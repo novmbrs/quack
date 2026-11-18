@@ -40,8 +40,8 @@ user-facing sentence is in the [Message catalog](#12-message-catalog).
 
 Quack is a Discord moderation bot with a web dashboard. Its one rule:
 
-> Admins define the server's moderation rules. Moderators apply those rules.
-> Quack chooses and carries out the configured result.
+> Rules managers define the server's moderation rules. Moderators apply those
+> rules. Quack chooses and carries out the configured result.
 
 A server's rules managers build **rules**, one per kind of problem ("Spam",
 "Harassment"), never one per punishment. Each rule has **levels** keyed on
@@ -72,7 +72,14 @@ permissions.
    entries are append-only, enforced by the database.
 7. **Every external effect has a durable, terminal outcome.** Each action,
    DM, and tracked message ends in a stored state; a crash never leaves work
-   stuck or done twice.
+   stuck. Effects are recorded as started before Discord is called, and a
+   retry first reads Discord's current state, so an effect whose result was
+   lost is not applied twice (the one exception, a duplicate staff post after
+   a long outage, is listed in §20.4).
+8. **One lock point per record.** Every change to a case, its action, DM,
+   evidence, or appeal locks the case row first (§4.12). A background job
+   writes only when the row is still in the state the job read, so a job
+   that lost its lease cannot overwrite newer state (§16.1).
 
 ### 1.2 Firm boundaries
 
@@ -135,8 +142,11 @@ Every string a human reads follows these rules. All of them live in
 - The same fact uses the same sentence on every surface: Discord reply, log
   channel, dashboard, API error `message`.
 - Staff-only information is always ephemeral in Discord. Only the case
-  receipt may be public, and only when the moderator did not ask for it to
-  be private.
+  receipt may be public, only when the moderator did not ask for it to be
+  private, and then only with the public receipt's fixed fields (§11.7).
+- Machine codes (Discord error numbers, HTTP statuses, enum values) never
+  appear in a sentence. They are kept in structured fields for staff
+  diagnostics (`Action.discord_code`, API `error.code`).
 
 ### 1.5 Surfaces
 
@@ -152,9 +162,28 @@ Every string a human reads follows these rules. All of them live in
 
 ## 2. People and permissions
 
-Quack re-reads Discord state for every staff operation. Cached data never
-grants lasting access: losing a role takes effect on the next operation.
-Earlier records stay attributed to whoever acted.
+Every staff operation is authorized from current facts, before any staff
+data is shown and before any write. Losing a role takes effect on the next
+operation; earlier records stay attributed to whoever acted. "Current
+facts" means:
+
+- **Discord interactions** (commands, buttons, selects, modals): the
+  actor's roles and permissions come from the interaction payload, which
+  Discord computes at the moment of the click. Every component click and
+  modal submit is authorized again; a custom ID never carries authority.
+- **Dashboard requests**: the actor's member record comes from the member
+  cache only while the gateway session is connected and the server has been
+  loaded since the last (re)connect, because gateway events then keep it
+  exact; otherwise from Discord REST. "Not a member" is never cached.
+- **Server facts** (owner, roles and their positions and permissions,
+  MFA level, channel overwrites) come from the guild cache under the same
+  connected-and-loaded condition, else REST.
+- **Settings** (staff role lists) are read inside the write's transaction.
+- **2FA** is the `discord_accounts` row (§2.2).
+
+Queued work (an action, a DM) is authorized when the staff operation that
+created it commits; the job checks only Quack's own access when it runs
+(§5.4).
 
 ### 2.1 Capabilities
 
@@ -205,9 +234,8 @@ ignore the rule. A refused actor gets message `error.mfa_required`.
 ### 2.3 Member checks
 
 `quack_core::permissions::check_member(facts) -> Result<(), MemberRefusal>`
-is pure. The caller gathers `ApplyFacts` from the `Discord` port (gateway
-cache first, REST fallback). Checks run in this order; the first failure
-wins.
+is pure. The caller gathers `ApplyFacts` from the `Discord` port under the
+freshness rules above. Checks run in this order; the first failure wins.
 
 | # | Check | Refusal (`MemberRefusal`) | Caused by Quack's access? |
 | --- | --- | --- | --- |
@@ -217,7 +245,7 @@ wins.
 | 4 | The member is not the actor. | `MemberIsSelf` | no |
 | 5 | The member is not a bot account (this includes Quack). | `MemberIsBot` | no |
 | 6 | The member is not the server owner. | `MemberIsOwner` | no |
-| 7 | The member's highest role position is strictly below the actor's highest role position, unless the actor is the owner. Equal positions refuse. | `MemberRoleTooHigh` | no |
+| 7 | The member's highest role position is strictly below the actor's highest role position, unless the actor is the owner. Equal positions refuse (a Quack policy, stricter than Discord's own tie-break by role ID; kept from Go). | `MemberRoleTooHigh` | no |
 | 8 | The member's highest role position is strictly below Quack's highest role position. | `QuackRoleTooLow` | yes |
 | 9 | Quack holds the Discord permission for the action kind: timeout and remove timeout need Moderate Members; kick needs Kick Members; ban and unban need Ban Members. Administrator on Quack satisfies all. Checked after the level is chosen (§4.2). | `QuackMissingPermission(Permission)` | yes |
 | 10 | For a timeout, the member does not have the Administrator permission (Discord never times out administrators). Checked after the level is chosen. | `MemberIsAdministrator` | no |
@@ -237,17 +265,14 @@ never logged.
 
 | Operation | Capability | Extra checks |
 | --- | --- | --- |
-| Apply a rule (`/case add`, "Add case", dashboard) | `moderate` + 2FA | Rule active. Member checks 1–10; check 3 required. |
+| Apply a rule (`/case add`, "Add case", dashboard) | `moderate` + 2FA | Rule active (checked under lock, §4.2). Member checks 1–10; check 3 required. |
 | Apply the honeypot rule (Quack) | none (Quack acts) | Member checks 1, 3, 5, 6, 8, 9, 10 with Quack as the actor. |
 | View a case, list cases, member history, evidence | `moderate` + 2FA | none |
 | Edit case context, add evidence | `moderate` + 2FA | none (allowed on valid and voided cases) |
 | Void a case | `moderate` + 2FA | Case is valid. |
-| Retry a failed original action | `moderate` + 2FA | Action `failed`, not dismissed; case valid; failure is not `timeout_window_passed`; member checks 2, 4, 6, 7 with the retrying moderator as actor; check 3 for timeout. Quack's own checks run in the action job (§5.4). |
-| Retry a failed undo action | `moderate` + 2FA | Action `failed`, not dismissed. |
-| Dismiss a failed action | `moderate` + 2FA | Action `failed`, not dismissed. |
-| Undo a done timeout or ban by hand | `moderate` + 2FA | Original action `done`, kind timeout or ban, no undo exists; for timeout, `timeout_ends_at` in the future and check 7 when the member is in the server. |
-| Accept, reject, request information, close, reopen an appeal | `moderate` + 2FA | Appeal state allows the transition (§8.2); `expected_version` matches. |
-| Submit an appeal, reply with information | member self | §8.1 eligibility. |
+| Retry, dismiss, or undo an action | `moderate` + 2FA | The single eligibility function `quack_core::action::controls` (§5.8), evaluated inside the write's transaction and also used to decide which buttons to render. |
+| Accept, reject, request information, close, reopen an appeal | `moderate` + 2FA | Appeal state allows the transition (§8.2); `expected_version` matches; the case is valid (an open appeal on a voided case cannot exist, §4.7). |
+| Submit an appeal, reply with information | member self | §8.1 eligibility; the case is valid. |
 | Rule create, edit, archive, restore, import, export | `manage_rules` + 2FA | §3 validation. |
 | Read settings | `manage_settings` + 2FA | none |
 | Change settings | `manage_settings` + 2FA | `manage_staff_roles` when `moderator_role_ids` changes; channel checks (§13.1.3). |
@@ -257,6 +282,10 @@ never logged.
 | Open own ticket | member of the server | Tickets enabled; no ticket of theirs is opening, open, or closing. |
 | Close a ticket | ticket's member, or `moderate` + 2FA | Ticket `open`. |
 | Fix ticket access | `moderate` + 2FA | Ticket `open`. |
+
+Every check that reads stored state (case valid, action failed, appeal
+version, ticket open) runs inside the transaction that makes the change,
+after the row lock of §4.12, never only before it.
 
 ---
 
@@ -268,17 +297,29 @@ never logged.
   name (denormalized for listing and uniqueness), `archived_at`, and who
   created and last changed it.
 - `rule_versions` holds every version as one validated JSON document
-  (`definition`), immutable once written (a trigger rejects UPDATE and
-  DELETE).
+  (`definition`), immutable once written (triggers reject UPDATE, DELETE,
+  and TRUNCATE).
 - A case references `(rule_id, rule_version)` and stores only its decision
   (§4.4).
 
-Editing a rule inserts version `current_version + 1` and updates
-`rules.current_version` and `rules.name` in one transaction. The client
-sends `expected_version`; a mismatch is `409 rule_changed`. Archive and
-restore change `archived_at` only, never the version. There is no delete,
-draft, or enable switch: a saved rule that is not archived is active
-immediately.
+Editing a rule locks the rule row (`SELECT … FOR UPDATE`), checks
+`expected_version` (mismatch → `409 rule_changed`), inserts version
+`current_version + 1`, and updates `rules.current_version` and `rules.name`
+in one transaction. Archive and restore change `archived_at` only, never the
+version. There is no delete, draft, or enable switch: a saved rule that is
+not archived is active immediately.
+
+Case creation reads the rule row `FOR SHARE` inside its transaction
+(§4.2), so an edit or archive and a case creation are ordered: a case
+either uses the version that was current when it locked the rule, or waits
+for the edit to commit and then uses the new version (or is refused because
+the rule is now archived). Caches are only for display, pickers, and
+building modals; they never decide which version a case uses.
+
+Rule creation, import, and restore lock the server's `guild_settings` row
+first, so the active-rule limit is checked against a count no concurrent
+write can change. Archive and edit lock `honeypot_settings` (`FOR SHARE`)
+before the rule, so the honeypot checks in §3.3 and §3.5 hold at commit.
 
 ### 3.2 The rule definition document
 
@@ -311,7 +352,7 @@ immediately.
 | `reason` | string | The official reason shown to the member in the DM, receipt, and dashboard. No placeholders. |
 | `appealable` | bool | Whether cases under this version can be appealed. |
 | `counting_window_days` | integer or null | null counts all past cases; otherwise only cases created within the last N days count. |
-| `fields` | array | Case context fields, in display order. |
+| `fields` | array | Case context fields, in display order. A rule with no fields still takes free-text context: one optional `long_text` field `{"key": "details", "label": "Details"}` that `RuleDefinition::context_fields()` returns when `fields` is empty. It is never stored in `fields`. |
 | `fields[].key` | string | Stable machine key; unique within the rule. |
 | `fields[].label` | string | The question shown to the moderator and the label shown to the member. |
 | `fields[].kind` | enum | `short_text`, `long_text`, `boolean`, `number`, `message_link`. |
@@ -335,7 +376,7 @@ pub struct RuleDefinition {
 }
 pub struct Field { pub key: FieldKey, pub label: String, pub kind: FieldKind, pub required: bool }
 pub enum FieldKind { ShortText, LongText, Boolean, Number, MessageLink }
-pub struct Level { pub from_case_count: u16, pub action: Option<LevelAction>, pub send_dm: bool }
+pub struct Level { pub from_case_count: u32, pub action: Option<LevelAction>, pub send_dm: bool }
 pub enum LevelAction {
     Timeout { duration_seconds: u32 },
     Kick,
@@ -360,18 +401,28 @@ first; "characters" means Unicode scalar values.
 | `fields[].key` | Matches `^[a-z0-9][a-z0-9_-]{1,63}$`; unique within the rule. | `field_key`, `field_key_duplicate` |
 | `fields[].label` | 1–100 characters. | `field_label_length` |
 | `levels` | 1–10 entries. | `level_count` |
-| `levels[0].from_case_count` | Exactly 1 (`Strictness::New`). | `first_level_not_one` |
-| `levels[i].from_case_count` | 2–1,000 for i > 0; strictly increasing. | `level_case_count`, `level_order` |
+| `levels[0].from_case_count` | Exactly 1. | `first_level_not_one` |
+| `levels[i].from_case_count` | 2–1,000,000 for i > 0; strictly increasing. | `level_case_count`, `level_order` |
 | timeout `duration_seconds` | 1–2,419,200 (28 days). | `timeout_duration` |
 | ban `delete_message_seconds` | 0–604,800 (7 days). | `ban_delete_window` |
 | honeypot rule | When the server's honeypot uses this rule, no field may be required. | `required_field_on_honeypot_rule` (409) |
 | active rule count | At most 100 non-archived rules per server (create, import, restore). | `too_many_rules` (409) |
 
-`Strictness::Historical` is used only for rule versions reconstructed by the
-importer (§19.5): it allows a first level other than 1 and does not check
-name uniqueness. Quack never applies a historical version to a new case,
-because new cases always use `current_version`, which is always validated
-with `Strictness::New`.
+`validate` takes a `Strictness`:
+
+- `Strictness::New` applies every row above. It is used for every
+  definition written through Quack (create, edit, import of a rule file).
+  Restore re-checks only the name and the active-rule limit.
+- `Strictness::Imported { reconstructed }` is used only by the MySQL
+  importer (§19.5). It checks structure (a name and reason that are not
+  empty, 1 or more levels with strictly increasing `from_case_count`, valid
+  action kinds, a timeout within Discord's 28 days, unique field keys) but
+  not size limits, so legacy rules are imported as they were and reported.
+  It requires a first level of 1 unless `reconstructed` is true (partial
+  versions rebuilt from old cases, never applied to a new case).
+
+A legacy rule that exceeds a size limit keeps working: cases use it as
+imported. The first edit must bring it within the limits.
 
 ### 3.4 Choosing the level
 
@@ -385,9 +436,9 @@ is pure:
    `now - counting_window_days × 86,400 s`. The window always comes from the
    version being applied, so changing the window affects counting only.
 2. The chosen level is the level with the highest `from_case_count` that is
-   less than or equal to `case_count`. Because the first level starts at 1,
-   there is always one.
-3. `LevelChoice { index: u8 /* 1-based */, from_case_count, action, send_dm }`.
+   less than or equal to `case_count`. Because the first level of every
+   version a case can use starts at 1, there is always one.
+3. `LevelChoice { index: u8 /* 1-based */, from_case_count: u32, action, send_dm }`.
 
 Escalation never uses other rules, other servers, weights, or a moderator's
 choice. Proptest covers: monotonic level choice in `case_count`; the first
@@ -398,7 +449,9 @@ level for `case_count = 1`; the last level for very large counts.
 - Archive sets `archived_at = now()`; the rule disappears from pickers and
   autocomplete; its cases and versions stay visible. Archive is refused
   with `409 rule_used_by_honeypot` while the honeypot module's settings point
-  at the rule.
+  at the rule, whether or not the honeypot is on; the honeypot settings
+  offer "Clear rule" (§13.4.1) to release it. A case creation that locks the
+  rule after the archive commits is refused with `rule_archived`.
 - Restore clears `archived_at`. It is refused with `409 rule_name_taken` when
   another active rule now has the same name, and with `409 too_many_rules`
   at the limit.
@@ -426,15 +479,15 @@ new name. Export is a read and is not logged. Import is logged as
 
 ### 3.7 The starter rule
 
-When Quack joins a server for the first time (no `guilds` row), it creates,
-in the bootstrap transaction (§17.5), this rule and stores its ID in
+When Quack joins a server for the first time (bootstrap creates its
+`guild_settings` row, §17.5), it creates, in the same transaction, this rule and stores its ID in
 `guild_settings.starter_rule_id`:
 
 ```json
 {
   "name": "General rule violation",
-  "description": "A starter rule. Review it and change it to fit your server.",
-  "reason": "Breaking the server rules.",
+  "description": "A starter rule for general violations. Review it and change it for this server.",
+  "reason": "General rule violation",
   "appealable": true,
   "counting_window_days": null,
   "fields": [],
@@ -446,7 +499,8 @@ in the bootstrap transaction (§17.5), this rule and stores its ID in
 }
 ```
 
-`created_by` is NULL (Quack). The dashboard shows a notice asking
+These are the Go starter's texts and levels, unchanged except "guild"
+becomes "server". `created_by` is NULL (Quack). The dashboard shows a notice asking
 administrators to review it until someone with `manage_settings`
 acknowledges it (`starter_notice_acknowledged_at`). Rejoining a server never
 creates a second starter rule.
@@ -454,15 +508,17 @@ creates a second starter rule.
 ### 3.8 The honeypot rule
 
 The honeypot module (§13.4) applies one rule chosen in its settings. When an
-administrator turns on the honeypot from `/setup` without choosing a rule,
-Quack uses the active rule named "Honeypot" if one exists, otherwise creates
-it:
+administrator turns on the honeypot from `/setup` and the settings name no
+rule, Quack creates this rule and saves it as the honeypot's rule in the
+same transaction. Quack never adopts an existing rule by its name: when an
+active rule is already called "Honeypot", the turn-on is refused with
+`module.problem.honeypot_rule_missing` so the administrator chooses a rule.
 
 ```json
 {
   "name": "Honeypot",
   "description": "Applied when a member posts in the honeypot channel.",
-  "reason": "Posting in the honeypot channel.",
+  "reason": "Posted in the honeypot channel despite the warning.",
   "appealable": true,
   "counting_window_days": null,
   "fields": [],
@@ -477,30 +533,34 @@ and on every edit of that rule) and cannot be archived while in use.
 
 ### 3.9 Limits
 
-All limits live in `quack_core::limits` as constants, are validated before
-any write, and are mirrored by database CHECK constraints where a column
-holds the value. "Characters" means Unicode scalar values after trimming.
+All limits live in `quack_core::limits` as constants and are validated by
+the application before every write. Database CHECK constraints mirror a
+limit only where imported legacy data cannot exceed it (§15); elsewhere the
+column admits legacy values, which are imported as they were and listed in
+the import report (§19.10). "Characters" means Unicode scalar values after
+trimming.
 
 | Limit | Value | Where enforced |
 | --- | --- | --- |
-| Rule name | 1–100 characters | §3.3, `rules.name`, `rule_versions.definition` |
+| Rule name | 1–100 characters | §3.3 |
 | Rule description | 0–500 characters | §3.3 |
 | Official reason | 1–1,000 characters | §3.3 |
 | Context fields per rule | 0–10 | §3.3 |
 | Field key | `^[a-z0-9][a-z0-9_-]{1,63}$` | §3.3 |
 | Field label | 1–100 characters | §3.3 |
 | Levels per rule | 1–10 | §3.3 |
-| Level `from_case_count` | first = 1; others 2–1,000, strictly increasing | §3.3 |
+| Level `from_case_count` | first = 1; others 2–1,000,000, strictly increasing | §3.3 |
 | Timeout duration | 1–2,419,200 s | §3.3 |
 | Ban message deletion window | 0–604,800 s | §3.3 |
 | Counting window | null or 1–36,500 days | §3.3 |
 | Active rules per server | 100 | §3.3 |
 | Context `short_text` | 1–500 characters | §4.6 |
 | Context `long_text` | 1–4,000 characters | §4.6 |
-| Context `message_link` | a Discord message link, at most 200 characters | §4.6 |
-| Context `number` | finite, absolute value at most 1,000,000,000,000,000, at most 6 decimal places | §4.6 |
-| Void reason | 1–1,000 characters | §4.7, `cases.void_reason` |
-| Appeal statement, information reply | 1–4,000 characters | §8.1, `appeal_events.text` |
+| Context `message_link` | a Discord message link; input at most 4,000 characters, stored canonical | §4.6 |
+| Context `number` | a decimal with absolute value at most 1,000,000,000,000,000 and at most 6 decimal places, stored exactly | §4.6 |
+| Free-text context (`details`, rules with no fields) | 1–4,000 characters | §4.6 |
+| Void reason | 1–1,000 characters | §4.7 |
+| Appeal statement, information reply | 1–4,000 characters | §8.1 |
 | Appeal decision reason | 1–2,000 characters | §8.2 |
 | Evidence items per case | 50 | §7.1 |
 | Evidence files per case | 100 | §7.1 |
@@ -512,7 +572,7 @@ holds the value. "Characters" means Unicode scalar values after trimming.
 | Moderator roles, rules manager roles | 0–25 each | §13.1 |
 | DM introduction | 0–1,000 characters | §13.1 |
 | DM footer | 0–500 characters | §13.1 |
-| Rejoin invite | `https://discord.gg/<code>`, code 2–32 of `[A-Za-z0-9-]` | §13.1 |
+| Rejoin invite | an invite link whose code is 2–64 of `[A-Za-z0-9_-]` | §13.1 |
 | Honeypot warning text | 0–1,500 characters | §13.4 |
 | Ticket transcript retention | 1–365 days (default 90) | §13.2 |
 | Ticket transcript file | 8,388,608 bytes (8 MiB) | §13.2 |
@@ -520,6 +580,7 @@ holds the value. "Characters" means Unicode scalar values after trimming.
 | API page size | default 50, maximum 100 | §14.1 |
 | Discord list page size | 10 rows | §11 |
 | Case draft lifetime | 15 minutes | §11.6 |
+| Discord nonce retry window | 60 seconds from the first attempt | §10.4 |
 | HTTP request body | 262,144 bytes (256 KiB) | §14.8 |
 | Statistics range | 1 second to 366 days | §14.3 |
 
@@ -536,123 +597,163 @@ of them changes whether the case is valid.
 
 | `case_source` | Created by | Notes |
 | --- | --- | --- |
-| `discord` | `/case add`, the "Add case" message command, the "Add case" member command | Operation key: interaction ID, or the draft ID for multi-page forms (§11.6). |
+| `discord` | `/case add`, the "Add case" message command, the "Add case" member command | Operation key: interaction ID, or `draft:<draft_id>` for forms (§11.6). |
 | `dashboard` | `POST /api/guilds/{guild_id}/cases` | Operation key: `Idempotency-Key` header. |
-| `honeypot` | The honeypot module | Operation key `honeypot:<guild_id>:<first message id>`. `moderator_id` is NULL. |
+| `honeypot` | The honeypot module | Operation key `honeypot:<first message id>` (§13.4.2). `moderator_id` is NULL. |
 | `imported` | The MySQL importer, for cases the Go system imported from Quack v4 | Never counted for escalation; no rule, no action, no DM, no appeal. |
 
 ### 4.2 Creating a case, end to end
 
 `quack_engine::cases::apply_rule(&self, req: ApplyRule) -> Result<Applied, ApplyError>`
 is the only way to create a case. `ApplyRule` carries: guild, actor
-(`Principal` or `Quack`), member ID, rule ID, context values, evidence
-sources (message links and, for the message command, the source message),
-`private` (receipt visibility), optional `replaces_case_id`, source, the
-operation key and its scope, and an optional receipt destination
-(interaction token and channel). The caller has already acknowledged the
-interaction or accepted the HTTP request.
+(`Principal` or `Quack`), member ID, rule ID, an optional pinned rule
+version (a draft's version, or the version the dashboard form was built
+from), context values, explicit evidence links and, for the message command,
+the source message, `private` (receipt visibility), the receipt destination
+(the interaction token for a private receipt, or the channel for a public
+one), optional `replaces_case_id`, source, the operation key, and, for
+honeypot cases, the honeypot configuration version the hits were admitted
+under. The caller has already acknowledged the interaction or accepted the
+HTTP request.
 
 **Before the transaction** (no locks held; may call Discord):
 
-1. **Replay check.** Look up `(scope, key)` in `operation_keys`. If found
-   with the same request hash, return `Applied::Replayed(case_id)`; the
-   caller renders the existing case. If found with a different request hash,
-   return `ApplyError::OperationKeyReused`.
-2. **Capability.** For staff sources, the `Principal` must hold `moderate`
-   and pass the 2FA rule (§2.2). Otherwise `Forbidden`.
-3. **Rule.** Load the rule and its current version from the rules cache
-   (§17.6; Postgres on a miss). Missing → `RuleNotFound`; archived →
-   `RuleArchived`.
-4. **Context.** Validate the submitted values against the version's fields
-   (§4.6). When the case starts from a message, every empty `message_link`
-   field is filled with that message's link before validation.
-5. **Evidence sources.** Collect, deduplicated by message ID: the source
-   message (message command), every `message_link` context value, and any
-   explicit links (dashboard). Each must be a link into this server
-   (§7.1); more than 50 → `TooMuchEvidence`.
-6. **Facts.** Ask the `Discord` port for `ApplyFacts`: server owner, MFA
+1. **Authorize.** For staff sources, the `Principal` (built from current
+   facts, §2) must hold `moderate` and pass the 2FA rule. Otherwise
+   `Forbidden`. Nothing about the operation key is revealed before this.
+2. **Replay check.** Look up the operation key (§4.3). Same request hash →
+   `Applied::Replayed(case_id)`; the caller renders the existing case for
+   this actor. Different hash → `ApplyError::OperationKeyReused`.
+3. **Early checks** against the rules cache, so most mistakes are answered
+   without a transaction: rule missing → `RuleNotFound`; archived →
+   `RuleArchived`; context invalid for the cached version (§4.6) →
+   `ContextInvalid`. These are repeated authoritatively in step 10.
+4. **Evidence sources.** Collect, deduplicated by message ID: the source
+   message (message command), every `message_link` context value, every
+   Discord message link found inside a text answer (§4.6), and explicit
+   links (dashboard). Explicit links and `message_link` values must point
+   into this server (`other_server`); links found inside text that point
+   elsewhere are ignored. More than 50 → `TooMuchEvidence`. When the case
+   starts from a message, every empty `message_link` field is filled with
+   that message's link first.
+5. **Facts.** Ask the `Discord` port for `ApplyFacts`: server owner, MFA
    level, Quack's member and permissions, the actor's member (staff
-   sources), and the member (or `None` when absent). Discord errors here →
-   `DiscordUnavailable`; nothing is written.
-7. **Member checks 1–8** (§2.3). A refusal caused by Quack's own access is
+   sources), and the member with their `joined_at` (or absent). Discord
+   errors here → `DiscordUnavailable`; nothing is written.
+6. **Member checks 1–8** (§2.3). A refusal caused by Quack's own access is
    written to the moderation log in its own short transaction
    (`case_create_refused`, result `refused`) and returned; for honeypot
    cases the module logs `honeypot_case_failed` instead (§13.4.2). Other
    refusals are returned without a log entry.
 
-**Inside one transaction** (READ COMMITTED; all statements in order):
+**Inside one transaction** (READ COMMITTED; locks in the §4.12 order):
 
-8. `UPDATE case_counters SET last_number = last_number + 1 WHERE guild_id = $1 RETURNING last_number`.
+7. Reserve the operation key: `INSERT INTO operation_keys … ON CONFLICT DO
+   NOTHING RETURNING …`. No row returned means a concurrent request with the
+   same key committed first: roll back and go to step 2.
+8. Honeypot cases only: `SELECT … FROM honeypot_settings WHERE guild_id = $1
+   FOR SHARE`; the module must still be enabled with the same `version`,
+   channel, and rule as when the hits were admitted, else
+   `HoneypotPolicyChanged` (§13.4.2).
+9. `UPDATE case_counters SET last_number = last_number + 1 WHERE guild_id = $1 RETURNING last_number`.
    This row lock serializes case creation per server until commit, so the
-   count in step 10 sees every earlier committed case.
-9. `INSERT INTO operation_keys (...) VALUES (...)` with the response that
-   this request will produce (`{"case_id": "<new id>"}`; the case ID is a
-   UUIDv7 generated before the transaction). A unique violation means a
-   concurrent request with the same key committed first: roll back and go
-   to step 1.
-10. Count counted cases (§3.4) with the `cases_escalation` index; add one.
-11. `select_level` (§3.4).
-12. If the level has an action, run member checks 9 and 10 against the
-    facts from step 6. A refusal rolls back and is returned; a check 9
-    refusal (Quack's access) is also logged as in step 7.
-13. If `replaces_case_id` is set: the referenced case must be in the same
-    server, voided, and not already replaced (unique index). Otherwise
-    `ReplacementInvalid`.
-14. Insert the `cases` row with the decision (§4.4), `number` from step 8,
-    `created_at = now()` captured once in Rust and reused below.
-15. If the level has an action, insert an `actions` row (`purpose`
-    original, state `pending`). For a timeout,
-    `timeout_ends_at = created_at + duration_seconds`.
-16. If the level sends a DM, insert a `dms` row (kind `case`, state
-    `pending`, fresh nonce).
-17. Insert one `evidence` row per evidence source (state `saving`).
-18. If a receipt destination is given, insert a `messages` row (kind
-    `case_receipt`, `message_id` NULL, `wanted_revision` 1,
-    `posted_revision` 0, the interaction token and its expiry).
-19. Insert the moderation log entry `case_created` (§9) and, when the log
+   count in step 11 sees every earlier committed case.
+10. `SELECT current_version, archived_at FROM rules WHERE guild_id = $1 AND id = $2 FOR SHARE`,
+    then load that version's definition. Missing → `RuleNotFound`;
+    archived → `RuleArchived`; a pinned version that differs from
+    `current_version` → `RuleChanged`. Validate the context against this
+    version (pure; skipped when it is the version step 3 used).
+11. Count counted cases (§3.4) with the `cases_escalation` index; add one.
+12. `select_level` (§3.4).
+13. If the level has an action, run member checks 9 and 10 against the
+    facts from step 5. A refusal rolls back and is returned; a check 9
+    refusal (Quack's access) is also logged as in step 6.
+14. If `replaces_case_id` is set: the referenced case must be in the same
+    server, voided, and not already replaced (`cases_replaces` unique
+    index). Otherwise `ReplacementInvalid`.
+15. Insert the `cases` row with the decision (§4.4), `number` from step 9,
+    `member_joined_at` from step 5, the scoped operation key and request
+    hash, `context_revision = 1`, and `created_at = now()` captured once in
+    Rust and reused below.
+16. If the level has an action, insert an `actions` row (state `pending`).
+    For a timeout, `timeout_ends_at = created_at + duration_seconds`,
+    truncated to whole seconds (§5.2).
+17. If the level sends a DM, insert a `dms` row (kind `case`, state
+    `pending`).
+18. Insert one `evidence` row per evidence source (state `saving`).
+19. Insert the receipt's `messages` row (§11.7): private → kind
+    `case_receipt`, `private = true`, the interaction token and its expiry;
+    public → kind `case_receipt`, the channel, `message_id` NULL, and the
+    interaction token, used only to answer the moderator privately once the
+    receipt is posted or refused (§10.3). The dashboard creates no receipt.
+20. Insert the moderation log entry `case_created` (§9) and, when the log
     channel is set, its `post_mod_log` job.
-20. Enqueue jobs (§16): `send_dm` for the DM; `run_action` for the action,
-    except a kick or ban with a DM, whose `run_action` job is enqueued by
-    the DM job when the DM settles (§6.3); one `capture_evidence` per
-    evidence row; `sync_message` for the receipt.
-21. `NOTIFY quack_jobs` (sent on commit).
-22. Commit. The transaction must finish within 2 seconds
-    (`SET LOCAL statement_timeout = '2s'`).
+21. Enqueue jobs (§16): `send_dm` for the DM; `run_action` for the action
+    (for a kick or ban whose level sends a DM, `run_at = created_at + 120 s`,
+    moved earlier when the DM settles, §6.3); one `capture_evidence` per
+    evidence row; `sync_message` for the receipt. Each enqueue notifies its
+    job kind; PostgreSQL delivers the notifications on commit.
+22. Commit. Every statement runs with `SET LOCAL statement_timeout = '2s'`
+    and `SET LOCAL lock_timeout = '2s'`, and the whole transaction with a
+    3-second deadline in Rust. A deadline before COMMIT is sent rolls back
+    (`error.internal`); a deadline while COMMIT is outstanding is
+    `error.unconfirmed`, and repeating the same operation key returns the
+    result.
 
 **After the transaction:**
 
-23. Return `Applied::Created(CaseCreated { case, action, dm })`. The bot
-    calls `sync_message` inline for the receipt (§10.3) so the moderator
-    sees it without waiting for a worker; the API returns the case.
-24. Metrics: `quack.case.created`, `quack.case.create.duration`,
-    `quack.case.level`. Span event `case.created`.
+23. Return `Applied::Created(CaseCreated { case, action, dm })`. For Discord
+    callers the receipt's `sync_message` job, which the commit's
+    notification wakes at once, is the only writer of the interaction's
+    reply from here on (§10.3); the caller writes nothing more, so the two
+    never race. The API returns the case.
+24. Metrics: `quack.cases.created`, `quack.case.create.duration`,
+    `quack.case.level`; refusals count `quack.cases.refused`. Span event
+    `case.created`.
 
-A failure in steps 8–22 (other than the handled ones) rolls back everything:
+A failure in steps 7–22 (other than the handled ones) rolls back everything:
 no case number is consumed, no job exists, nothing reaches Discord.
 
 ### 4.3 Operation keys
 
 Every state-changing command carries an operation key, stored in
-`operation_keys` in the same transaction as the write it protects.
+`operation_keys` in the same transaction as the write it protects. A key is
+scoped to the server, the account acting, and the operation, so different
+people and different operations never collide.
 
-| Origin | Scope | Key |
-| --- | --- | --- |
-| Slash command, button, select, modal | `discord:<guild_id or dm>:<account_id>` | The interaction ID (decimal). |
-| Multi-page `/case add` | `discord:<guild_id>:<account_id>` | `draft:<draft_id>` (stable across pages and double clicks). |
-| Dashboard write | `http:<account_id>:<METHOD> <route pattern>:<guild_id or ->` | The `Idempotency-Key` header. |
-| Honeypot | `quack:<guild_id>` | `honeypot:<guild_id>:<message_id>`. |
+| Origin | `guild_id` | `account_id` | `operation` | `key` |
+| --- | --- | --- | --- | --- |
+| Slash command, button, select, modal | the server, or 0 in DMs | the clicker | command name or custom-ID code (`case_add`, `vdm`, `aam`, …) | the interaction ID (decimal) |
+| `/case add` form | the server | the moderator | `case_add` | `draft:<draft_id>` (stable across pages, double clicks, and retries) |
+| Dashboard write | the server, or 0 for `/api/me` routes | the signed-in account | `<METHOD> <route pattern>`, e.g. `POST /api/guilds/{guild_id}/cases` | the `Idempotency-Key` header |
+| Honeypot | the server | 0 (Quack) | `honeypot_case` | `honeypot:<first message id>` |
 
-- `request_hash` is SHA-256 of a canonical encoding of the request: for HTTP
-  the raw query string, media type, and body; for Discord the command name
-  and decoded options.
-- A replay with the same hash returns the stored `response_status` and
-  `response` (HTTP replays add `Idempotency-Replayed: true`). A different
-  hash returns `409 idempotency_key_reused`.
+- **Order.** Authenticate, resolve the target, and authorize the actor
+  against its current state first; only then look up the key. A replay is
+  answered only to someone allowed to see the result now.
+- `request_hash` is SHA-256 of a canonical JSON encoding of the resolved
+  request: path IDs (resolved, e.g. a case number becomes the case UUID),
+  query parameters, and the validated, typed body for HTTP; decoded options,
+  custom-ID arguments, and modal values for Discord.
+- A replay with the same hash re-renders the **current** state of the
+  stored result reference (`{"case_id": …}`, `{"action_id": …}`) for this
+  actor with the original status code (HTTP replays add
+  `Idempotency-Replayed: true`). A different hash returns `409
+  idempotency_key_reused`.
 - Two concurrent requests with one key: the second blocks on the primary
   key until the first commits, then replays its result.
 - Rows expire after 24 hours (housekeeping deletes them). Case creation is
-  also protected forever by `cases.operation_key` (unique per server), so a
-  replay after expiry still finds the case.
+  also protected forever: `cases.operation_key` holds
+  `<account_id>:<operation>:<key>` (unique per server) with
+  `cases.request_hash`, so a replay after expiry still finds the case, and
+  a different request with the old key is still `409`. Other operations are
+  protected only for 24 hours; repeating one after that runs it again, which
+  is harmless because each re-checks its preconditions (a second void is
+  `409 case_already_voided`).
+- An HTTP request whose write transaction has begun is allowed to finish
+  even past the request deadline (§14.8). If the client gave up, repeating
+  the same key returns the stored result. The dashboard reuses one key for
+  every retry of one submit.
 - Reads never use operation keys.
 
 ### 4.4 Case numbers and the decision
@@ -660,7 +761,8 @@ Every state-changing command carries an operation key, stored in
 - `case_counters(guild_id, last_number)` is created with the server and
   only ever increments. Numbers start at 1, never repeat, and are not
   reused after voids. The importer sets `last_number` to the highest
-  imported number.
+  imported number. Numbers stop at 2^53 − 1 (exact in JavaScript); past
+  that, case creation is refused. Numbers are never reused.
 - The decision stored on the case (its "snapshot") is exactly:
 
 | Column | Meaning |
@@ -674,6 +776,10 @@ Every state-changing command carries an operation key, stored in
 | `ban_delete_message_seconds` | For bans. |
 | `sends_dm` | Whether the level sends a DM. |
 
+The case also records `member_joined_at`, the member's Discord `joined_at`
+when the case was created; a kick is only ever carried out against that
+membership (§5.4).
+
 The decision never changes. Corrections are a void plus a replacement case.
 
 ### 4.5 Case states
@@ -682,7 +788,7 @@ A case is **valid** or **voided** (`voided_at IS NULL` means valid).
 
 | From | Event | To | Effects |
 | --- | --- | --- | --- |
-| (none) | Commit of §4.2 | valid | §4.2 steps 14–20. |
+| (none) | Commit of §4.2 | valid | §4.2 steps 15–21. |
 | valid | Staff void (§4.7) | voided | §4.7. |
 | valid | Appeal accepted (§8.2) | voided | §4.7 with cause `appeal_accepted`. |
 | voided | Any void | voided | Refused: `409 case_already_voided`. A replay of the same operation key returns the original result instead. |
@@ -691,79 +797,109 @@ There is no un-void.
 
 ### 4.6 Case context validation
 
-`quack_core::case::validate_context(fields, submitted) -> Result<ContextValues, Vec<ContextProblem>>`.
-Submitted values arrive as `key → JSON value` (API) or `key → string` (Discord
-modal). Unknown keys → `unknown_field`. Duplicate keys → `duplicate_field`.
-An omitted, empty, or whitespace-only optional value is stored as absent.
+`quack_core::case::validate_context(fields, submitted) -> Result<ContextValues, Vec<ContextProblem>>`,
+where `fields` is `RuleDefinition::context_fields()` (the rule's fields, or
+the single free-text `details` field when it has none, §3.2). Submitted
+values arrive as `key → JSON value` (API) or `key → string` (Discord
+modal). Unknown keys → `unknown_field`. Duplicate keys →
+`duplicate_field`. An omitted, empty, or whitespace-only optional value is
+stored as absent.
 
 | Kind | Accepted input | Stored as | Problems |
 | --- | --- | --- | --- |
 | `short_text` | String, 1–500 characters after trimming. | JSON string | `required`, `too_long` |
 | `long_text` | String, 1–4,000 characters after trimming. | JSON string | `required`, `too_long` |
 | `boolean` | API: JSON `true`/`false`. Discord: the select values `yes`/`no`. | JSON bool | `required`, `not_yes_no` |
-| `number` | API: JSON number. Discord: text parsed as a decimal (`-` allowed, `.` decimal point, no exponent). Finite, absolute value ≤ 10^15, ≤ 6 decimal places. | JSON number | `required`, `not_a_number`, `number_out_of_range` |
-| `message_link` | `https://discord.com/channels/<guild>/<channel>/<message>` (also `ptb.`, `canary.`, `www.` hosts and `discordapp.com`), IDs of 17–20 digits, `guild` equal to this server, at most 200 characters. Query and fragment are dropped. | Canonical `https://discord.com/channels/…` string | `required`, `not_a_message_link`, `other_server` |
+| `number` | API: a JSON number or a string; Discord: text. Grammar: optional `-`, digits, optional `.` and digits; no exponent, no `+`, no spaces inside. Absolute value ≤ 10^15, ≤ 6 decimal places. Parsed from the original text into `quack_core::case::Decimal` (an `i128` count of millionths), never through a binary float. | Canonical decimal string (no trailing zeros, no leading `+`), e.g. `"2.5"`; the API returns it as a string | `required`, `not_a_number`, `number_out_of_range` |
+| `message_link` | `https://discord.com/channels/<guild>/<channel>/<message>` (also `ptb.`, `canary.`, `www.` hosts and `discordapp.com`), each ID a positive decimal below 2^63, `guild` equal to this server, input at most 4,000 characters. Query and fragment are dropped. | Canonical `https://discord.com/channels/…` string | `required`, `not_a_message_link`, `other_server` |
 
 `false` and `0` are answers, not absence. Validation reports every problem
-at once; the message for each is in §12.3.
+at once; the message for each is in §12.5.
+
+**Links inside text.** `quack_core::case::find_message_links(text)` returns
+the Discord message links inside a text answer (HTTPS URLs with the hosts
+above, trailing punctuation trimmed). They become evidence sources (§4.2
+step 4, §4.9) when they point into this server; the text itself is stored
+unchanged.
 
 ### 4.7 Voiding
 
 `quack_engine::cases::void_case(principal, case_ref, reason, op_key)`:
 
-1. Capability `moderate` + 2FA. Reason 1–1,000 characters.
-2. One transaction:
-   1. Insert the operation key.
+1. Authorize (`moderate` + 2FA). Reason 1–1,000 characters.
+2. One transaction (locks in the §4.12 order):
+   1. Reserve the operation key.
    2. `SELECT … FROM cases WHERE guild_id = $1 AND id = $2 FOR UPDATE`.
       Voided already → `409 case_already_voided`.
    3. Set `voided_at = now()`, `voided_by`, `void_reason`, `void_cause`
-      (`staff` or `appeal_accepted`).
-   4. Original actions in state `pending` → `cancelled` (their jobs find the
-      state terminal and finish). Actions in `running` are left alone: the
-      job checks validity when it settles (§5.4).
-   5. For each original timeout or ban in state `done` with no undo yet:
-      insert an undo action (`remove_timeout` or `unban`, state `pending`,
-      `requested_by` = the voider, `undo_of_action_id`) and its `run_action`
-      job. A timeout whose `timeout_ends_at` has passed gets no undo.
+      (`staff`, or `appeal_accepted` with the fixed reason
+      `case.void.reason.appeal_accepted`, §8.2).
+   4. Lock the original action (`FOR UPDATE`). By state:
+      - `pending` → `cancelled`. Its job finds the state terminal and
+        finishes. An original action never starts a new attempt on a voided
+        case (§5.4 checks validity under the same case lock).
+      - `running` → unchanged. The attempt in flight settles normally; if it
+        does not end `done`, the action becomes `cancelled` (§5.3).
+      - `done`, `failed`, `cancelled` → unchanged.
+   5. **Undo.** If the original is a timeout or ban, no undo exists yet, at
+      least one of its attempts may have reached Discord (§5.2), and, for a
+      timeout, `timeout_ends_at` is in the future: insert the undo action
+      (`remove_timeout` or `unban`, state `pending`, `requested_by` = the
+      voider) and its `run_action` job. This covers an action that is done,
+      one whose attempt is still in flight, and one whose earlier attempt's
+      result was never learned. The undo runs only after any attempt in
+      flight for the member has settled (§5.4), and it changes Discord only
+      when Discord still shows this case's timeout or ban (§5.6). A kick is
+      never undone.
    6. The case DM in state `pending` → `not_needed`. A DM in `sending` or a
       terminal state is left alone.
-   7. An appeal in `pending` or `needs_information` → `closed` with
-      appeal event `closed` (actor NULL, text "Closed because the case was
-      voided.") and an appeal DM (§6) — unless the void is the appeal's own
-      acceptance.
+   7. An appeal in `pending` or `needs_information` → `closed` with appeal
+      event `closed` (actor NULL, `closed_by_void = true`) and its
+      `appeal_update` DM — unless this void is the appeal's own acceptance.
    8. Bump the case receipt and the appeal post (§10).
    9. Moderation log `case_voided` (detail: cause, cancelled action IDs,
       undo action IDs).
-3. Metric `quack.case.voided{cause}`.
+3. Metric `quack.cases.voided{quack.void.cause}`.
 
 Undo actions are never cancelled by a later void: once queued, they run.
 
 ### 4.8 Replacement links
 
 A wrong case is fixed by voiding it and creating a new case with
-`replaces_case_id` pointing at it (§4.2 step 13). One voided case has at most
-one replacement (`UNIQUE (replaces_case_id)`). The replacement may use a
-different rule or member. Both views show the link in both directions
-("Replaced by case #13", "Replaces case #12").
+`replaces_case_id` pointing at it (§4.2 step 14). One voided case has at
+most one replacement (`cases_replaces` unique index). A case never replaces
+itself. The replacement may use a different rule or member. Staff views show
+the link in both directions ("Replaced by case #13", "Replaces case #12").
+Member views show a link only when both cases are about that member, so a
+correction that moved a case to another member never reveals the other
+member's case.
 
 ### 4.9 Edits
 
 The decision never changes. Two edits exist, both on valid or voided cases:
 
 - **Edit context.** Replaces the case context with new values validated
-  against the case's own rule version (not the current one). New
-  `message_link` values that are not yet evidence get evidence rows and
-  `capture_evidence` jobs (subject to the per-case cap). Existing evidence
-  is never removed. Moderation log `case_context_edited` (detail: changed
-  field keys). The receipt is bumped.
-- **Add evidence.** Adds 1–10 message links (§7.1). Moderation log
-  `evidence_added` (detail: count). The receipt is bumped.
+  against the case's own rule version (not the current one). The request
+  carries the `context_revision` the editor was opened at; the transaction
+  locks the case and compares it. A mismatch is `409 context_changed` and
+  nothing is saved; otherwise `context_revision` increments. New message
+  links (from `message_link` values and from links inside text answers) that
+  are not yet evidence get evidence rows and `capture_evidence` jobs,
+  subject to the per-case cap, in the same transaction. Existing evidence is
+  never removed. Moderation log `case_context_edited` (detail: changed field
+  keys). The receipt is bumped.
+- **Add evidence.** Adds 1–10 message links (§7.1) under the case lock. A
+  link already saved or being saved is reported as such; a link whose
+  earlier capture failed is captured again (state back to `saving`, new
+  job). Moderation log `evidence_added` (detail: count). The receipt is
+  bumped.
 
 ### 4.10 Reading cases
 
 Staff read by number (`/case view`, `GET …/cases/{case_ref}` where
 `case_ref` is a number, a UUID, or a legacy ULID mapped as in §19.3).
-Members read their own case by UUID or legacy ULID.
+Members read their own case by UUID or legacy ULID only: case numbers are
+per server, and member routes have no server in the path.
 
 | Field | Staff view | Member view |
 | --- | --- | --- |
@@ -778,27 +914,61 @@ Members read their own case by UUID or legacy ULID.
 | Action attempts, failure reasons, HTTP and Discord codes | yes | no (outcome sentence only) |
 | Undo actions and their outcomes | yes | yes (outcome sentence only) |
 | DM outcome | yes | yes ("Quack sent you a DM" / "couldn't" / "couldn't confirm") |
-| Case context (all fields, including message links) | yes | yes |
-| Evidence text, embeds summary, files | yes | yes, through the member file route |
-| Evidence author, original message link, channel | yes | no |
+| Case context | yes, every field | every field except `message_link` values, which show as `member.context.link_saved` |
+| Evidence text, embeds summary, files | yes | yes: text, embed type and title, file names, files through the member file route |
+| Evidence author, original message link, channel, embed URLs | yes | no |
 | Moderator | yes | no |
 | Source (`discord`, `dashboard`, `honeypot`, `imported`) | yes | no |
-| Replacement links | yes | yes (case numbers only) |
+| Replacement links | yes | yes, case numbers only, and only when both cases are about this member (§4.8) |
 | Appeal (state, statement, member replies, decision reasons) | yes | yes |
 | Who decided the appeal | yes | no |
 | Staff timeline (moderation log entries linked to the case) | yes | no |
 | Member timeline (§4.11) | yes | yes |
 
 Member reads never reveal whether a case exists in another member's name:
-a wrong owner and a missing case are both `404 not_found`.
+a wrong owner and a missing case are both `404 not_found`. Text that staff
+or members typed (reasons, context, statements) is shown as written and can
+itself mention people.
 
 ### 4.11 Member timeline
 
-Built from rows, never from the moderation log, so it carries no staff
-identity. Items, oldest first: case added (`created_at`); each action
-reaching a terminal state (its outcome sentence, `done_at` or `updated_at`);
-the case DM settling; each appeal event (kind and text, actor removed);
-case voided (`voided_at`, reason).
+Built from immutable rows, so history never changes when an action is
+retried or dismissed: the case row (added, voided with its reason), the
+`action_attempts` rows (each attempt that ended `done` or `no_change`, and
+each action's final failure from the moderation log entry `action_failed`),
+the settled DM (`dms.settled_at`), and the appeal events. Items are rendered
+with member-facing texts (§12.6, §12.7, §12.9) that never name staff.
+Oldest first; the API returns the newest 100 items and
+`timeline_truncated` when there are more.
+
+### 4.12 Locks
+
+Every transaction that changes moderation state takes its locks in this
+order, skipping the ones it does not need, so transactions never deadlock:
+
+1. `operation_keys` (the new row; blocks only a concurrent request with the
+   same key)
+2. `guild_settings` (rule creation, import, restore; settings writes)
+3. Module settings rows (`honeypot_settings`, `ticket_settings`,
+   `activity_log_settings`)
+4. `case_counters` (case creation)
+5. `rules` (`FOR SHARE` for case creation; `FOR UPDATE` for edit, archive,
+   restore)
+6. The member advisory lock `pg_advisory_xact_lock` (action starts only,
+   §5.4)
+7. `cases` (`FOR UPDATE`; when one transaction locks several, in ascending
+   `id` order)
+8. The case's children: `actions`, `dms`, `appeals`, `evidence`
+9. `messages` (bumps)
+10. `jobs` (enqueue upserts, and a handler's own fence and settle, which
+    are always its transaction's last statements, §16.1)
+
+The case row is the single lock point for a case: creating or settling an
+action attempt, sending a case DM, voiding, every appeal transition, context
+edits, and evidence admission all lock it first, then re-check the state
+they depend on. All locks are transaction-scoped; nothing holds a lock while
+calling Discord. A transaction that fails with a serialization failure or
+deadlock is retried up to 3 times when it touches only the database.
 
 ---
 
@@ -811,179 +981,246 @@ has no undo.
 
 ### 5.1 Kinds
 
-| `action_kind` | Purpose | Discord call | Permission | Done when |
+Every attempt first reads the Discord state it is about to change, inside
+the member-serialized section (§5.4), and acts only when the change is
+still needed. Reads use REST, never a cache.
+
+| `action_kind` | Purpose | Reads first | Then | Permission |
 | --- | --- | --- | --- | --- |
-| `timeout` | original | `PATCH /guilds/{g}/members/{m}` `communication_disabled_until = timeout_ends_at` | Moderate Members | 2xx. |
-| `kick` | original | `DELETE /guilds/{g}/members/{m}` | Kick Members | 2xx, or 404 Unknown Member (10007): the member already left. |
-| `ban` | original | `PUT /guilds/{g}/bans/{m}` `delete_message_seconds` | Ban Members | 2xx (also when already banned). |
-| `remove_timeout` | undo of `timeout` | `PATCH /guilds/{g}/members/{m}` `communication_disabled_until = null` | Moderate Members | 2xx, or 404 Unknown Member: nothing to remove. |
-| `unban` | undo of `ban` | `DELETE /guilds/{g}/bans/{m}` | Ban Members | 2xx, or 404 Unknown Ban (10026): nothing to undo. |
+| `timeout` | original | `GET /guilds/{g}/members/{m}` | Absent → `failed` (`member_not_in_server`). Administrator → `failed` (`member_is_administrator`). A current timeout ending at or after `timeout_ends_at` → `done` (`no_change`): Quack never shortens a timeout. Otherwise `PATCH /guilds/{g}/members/{m}` `communication_disabled_until = timeout_ends_at`. | Moderate Members |
+| `kick` | original | `GET /guilds/{g}/members/{m}` | Absent, or a `joined_at` later than `cases.member_joined_at` (they left and rejoined, which is a new membership; for an imported case, whose join time is unknown, later than the case's `created_at`) → `done` (`no_change`, "already left the server"). Otherwise `DELETE /guilds/{g}/members/{m}`; 404 Unknown Member → `done` (`no_change`). | Kick Members |
+| `ban` | original | `GET /guilds/{g}/bans/{m}` | A ban exists → `done`; `no_change` unless its reason carries this case's marker (then an earlier attempt of this action placed it). Otherwise `PUT /guilds/{g}/bans/{m}` with `delete_message_seconds`. Message deletion therefore happens at most once. | Ban Members |
+| `remove_timeout` | undo of `timeout` | the guard, then `GET /guilds/{g}/members/{m}` | §5.6. | Moderate Members |
+| `unban` | undo of `ban` | the guard, then `GET /guilds/{g}/bans/{m}` | §5.6. | Ban Members |
 
-Every call sends `X-Audit-Log-Reason: Quack case #<n>: <rule name>` truncated
-to 512 characters (undo: `Quack case #<n> voided`).
+Every mutating call sends `X-Audit-Log-Reason`. For originals it is the
+**case marker** `Quack case #<n>: <rule name>`, cut to 512 characters; for
+undos, `Quack case #<n> voided`. Discord stores the ban's reason, so
+`quack_core::action::parse_case_marker(reason) -> Option<u64>` (the number
+after a leading `Quack case #`) tells which case placed a ban.
 
-### 5.2 Fixed timeout end and idempotency
+### 5.2 Idempotency and "may have applied"
 
-- `timeout_ends_at = cases.created_at + timeout_seconds`, fixed at creation
-  and sent unchanged on every attempt. Repeating the call converges on the
-  same state.
-- A ban repeated is still one ban. An unban of a member who is not banned is
-  done. A kick of a member who already left is done. A timeout removal for a
-  member who is not timed out is done.
-- Therefore an attempt whose result is unknown (crash, timeout, 5xx,
-  connection reset) is retried. No action is ever parked for review because
-  its outcome is uncertain.
+- `timeout_ends_at = cases.created_at + timeout_seconds`, truncated to whole
+  seconds, fixed at creation, and sent unchanged on every attempt. Discord's
+  `communication_disabled_until` is compared at whole-second precision.
+- A kick acts only on the membership the case was about (§4.4).
+- A ban is placed only when no ban exists; an unban or timeout removal acts
+  only on a ban or timeout Quack can show is this case's (§5.6).
+- Therefore an attempt whose result is unknown (crash, deadline, 5xx,
+  connection reset) is simply retried: the retry reads Discord first. No
+  action is parked for review because its outcome was uncertain.
+
+An attempt **may have applied** when it is still open (`finished_at` NULL)
+or ended `done`, `unknown`, or `interrupted`.
+`quack_core::action::may_have_applied(&[AttemptOutcome])` is this rule; the
+void (§4.7) and the failure reason (§5.5) use it.
 
 ### 5.3 States
 
 | `action_state` | Outcome shown | Meaning |
 | --- | --- | --- |
 | `pending` | in progress | Waiting for its first attempt or for the next retry (`next_attempt_at`). |
-| `running` | in progress | An attempt has started and has not settled. |
-| `done` | done | Discord confirmed the change, or the desired state already held. |
+| `running` | in progress | An attempt has started (its `action_attempts` row is open) and has not settled. |
+| `done` | done | Discord confirmed the change, or the desired state already held (`no_change`). |
 | `failed` | failed | A definite refusal, or the retry budget ran out. `failure_reason` says which. |
-| `cancelled` | cancelled | An original action whose case was voided before it started. |
-| `skipped` | left in place | An undo that did not run because another valid case still applies (`skipped_because_case_id`). |
+| `cancelled` | cancelled | An original action that will not run (again) because its case was voided. Originals only. |
+| `skipped` | left in place | An undo that did not change Discord; `skip_reason` says why (§5.6). Undos only. |
 
 Transition table (`quack_core::action::transition(state, event)`; any pair
-not listed is rejected as `InvalidTransition`):
+not listed is rejected as `InvalidTransition`). "Start" and "settle" are the
+two transactions of §5.4.
 
 | From | Event | To | Side effects (same transaction) |
 | --- | --- | --- | --- |
-| (none) | Case created with an action / undo requested | `pending` | Insert `run_action` job (except kick/ban waiting for the DM, §6.3). |
-| `pending` | Claimed; checks pass; attempt recorded | `running` | Insert `action_attempts` row (`finished_at` NULL). |
-| `pending` | Claimed; original action and case voided | `cancelled` | Bump receipt. |
-| `pending` | Claimed; undo guard finds another valid case (§5.6) | `skipped` | `skipped_because_case_id`; log `action_undo_skipped`; bump receipt. |
-| `pending` | Claimed; Quack-side pre-check refuses (§5.4 step 6) | `failed` | `failure_reason`; log `action_failed`; bump receipt. |
-| `pending` | Claimed; timeout window passed | `failed` | `failure_reason = timeout_window_passed`; log; bump. |
-| `pending` | Case voided (§4.7) | `cancelled` | Original actions only. |
-| `running` | Attempt `done` or `no_change` | `done` | `done_at`; log `action_done`; bump; if original and case now voided, queue the undo (§4.7 step 5). |
-| `running` | Attempt `refused` | `failed` | `failure_reason` from §5.5; log `action_failed`; bump. |
-| `running` | Attempt `unknown`, `rate_limited`, or `interrupted`, attempts left | `pending` | `next_attempt_at`; job rescheduled (§5.7). |
-| `running` | Same, no attempts left | `failed` | `failure_reason = retries_exhausted`; log; bump. |
-| `running` | Attempt not `done`, original action, case now voided | `cancelled` | Bump. |
-| `failed` | Staff retry (§5.8) | `pending` | Clear `failure_reason`; new job with a fresh budget; log `action_retry_requested`; bump. |
+| (none) | Case created with an action / undo requested | `pending` | Insert the `run_action` job. |
+| `pending` | Start: original whose case is voided | `cancelled` | Bump receipt. |
+| `pending` | Start: undo guard finds another valid case's action in force (§5.6) | `skipped` | `skip_reason = other_case_applies`, `skipped_because_case_id`; log `action_undo_skipped`; bump. |
+| `pending` | Start: Quack-side pre-check refuses (§5.4) | `failed` | `failure_reason`; log `action_failed`; bump. |
+| `pending` | Start: timeout end has passed | `failed` | `failure_reason = timeout_window_passed`; log; bump. |
+| `pending` | Start: checks pass | `running` | Insert the open `action_attempts` row; `attempts + 1`; `last_attempt_at`. |
+| `pending` | Case voided (original) | `cancelled` | §4.7. |
+| `running` | Settle: attempt `done` or `no_change` | `done` | `done_at`, `no_change`; log `action_done`; bump. |
+| `running` | Settle: undo found the timeout or ban changed outside this case | `skipped` | `skip_reason = changed_outside_case`; log `action_undo_skipped`; bump. |
+| `running` | Settle: attempt `refused` | `failed` | `failure_reason` from §5.5 with its details; log `action_failed`; bump. |
+| `running` | Settle: original not `done`, case now voided | `cancelled` | Bump. |
+| `running` | Settle: attempt `not_sent`, `unknown`, or `interrupted`, attempts left | `pending` | `next_attempt_at` (§5.7). |
+| `running` | Settle: same, no attempts left | `failed` | `failure_reason = unconfirmed` when any attempt in this round may have applied, else `retries_exhausted`; log; bump. |
+| `failed` | Staff retry (§5.8) | `pending` | Clear every failure field (`failure_reason`, `failure_permission`, `failure_http_status`, `failure_discord_code`); `attempts = 0` (new round); new job; log `action_retry_requested`; bump. |
 | `failed` | Staff dismiss | `failed` | `dismissed_at`, `dismissed_by`; log `action_dismissed`; bump. |
 
 `done`, `cancelled`, and `skipped` are terminal. `failed` is terminal unless
-staff retry it.
+staff retry it. The settle rows are tried in the order listed.
 
 ### 5.4 Running an attempt
 
-The `run_action` job handler (`quack_engine::actions::run`):
+The `run_action` job handler (`quack_engine::actions::run`). Facts that
+need Discord (the guild's owner, Quack's roles and permissions, the
+member's cached roles) are gathered before any transaction.
 
-1. **Serialize per member.** Take a session advisory lock on a dedicated
-   pooled connection: `SELECT pg_try_advisory_lock(hashtextextended('member:' || $guild || ':' || $member, 0))`.
-   Not acquired → return `Defer(1 s)` (no attempt consumed). All actions for
-   one (server, member) therefore run one at a time across workers. The
-   lock is released after step 10 or when the connection drops.
-2. Load the action and its case. A terminal state → `Done` (idempotent
-   re-delivery).
-3. An attempt row with `finished_at IS NULL` belongs to an attempt that
-   crashed: set its outcome to `interrupted` and `finished_at = now()`.
-4. Original action on a voided case → `cancelled`.
-5. Undo action → run the guard (§5.6); another case applies → `skipped`.
-6. **Quack-side pre-check** from `ApplyFacts` (cache, REST fallback):
-   Quack in the server (`quack_not_in_server`), Quack holds the permission
-   (`quack_missing_permission`), the member is not the owner
-   (`member_is_owner`), for timeout the member is in the server
-   (`member_not_in_server`) and does not have Administrator
-   (`member_is_administrator`), and when the member is present, the member's
-   highest role is below Quack's (`quack_role_too_low`; not checked for
-   `unban`). A refusal fails the action without calling Discord.
-7. Timeout: `now() >= timeout_ends_at - 5 s` → `failed`
-   (`timeout_window_passed`).
-8. Record the attempt (short transaction): state `running`,
-   `attempts = attempts + 1`, `last_attempt_at`, insert `action_attempts`
-   with `started_at`.
-9. Call Discord through the `Discord` port with a 10-second deadline
-   (§17.3). The port returns `Outcome<()>`.
-10. Settle (one transaction, guarded by `state = 'running'`): finish the
-    attempt row, apply the transition from §5.3, write the log entry, bump
-    the receipt, and return the job result.
+1. **Start** (one short transaction, locks in the §4.12 order):
+   1. `SELECT pg_advisory_xact_lock(hashtextextended('member:' || $guild || ':' || $member, 0))`.
+      The lock lasts until this transaction ends, so nothing leaks if the
+      handler stops.
+   2. Lock the case, then the action (`FOR UPDATE`). (The job's fence runs
+      as this transaction's last statement, §16.1.)
+   3. Terminal state → finish the job (`Done`).
+   4. An open attempt row means an earlier run stopped mid-attempt: settle
+      it as `interrupted` through the normal settle rows (§5.3), then
+      continue only if the action is now `pending` and due.
+   5. `pending` with `next_attempt_at` in the future → `Retry` at that time.
+   6. Another action of this member is `running` → `Defer(2 s)`. Together
+      with step 1 this serializes all attempts for one (server, member): an
+      undo never runs while an original's attempt is in flight.
+   7. Kick or ban whose case DM is still `pending` or `sending`, less than
+      120 s after the case was created → `Defer` until then (§6.3).
+   8. Apply the start rows of §5.3: voided case (original), the undo guard
+      (§5.6), the timeout end (`now() >= timeout_ends_at`), and the
+      Quack-side pre-check: Quack in the server (`quack_not_in_server`),
+      Quack holds the permission (`quack_missing_permission`), the member is
+      not the owner (`member_is_owner`), and, when the member is in the
+      server, their highest role is below Quack's (`quack_role_too_low`; not
+      checked for `unban`).
+   9. Otherwise open the attempt (`running`) and commit. The commit is the
+      logical start: a void that commits later finds the action `running`.
+2. **Read and act** (no locks; each Discord call has a 10-second deadline):
+   the reads and calls of §5.1.
+3. **Settle** (one short transaction): lock the case, then the action;
+   check `state = 'running'` and that the open attempt is the one this run
+   started (its number); the job's fence runs last. Any mismatch rolls back:
+   the attempt was already settled by whoever holds the job now. Otherwise
+   finish the attempt row, apply the settle row of §5.3, write the log
+   entry, bump the receipt, and settle the job, all in this transaction.
 
-Metrics: `quack.action.attempts{kind,outcome,reason}`; on `done`,
-`quack.action.time_to_done{kind}` (from case creation); on retry,
-`quack.action.retries{kind}`; on `skipped`, `quack.action.undo.skipped{kind}`.
+A timeout `PATCH` that Discord refuses after `timeout_ends_at` has passed is
+recorded as `timeout_window_passed`, not `discord_refused`.
+
+Metrics: `quack.action.attempts{quack.action.kind,quack.action.attempt.outcome,quack.reason}`;
+on reaching a terminal state `quack.actions.finished`; on `done`,
+`quack.action.completion.duration` (from case creation, or from the undo
+request); on a scheduled retry, `quack.action.retries`; on `skipped`,
+`quack.action.undo.skipped`. Span event `action.attempt`.
 
 ### 5.5 Attempt outcomes and failure reasons
 
-| Port outcome | `attempt_outcome` | Next |
+| Result of the attempt | `attempt_outcome` | Next |
 | --- | --- | --- |
-| `Done` | `done` | `done` |
-| `Refused` with Unknown Member (kick, remove timeout) or Unknown Ban (unban): the desired state already holds (§5.1) | `no_change` | `done` |
-| `Refused(r)` | `refused` | `failed` with the reason below |
-| `RetryAfter(d)` | `rate_limited` | retry at `max(d, backoff)` |
-| `Unknown(c)` | `unknown` | retry with backoff |
-| crash detected in step 3 | `interrupted` | retry with backoff |
+| The change call returned `Done` | `done` | `done` |
+| The read showed the desired state already holds, or Unknown Member / Unknown Ban on the change call where §5.1 says so | `no_change` | `done` |
+| The undo read showed a timeout or ban that is not this case's (§5.6) | `no_change` | `skipped` (`changed_outside_case`) |
+| `Refused(r)` on a read or the change call (other than the cases above) | `refused` | `failed` with the reason below |
+| A read failed, or `RetryAfter(d)` before the change call was sent: Discord changed nothing | `not_sent` | retry at `max(d, backoff)` |
+| `Unknown(c)` on the change call | `unknown` | retry with backoff |
+| Found open by the next run (§5.4 step 1.4) | `interrupted` | retry with backoff |
 
 `action_failure` (typed enum `ActionFailure`; message ids in §12.6):
 
 | Value | When |
 | --- | --- |
 | `quack_not_in_server` | Pre-check, or Discord 404 Unknown Guild (10004). |
-| `quack_missing_permission` | Pre-check. Carries the permission name. |
+| `quack_missing_permission` | Pre-check. Carries the permission. |
 | `quack_role_too_low` | Pre-check. |
 | `member_is_owner` | Pre-check. |
-| `member_not_in_server` | Timeout pre-check, or 404 Unknown Member on a timeout. |
-| `member_is_administrator` | Timeout pre-check: Discord never times out a member with Administrator. |
-| `timeout_window_passed` | §5.4 step 7. |
-| `discord_refused` | Any other 4xx except 429, including 403 Missing Permissions (50013) after the pre-check passed (a stale cache). Carries HTTP status and Discord error code. |
-| `retries_exhausted` | The budget ran out on `unknown`, `rate_limited`, or `interrupted` attempts. |
+| `member_not_in_server` | Timeout: the read found the member absent. |
+| `member_is_administrator` | Timeout: the member has Administrator, and Discord never times out administrators. |
+| `timeout_window_passed` | The timeout's end passed before Discord applied it (§5.4). |
+| `discord_refused` | Any other 4xx except 429, including 403 Missing Permissions (50013) after the pre-check passed (stale facts). Carries HTTP status and Discord error code. |
+| `retries_exhausted` | The round's budget ran out and no attempt may have applied (every one was `not_sent`): Discord definitely did not apply it. |
+| `unconfirmed` | The round's budget ran out and at least one attempt may have applied, or the importer found an attempt in flight (§19.9). Quack can't tell whether Discord applied it. |
 
-### 5.6 The undo guard
+### 5.6 The undo guard and provenance
 
-Inside the member-serialized section, before an undo action calls Discord:
+An undo changes Discord only when Discord still shows this case's effect and
+no other valid case wants it. Two checks, in order:
 
-```sql
-SELECT c.id, c.number
-FROM actions a JOIN cases c ON c.guild_id = a.guild_id AND c.id = a.case_id
-WHERE a.guild_id = $1 AND a.member_id = $2
-  AND a.kind = $3                        -- 'timeout' for remove_timeout, 'ban' for unban
-  AND a.case_id <> $4                    -- the undo's own case
-  AND c.voided_at IS NULL
-  AND a.state IN ('pending', 'running', 'done')
-  AND (a.kind <> 'timeout' OR a.timeout_ends_at > now())
-  AND NOT EXISTS (SELECT 1 FROM actions u WHERE u.undo_of_action_id = a.id AND u.state = 'done')
-ORDER BY c.number DESC LIMIT 1;
-```
+1. **Guard** (start transaction, under the member and case locks):
 
-A row means another valid case still applies: the undo becomes `skipped`
-with `skipped_because_case_id`, logged as `action_undo_skipped`, shown as
-"left in place because case #N still applies". Uses index `actions_member`.
+   ```sql
+   SELECT c.id, c.number
+   FROM actions a JOIN cases c ON c.guild_id = a.guild_id AND c.id = a.case_id
+   WHERE a.guild_id = $1 AND a.member_id = $2
+     AND a.kind = $3                        -- 'timeout' for remove_timeout, 'ban' for unban
+     AND a.case_id <> $4                    -- the undo's own case
+     AND c.voided_at IS NULL
+     AND a.state = 'done'
+     AND (a.kind <> 'timeout' OR a.timeout_ends_at > now())
+   ORDER BY c.number DESC LIMIT 1;
+   ```
+
+   A row means another valid case's timeout or ban is in force: the undo
+   becomes `skipped` (`other_case_applies`, `skipped_because_case_id`), shown
+   as "left in place because case #N still applies". Only `done` actions
+   count: a competing action that has not started will apply after the
+   undo, and one in flight makes the undo wait (§5.4 step 1.6). Uses index
+   `actions_member`.
+2. **Provenance** (after start, from the REST read):
+   - `remove_timeout`: no current timeout, or one that has ended → `done`
+     (`no_change`). A timeout whose end differs from this case's
+     `timeout_ends_at` → `skipped` (`changed_outside_case`): someone set a
+     different timeout, so Quack leaves it. Equal → `PATCH …
+     communication_disabled_until = null`.
+   - `unban`: no ban (404 Unknown Ban) → `done` (`no_change`). A ban whose
+     reason's case marker names a **voided** case of this member in this
+     server that has a ban action → `DELETE /guilds/{g}/bans/{m}`.
+     Otherwise (no marker, or a valid case) → `skipped`
+     (`changed_outside_case`). Any voided case's marker is accepted, not
+     only this case's, because Discord does not document whether banning an
+     already-banned member replaces the stored reason; with the guard, a
+     ban placed by Quack for a case that no longer counts is Quack's to
+     remove.
+
+A skipped undo is terminal. Nothing is lost: if the case that still applied
+is voided later, its own undo removes the timeout or ban, because that case
+now owns what Discord shows. A `changed_outside_case` undo is reported so a
+moderator can check the member in Discord.
 
 ### 5.7 Retry policy
 
-- Budget: 8 attempts per job (one first try plus seven retries).
+- Budget: 8 attempts per round (one first try plus seven retries). A staff
+  retry starts a new round with a fresh budget; `action_attempts.number`
+  keeps counting across rounds.
 - Backoff after attempt n (n = 1…7): 5 s, 15 s, 1 min, 5 min, 15 min,
   1 h, 3 h. Total ≈ 4 h 36 min.
 - `RetryAfter(d)`: the next attempt waits `max(d, backoff)`.
-- A `Defer` (lock busy) does not consume an attempt.
-- A staff retry creates a new job with a fresh budget; `actions.attempts`
-  keeps counting across budgets.
+- A `Defer` (member busy, waiting for a DM) does not consume an attempt.
 
 ### 5.8 Staff controls
 
-| Control | Allowed when | Effect |
-| --- | --- | --- |
-| Retry | `failed`, not dismissed. Original: case valid, reason not `timeout_window_passed`, retrying moderator passes member checks 2, 4, 6, 7 (and 3 for timeout). | `pending` + fresh job. |
-| Dismiss | `failed`, not dismissed. | Sets `dismissed_at`; the action leaves the "Actions that need review" list; history kept. |
-| Undo (remove timeout / unban) | Original `done`, kind timeout or ban, no undo yet. Timeout: end time in the future. | New undo action `pending` + job, `requested_by` = staff. The guard still applies. |
+`quack_core::action::controls(action, original, case, now) -> Controls`
+decides which controls an action offers. Card and log-channel buttons are
+rendered from it, and the write re-evaluates it inside its transaction
+after locking the case and the action.
 
-Refusals: `409 action_not_retryable` (wrong state or dismissed), `409
-case_voided` (retry of an original on a voided case),
-`422 timeout_window_passed`, `409 action_not_undoable`.
+| Control | Allowed when | Actor checks (fresh facts) | Effect |
+| --- | --- | --- | --- |
+| Retry | `failed`, not dismissed. Original: case valid, reason not `timeout_window_passed`, and for a timeout `timeout_ends_at` in the future. Undo: always (its case is voided by definition). | Original: member checks 2, 4, 6, 7 with the retrying moderator as actor (and 3 for a timeout). Remove timeout: check 7 when the member is in the server. Unban: none (the member is usually absent). | New round: `pending` + job. |
+| Dismiss | `failed`, not dismissed. | none | Sets `dismissed_at`; the action leaves the failed-actions list; history kept. |
+| Undo (remove timeout / unban) | Original `done`, kind timeout or ban, no undo exists. Timeout: end in the future. | Remove timeout: check 7 when the member is in the server. | New undo action `pending` + job, `requested_by` = staff. §5.6 still applies. |
+
+Refusals (each a typed outcome): `404 action_not_found` (no such action in
+this server), `409 action_not_retryable`, `409 action_not_dismissable`, `409
+case_voided` (retry of an original on a voided case), `422
+timeout_window_passed`, `409 action_not_undoable`, and the member refusal
+for a failed actor check.
+
+Buttons carry the action ID and are labelled with its kind ("Retry ban",
+"Dismiss unban"), so a card with a failed original and a failed undo is
+never ambiguous. Staff find every failed action on the dashboard's failed
+actions page (`/guilds/{guild_id}/failures`); the staff card of a case
+with a failed action links there, and the log channel's `action_failed`
+post carries a Retry button (§9.4).
 
 ### 5.9 What a void does at each action state
 
 | Original action state | On void |
 | --- | --- |
-| `pending` | `cancelled`. Never starts. |
-| `running` | Left to finish. If it ends `done`, the undo is queued in the settle transaction; otherwise it ends `cancelled`. |
-| `done` (timeout, end in the future; or ban) | Undo action queued. |
-| `done` (timeout already ended; or kick) | Nothing. |
-| `failed` | Stays `failed`; retry is refused because the case is voided. |
-| `cancelled`, `skipped` | Nothing. |
+| `pending`, no attempt may have applied | `cancelled`. Never starts. |
+| `pending` after an attempt that may have applied | `cancelled`; for a timeout or ban, the undo is queued. |
+| `running` | Left to settle: `done`, or `cancelled` otherwise. For a timeout or ban, the undo is queued now and runs after the attempt settles. |
+| `done` (ban; or timeout with its end in the future) | Undo queued. |
+| `done` (timeout already ended; or kick) | Nothing. A kick can't be undone. |
+| `failed` | Stays `failed`; retry is refused because the case is voided. For a timeout or ban, the undo is queued when an attempt may have applied. |
+| `cancelled` | Nothing. |
 
 | Undo action state | On void of its own case | On void of another case |
 | --- | --- | --- |
@@ -994,15 +1231,16 @@ case_voided` (retry of an original on a voided case),
 ## 6. DMs
 
 A DM is one direct message from Quack to a member. Each DM is a `dms` row
-with its own outcome and is sent **at most once**.
+with its own outcome and is sent **at most once**: a DM whose result Quack
+never learned is reported as "couldn't confirm" and never sent again.
 
 ### 6.1 Kinds
 
 | `dm_kind` | Created when | At most | Content |
 | --- | --- | --- | --- |
-| `case` | A case is created at a level with `send_dm` | one per case | `dm.case` (§12.8) |
-| `appeal_update` | A staff decision on an appeal (request information, accept, reject, close, reopen), or Quack closing the appeal because its case was voided | one per appeal event | `dm.appeal.*` (§12.8) |
-| `ticket_closed` | A ticket finishes closing | one per ticket | `dm.ticket_closed` (§12.13) |
+| `case` | A case is created at a level with `send_dm` | one per case | `dm.case` (§12.8), from the case row |
+| `appeal_update` | A staff decision on an appeal (request information, accept, reject, close, reopen), or Quack closing the appeal because its case was voided | one per appeal event | `dm.appeal.*` (§12.8), from that appeal event |
+| `ticket_closed` | A ticket finishes closing | one per ticket | `dm.ticket_closed` (§12.13) with the transcript file |
 
 A case whose level has no DM has no `dms` row; every view reports its DM as
 "not needed" (`dm.state.not_needed.level`).
@@ -1012,67 +1250,80 @@ A case whose level has no DM has no `dms` row; every view reports its DM as
 | `dm_state` | Outcome shown | Meaning |
 | --- | --- | --- |
 | `pending` | in progress | Not yet sent. |
-| `sending` | in progress | Recorded immediately before the create-message call. |
-| `sent` | done | Discord returned the message. `message_id` set. |
-| `failed` | failed | Discord definitely refused. `failure` set. |
-| `unknown` | couldn't confirm | The send started but Quack never learned the result (crash, deadline, repeated network error). Terminal: never sent again. |
-| `not_needed` | not needed | The case was voided before the DM was sent. |
+| `sending` | in progress | Quack opened the DM channel and recorded `first_attempt_at` before its first create call. |
+| `sent` | done | Discord returned the message. `channel_id` and `message_id` set. |
+| `failed` | failed | Discord definitely refused before any create call with an unknown result, or the DM channel could not be opened. `failure` set. |
+| `unknown` | couldn't confirm | A create call's result was never learned and the nonce window (§10.4) has ended. Terminal: never sent again. |
+| `not_needed` | not needed | The case was voided before sending started. |
 
 | From | Event | To | Side effects (same transaction) |
 | --- | --- | --- | --- |
 | (none) | Created (§6.1) | `pending` | `send_dm` job. |
-| `pending` | Case voided (case DMs only) | `not_needed` | Bump receipt. If a kick/ban waits on this DM, its action is already `cancelled` by the void. |
-| `pending` | Job: DM channel opened, about to send | `sending` | `attempted_at`, `channel_id`. |
-| `pending` | Job: opening the DM channel refused, or not opened after 3 attempts | `failed` | `failure`; log `dm_failed`; bump; release a waiting kick/ban. |
-| `sending` | Create-message `Done` | `sent` | `message_id`, `settled_at`; log `dm_sent`; bump; release a waiting kick/ban. |
-| `sending` | Create-message `Refused` | `failed` | `failure`; log `dm_failed`; bump; release. |
-| `sending` | Create-message `RetryAfter` longer than 10 s (Discord did nothing) | `pending` | Job retried after the delay. |
-| `sending` | Still `Unknown` after the in-job retry, or the job finds the row already `sending` (a crash) | `unknown` | log `dm_failed` (detail `unknown`); bump; release. |
+| `pending` | Case voided (case DMs only) | `not_needed` | Bump receipt. |
+| `pending` | Start: DM channel opened; for a case DM, the case is valid (checked under the case lock) | `sending` | `channel_id`, `first_attempt_at`. Committed before the first create call. |
+| `pending` | Opening the DM channel refused | `failed` | `failure`; log `dm_failed`; bump; wake a waiting kick or ban. |
+| `pending` | Budget spent while still `pending` (never sent) | `failed` | `failure = discord_unavailable`; log; bump; wake. |
+| `sending` | Create `Done` | `sent` | `message_id`, `settled_at`; log `dm_sent`; bump; wake. |
+| `sending` | Create `Refused`, and no create call of this DM had an unknown result | `failed` | `failure`; log `dm_failed`; bump; wake. |
+| `sending` | Create `RetryAfter` that does not fit in the window, and no create call had an unknown result | `pending` | Nothing was sent: the job retries after the delay. |
+| `sending` | The window ended after a create call with an unknown result, or a create was refused after one; or a run finds the DM `sending` after the window | `unknown` | Log `dm_failed` (`unknown`); bump; wake. |
 
-"Release a waiting kick/ban" means: if this is a case DM and the case's
-original action is a kick or ban in state `pending` with no job, insert its
-`run_action` job in the same transaction.
+"Wake a waiting kick or ban" means: if this is a case DM and the case's
+original action is a kick or ban in `pending`, move its `run_action` job's
+`run_at` to now (§6.3). Every terminal transition, including the job's
+finalization (§16.1), does this in its own transaction.
 
 ### 6.3 Ordering with kick and ban
 
 For kick and ban the DM goes **before** the action so the member can still
 receive it (after a kick or ban they often share no server with Quack). The
-case transaction enqueues only `send_dm`; the DM job enqueues `run_action`
-when the DM reaches any terminal state. A DM failure never blocks the
-action. For timeouts and warnings both jobs are enqueued at once and run
-independently. The DM job makes at most three Discord calls with a
-10-second deadline each, so a kick or ban normally waits a second or two and
-at most about 35 seconds plus queue delay.
+case transaction enqueues the action's job with `run_at = created_at +
+120 s`; the DM's terminal transition moves it to now. The action's start
+(§5.4) waits while the DM is `pending` or `sending`, but never past those
+120 seconds, so a slow or stuck DM delays a kick or ban by at most two
+minutes. A DM failure never blocks the action. For timeouts and warnings
+both jobs are enqueued at once and run independently.
 
-The DM describes the case's decision ("What happens: you're banned from the
-server"), not the action's later outcome, so it is correct whichever order
-the two finish in.
+Every DM describes the case's **decision** ("The moderators decided to ban
+you from the server"), not the action's later outcome, so it is correct
+whichever order the two finish in and whether or not the action succeeds.
+The member's case page shows the action's actual outcome.
 
 ### 6.4 Sending
 
 The `send_dm` handler (`quack_engine::dms::send`):
 
 1. Load the row. Terminal state → `Done`.
-2. Row is `sending` → a previous attempt crashed after it started: set
-   `unknown` (§6.2) and finish. Quack never resends.
-3. Case DMs: case voided → `not_needed`.
-4. `open_dm(member_id)` (`POST /users/@me/channels`, idempotent). `Refused` →
-   `failed` with the reason from §6.5. `Unknown` or `RetryAfter` → retry the
-   job (budget 3 attempts, backoff 5 s, 30 s). Nothing was sent yet, so on
-   exhaustion the DM becomes `failed` with `dm_channel_unavailable`.
-5. Mark `sending` (short transaction).
-6. Render the DM from current data (§12.8) and call `send(channel, msg,
-   files, nonce)` (§17.3) with `enforce_nonce = true`. The nonce is the DM ID as 22
-   characters of base64url, so a repeat within Discord's nonce window returns
-   the first message instead of creating a second one.
-7. `Unknown` → wait 2 s and repeat step 6 once with the same nonce.
-   `RetryAfter(d)` with `d ≤ 10 s` → wait `d` and repeat step 6 (at most
-   twice); with `d > 10 s` → back to `pending` and retry the job after `d`
-   (nothing was sent). Anything else settles.
-8. Settle per §6.2.
+2. `pending`: `open_dm(member_id)` (`POST /users/@me/channels`, which is
+   idempotent). `Refused` → `failed` with the reason from §6.5. `Unknown` or
+   `RetryAfter` → retry the job (budget 3 attempts, backoff 5 s, 30 s).
+   Then the start transaction: lock the case (case DMs), then the DM; case
+   DM on a voided case → `not_needed`; otherwise `sending` with `channel_id`
+   and `first_attempt_at = now()`; the job's fence (§16.1); commit.
+3. `sending`: if `now() >= first_attempt_at + 60 s` (the window, §10.4) →
+   `unknown`. Otherwise send.
+4. Render the DM from its own record (the case row for `case`, the appeal
+   event for `appeal_update`, the ticket and transcript for
+   `ticket_closed`) and call `send(channel, msg, files, nonce)` with
+   `enforce_nonce = true`. The nonce is the DM ID as 22 characters of
+   base64url and never changes, so a repeat inside the window returns the
+   first message instead of creating a second one.
+5. Results, while inside the window: `Done` → `sent`. `Unknown` → remember
+   that a create may have succeeded, wait 2 s, repeat step 4. `RetryAfter(d)`
+   → wait `d` and repeat if that still fits in the window. `Refused` →
+   `failed` when no create so far was unknown, else `unknown`. When the
+   window would be exceeded: `unknown` if any create was unknown, else back
+   to `pending` with the job retried after `d`.
+6. Settle per §6.2 in one transaction with the job (§16.1).
 
-Metrics: `quack.dm.outcomes{kind,state,reason}`,
-`quack.dm.send.duration{kind}`. Span event `dm.outcome`.
+The handler's deadline (§16.5) is longer than the window, so a run never
+stops mid-window on its own. A run that crashes leaves the DM `sending`; the
+next run resumes it with the same nonce while the window lasts and settles
+`unknown` after it.
+
+Metrics: `quack.dm.outcomes{quack.dm.kind,quack.dm.outcome,quack.reason}`,
+`quack.dm.send.duration{quack.dm.kind}` (from opening the DM channel to the
+settle). Span event `dm.outcome`.
 
 ### 6.5 Failure reasons
 
@@ -1080,10 +1331,10 @@ Metrics: `quack.dm.outcomes{kind,state,reason}`,
 
 | Value | Discord answer | Sentence fragment (§12.7) |
 | --- | --- | --- |
-| `dms_closed` | 403 Cannot send messages to this user (50007) while the member is in the server | "because their DMs are closed or they blocked Quack" |
-| `not_in_shared_server` | 50007 while the member is not in the server, or 50278 (no mutual servers) | "because they no longer share a server with Quack" |
-| `dm_channel_unavailable` | Opening the DM channel failed three times without a definite answer | "because Discord didn't open a DM channel" |
-| `discord_refused` | Any other 4xx except 429 | "because Discord refused the message (error {code})" |
+| `dms_closed` | 403 Cannot send messages to this user (50007) | "because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack)" |
+| `not_in_shared_server` | 50278 (no mutual servers) | "because they no longer share a server with Quack" |
+| `discord_unavailable` | The DM channel could not be opened, or Discord kept rate limiting, within the budget, and nothing was sent | "because Discord wasn't available" |
+| `discord_refused` | Any other 4xx except 429 | "because Discord refused the message" |
 
 ### 6.6 What a case DM contains
 
@@ -1094,7 +1345,8 @@ the decided action (timeout end time as a Discord timestamp); the case
 number and time; appeal instructions with an **Appeal** button and an
 **Open in dashboard** link when the case is appealable, or "This case can't
 be appealed."; the server's DM footer (if set). It never contains evidence,
-the moderator's identity, or internal details.
+the moderator's identity, or internal details. The member's case page on
+the dashboard shows the same facts, plus the action's outcome.
 
 ---
 
@@ -1109,43 +1361,60 @@ never waits on Discord fetches or file copies.
 | Source | Added by |
 | --- | --- |
 | The message an "Add case" message command was used on | The case transaction |
-| `message_link` context values | The case transaction, and context edits |
+| `message_link` context values, and message links inside text answers (§4.6) | The case transaction, and context edits |
 | Links given when creating a case on the dashboard | The case transaction |
 | "Add evidence" (Discord button, dashboard) | Its own transaction, 1–10 links per call |
 
-- A link must point into this server (§4.6 `message_link` rules); otherwise
-  `other_server`.
-- One evidence row per `(case_id, message_id)`; adding the same message
-  again is a no-op that reports "already saved".
-- At most 50 evidence rows and 100 files per case. Links beyond the cap are
-  refused before any write (`422 evidence_limit_reached`).
+- An explicit link must point into this server (§4.6 `message_link` rules);
+  otherwise `other_server`.
+- One evidence row per `(case_id, message_id)`. Adding a message that is
+  `saving` or `saved` again reports "already saved"; adding one whose
+  capture `failed` captures it again (state back to `saving`, new job).
+- At most 50 evidence rows per case, counted under the case lock in the
+  transaction that adds them. A request that would exceed it is refused
+  before any write (`422 evidence_limit_reached`, also for case creation
+  with more than 50 sources).
 - Each row starts `saving` with a `capture_evidence` job keyed
-  `evidence:<evidence_id>`. Views show "Saving evidence…" until it settles.
+  `capture_evidence:<evidence_id>`. Views show "Saving evidence…" until it
+  settles.
 
 ### 7.2 The capture job
 
 `quack_engine::evidence::capture`:
 
 1. Load the row; terminal state → `Done`.
-2. If `added_by` is a staff member (not Quack), check from the gateway cache
-   that they can read the channel (View Channel and Read Message History,
-   computed with overwrites; threads use the parent channel and private
-   threads also need thread membership or Manage Threads). No access →
-   `failed` (`moderator_no_access`).
+2. If `added_by` is a staff member (not Quack), check from current facts
+   (§2) that they can read the channel: View Channel and Read Message
+   History, computed with overwrites; threads use the parent channel;
+   private threads also need thread membership (`GET
+   /channels/{thread}/thread-members/{user}`; 404 means not a member) or
+   Manage Threads. No access → `failed` (`moderator_no_access`). Facts
+   unavailable → retry; access is never assumed.
 3. `fetch_message(channel_id, message_id)`. `Refused` 404 Unknown Message or
    Unknown Channel → `failed` (`message_deleted`); 403 → `failed`
-   (`quack_no_access`); the message's server differs → `failed` (`other_server`);
-   `Unknown`/`RetryAfter` → retry (budget 4, backoff 10 s, 1 min, 5 min).
-   Budget exhausted → `failed` (`discord_error`).
-4. Save the snapshot: author ID, content (first 4,000 characters), created
-   and edited times, up to 10 embeds as `{type, title, description, url}`
-   summaries (title ≤ 256, description ≤ 1,000 characters), and up to 10
-   files as `evidence_files` rows (filename, content type, size, original
-   URL). More than 10 files → the rest are recorded with copy state
-   `limit_reached`. The per-case file cap (100) also yields `limit_reached`.
-5. Copy files (§7.3).
-6. Set `saved` and `saved_at`; bump the receipt. Metric
-   `quack.evidence.captures{outcome}`.
+   (`quack_no_access`); the message's server differs → `failed`
+   (`other_server`); `Unknown`/`RetryAfter` → retry (budget 4, backoff 10 s,
+   1 min, 5 min). Budget exhausted → `failed` (`discord_error`).
+4. **Save the snapshot** (one transaction: lock the case, then the
+   evidence row): author ID, content (first 4,000 characters), created and
+   edited times, up to 10 embeds as `{type, title, description, url}`
+   summaries (title ≤ 256, description ≤ 1,000 characters), and the
+   message's files. A file is admitted while the message has fewer than 10
+   admitted files and the case fewer than 100; every admitted file gets an
+   `evidence_files` row (filename, content type or NULL, size, original URL,
+   its Discord attachment ID); the rest are only counted in
+   `evidence.files_not_saved`. Each file's first state is decided here:
+   `link_only` (no evidence channel), `too_large`, `unsupported_type`, or
+   `pending` (to copy).
+5. **Copy** each `pending` file (§7.3), one file per transaction, so
+   progress survives a crash. When the run's time slice ends (§16.1) with
+   files left, return `Continue`.
+6. When every file has left `pending`: `saved`, `saved_at`; bump the
+   receipt. Metric `quack.evidence.captures{quack.outcome}`.
+
+At exhaustion (§16.1 finalization) every file still `pending` becomes
+`copy_failed`, and the row becomes `saved` if its snapshot was stored, else
+`failed` (`discord_error`).
 
 `evidence_state`: `saving` → `saved` | `failed`. A `saved` row may still have
 individual files that could not be copied; each file has its own state.
@@ -1157,20 +1426,24 @@ individual files that could not be copied; each file has its own state.
 
 When `guild_settings.evidence_channel_id` is set, the job copies each file:
 
-- Eligible: size ≤ 10,485,760 bytes and content type (lowercased, without
+- Eligible: size ≤ 10,485,760 bytes and a content type (lowercased, without
   parameters) starting with `image/`, `video/`, `audio/`, or equal to
-  `text/plain` or `application/pdf`.
-- Before uploading, re-check the evidence channel is staff-only (§13.1.3).
-  Not staff-only → copy state `copy_failed` for every file of this item and
-  `copy_skipped_not_staff_only = true` on the item (shown as
-  `evidence.channel_not_staff_only`).
+  `text/plain` or `application/pdf`. A file with no content type is not
+  eligible.
+- Before uploading, re-check the evidence channel is staff-only (§13.1.3)
+  from current facts. Not staff-only → `copy_failed` for every pending file
+  of this item and `copy_skipped_not_staff_only = true` on the item (shown
+  as `evidence.channel_not_staff_only`).
 - Download only from `cdn.discordapp.com` or `media.discordapp.net` over
   HTTPS, at most 5 redirects within those hosts, 30-second deadline, stop at
   10,485,760 bytes.
-- Upload as `SPOILER_<filename>` with no message text, nonce = file ID
-  (22 characters). Store `copy_message_id` and `copy_attachment_id`.
-- Metrics: `quack.evidence.files_copied{outcome}`,
-  `quack.evidence.bytes_copied`.
+- Upload as a plain message (no Components V2, no text) with one attachment
+  `SPOILER_<filename>`, following §10.4: record `copy_started_at`, nonce =
+  the file ID (22 characters), `enforce_nonce`. On `Done` store
+  `copy_channel_id`, `copy_message_id`, `copy_attachment_id` → `copied`.
+  Each file has a budget of 3 upload tries; a definite refusal or a spent
+  budget → `copy_failed`.
+- Metrics: `quack.evidence.files` (copies made), `quack.evidence.bytes`.
 
 `file_copy_state`:
 
@@ -1182,20 +1455,20 @@ When `guild_settings.evidence_channel_id` is set, the job copies each file:
 | `too_large` | Larger than 10 MiB. |
 | `unsupported_type` | Not an eligible content type. |
 | `copy_failed` | Download or upload failed, or the channel is not staff-only. |
-| `limit_reached` | Over 10 files on the message or 100 on the case. |
 
 ### 7.4 Who sees evidence
 
 - Staff see everything, including authors and original message links.
 - The member sees their own case's evidence on the dashboard: message text,
-  embed summaries, file names, and files through
+  embed types and titles, file names, and files through
   `GET /api/me/cases/{case_id}/evidence/{file_id}`. They never see authors,
-  original message links, or channel names.
-- File routes redirect (302) to a freshly signed Discord URL: a `copied`
-  file uses its copy (Quack fetches the copy message for a fresh attachment
-  URL); any other file uses its original URL refreshed through `POST
-  /attachments/refresh-urls`. A file whose copy and original are both gone is
-  `404 file_unavailable`.
+  original message links, embed URLs, or channel names.
+- File routes answer `302` to a fresh Discord CDN URL. Quack finds it by
+  fetching a message and locating the attachment by its ID in the response:
+  the copy message when the file is `copied`, else (or when the copy is
+  gone) the source message. When neither message has the attachment any
+  more → `404 file_unavailable`. The CDN URL contains a channel ID (never a
+  channel name); that is accepted.
 - Evidence never appears in DMs, receipts, or the log channel.
 
 ---
@@ -1214,9 +1487,11 @@ A member may appeal a case when all hold:
 - The case has no appeal (`UNIQUE (case_id)`).
 - The case is not `imported`.
 
-The statement answers one fixed question (§12.9 `appeal.form.*`) and is
-1–4,000 characters. Ineligible → `409 appeal_exists`, `409 case_voided`, or
-`422 appeal_not_allowed`.
+The submit transaction locks the case first and checks these there, so a
+submission and a void are ordered: an appeal is never created on a voided
+case. The statement answers one fixed question (§12.9 `appeal.form.*`) and
+is 1–4,000 characters. Ineligible → `409 appeal_exists`, `409 case_voided`,
+or `422 appeal_not_allowed`.
 
 ### 8.2 States
 
@@ -1226,51 +1501,70 @@ The statement answers one fixed question (§12.9 `appeal.form.*`) and is
 | `needs_information` | Staff asked the member for more information. |
 | `accepted` | Staff accepted; the case is voided. Terminal. |
 | `rejected` | Staff rejected; the case stands. |
-| `closed` | Staff closed it, or Quack closed it because the case was voided. |
+| `closed` | Staff closed it, or Quack closed it because the case was voided (`closed_by_void`, terminal). |
+
+Every transition is one transaction that locks the case, then the appeal
+(§4.12), and re-checks the case's validity and the appeal's state and
+`version` there.
 
 | From | Event (`appeal_event_kind`) | Actor | To | Effects (same transaction) |
 | --- | --- | --- | --- | --- |
-| (none) | `submitted` | member | `pending` | Appeal row (version 1), event; appeal post created (when the appeal channel is set); log `appeal_submitted`; bump receipt. |
+| (none) | `submitted` | member | `pending` | Appeal row (version 1); event; the appeal's `appeal_post` row (§8.3); log `appeal_submitted`; bump receipt. |
 | `pending` | `information_requested` | staff, reason | `needs_information` | Event; `appeal_update` DM; bump post; log. |
-| `needs_information` | `information_provided` | member, text 1–4,000 | `pending` | Event; bump post; log. |
-| `pending` | `accepted` | staff, reason | `accepted` | Event; void the case (§4.7, cause `appeal_accepted`); DM; bump post and receipt; log `appeal_accepted` and `case_voided`. |
+| `needs_information` | `information_provided` | member, text 1–4,000, the `version` they saw | `pending` | Event; bump post; log. |
+| `pending` | `accepted` | staff, reason | `accepted` | Event (with the staff reason); void the case (§4.7, cause `appeal_accepted`, void reason `case.void.reason.appeal_accepted`); DM; bump post and receipt; log `appeal_accepted` and `case_voided`. |
 | `pending` | `rejected` | staff, reason | `rejected` | Event; DM; bump post; log. |
 | `pending`, `needs_information` | `closed` | staff, reason | `closed` | Event; DM; bump post; log. |
-| `pending`, `needs_information` | `closed` | Quack (case voided directly) | `closed` | Event text "Closed because the case was voided."; DM; bump post; log `appeal_closed` (actor NULL). |
-| `rejected`, `closed` | `reopened` | staff, reason | `needs_information` | Event; DM (asks for information); bump post; log. |
-| any other | any | | unchanged | `409 appeal_changed`. |
+| `pending`, `needs_information` | `closed` | Quack, inside a direct void (§4.7) | `closed` | Event with `closed_by_void = true` and text `appeal.closed_by_void`; DM; bump post; log `appeal_closed` (actor NULL). |
+| `rejected`, `closed` (not by void) | `reopened` | staff, reason; the case must be valid | `needs_information` | Event; DM (asks for information); bump post; log. |
+| any other | any | | unchanged | `409 appeal_changed`, or `409 case_voided` when the case was voided. |
 
-- Every staff decision requires a reason of 1–2,000 characters. In Discord
-  the Accept and Reject buttons open a modal prefilled with default text
-  (`appeal.reason.default.accept`, `appeal.reason.default.reject`).
-- Every staff transition carries `expected_version`; the row's `version`
-  increments on each transition. A mismatch is `409 appeal_changed`.
-- `decided_by`, `decided_at`, `decision_reason` hold the latest staff
-  decision.
-- Metrics: `quack.appeal.submitted`, `quack.appeal.transitions{decision}`,
-  `quack.appeal.time_to_decision{decision}` (submission to first
-  accept/reject/close), `quack.appeal.open` (gauge). Span event
-  `appeal.transition`.
+- Every staff decision requires a reason of 1–2,000 characters, stored on
+  its event. In Discord the Accept and Reject buttons open a modal
+  prefilled with default text (`appeal.reason.default.accept`,
+  `appeal.reason.default.reject`).
+- Every transition carries `expected_version`, staff and member alike; the
+  row's `version` increments on each transition. A mismatch is `409
+  appeal_changed`, so an old reply can never answer a newer information
+  request.
+- `decided_by`, `decided_at`, `decision_reason` mirror the latest staff
+  decision for lists; the events are the history.
+- Metrics: `quack.appeal.transitions{quack.appeal.transition}` (submissions
+  included), `quack.appeal.decision.duration{quack.appeal.transition}`
+  (submission to the first accept, reject, or close), `quack.appeals.open`
+  (gauge). Span event `appeal.transition`.
 
 ### 8.3 The appeal post
 
-Each appeal has at most one tracked staff message (kind `appeal_post`,
-§10) in the server's appeal channel. It is created when the appeal is
-submitted, if `appeal_channel_id` is set, and re-rendered on every
-transition. Content: `appeal.post.*` (§12.9) — member, case number and rule,
-state, statement (first 1,500 characters; the rest on the dashboard), latest
-decision and reason, and buttons **Accept**, **Reject** (only while
-`pending`), and **Open appeal** (dashboard link). The post never names the
-reviewer in text visible to the member (the member never sees it).
+Each appeal has exactly one tracked staff message (kind `appeal_post`,
+§10), created with the appeal. Its channel is the server's
+`appeal_channel_id`, or NULL while no appeal channel is set.
+
+- Setting an appeal channel (settings or `/setup`) binds, in the same
+  transaction, the post of every `pending` or `needs_information` appeal
+  that has no channel or is `gone` to the new channel and bumps it.
+- Changing the appeal channel moves the posts of open appeals: the old
+  location is kept as a stale coordinate (§10.1) and its message is edited to
+  `appeal.post.moved` without buttons. Posts of decided appeals stay where
+  they are.
+- Clearing the appeal channel leaves existing posts in place.
+
+Content: `appeal.post.*` (§12.9): member, case number and rule, state,
+statement (first 1,500 characters; the rest on the dashboard), the latest
+decision and its reason, and buttons **Accept**, **Reject** (only while
+`pending`), and **Open appeal** (dashboard link). Every button re-checks the
+clicker's capability and the appeal version and answers privately.
 
 ### 8.4 Appeal DMs
 
 Each staff decision (and Quack's automatic close) sends exactly one
-`appeal_update` DM (§6). Content per event in §12.8: the decision, the
-reason as a quote, what happens next, a link to the member's case page
-(`/guilds/{guild_id}/cases/{case_id}/appeal`), and for accepted appeals of
-cases with a kick or ban, the server's rejoin invite when set. DMs never name
-the staff member.
+`appeal_update` DM (§6), rendered from its own appeal event: the decision,
+that event's reason as a quote, what happens next, a link to the member's
+case page (`/guilds/{guild_id}/cases/{case_id}/appeal`), and for accepted
+appeals of cases with a kick or ban, the server's rejoin invite when set
+(read when the DM is sent). Because each DM renders its own event and shows
+the event's time, two quick decisions produce two accurate DMs whatever
+order they arrive in. DMs never name the staff member.
 
 ---
 
@@ -1290,7 +1584,10 @@ typed links `case_id`, `member_id`, `appeal_id`, `action_id`, `rule_id`,
 
 `quack_core::modlog::ModLogEntry` is a Rust enum with one variant per kind;
 its serde form is `detail`. No variant has a free-text field except where
-listed, so tokens and message content cannot enter by construction.
+listed, so tokens and message content cannot enter by construction. The
+typed links of an entry are all taken from one loaded record (the case, the
+appeal, the action), never assembled from separate inputs, so they always
+agree.
 
 ### 9.2 Kinds
 
@@ -1305,11 +1602,11 @@ listed, so tokens and message content cannot enter by construction.
 | `case_context_edited` | ok | case, member | `{case_number, changed_keys: [string]}` | yes |
 | `evidence_added` | ok | case, member | `{case_number, count}` | no |
 | `action_done` | ok | case, member, action | `{case_number, kind, attempts, no_change}` | yes |
-| `action_failed` | failed | case, member, action | `{case_number, kind, reason, permission\|null, http_status\|null, discord_code\|null, attempts}` | yes |
+| `action_failed` | failed | case, member, action | `{case_number, kind, reason, permission\|null, http_status\|null, discord_code\|null, attempts}` (`reason` is an `ActionFailure`, including `unconfirmed`) | yes |
 | `action_retry_requested` | ok | case, member, action | `{case_number, kind}` | yes |
 | `action_dismissed` | ok | case, member, action | `{case_number, kind}` | yes |
 | `action_undo_requested` | ok | case, member, action | `{case_number, kind}` (the undo's kind) | yes |
-| `action_undo_skipped` | ok | case, member, action | `{case_number, kind, still_applies_case_number}` | yes |
+| `action_undo_skipped` | ok | case, member, action | `{case_number, kind, skip_reason: "other_case_applies"\|"changed_outside_case", still_applies_case_number\|null}` | yes |
 | `dm_sent` | ok | case\|null, member, appeal\|null, ticket\|null | `{dm_kind}` | no |
 | `dm_failed` | failed | case\|null, member, appeal\|null, ticket\|null | `{dm_kind, state: "failed"\|"unknown", failure\|null, discord_code\|null}` | yes |
 | `appeal_submitted` | ok | case, member, appeal | `{case_number}` | yes |
@@ -1326,15 +1623,15 @@ listed, so tokens and message content cannot enter by construction.
 | `rule_imported` | ok | rule | `{name}` | yes |
 | `settings_changed` | ok | — | `{fields: [string]}` (setting names, never values) | yes |
 | `module_enabled` | ok | — | `{module}` | yes |
-| `module_disabled` | ok | — | `{module, reason: null\|"channel_deleted"}` | yes |
+| `module_disabled` | ok | — | `{module, reason: null\|"channel_deleted"\|"quack_left"}` | yes (not when `quack_left`) |
 | `module_settings_changed` | ok | — | `{module, fields: [string]}` | yes |
 | `quack_joined` | ok | rule (starter, first join only) | `{first_join}` | yes |
 | `quack_left` | ok | — | `{}` | no |
 | `channel_setting_cleared` | ok | — | `{setting: "log_channel"\|"appeal_channel"\|"evidence_channel"\|"ticket_entry_channel"\|"ticket_queue_channel"\|"honeypot_channel"\|"activity_log_route"}` | yes |
-| `log_channel_failed` | failed | — | `{entry_id, reason: "not_staff_only"\|"discord_refused"\|"retries_exhausted", discord_code\|null}` | no |
+| `log_channel_failed` | failed | — | `{entry_id, reason: "not_staff_only"\|"discord_refused"\|"retries_exhausted", discord_code\|null}` (the first entry that could not be posted in this outage) | no |
 | `ticket_opened` | ok | member, ticket | `{}` | yes |
 | `ticket_closed` | ok | member, ticket | `{transcript_complete}` | yes |
-| `honeypot_case_failed` | failed | member, rule | `{refusal}` (a `MemberRefusal` or `"rule_unavailable"`) | yes |
+| `honeypot_case_failed` | failed | member, rule | `{refusal}` (a `MemberRefusal`, `"rule_unavailable"`, `"policy_changed"`, or `"discord_unavailable"`) | yes |
 | `legacy` | as imported | as imported | `{action, resource_type, resource_id, failure_reason}` (imported Go rows only, §19.4) | no |
 
 `actor_id` is the staff member for staff operations, the member for
@@ -1343,15 +1640,15 @@ listed, so tokens and message content cannot enter by construction.
 
 ### 9.3 Append-only enforcement
 
+Two triggers on `mod_log` call the shared `reject_change()` function (§15.3,
+§15.6), so UPDATE, DELETE, and TRUNCATE fail with `insufficient_privilege`
+(`mod_log is append-only`), even for the table owner:
+
 ```sql
-CREATE FUNCTION mod_log_reject_change() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  RAISE EXCEPTION 'mod_log is append-only' USING ERRCODE = 'insufficient_privilege';
-END $$;
-CREATE TRIGGER mod_log_no_update BEFORE UPDATE OR DELETE ON mod_log
-  FOR EACH ROW EXECUTE FUNCTION mod_log_reject_change();
+CREATE TRIGGER mod_log_no_change BEFORE UPDATE OR DELETE ON mod_log
+  FOR EACH ROW EXECUTE FUNCTION reject_change();
 CREATE TRIGGER mod_log_no_truncate BEFORE TRUNCATE ON mod_log
-  FOR EACH STATEMENT EXECUTE FUNCTION mod_log_reject_change();
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_change();
 ```
 
 Entries are written in the same transaction as the change they describe.
@@ -1362,24 +1659,33 @@ transaction because the change rolled back.
 
 - When an entry of a posted kind commits and `guild_settings.log_channel_id`
   is set, the same transaction inserts a `post_mod_log` job keyed
-  `mod_log_post:<entry_id>`. Changing the log channel later does not
-  re-post old entries.
-- The job renders the entry (§12.10) from current data, re-checks the
-  channel is staff-only (§13.1.3), and creates the message with nonce = the
-  entry ID in base64url (22 characters).
-- Outcomes: `Done` → finished. Channel missing (404 Unknown Channel, or
-  `log_channel_id` now NULL) → finished without posting; when the channel is
-  missing, clear `log_channel_id` (guarded on the old value) and log
-  `channel_setting_cleared`. Not staff-only or 403 → finished; log
-  `log_channel_failed` once per outage (no other `log_channel_failed` for
-  this server since the last successful post). `Unknown`/`RetryAfter`/5xx →
-  retry with backoff 10 s, 30 s, 1 min, 2 min (5 attempts, all inside
-  Discord's nonce window so a retry cannot post twice); exhausted →
-  `log_channel_failed` (`retries_exhausted`).
-- An `action_failed` post includes a **Retry** button (`1:ar:<action>`) while
-  the action is `failed`, not dismissed, and its case is valid. It is not
-  edited later; clicking it re-checks everything.
-- Metric `quack.mod_log.posts{outcome}`.
+  `post_mod_log:<entry_id>` whose payload pins that channel. Changing the
+  log channel later neither re-posts old entries nor sends a queued entry
+  somewhere else: a job whose pinned channel is no longer the log channel
+  finishes without posting.
+- The job renders the entry (§12.10). Facts come from immutable records:
+  the entry's `detail`, the case's rule version, the void reason, the appeal
+  event. Only display names (members, the rule's current name in links) are
+  read live.
+- Before creating the message the job re-checks from current facts that the
+  channel is staff-only (§13.1.3), then creates it following §10.4 with
+  nonce = the entry ID in base64url (22 characters).
+- Outcomes: `Done` → finished. 404 Unknown Channel → finished without
+  posting; clear `log_channel_id` only if it still holds that channel
+  (compare-and-clear) and log `channel_setting_cleared`. Not staff-only, 403,
+  or another definite refusal → finished without posting; the setting is
+  kept. `Unknown`, `RetryAfter`, 5xx → retry: budget 6, backoff 10 s, 30 s,
+  2 min, 10 min, 1 h. After the nonce window a retry may create a second
+  copy of the same post (§20.4). Every finish without a post writes
+  `log_channel_failed` once per outage: only when no other
+  `log_channel_failed` was written for this server since its last successful
+  post.
+- An `action_failed` post carries a **Retry** button (`1:ar:<action>`) when
+  `quack_core::action::controls` (§5.8) allows a retry at posting time.
+  The post is not edited later; a click re-checks everything and answers
+  privately.
+- Metric `quack.modlog.posts{quack.outcome}` (`done` posted, `skipped`
+  moved or no channel, `failed`).
 
 ### 9.5 Redaction
 
@@ -1417,103 +1723,173 @@ lowercasing and replacing `-` with `_`) have their values replaced by
 
 A tracked message is one Discord message Quack keeps up to date: case
 receipts, the staff post for each appeal, ticket panels, ticket staff
-posts, and the honeypot warning. Each is a `messages` row.
+posts, and the honeypot warning. Each is a `messages` row, and its
+`sync_message` job is the only thing that writes it to Discord.
 
 ### 10.1 The model
 
 | Column | Meaning |
 | --- | --- |
 | `kind` | `case_receipt`, `appeal_post`, `ticket_panel`, `ticket_post`, `honeypot_warning`. |
-| `owner_id` | The case, appeal, or ticket ID; NULL for one-per-server kinds (`ticket_panel`, `honeypot_warning`). |
-| `channel_id`, `message_id` | Where it lives; `message_id` NULL until first posted. |
-| `wanted_revision` | Incremented in the same transaction as any change the message shows. |
-| `posted_revision` | The highest revision whose rendering is on Discord. |
-| `interaction_token`, `token_expires_at` | For receipts posted as interaction responses: edits use the token while it is valid (15 minutes minus 60 seconds). |
-| `private` | An ephemeral receipt: editable only through its token. |
+| `case_id`, `appeal_id`, `ticket_id` | The owner: exactly the one column its kind needs (case receipt → case, appeal post → appeal, ticket post → ticket); none for the one-per-server kinds (`ticket_panel`, `honeypot_warning`). Real foreign keys. |
+| `channel_id`, `message_id` | Where it lives. `channel_id` is NULL only for an appeal post waiting for an appeal channel (§8.3); `message_id` is NULL until posted. |
+| `generation` | Incremented whenever the message must be posted anew: a move, a repost after deletion, or reactivation. Write-backs are compared against it. |
+| `create_started_at` | When the current create began (§10.4); NULL when no create is in progress. |
+| `wanted_revision` | Incremented in the same transaction as any change the message shows (≥ 1). |
+| `posted_revision` | The highest revision whose rendering is on Discord (0 to `wanted_revision`). |
+| `wanted_at` | When `wanted_revision` last changed, for the sync lag metric. |
+| `private`, `interaction_token`, `token_expires_at` | A private receipt is the interaction's ephemeral original response. It is only ever edited through its token (valid 15 minutes minus 60 seconds); there is no other way to write it. A public receipt keeps the moderator's token only for the fallback in §10.3. |
 | `state` | `active` or `gone`. |
-| `stale_channel_id`, `stale_message_id` | The previous location after a move (below). |
+| `stale` | Earlier locations still to be cleaned up after moves: a JSON list of `{channel_id, message_id}`, at most 5. |
+| `attachment_id` | The file Quack attached (the ticket transcript), kept on later edits. |
 | `last_error` | Machine code of the last failed sync, e.g. `http_403_50001`; never shown in Discord or on the dashboard. |
 
-Uniqueness: one row per `(kind, owner_id)` when `owner_id` is set; one row
-per `(guild_id, kind)` when it is NULL.
+Uniqueness: one row per owner and kind; one row per `(guild_id, kind)` for
+the one-per-server kinds.
 
 ### 10.2 Bumping
 
-`quack_db::messages::bump(tx, kind, owner)`:
+`quack_db::messages::bump(tx, guild, Owner)` where `Owner` is `Case(id)`,
+`Appeal(id)`, `Ticket(id)`, or `Server(kind)`:
 
 ```sql
-UPDATE messages SET wanted_revision = wanted_revision + 1, updated_at = now()
-WHERE kind = $1 AND owner_id = $2 AND state = 'active'
-RETURNING id, wanted_revision;
+-- Owner::Case (likewise appeal_id for Appeal, ticket_id for Ticket)
+UPDATE messages SET wanted_revision = wanted_revision + 1, wanted_at = now()
+WHERE guild_id = $1 AND case_id = $2 AND kind = 'case_receipt' AND state = 'active'
+RETURNING id;
+-- Owner::Server(kind)
+UPDATE messages SET wanted_revision = wanted_revision + 1, wanted_at = now()
+WHERE guild_id = $1 AND kind = $2 AND case_id IS NULL AND appeal_id IS NULL
+  AND ticket_id IS NULL AND state = 'active'
+RETURNING id;
 ```
 
-followed by enqueueing `sync_message` keyed `message:<id>` (§16.3: if that
-job exists it is coalesced; if it is running, it is marked to run again).
+followed by enqueueing `sync_message` keyed `sync_message:<id>` (§16.3).
 What bumps what:
 
 | Change | Bumps |
 | --- | --- |
 | Action state change, DM settles, evidence settles, context edit, void, appeal submitted or decided, replacement created | the case's `case_receipt` |
-| Appeal transition | the appeal's `appeal_post` |
-| Ticket opened, closed, access fixed | the ticket's `ticket_post` |
+| Appeal transition, appeal channel set or changed | the appeal's `appeal_post` |
+| Ticket opened, closed, access fixed, transcript saved | the ticket's `ticket_post` |
 | Ticket settings changed, tickets enabled or disabled | the server's `ticket_panel` |
-| Honeypot case created, honeypot settings changed, honeypot enabled or disabled | the server's `honeypot_warning` |
+| Honeypot case created, honeypot settings changed, honeypot enabled or disabled, an edit of the honeypot's rule | the server's `honeypot_warning` |
+
+A settings transaction that chooses a destination for a `gone` row (or an
+appeal post with no channel) reactivates it in the same transaction:
+`state = 'active'`, the new `channel_id`, `message_id = NULL`,
+`generation + 1`, and a bump.
 
 ### 10.3 The sync job
 
-`quack_engine::messages::sync` (also called inline by the bot right after
-creating a receipt):
+`quack_engine::messages::sync`, keyed per row, so one row never has two
+syncs running:
 
-1. Load the row; `gone` → `Done`. Note `rev = wanted_revision`.
-2. Render from current data (§12) — never from the revision.
-3. Write to Discord:
-   - `message_id` NULL and a valid interaction token → edit the original
-     interaction response through the token; store the returned message ID.
-   - `message_id` NULL, no token → create the message with nonce
-     `<row id base64url><rev mod 1000, 3 digits>` (25 characters).
-   - `message_id` set, valid token (ephemeral receipts and receipts younger
-     than the token) → edit through the token.
-   - `message_id` set, no valid token → edit with bot credentials.
-   - Ephemeral receipt (`private`) whose token expired → mark `gone`.
-4. Record it:
+1. **Read** (short transaction): lock the row (the job's fence runs last in every transaction, §16.1). `gone`
+   → `Done`. `posted_revision = wanted_revision` and `stale` empty → `Done`
+   (already current). Note `rev`, `generation`, `channel_id`, `message_id`.
+   If a create is needed and `create_started_at` is NULL, set it to now.
+2. **Render** from current data at send time (§12), never from the
+   revision, so a later render always shows the latest state.
+3. **Write:**
+   - Private receipt: token valid → edit the original response. Token
+     expired → `gone`. Nothing else is ever done with a private receipt.
+   - Public receipt, first post: after the create succeeds and while the
+     token is valid, also edit the moderator's original response to
+     `case.receipt.posted`.
+   - `channel_id` NULL → `Done` (an appeal post waiting for a channel).
+   - Appeal and ticket posts: before any create or edit, re-check from
+     current facts that the channel is still staff-only (§13.1.3). Not
+     staff-only → write nothing, `last_error = "not_staff_only"`, finish; the
+     next bump tries again.
+   - `message_id` set → edit with bot credentials, keeping
+     `attachment_id`.
+   - `message_id` NULL → create it (§10.4) with nonce
+     `<row id u22><generation, base 36>` (at most 25 characters): stable
+     across revisions, new for each generation.
+4. **Record** (short transaction): lock the row, then
+   compare-and-set on the generation read in step 1:
 
    ```sql
    UPDATE messages
    SET posted_revision = GREATEST(posted_revision, $rev),
-       message_id = COALESCE(message_id, $id), last_error = NULL, updated_at = now()
-   WHERE id = $1;
+       message_id = COALESCE(message_id, $created_id), create_started_at = NULL,
+       last_error = NULL, updated_at = now()
+   WHERE id = $1 AND generation = $gen;
    ```
 
-5. If `wanted_revision > rev` now, repeat from step 1 (at most 3 loops per
-   run; then return `Done` with the job marked to run again).
+   No row updated means the message was moved while this sync ran: a
+   message it created is appended to `stale` instead, so it is cleaned up.
+5. **Clean up** each `stale` location: edit it to `ticket.panel.moved` or
+   `appeal.post.moved` (without buttons), or delete it (honeypot warning,
+   public receipts, ticket posts), treating 404 as done; remove it from the
+   list.
+6. If `wanted_revision > rev` now, repeat from step 1 (at most 3 loops per
+   run; then `Continue`).
 
 When the message or channel is gone (404 Unknown Message 10008, Unknown
 Channel 10003, 403 Missing Access 50001):
 
 | Kind | Action |
 | --- | --- |
-| `case_receipt` | `gone`. The case is unaffected. |
-| `appeal_post` | Re-post in the current `appeal_channel_id` (new `message_id`). If none is set or that channel is also gone → `gone`. |
-| `ticket_panel` | Re-post in the current entry channel. Entry channel gone → `gone` and tickets are disabled (§13.2). |
-| `ticket_post` | Re-post in the current queue channel; none → `gone`. |
-| `honeypot_warning` | Re-post in the honeypot channel; channel gone → `gone` and the honeypot is disabled (§13.4). |
+| `case_receipt` | Public receipt whose create was refused: while the token is valid it becomes a private receipt (`private = true`) and the moderator's ephemeral reply is replaced by the card with `case.receipt.post_failed`; otherwise `gone`. A posted receipt that disappears → `gone`. The case is unaffected. |
+| `appeal_post` | Post again in the current `appeal_channel_id` (`generation + 1`); none set → wait with `channel_id` NULL. |
+| `ticket_panel` | Post again in the current entry channel; channel reconciliation (§13.1.5) turns tickets off when the channel was deleted. |
+| `ticket_post` | Post again in the current queue channel; none → `gone`. |
+| `honeypot_warning` | Post again in the honeypot channel; reconciliation turns the honeypot off when the channel was deleted. |
 
-**Moved messages.** When settings move a tracked message to another
-channel (the ticket entry channel or the honeypot channel changes), the
-settings transaction sets `stale_channel_id` and `stale_message_id` to the
-old location, `channel_id` to the new one, `message_id = NULL`, and bumps.
-The sync job posts in the new channel, then edits the stale message to
-`ticket.panel.moved` (ticket panel) or deletes it (honeypot warning),
-treating 404 as done, and clears the stale columns.
+A `MESSAGE_DELETE` for a tracked message (looked up by `(channel_id,
+message_id)`) does the same in its own transaction, so a deleted panel,
+post, or warning is posted again at once.
+
+**Moved messages.** When settings move a tracked message to another channel
+(the ticket entry channel, the honeypot channel, the appeal channel for
+open appeals), the settings transaction appends the old location to
+`stale`, sets the new `channel_id`, `message_id = NULL`, `generation + 1`,
+and bumps. The sync posts in the new channel, then cleans up the stale
+locations.
 
 Other outcomes: `Unknown`, `RetryAfter`, 5xx → retry with backoff 2 s,
-10 s, 1 min, 5 min, 30 min (6 attempts); exhausted → `last_error` set and
-the job finishes; the next bump tries again. A definite 4xx not listed →
-`last_error`, finish.
+10 s, 1 min, 5 min, 30 min (6 attempts); creates follow §10.4. Exhausted →
+`last_error` set and the job finishes; the next bump tries again. A definite
+4xx not listed → `last_error`, finish.
 
-Metrics: `quack.message.syncs{kind,outcome}`; on success
-`quack.message.sync.lag{kind}` (seconds from the bump's `updated_at` to
-now).
+A worker that outlives its lease could land an older edit after a newer
+one; this needs a Discord response slower than the margin between the
+handler deadline and the lease (§16.1), and the next bump corrects it.
+
+Metrics: `quack.message.syncs{quack.message.kind,quack.outcome}`; on
+success `quack.message.sync.lag{quack.message.kind}` (seconds from
+`wanted_at` to now).
+
+### 10.4 Creating messages safely
+
+Discord's Create Message takes a `nonce` (at most 25 characters) and
+`enforce_nonce`. Discord's documentation says that with `enforce_nonce` the
+nonce "will be checked for uniqueness in the past few minutes" for the same
+author, returning the earlier message instead of creating a new one, and
+gives no exact window. Quack assumes **60 seconds**
+(`quack_core::limits::NONCE_WINDOW`). Every message create follows one rule:
+
+1. Before the first create call, record when the create started
+   (`dms.first_attempt_at`, `messages.create_started_at`,
+   `evidence_files.copy_started_at`, `tickets.welcome_started_at`) and fix
+   its nonce, derived from the record's ID.
+2. While less than 60 seconds have passed since that start, a create whose
+   result was unknown may be repeated with the same nonce and
+   `enforce_nonce = true`.
+3. After that, the earlier create's outcome is unknown:
+   - **Member DMs** settle `unknown`. Terminal; never resent (§6).
+   - **Everything else** (public receipts, appeal posts, ticket posts,
+     ticket panels, honeypot warnings, log channel posts, evidence copies,
+     ticket welcomes) is created again with a new start time. A crash or
+     lost answer at exactly the wrong moment followed by a long Discord
+     outage can therefore produce one duplicate post (§20.4).
+
+Channels and threads have no nonce, so they are made findable instead and
+looked up before every create: ticket threads by their full name
+(§13.2.3), setup channels by name, creation time, and Quack's own overwrite
+(§13.1.4).
 
 ---
 
@@ -1528,7 +1904,7 @@ messages (§12.1). No command has a default member permission except
 
 | Command | Type | Options (name, type, required, constraints) | Capability | Reply |
 | --- | --- | --- | --- | --- |
-| `/case add` | slash subcommand | `member` USER, required; `rule` STRING, required, autocomplete, max 100; `private` BOOLEAN, optional | `moderate` | Case receipt: public, or ephemeral when `private` is true. |
+| `/case add` | slash subcommand | `member` USER, required; `rule` STRING, required, autocomplete, max 100; `private` BOOLEAN, optional | `moderate` | Private: the private receipt (the staff card, ephemeral). Otherwise an ephemeral confirmation, and Quack posts the public receipt in the channel. |
 | `/case view` | slash subcommand | `number` INTEGER, required, min 1 | `moderate` | Ephemeral case card (§11.7). |
 | `/case list` | slash subcommand | `member` USER, optional; `rule` STRING, optional, autocomplete (includes archived rules) | `moderate` | Ephemeral list, 10 per page, newest first. |
 | `/case void` | slash subcommand | `number` INTEGER, required, min 1; `reason` STRING, required, 1–1,000 | `moderate` | Ephemeral result (§4.7). |
@@ -1537,14 +1913,19 @@ messages (§12.1). No command has a default member permission except
 | `/rules` | slash | none | `moderate` or `manage_rules` | Ephemeral list of active rules (name, levels summary) with a dashboard link per rule; 10 per page. |
 | `/setup` | slash | none | `manage_settings` | Ephemeral guided setup panel (§11.8). |
 | `/help` | slash | `topic` STRING, optional, choices `cases`, `rules`, `appeals`, `setup` | none | Ephemeral help text (§12.12). |
-| Add case | message command | (the message) | `moderate` | Ephemeral rule picker, then an ephemeral receipt. The source message becomes evidence. |
-| Add case | member command | (the member) | `moderate` | Ephemeral rule picker, then a public receipt posted by Quack in the channel. |
+| Add case | message command | (the message) | `moderate` | Ephemeral rule picker, then the private receipt. The source message becomes evidence. |
+| Add case | member command | (the member) | `moderate` | Ephemeral rule picker, then an ephemeral confirmation, and Quack posts the public receipt in the channel. |
 
-Autocomplete for `rule` options answers from the rules cache only
-(§17.6): case-insensitive substring match on the name, at most 25 choices,
-name as label, rule UUID as value. It returns no choices when the
-interaction member lacks the capability (computed from the interaction's
-member roles and the cached settings; 2FA is checked on submit).
+Autocomplete for `rule` options answers from the rules cache only (§17.6):
+case-insensitive substring match on the name and the description, at most
+25 choices, the name (cut to 100 characters) as label, the rule UUID as
+value. `/case add` offers active rules; `/case list` also offers archived
+ones. It returns no choices when the interaction member lacks the
+capability by the roles and permissions in the interaction payload and the
+cached settings; 2FA is checked when the command runs. (Rule names are not
+secret: members see them on their own cases.) A `rule` value that is not a
+rule UUID (typed text that was not picked) is matched against active rule
+names, case-insensitively and exactly; no match → `error.rule_not_found`.
 
 ### 11.2 Command registration
 
@@ -1556,37 +1937,45 @@ run the same function:
    global commands.
 3. `GET` the remote list. Canonicalize both sides (drop IDs, versions, and
    default fields; sort keys; keep option order).
-4. Equal → do nothing. Different → one bulk overwrite
+4. Equal → keep the remote list. Different → one bulk overwrite
    (`PUT /applications/{app}/commands` or the guild variant) with every
-   definition. This replaces removed Go-era commands (`/template …`, `/case
+   definition, which also removes Go-era commands (`/template …`, `/case
    failures|retry|dismiss|reverse|evidence|user`, "Add case for member",
-   `/ui-preview`) and keeps IDs for unchanged names.
-5. Store `name → command ID` in memory for command mentions in text
-   (`</case view:ID>`).
+   `/ui-preview`).
+5. Store the command IDs from the list Discord returned (the `GET`, or the
+   `PUT`'s response), keyed by `(type, name)`, for command mentions in text
+   (`</case view:ID>`). Mentions are rendered only from typed catalog
+   references, never from text a person typed.
 
 A sync failure stops `serve` with a clear log line; `commands sync` exits 1.
 
 ### 11.3 Acknowledgement rules
 
 Every interaction is acknowledged before any database or Discord REST call,
-with one documented exception. Work happens after the ack.
+with the documented exception below. Work happens after the ack. The
+capability is always checked before staff data is shown: from the
+interaction payload and the caches when the response must be immediate, and
+fully (with 2FA) before any write.
 
 | Interaction | Initial response | Visibility of the final answer |
 | --- | --- | --- |
-| `/case add` when the rule has a required field | Modal page 1, built from the rules cache. | Receipt follows the modal submit. |
-| `/case add` otherwise | Deferred channel message (type 5). | Public, or ephemeral when `private`. |
+| `/case add` when the rule (from the rules cache) has a required field, and the payload shows the `moderate` capability | Modal page 1, built from the rules cache (no stored values). | §11.6. |
+| `/case add` otherwise | Deferred channel message, **ephemeral**. | Ephemeral. A public receipt is a separate message Quack posts (§11.7). |
 | `/case view`, `/case list`, `/case void`, `/case history`, `/appeals`, `/rules`, `/setup` | Deferred channel message, ephemeral. | Ephemeral. |
 | `/help` | Immediate message (type 4), ephemeral. Static text. | Ephemeral. |
-| Message or member command "Add case" | Deferred channel message, ephemeral. | Picker and private receipt ephemeral; member-command receipt public (posted by Quack). |
+| Message or member command "Add case" | Deferred channel message, ephemeral. | Ephemeral; a public receipt is a separate message (§11.7). |
 | Autocomplete | Type 8 result from memory. | — |
-| Button that opens a modal (Void, Add evidence, Accept, Reject, Appeal, Continue, setup modals) | Modal (no I/O: from custom ID, caches, or static text). | — |
-| **Exception:** Edit context, and re-opening a draft page after a validation error | Modal prefilled after one primary-key read (`cases` or `case_drafts`) with a 300 ms deadline. Deadline missed → immediate ephemeral `interaction.busy` message. | — |
+| Button that opens a modal with no stored values (Void, Add evidence, Accept, Reject, Appeal, Continue) | Modal (custom ID, caches, or static text only). | — |
+| **Exception:** a modal prefilled with stored values: Edit context, Try again on a draft page, Set rejoin invite, Edit warning | Authorize from the payload, the caches, and the actor's 2FA row, and read the one row the modal shows, in a single query bound to the actor and server, within 300 ms; then the modal. Not authorized → ephemeral refusal and no modal. Deadline missed → ephemeral `interaction.busy`. | — |
 | Button or select on an ephemeral message | Deferred update (type 6). | Edits that ephemeral message. |
-| Button on a shared message (receipt, log channel post, appeal post, ticket post, ticket panel) | Deferred channel message, ephemeral (type 5, flag 64). | New ephemeral message; the shared message changes only through tracked-message sync. |
-| Modal submit | Deferred update when the modal came from an ephemeral message; otherwise deferred channel message (ephemeral, except the final `/case add` page, which follows `private`). | As stated. |
+| Button on a shared message (public receipt, log channel post, appeal post, ticket post, ticket panel) | Deferred channel message, ephemeral (type 5, flag 64). | New ephemeral message; the shared message changes only through tracked-message sync. |
+| Modal submit | Deferred update when the modal came from an ephemeral message; otherwise deferred channel message, ephemeral. | Ephemeral. |
 
 - The ack must go out within 2.5 seconds of the interaction's snowflake
   timestamp. `quack.interaction.ack.duration` measures receive-to-ack.
+- Initial callbacks of type 5 and 6 carry only the ephemeral flag. The
+  Components V2 flag is set on the edit or follow-up that carries the
+  content.
 - After the ack, the handler answers by editing the original response
   (`PATCH /webhooks/{app}/{token}/messages/@original`) or with a follow-up.
 - In DMs the ephemeral flag is omitted (Discord rejects it there).
@@ -1597,13 +1986,13 @@ with one documented exception. Work happens after the ack.
 
 ### 11.4 What is ephemeral
 
-Everything staff-facing is ephemeral, including errors. The only public
-messages Quack sends in server channels are: the case receipt from `/case
-add` without `private` and from the member command "Add case"; tracked staff
-messages in staff-only channels (appeal posts, ticket posts, log channel
-posts, evidence copies); the ticket panel; the ticket thread welcome; the
-honeypot warning; server activity log posts. Every button on a public
-message re-checks the clicker's capability and answers privately.
+Everything staff-facing is ephemeral, including errors and refusals. The
+only messages Quack posts publicly in server channels are: the **public
+receipt** (§11.7: only its fixed fields); the ticket panel; the ticket
+thread welcome; the honeypot warning; and posts in staff-only channels
+(appeal posts, ticket posts, log channel posts, evidence copies, server
+activity log posts). Every button on a public message re-checks the
+clicker's capability and answers privately.
 
 ### 11.5 Custom IDs
 
@@ -1611,14 +2000,15 @@ Format: `1:<code>[:<arg>]…`, at most 100 characters. `1` is the scheme
 version. UUIDs are 22 characters of unpadded base64url (`u22`). Snowflakes
 and integers are decimal. `quack_discord::custom_id::CustomId` is an enum
 with one variant per row; `encode` and `decode` are property-tested
-(round trip, ≤ 100 characters for maximal arguments).
+(round trip, ≤ 100 characters for maximal arguments). A custom ID carries
+no authority: every handler authorizes the clicker.
 
 | Code | Component | Arguments | Behaviour |
 | --- | --- | --- | --- |
 | `cv` | Button "Open case" | case u22 | Show the case card. |
 | `cvs` | Select "Open a case" (lists and history) | none; value: case u22 | Show the chosen case card. |
-| `ce` | Button "Edit context" | case u22 | Open the edit-context modal (exception read). Rules with more than 5 fields: answer `case.context.too_many_fields` with a dashboard link instead. |
-| `cem` | Modal | case u22 | Save context (§4.9). |
+| `ce` | Button "Edit context" (staff card only) | case u22 | Exception read (§11.3): open the edit-context modal prefilled with the current context. More than 5 context fields: answer `case.context.too_many_fields` with a dashboard link instead. |
+| `cem` | Modal | case u22, context revision | Save context (§4.9). |
 | `ea` | Button "Add evidence" | case u22 | Open the add-evidence modal (one paragraph input, one link per line). |
 | `eam` | Modal | case u22 | Add evidence (§7.1). |
 | `ev` | Button "View evidence", pager | case u22, item number (1-based) | Show one evidence item. |
@@ -1626,22 +2016,23 @@ with one variant per row; `encode` and `decode` are property-tested
 | `vdm` | Modal | case u22 | Void (§4.7). |
 | `hi` | Button "History", pager | member snowflake, page | Member history page. |
 | `cl` | Pager | page, member snowflake or `0`, rule u22 or `0` | Case list page. |
-| `ar` | Button "Retry" | action u22 | Retry (§5.8). |
-| `ad` | Button "Dismiss" | action u22 | Dismiss (§5.8). |
+| `ar` | Button "Retry {action}" | action u22 | Retry (§5.8). |
+| `ad` | Button "Dismiss {action}" | action u22 | Dismiss (§5.8). |
 | `au` | Button "Remove timeout" / "Unban" | action u22 (the original) | Ask to confirm. |
 | `auc` | Button "Yes, remove timeout" / "Yes, unban" | action u22 | Undo (§5.8). |
-| `rp` | Select (rule picker) | draft u22 | Value: rule u22. Opens modal page 1 when the rule needs input, otherwise creates the case. |
+| `rp` | Select (rule picker) | draft u22 | Value: rule u22. Set the draft's rule (§11.6). |
 | `rpp` | Pager | draft u22, page | Rule picker page (25 rules per page). |
-| `cd` | Modal (case form page) | draft u22, rule u22, rule version, page | Save the page; finish or offer Continue. |
-| `cn` | Button "Continue" | draft u22, rule u22, rule version, page | Open the next page's modal. |
-| `cr` | Button "Try again" | draft u22, rule u22, rule version, page | Re-open the same page prefilled (exception read). |
+| `cd` | Modal (case form page) | draft u22, rule u22, rule version, page | Save the page (§11.6). |
+| `cn` | Button "Continue" / "Fill in the form" | draft u22, rule u22, rule version, page | Open that page's modal (no stored values). |
+| `cr` | Button "Try again" (a page with problems) | draft u22, rule u22, rule version, page | Exception read: re-open the same page prefilled with the values the moderator sent. |
+| `cs` | Button "Try again" (saving failed) | draft u22 | Apply the completed draft again (§11.6). |
 | `ap` | Button "Appeal" (DM) | case u22 | Open the appeal modal. |
 | `apm` | Modal | case u22 | Submit the appeal (§8.1). |
 | `aa` | Button "Accept" | appeal u22, version | Open the accept modal (prefilled default reason). |
 | `aam` | Modal | appeal u22, version | Accept. |
 | `aj` | Button "Reject" | appeal u22, version | Open the reject modal. |
 | `ajm` | Modal | appeal u22, version | Reject. |
-| `ao` | Button "Open" | appeal u22 | Show the appeal card. |
+| `ao` | Button "Open" | appeal u22 | Show the appeal card: the appeal post's content plus Accept and Reject while `pending`, and Open appeal (dashboard link). Other decisions are made on the dashboard. |
 | `al` | Pager | page | `/appeals` page. |
 | `rl` | Pager | page | `/rules` page. |
 | `su` | Setup controls | area, operation | §11.8. |
@@ -1651,14 +2042,21 @@ with one variant per row; `encode` and `decode` are property-tested
 
 Longest form: `1:cd:<22>:<22>:<10>:<2>` = 64 characters.
 
-**Legacy IDs** (messages posted by the Go version stay in Discord):
+**Legacy IDs** (messages posted by the Go version stay in Discord). Each
+supported Go shape is decoded exactly; the ULID is mapped with §19.3 and
+must name a record of this server.
 
 | Legacy ID | Handled as |
 | --- | --- |
-| `appeal:submit:v1:<ULID>` | `ap` with the case ID mapped from the ULID (§19.3). |
-| `ticket:open:v1:<anything>` | `to`. |
-| `case:<action>:v<n>:<payload containing a 26-character ULID>` | `cv` for the mapped case. |
-| anything else | Ephemeral `interaction.legacy_button`. |
+| `appeal:submit:v1:<case ULID>` | `ap` for the case. |
+| `appeal:accept:v1:<appeal ULID>`, `appeal:reject:v1:<appeal ULID>` | `ao` for the appeal (the card shows the current buttons). |
+| `ticket:open:v1:` | `to`. |
+| `ticket:close:v1:<ticket ULID>` | `tc` for the ticket. |
+| `ticket:repair:v1:<ticket ULID>` | `tf` for the ticket. |
+| `case:view:v1:<case ULID>`, `case:evidence:v1:<case ULID>`, `case:edit_context:v1:<case ULID>`, `case:void:v1:<case ULID>` | `cv` for the case. |
+| `case:retry:v1:<execution ULID>`, `case:dismiss:v1:<execution ULID>` | `cv` for the case of the mapped action (view only). |
+| `case:user_detail:v1:<member snowflake>` | `hi` page 1. |
+| anything else, or a ULID that names nothing in this server | Ephemeral `interaction.legacy_button`. |
 
 An undecodable `1:` ID answers `interaction.expired_button`.
 
@@ -1666,74 +2064,84 @@ An undecodable `1:` ID answers `interaction.expired_button`.
 
 A Discord modal holds at most 5 inputs. Rules with up to 10 fields use up to
 2 pages. Drafts live in `case_drafts` so restarts and double clicks are
-harmless.
+harmless. A draft belongs to one moderator and one server, holds the rule
+version it was started with, and expires 15 minutes after it was created.
 
-**From `/case add`:**
+**Saving a page** (`cd` submit; defer ephemerally first). One transaction:
 
-1. The rule (from the rules cache) has a required field → respond with
-   modal page 1 at once. The draft ID is generated in memory (UUIDv7) and
-   carried in the modal's custom ID (`cd`). Right after the ack, insert the
-   `case_drafts` row (actor, member, rule, version, `private`, `page = 1`,
-   empty values, `expires_at = now + 15 min`). No required field → create
-   the case directly with operation key = interaction ID.
-2. Page modal contents: the fields of that page (5 per page, in rule order)
-   — `short_text` and `number` as short text inputs, `long_text` and
-   `message_link` as paragraph inputs, `boolean` as a Yes/No string select.
-   Each is wrapped in a Label (label ≤ 45 characters, cut with "…"; the full
-   label goes in the description, ≤ 100). Required flags and max lengths
-   come from §4.6.
-3. On a page submit (`cd`): defer, then
+1. Authorize the moderator (fresh payload, 2FA).
+2. `INSERT INTO case_drafts … ON CONFLICT (id) DO NOTHING` (the first page's
+   submit creates the draft; the modal itself never needed a row), then
+   lock it `FOR UPDATE`. It must belong to this moderator and server and not
+   be expired (`case.draft.expired`).
+3. The draft's `page` is past this page → this page was already saved (a
+   double click): answer `case.draft.page_already_saved` with the button for
+   the draft's current page, or the case if the draft was already used.
+4. Store the submitted values for this page. Validate them (§4.6 against the
+   draft's version). Problems → keep the page, commit, and answer
+   `case.draft.page_invalid` with **Try again** (`cr`), which re-opens the
+   page prefilled with what was sent. Valid → `page + 1`; commit.
+5. More pages → `case.draft.page_saved` with **Continue** (`cn`).
+6. All pages saved → apply the rule (§4.2) with operation key
+   `draft:<id>` and the draft's version pinned. The case transaction deletes
+   the draft. When applying fails without a case (`error.internal`,
+   `error.discord_unavailable`, `error.unconfirmed`), the completed draft
+   stays and the answer has **Try again** (`cs`), which applies it again;
+   the operation key makes that safe even if the first try committed.
+   `RuleChanged` → `case.draft.rule_changed` and the draft is deleted.
 
-   ```sql
-   UPDATE case_drafts SET values = values || $page_values, page = page + 1, updated_at = now()
-   WHERE id = $1 AND page = $2 AND actor_id = $3 AND expires_at > now()
-   RETURNING *;
-   ```
-
-   No row → the page was already submitted (double click), the draft
-   expired, or (page 1 only) the row from step 1 has not been inserted yet.
-   When the draft ID's UUIDv7 timestamp is less than 2 seconds old, wait
-   500 ms and try once more. Then: if a case exists for operation key
-   `draft:<id>`, show it; otherwise answer `case.draft.expired`.
-4. Page values that fail §4.6 → answer `case.draft.page_invalid` listing the
-   problems with a **Try again** button (`cr`); the draft page is not
-   advanced.
-5. More pages → answer `case.draft.page_saved` with a **Continue** button
-   (`cn`) that opens the next modal (no I/O).
-6. Last page → claim the draft
-   (`DELETE FROM case_drafts WHERE id = $1 AND page = $2 RETURNING *` inside
-   the case transaction) and apply the rule with operation key
-   `draft:<id>`. The receipt's visibility follows the draft's `private`.
-7. At every page submit, the rule's current version (rules cache) must
-   still equal the draft's; otherwise answer `case.draft.rule_changed` and
-   delete the draft.
+**From `/case add`:** when the rule needs input, the initial response is
+modal page 1 with a fresh draft ID (UUIDv7) in its custom ID; the first
+submit creates the row. Otherwise the command defers and applies the rule
+at once with operation key = the interaction ID.
 
 **From the "Add case" message or member command:**
 
-1. Defer ephemerally; check `moderate` + 2FA; insert a draft (member, source
-   message for the message command, `private = true` for the message
-   command and `false` for the member command, no rule yet).
+1. Defer ephemerally; authorize; insert a draft (member, the source message
+   for the message command, `private = true` for the message command and
+   `false` for the member command, no rule yet).
 2. Show the rule picker: a string select of active rules (25 per page,
    pager `rpp`), or `case.picker.no_rules` when there are none. With exactly
-   one active rule, skip the picker and continue at step 3 with it.
-3. On select (`rp`): set the draft's rule with
-   `UPDATE … SET rule_id = $r, rule_version = $v WHERE id = $1 AND rule_id IS NULL`.
-   When the rule has required fields left after auto-filling
-   `message_link` fields from the source message, respond with modal page 1
-   (as above). Otherwise defer and apply the rule with operation key
-   `draft:<id>`.
-4. Message command: the private receipt replaces the picker. Member
-   command: the picker message becomes `case.receipt.posted` and Quack
-   creates the public receipt in the channel as a tracked message (§10.3).
+   one active rule, continue at step 3 with it.
+3. On select (`rp`, deferred update): set the draft's rule and version
+   (`UPDATE … WHERE id = $1 AND actor_id = $2 AND rule_id IS NULL`), then
+   fill empty `message_link` fields from the source message. Required fields
+   left → answer `case.picker.fill_form` with **Fill in the form** (`cn`,
+   page 1). Otherwise apply the rule with operation key `draft:<id>`.
+4. Message command: the private receipt replaces the picker. Member command:
+   the picker message becomes `case.receipt.posted`, and Quack posts the
+   public receipt.
 
 Expired drafts are deleted by housekeeping (§16.6).
 
-### 11.7 The case card and receipt
+### 11.7 The case card and receipts
 
-Both render `case.card.*` (§12.4) from the same data; the receipt is the
-card at creation time, kept current by tracked-message sync.
+The **staff card** renders every `case.card.*` line (§12.4). It is only
+ever shown ephemerally: `/case view`, Open case, the history and list
+selects, and the **private receipt** (the card as the interaction's original
+response, kept current through the interaction token for 15 minutes, then
+dropped; `/case view` shows it later). A private receipt is never posted any
+other way.
 
-Buttons (2 rows maximum; disabled or hidden as stated):
+The **public receipt** is a separate message Quack posts in the channel
+with bot credentials (§10.4) and keeps current by editing. It shows only
+these fixed fields, from `quack-text`'s `ReceiptView` projection:
+
+- the case number and rule name, with "· Voided" once voided;
+- the member;
+- the official reason;
+- the action line: the §12.6 action sentence without its failure reason or
+  retry suffix.
+
+It never shows case context, evidence, the moderator, the void reason, the
+appeal, the DM outcome, or any failure detail, and its only button is
+**Open case** (`cv`), which authorizes the clicker and answers with the
+staff card privately. When Quack can't post in the channel (a definite
+refusal), the case stands and the moderator is told privately
+(`case.receipt.post_failed`).
+
+Staff card buttons, rendered from current state (each is re-authorized and
+re-checked when clicked); at most 3 rows of 5:
 
 | Button | Shown when |
 | --- | --- |
@@ -1742,14 +2150,14 @@ Buttons (2 rows maximum; disabled or hidden as stated):
 | View evidence | the case has evidence |
 | History | always |
 | Void case | case valid |
-| Retry | the original or undo action is `failed`, not dismissed, and (for originals) the case is valid |
-| Dismiss | an action is `failed` and not dismissed |
-| Remove timeout | original timeout `done`, end in the future, no undo |
-| Unban | original ban `done`, no undo |
+| Retry {action} | `controls(action).retry`, per action (§5.8) |
+| Dismiss {action} | `controls(action).dismiss`, per action |
+| Remove timeout / Unban | `controls(original).undo` |
+| Failed actions (link to `/guilds/{guild_id}/failures`) | an action of the case is failed and not dismissed |
 | Open in dashboard | always (link) |
 
-The public receipt shows the moderator and case context but never evidence
-(§1.4).
+The card does not page: long context and evidence lists are cut (§11.11)
+and continue on the dashboard.
 
 ### 11.8 Guided `/setup`
 
@@ -1762,65 +2170,71 @@ Every click re-checks `manage_settings` + 2FA.
 | --- | --- | --- |
 | Home (`home`) | One line per area below. | One button per area; "Open settings" dashboard link. |
 | Log channel (`log`) | Channel or "Not set". | Channel select (text channels) `ch`; "Create #moderation-log" `new`; "Stop posting" `clr`. |
-| Appeals (`ap`) | Appeal channel; rejoin invite set or not. | Channel select `ch`; "Create #appeals" `new`; "Set rejoin invite" `inv` (modal `invm`, prefilled from the settings cache); "Remove invite" `clr`. |
+| Appeals (`ap`) | Appeal channel; rejoin invite set or not. | Channel select `ch`; "Create #appeals" `new`; "Stop posting appeals" `clr`; "Set rejoin invite" `inv` (modal `invm`, exception read); "Remove invite" `clrinv`. |
 | Evidence copies (`ev`) | Channel or "Off". | Channel select `ch`; "Create #evidence" `new`; "Stop copying files" `clr`. |
 | Tickets (`tk`) | On/off; entry and queue channels. | Entry channel select `entry`; queue channel select `queue`; "Create channels" `new` (creates `#support` and `#ticket-log`); "Turn on" `on`; "Turn off" `off`. |
-| Honeypot (`hp`) | On/off; channel; rule; warning. | Channel select `ch`; "Create #honeypot" `new`; rule select `rule` (active rules without required fields, from the rules cache); "Edit warning" `warn` (modal `warnm`, prefilled from the settings cache); "Turn on" `on`; "Turn off" `off`. |
+| Honeypot (`hp`) | On/off; channel; rule; warning. | Channel select `ch`; "Create #honeypot" `new`; rule select `rule` (active rules without required fields, from the rules cache); "Clear rule" `clrrule` (only while off); "Edit warning" `warn` (modal `warnm`, exception read); "Turn on" `on`; "Turn off" `off`. |
 | Server activity log (`al`) | On/off; channel (or "Several channels" when routes differ). | Channel select `ch` (routes every event to it); "Create #server-log" `new`; "Turn on" `on`; "Turn off" `off`. |
 
 Channel selects offer text channels only. A chosen staff destination must
-pass §13.1.3; created channels get staff-only overwrites (§13.1.4).
+pass §13.1.3; created channels get the overwrites of §13.1.4.
 
 ### 11.9 Gateway intents and events
 
 Intents (fixed at connect): `GUILDS`, `GUILD_MEMBERS` (privileged),
 `GUILD_MODERATION`, `GUILD_MESSAGES`, `MESSAGE_CONTENT` (privileged). Both
-privileged intents must be enabled in the developer portal. One shard
-(`ShardId::ONE`); Discord requires sharding at 2,500 servers.
+privileged intents must be enabled in the developer portal, and an
+application in 100 or more servers needs Discord's approval for them. If
+Discord rejects the identify for disallowed intents (close code 4014),
+`serve` stops with a log line naming the intents.
+
+Quack runs one shard (`ShardId::ONE`). At startup it reads `GET
+/gateway/bot`; when Discord recommends more than one shard (about 2,500
+servers), `serve` stops with a clear error (§20.4).
 
 | Event | Handling |
 | --- | --- |
-| `READY` | Mark the gateway connected; record Quack's own account ID; clear the member cache. |
-| `RESUMED` | Mark connected. |
-| `GUILD_CREATE` | Update the guild cache; seed the member cache from the payload's members; bootstrap the server (§17.5); reconcile channel settings (§13.1.5); warm the rules and config caches. |
+| `READY` | Mark the gateway connected; record Quack's own account ID; clear the member cache; mark every server unloaded until its `GUILD_CREATE`. Installed servers missing from READY's server list are treated as left (as `GUILD_DELETE`). Every `open` ticket gets `journal_gaps = true` when this READY follows an invalid session (events may have been missed). |
+| `RESUMED` | Mark connected. Nothing was missed. |
+| `GUILD_CREATE` | Update the guild cache; seed the member cache from the payload's members; bootstrap the server (§17.5); reconcile channel settings (§13.1.5); warm the rules and config caches; mark the server loaded. |
 | `GUILD_UPDATE` | Update `guilds` (name, icon, owner, MFA level) when changed; server activity `server_changed`. |
-| `GUILD_DELETE` | `unavailable = true` → ignore (outage). Otherwise `guilds.installed = false`, `left_at`; log `quack_left`; drop caches for the server. |
+| `GUILD_DELETE` | `unavailable = true` → mark the server unloaded (outage). Otherwise Quack left: §17.5 "Leaving a server". |
 | `GUILD_ROLE_CREATE/UPDATE/DELETE` | Guild cache only. Deleted roles are ignored when reading staff roles. |
 | `CHANNEL_CREATE/UPDATE` | Guild cache; server activity `channel_changed`. |
 | `CHANNEL_DELETE` | Guild cache; clear settings that point at the channel (§13.1.5); server activity `channel_changed`. |
-| `THREAD_DELETE` | A ticket's thread → close the ticket from its journal (§13.2.4). |
+| `THREAD_DELETE` | A ticket's thread (`opening` or `open`) → close the ticket (§13.2.4). |
 | `GUILD_MEMBER_ADD` | Member cache; server activity `member_joined`. |
 | `GUILD_MEMBER_UPDATE` | Member cache. |
 | `GUILD_MEMBER_REMOVE` | Member cache removal; server activity `member_left`. |
-| `MESSAGE_CREATE` | Server activity message cache; ticket journal; honeypot trigger. |
+| `MESSAGE_CREATE` | Server activity message cache; ticket journal; honeypot hit. |
 | `MESSAGE_UPDATE` | Server activity `message_edited`. |
-| `MESSAGE_DELETE`, `MESSAGE_DELETE_BULK` | Server activity `message_deleted` / `messages_bulk_deleted`; a deleted honeypot warning or ticket panel bumps its tracked message (re-post). |
-| `GUILD_AUDIT_LOG_ENTRY_CREATE` | Ban (22) and unban (23) by someone other than Quack → server activity `member_banned` / `member_unbanned`. |
+| `MESSAGE_DELETE`, `MESSAGE_DELETE_BULK` | Server activity `message_deleted` / `messages_bulk_deleted`; a deleted tracked message is posted again (§10.3). |
+| `GUILD_AUDIT_LOG_ENTRY_CREATE` | Ban (22) and unban (23) by someone other than Quack → server activity `member_banned` / `member_unbanned`. Needs View Audit Log; without it these two events are missing, and server health and the module's settings say so. |
 | `INTERACTION_CREATE` | Interaction router (§11.3). |
 
 Dispatch: the shard loop only updates caches and hands events off.
-Interactions go to a task pool (at most 64 concurrent handlers).
-Other events go to 4 queues of 1,024 events, chosen by server ID, so one
-server's events stay in order; a full queue drops the event and counts
-`quack.gateway.queue.dropped{queue}`.
+Interactions go to a task pool (at most 64 concurrent handlers). Other
+events go to 4 queues of 1,024 events, chosen by server ID, so one server's
+events stay in order. A full queue drops the event and counts
+`quack.queue.dropped{quack.queue.name}`; a dropped event in a ticket thread
+also sets that ticket's `journal_gaps`.
 
 ### 11.10 Caches
 
-| Cache | Contents | Bound | Freshness | Size metric |
+| Cache | Contents | Bound | Freshness | Size metric (`quack.cache.size{quack.cache.name}`) |
 | --- | --- | --- | --- | --- |
-| Discord guild cache (`twilight-cache-inmemory`, resource types `GUILD`, `CHANNEL`, `ROLE`, `USER_CURRENT`) | Server owner, MFA level, name, icon, channels with overwrites and parents, roles with positions and permissions | The servers Quack is in (at most 2,500 on one shard) | Gateway events | `quack.cache.size{cache="guilds"}` |
-| Member cache (`quack-discord`) | (server, account) → roles, joined time, timeout end, bot flag, username, global name, avatar | 200,000 entries, LRU | Event-fed entries expire after 30 min, REST-fed after 5 min; removed on `GUILD_MEMBER_REMOVE`; "not a member" is never cached | `quack.cache.size{cache="members"}` |
-| Rules cache (`quack-engine`) | Server → active rules with current definition | 100 per server (the limit) | Reloaded for a server on `NOTIFY quack_rules` | `quack.cache.size{cache="rules"}` |
-| Config cache (`quack-engine`) | Server → `guild_settings` and module settings | One per installed server | Reloaded on `NOTIFY quack_settings` | `quack.cache.size{cache="config"}` |
-| Server activity message cache (`quack-activity-log`) | (server, channel, message) → author, text, file names and sizes, embed types | 50,000 entries and 64 MiB estimated | 24 h; LRU | `quack.cache.size{cache="activity_messages"}` |
-| Interaction dedupe set (`quack-bot`) | Interaction IDs | 100,000 | 15 min | `quack.cache.size{cache="interactions"}` |
-| Directory cache (`quack-api`) | (server, account) → display data for the dashboard | 10,000 | 10 min | `quack.cache.size{cache="directory"}` |
-| Account servers cache (`quack-api`) | Session → the account's Discord server list | 1,000 | 60 s | `quack.cache.size{cache="account_guilds"}` |
+| Discord guild cache (`twilight-cache-inmemory`, resource types `GUILD`, `CHANNEL`, `ROLE`, `USER_CURRENT`) | Server owner, MFA level, name, icon, channels with overwrites and parents, roles with positions and permissions | The servers Quack is in (one shard) | Gateway events; trusted for a server only while connected and loaded (§2) | `guilds` |
+| Member cache (`quack-discord`) | (server, account) → roles, joined time, timeout end, bot flag, username, global name, avatar | 200,000 entries, LRU | Event-fed entries are exact while connected and loaded; REST-fed entries expire after 5 min; removed on `GUILD_MEMBER_REMOVE`; "not a member" is never cached | `members` |
+| Rules cache (`quack-engine`) | Server → every rule's name, description, archived flag, and, for active rules, the current definition | One server's rules | Reloaded for a server on `NOTIFY quack_rules` | `rules` |
+| Config cache (`quack-engine`) | Server → `guild_settings` and module settings | One per installed server | Reloaded on `NOTIFY quack_settings` | `config` |
+| Server activity message cache (`quack-activity-log`) | (server, channel, message) → author, text (already redacted, §13.3.2), file names and sizes, embed types | 50,000 entries and 64 MiB estimated | 24 h; LRU | `activity_messages` |
+| Interaction dedupe set (`quack-bot`) | Interaction IDs | 100,000 | 15 min | `interactions` |
+| Directory cache (`quack-api`) | (server, account) → display data for the dashboard | 10,000 | 10 min | `directory` |
+| Account servers cache (`quack-api`) | Session → the account's Discord server list | 1,000 | 60 s | `account_guilds` |
 
-Every cache counts `quack.cache.lookups{cache,result}` and
-`quack.cache.evictions{cache,cause}` (`capacity`, `expired`, `invalidated`).
-Twilight's message, member, presence, voice, emoji, sticker, and
-integration caches are off.
+Every cache counts `quack.cache.lookups{quack.cache.name,quack.cache.result}`
+and `quack.cache.evictions{quack.cache.name}`. Twilight's message, member,
+presence, voice, emoji, sticker, and integration caches are off.
 
 ### 11.11 Rendering
 
@@ -1835,20 +2249,31 @@ a Components V2 message (flag `IS_COMPONENTS_V2`, no `content`, no embeds):
 | `Block::Field { label, value }` | Text Display `**label:** value` |
 | `Block::Subtext(text)` | Text Display `-# text` |
 | `Block::Divider` | Separator |
+| `Block::File(name)` | File component `attachment://<name>` (Discord shows a V2 message's attachments only through File components) |
 | `Row::Buttons(Vec<Button>)` | Action Row, at most 5 buttons |
 | `Row::Select(Select)` | Action Row with one select |
 | `Msg::tone` | Container accent: none (neutral), green `0x3BA55C` (done), amber `0xFAA61A` (in progress or warning), red `0xED4245` (failed) |
 
-- Everything sits in one Container. At most 40 components and 4,000
-  characters of text per message. When text is longer, the renderer cuts
-  Subtext first, then the longest Quote or Text block (with "…"), and adds
-  `render.trimmed` ("Some details are only on the dashboard.").
+- Everything sits in one Container. The renderer enforces a budget on the
+  emitted tree: at most 40 components counted with nesting (the
+  Container, every Text Display, Separator, File, Action Row, button, and
+  select), and at most 4,000 characters of text counted after Markdown
+  escaping. Over budget, it removes Subtext blocks, then cuts the longest
+  Quote or Text block (with "…"), then drops trailing Field and Text blocks,
+  never headings or rows, and adds `render.trimmed` ("Some details are only
+  on the dashboard."). Variable lists are paged or cut before rendering
+  (10 list rows, 20 rows in an activity bulk-delete post with "and N
+  more"), so the budget always holds. A property test renders maximal
+  inputs for every message and checks Discord's limits.
 - Dynamic text (names, reasons, context, statements, evidence text) is
   Markdown-escaped. Mentions render but never ping (`allowed_mentions`
   empty), except the ticket welcome, which pings its member.
 - Button labels ≤ 80 characters, select option labels and descriptions
-  ≤ 100, modal titles and Label labels ≤ 45.
+  ≤ 100, modal titles and Label labels ≤ 45. A modal always has at least one
+  input; a rule with no fields has the free-text `details` input (§3.2).
 - Discord timestamps use `<t:unix:f>` (full) and `<t:unix:R>` (relative).
+- Evidence copies are plain messages with one attachment and no
+  components (§7.3).
 
 ---
 
@@ -1874,7 +2299,6 @@ fields that carry these texts (`message`, `text`, `outcome_text`) as given.
 | `{time}` | `<t:unix:R>` | Relative time |
 | `{duration}` | `quack_text::duration`: the two largest whole units, e.g. "1 h 30 min", "2 d", "45 s" | same |
 | `{permission}` | Discord's UI name: Moderate Members, Kick Members, Ban Members, Manage Messages, Manage Channels, Manage Threads, View Channel, Send Messages, Send Messages in Threads, Read Message History, Attach Files, Embed Links, Create Private Threads, View Audit Log | same |
-| `{code}` | Discord JSON error code, or the HTTP status when there is none | same |
 
 Plural variants are listed as "one: … / other: …". A line starting with
 `>` is a quote block; `###` a heading; `-#` subtext.
@@ -1915,7 +2339,7 @@ Plural variants are listed as "one: … / other: …". A line starting with
 | `word.action.timeout` | timeout |
 | `word.action.kick` | kick |
 | `word.action.ban` | ban |
-| `word.action.remove_timeout` | timeout removal |
+| `word.action.remove_timeout` | remove timeout |
 | `word.action.unban` | unban |
 | `word.outcome.in_progress` | In progress |
 | `word.outcome.done` | Done |
@@ -1933,6 +2357,7 @@ Plural variants are listed as "one: … / other: …". A line starting with
 | `button.next` | Next |
 | `button.open_case` | Open case |
 | `button.open_in_dashboard` | Open in dashboard |
+| `button.failed_actions` | Failed actions |
 | `select.open_case` | Open a case |
 | `render.trimmed` | Some details are only on the dashboard. |
 | `level.summary.item` | from case {from}: {outcome} |
@@ -1949,7 +2374,7 @@ matching error code (§14.6).
 
 | Id | Text |
 | --- | --- |
-| `error.missing_capability.moderate` | Only moderators can do this. Ask a server administrator if you should be a moderator. |
+| `error.missing_capability.moderate` | Only moderators can do this. Ask a server administrator to give you a moderator role. |
 | `error.missing_capability.manage_rules` | You need the Manage Server permission or a rules manager role to manage rules. |
 | `error.missing_capability.manage_settings` | You need the Manage Server permission to change Quack's settings. |
 | `error.missing_capability.manage_staff_roles` | Only the server owner and administrators can change the moderator roles. |
@@ -1961,19 +2386,23 @@ matching error code (§14.6).
 | `error.unconfirmed` | Quack couldn't confirm whether that was saved. Check before you try again. |
 | `error.render_failed` | Case #{number} is saved, but Quack couldn't show it here. Use /case view number:{number} to see it. |
 | `error.case_not_found` | There's no case #{number} in this server. |
+| `error.action_not_found` | Quack couldn't find that action in this server. Open the case again to see its actions. |
+| `error.context_changed` | Someone else changed this case's context. Open it again before you save. |
+| `error.rule_changed` | The rule {rule} changed while you were adding the case. Open the form again to use the new version. |
 | `error.rule_not_found` | That rule doesn't exist anymore. Choose another rule. |
 | `error.rule_archived` | The rule {rule} is archived, so it can't be applied. Choose an active rule. |
 | `error.case_already_voided` | Case #{number} is already voided. |
 | `error.case_voided` | Case #{number} is voided, so Quack won't run its {action}. Add a new case if it still applies. |
-| `error.action_not_retryable` | This {action} isn't failed anymore, so there's nothing to retry. |
-| `error.action_not_dismissable` | This {action} isn't failed anymore, so there's nothing to dismiss. |
-| `error.action_not_undoable` | There's nothing to undo: the {action} isn't in place, or Quack is already undoing it. |
+| `error.action_not_retryable` | This {action} can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands. |
+| `error.action_not_dismissable` | This {action} isn't failed anymore, or it was already dismissed, so there's nothing to dismiss. |
+| `error.action_not_undoable` | There's nothing to undo: the {action} isn't in place, or Quack is already undoing it. Open the case to see where it stands. |
 | `error.timeout_window_passed` | The timeout's end time has passed. Add a new case if {member} still needs a timeout. |
 | `error.appeal_not_found` | That appeal doesn't exist in this server. |
 | `error.appeal_changed` | This appeal changed since you opened it. Open it again to see where it stands. |
-| `error.evidence_limit_reached` | Case #{number} already has {count} evidence items. A case can have at most 50. |
+| `error.evidence_limit_reached` | Case #{number} would have more than 50 evidence items. Add fewer message links. |
 | `error.too_many_links` | Add at most 10 message links at a time. |
 | `error.replacement_invalid` | Case #{number} can't be replaced: only a voided case in this server that has no replacement yet can be. |
+| `error.honeypot_policy_changed` | The honeypot settings changed, so Quack didn't add a case for this post. |
 | `interaction.busy` | Quack is busy right now. Try again in a moment. |
 | `interaction.expired_button` | This button has expired. Run the command again. |
 | `interaction.legacy_button` | This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead. |
@@ -1998,7 +2427,7 @@ always "No case was added."):
 
 ### 12.4 Case card and receipt
 
-The card (staff, ephemeral) and the receipt (public or private) use the same
+The staff card (and the private receipt, which is the card) uses these
 lines, in this order; lines whose condition is false are omitted.
 
 | Id | Text | Condition |
@@ -2025,23 +2454,37 @@ lines, in this order; lines whose condition is false are omitted.
 | `case.card.appeal.accepted` | **Appeal:** accepted. | |
 | `case.card.appeal.rejected` | **Appeal:** rejected. | |
 | `case.card.appeal.closed` | **Appeal:** closed. | |
+| `case.card.failed_actions` | A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard. | an action is failed and not dismissed |
 | `case.card.imported_action` | -# The original Quack v4 action was {v4_action}. Quack took no action for this case. | imported |
 | `case.card.footer` | -# Added by {moderator} {time} | moderator set |
 | `case.card.footer_honeypot` | -# Added by Quack {time} after a post in the honeypot channel | honeypot |
 | `case.card.footer_imported` | -# Imported {time}. Original moderator: {v4_moderator} | imported |
 
+The public receipt (§11.7) uses only:
+
+| Id | Text | Condition |
+| --- | --- | --- |
+| `case.receipt.heading` | ### Case #{number} · {rule} | valid |
+| `case.receipt.heading_voided` | ### Case #{number} · {rule} · Voided | voided |
+| `case.receipt.member` | {member} | always |
+| `case.receipt.reason` | > {reason} | always |
+| `case.receipt.action` | **Action:** {action sentence, §12.6, without `{reason}` and `{retry}`} | always |
+
 Buttons (labels): `case.button.edit_context` "Edit context",
 `case.button.add_evidence` "Add evidence", `case.button.view_evidence`
 "View evidence", `case.button.history` "History", `case.button.void` "Void
-case", `case.button.retry` "Retry", `case.button.dismiss` "Dismiss",
-`case.button.remove_timeout` "Remove timeout", `case.button.unban` "Unban",
-`button.open_in_dashboard`.
+case", `case.button.retry` "Retry {action}", `case.button.dismiss` "Dismiss
+{action}", `case.button.remove_timeout` "Remove timeout",
+`case.button.unban` "Unban", `button.failed_actions`,
+`button.open_in_dashboard`, `button.open_case` (the public receipt's only
+button).
 
 | Id | Text |
 | --- | --- |
 | `case.receipt.posted` | Case #{number} is saved. Quack posted the receipt in this channel. |
 | `case.receipt.post_failed` | Case #{number} is saved. Quack couldn't post the receipt in this channel, so here it is privately. |
 | `case.receipt.replayed` | Case #{number} was already saved by this command. |
+| `case.saved_unconfirmed` | Quack couldn't confirm whether the case was saved. Use Try again: if it was saved, Quack shows it instead of adding another. |
 
 ### 12.5 Adding a case: picker, form, drafts, context problems
 
@@ -2050,48 +2493,59 @@ case", `case.button.retry` "Retry", `case.button.dismiss` "Dismiss",
 | `case.picker.prompt` | Choose a rule for the case about {member}. |
 | `case.picker.placeholder` | Choose a rule |
 | `case.picker.no_rules` | This server has no active rules yet. Ask a rules manager to create one on the dashboard. |
+| `case.picker.fill_form` | The rule {rule} needs some answers. Fill in the form to finish the case about {member}. |
 | `case.form.title` | {rule} ({page}/{pages}) — cut to 45 characters |
 | `case.form.boolean_placeholder` | Choose Yes or No |
 | `case.form.number_placeholder` | A number, like 3 or 2.5 |
 | `case.form.link_placeholder` | https://discord.com/channels/… |
 | `case.draft.page_saved` | Page {page} of {pages} is saved in your draft. Continue to finish the case. |
 | `case.draft.button.continue` | Continue |
+| `case.draft.button.fill_form` | Fill in the form |
 | `case.draft.button.try_again` | Try again |
-| `case.draft.page_invalid` | Some answers need fixing. Nothing on this page was saved:\n{problems, one per line} |
+| `case.draft.page_invalid` | Some answers need fixing, so this page isn't saved yet:\n{problems, one per line}\nUse Try again to correct them. |
+| `case.draft.page_already_saved` | This form page was already saved. Continue with the next page. |
 | `case.draft.expired` | This form expired after 15 minutes. Run /case add again. |
 | `case.draft.rule_changed` | The rule {rule} changed while you were filling in the form. Run /case add again to use the new version. |
 | `context.required` | {label}: an answer is required. |
 | `context.too_long` | {label}: use at most {max} characters. |
 | `context.not_yes_no` | {label}: choose Yes or No. |
 | `context.not_a_number` | {label}: enter a number, like 3 or 2.5. |
-| `context.number_out_of_range` | {label}: use a number no bigger than 1,000,000,000,000,000 with at most 6 decimal places. |
+| `context.number_out_of_range` | {label}: enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places. |
 | `context.not_a_message_link` | {label}: paste a Discord message link. Right-click the message and choose Copy Message Link. |
 | `context.other_server` | {label}: that message is in another server. Use a message from this server. |
 | `context.unknown_field` | {key} isn't a field of this rule. |
 | `context.duplicate_field` | {key} is answered more than once. |
+| `context.details_label` | Details |
+| `member.context.link_saved` | A message saved as evidence |
 
 ### 12.6 Actions
 
 Action sentences for staff views, receipts, the dashboard, and the log
 channel. `{retry}` appends `action.retry_scheduled` when the action is
-`pending` after at least one attempt.
+`pending` after at least one attempt. A `failed` action uses
+`action.<kind>.failed` with its `{reason}`, except `unconfirmed`, which uses
+`action.unconfirmed` alone (so one sentence never says both "couldn't" and
+"couldn't confirm").
 
 | Id | Text |
 | --- | --- |
 | `action.none` | No action. This case is a warning. |
-| `action.retry_scheduled` | Discord didn't confirm the last try, so Quack will try again {time}. |
+| `action.retry_scheduled` | The last try didn't go through or wasn't confirmed, so Quack will try again {time}. |
+| `action.unconfirmed` | Quack couldn't confirm whether Discord applied the {action} to {member}. Check {member} in Discord before you retry. |
 | `action.timeout.in_progress` | Quack is timing out {member} until {ends_at}.{retry} |
 | `action.timeout.done` | {member} is timed out until {ends_at}. |
+| `action.timeout.done_no_change` | {member} was already timed out until {ends_at} or later, so Quack left that timeout as it was. |
 | `action.timeout.failed` | Quack couldn't time out {member}. {reason} |
 | `action.timeout.cancelled` | Quack didn't time out {member} because the case was voided first. |
 | `action.kick.in_progress` | Quack is removing {member} from the server.{retry} |
 | `action.kick.done` | Quack removed {member} from the server. |
-| `action.kick.done_no_change` | {member} had already left the server. |
+| `action.kick.done_no_change` | {member} had already left the server, so Quack didn't remove them. |
 | `action.kick.failed` | Quack couldn't remove {member} from the server. {reason} |
 | `action.kick.cancelled` | Quack didn't remove {member} because the case was voided first. |
 | `action.ban.in_progress` | Quack is banning {member}.{retry} |
 | `action.ban.done` | Quack banned {member}. |
 | `action.ban.done_delete` | Quack banned {member} and deleted their messages from the last {duration}. |
+| `action.ban.done_no_change` | {member} was already banned. |
 | `action.ban.failed` | Quack couldn't ban {member}. {reason} |
 | `action.ban.cancelled` | Quack didn't ban {member} because the case was voided first. |
 | `action.remove_timeout.in_progress` | Quack is removing {member}'s timeout.{retry} |
@@ -2099,11 +2553,13 @@ channel. `{retry}` appends `action.retry_scheduled` when the action is
 | `action.remove_timeout.done_no_change` | {member}'s timeout had already ended. |
 | `action.remove_timeout.failed` | Quack couldn't remove {member}'s timeout. {reason} |
 | `action.remove_timeout.skipped` | Quack left {member}'s timeout in place because case #{other} still applies. |
+| `action.remove_timeout.skipped_changed` | Quack left {member}'s timeout in place because someone changed it outside case #{number}. Check it in Discord. |
 | `action.unban.in_progress` | Quack is unbanning {member}.{retry} |
 | `action.unban.done` | Quack unbanned {member}. |
 | `action.unban.done_no_change` | {member} wasn't banned anymore, so there was nothing to undo. |
 | `action.unban.failed` | Quack couldn't unban {member}. {reason} |
 | `action.unban.skipped` | Quack left {member}'s ban in place because case #{other} still applies. |
+| `action.unban.skipped_changed` | Quack left {member}'s ban in place because it didn't come from a voided Quack case. Check it in Discord. |
 | `action.dismissed_suffix` | Dismissed by {actor} {time}. |
 
 Failure reasons (`{reason}`):
@@ -2117,8 +2573,8 @@ Failure reasons (`{reason}`):
 | `action.failure.member_not_in_server` | {member} isn't in the server, so there's no one to time out. |
 | `action.failure.member_is_administrator` | {member} has the Administrator permission, and Discord doesn't allow timeouts for administrators. |
 | `action.failure.timeout_window_passed` | The timeout would already have ended by now, so Quack didn't apply it. |
-| `action.failure.discord_refused` | Discord didn't let Quack do this (error {code}). Check Quack's role and permissions, then retry. |
-| `action.failure.retries_exhausted` | Quack tried {attempts} times but couldn't confirm the change with Discord. Check {member} in Discord before you retry. |
+| `action.failure.discord_refused` | Discord didn't let Quack do this. Check Quack's role and permissions, then retry. |
+| `action.failure.retries_exhausted` | Discord turned Quack away {attempts} times, so nothing changed. Retry when Discord is available again. |
 
 Member-facing action sentences (dashboard member view; `you`):
 
@@ -2127,6 +2583,7 @@ Member-facing action sentences (dashboard member view; `you`):
 | `member.action.none` | This case is a warning. No other action was taken. |
 | `member.action.timeout.in_progress` | Quack is timing you out until {ends_at}. |
 | `member.action.timeout.done` | You're timed out until {ends_at}. |
+| `member.action.unconfirmed` | Quack couldn't confirm whether Discord applied this action. |
 | `member.action.timeout.not_applied` | The timeout wasn't applied. |
 | `member.action.kick.in_progress` | Quack is removing you from the server. |
 | `member.action.kick.done` | You were removed from the server. |
@@ -2137,13 +2594,17 @@ Member-facing action sentences (dashboard member view; `you`):
 | `member.action.remove_timeout.done` | Your timeout was removed. |
 | `member.action.remove_timeout.in_progress` | Quack is removing your timeout. |
 | `member.action.remove_timeout.skipped` | Your timeout stays because another case still applies. |
+| `member.action.remove_timeout.skipped_changed` | Your timeout stays. The moderators can see why. |
 | `member.action.remove_timeout.not_applied` | Your timeout hasn't been removed yet. The moderators can see why. |
 | `member.action.unban.done` | You're no longer banned. |
 | `member.action.unban.in_progress` | Quack is unbanning you. |
 | `member.action.unban.skipped` | Your ban stays because another case still applies. |
+| `member.action.unban.skipped_changed` | Your ban stays. The moderators can see why. |
 | `member.action.unban.not_applied` | Your ban hasn't been removed yet. The moderators can see why. |
 
-`not_applied` covers `failed` (and `cancelled` for original actions).
+`not_applied` covers `failed` with a definite reason (and `cancelled` for
+original actions); `failed` with `unconfirmed` uses
+`member.action.unconfirmed`.
 
 Staff controls:
 
@@ -2169,7 +2630,10 @@ Voiding:
 | `case.void.undo.remove_timeout` | Quack is removing {member}'s timeout. |
 | `case.void.undo.unban` | Quack is unbanning {member}. |
 | `case.void.cancelled_action` | Quack won't run the {action}. |
-| `case.void.running_action` | Quack had already started the {action}. If Discord confirms it, Quack will undo it. |
+| `case.void.running_action` | Quack had already started the {action}. If it went through, Quack will undo it. |
+| `case.void.running_kick` | Quack had already started the kick, so {member} may still be removed. A kick can't be undone. |
+| `case.void.done_kick` | {member} was already removed from the server. A kick can't be undone. |
+| `case.void.reason.appeal_accepted` | Appeal accepted. |
 | `case.void.appeal_closed` | The open appeal is closed, and {member} gets a DM about it. |
 
 Context and evidence:
@@ -2180,7 +2644,7 @@ Context and evidence:
 | `case.context.saved` | The context of case #{number} is saved. |
 | `case.context.saved_new_evidence` | The context of case #{number} is saved. one: Quack is saving 1 new evidence item. / other: Quack is saving {count} new evidence items. |
 | `case.context.too_many_fields` | Case #{number} has more context fields than fit in a Discord form. Edit it on the dashboard. |
-| `case.context.no_fields` | The rule for case #{number} has no context fields. |
+| `case.context.details_label` | Details |
 | `evidence.modal.title` | Add evidence · case #{number} |
 | `evidence.modal.label` | Message links |
 | `evidence.modal.description` | One Discord message link per line, up to 10. |
@@ -2188,6 +2652,7 @@ Context and evidence:
 | `evidence.added.already_saved` | one: 1 of these was already saved. / other: {count} of these were already saved. |
 | `evidence.view.heading` | ### Evidence {item} of {total} · case #{number} |
 | `evidence.view.message` | Message from {author} in {channel}, sent {time} · [Open message]({url}) |
+| `evidence.added.retrying` | one: Quack is trying again to save 1 message that failed before. / other: Quack is trying again to save {count} messages that failed before. |
 | `evidence.view.edited` | Edited {time}. |
 | `evidence.view.text` | > {text} |
 | `evidence.view.embeds` | Link previews: {titles or types, comma-separated} |
@@ -2195,7 +2660,7 @@ Context and evidence:
 | `evidence.view.none` | Case #{number} has no evidence yet. Use Add evidence to add message links. |
 | `evidence.failure.message_deleted` | Quack couldn't save this message because it was deleted before Quack fetched it. |
 | `evidence.failure.moderator_no_access` | Quack didn't save this message because the moderator who added it can't read that channel. |
-| `evidence.failure.quack_no_access` | Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again. |
+| `evidence.failure.quack_no_access` | Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry. |
 | `evidence.failure.other_server` | Quack didn't save this message because it's in another server. |
 | `evidence.failure.discord_error` | Quack couldn't save this message because Discord kept failing. Add the link again to retry. |
 | `evidence.file.copied` | {name} · saved copy |
@@ -2204,7 +2669,7 @@ Context and evidence:
 | `evidence.file.too_large` | {name} · original link only, because Quack copies files up to 10 MB |
 | `evidence.file.unsupported_type` | {name} · original link only, because Quack copies only images, video, audio, text, and PDF files |
 | `evidence.file.copy_failed` | {name} · Quack couldn't copy this file, so the original link may stop working |
-| `evidence.file.limit_reached` | {name} · not saved, because a case keeps at most 100 files and 10 per message |
+| `evidence.files_not_saved` | one: 1 more file wasn't saved, because a case keeps at most 100 files and 10 per message. / other: {count} more files weren't saved, because a case keeps at most 100 files and 10 per message. |
 | `evidence.channel_not_staff_only` | The evidence channel is no longer staff-only, so Quack didn't copy files there. |
 
 ### 12.7 DM outcome sentences
@@ -2217,17 +2682,18 @@ is a §6.5 fragment.
 | `dm.state.in_progress` | Quack is sending {member} a DM. |
 | `dm.state.sent` | Quack sent {member} a DM. |
 | `dm.state.failed` | Quack couldn't send {member} a DM {because}. They can still see the case by signing in to the dashboard. |
-| `dm.state.unknown` | Quack couldn't confirm whether {member} got the DM. Discord didn't answer in time, and Quack won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard. |
+| `dm.state.unknown` | Quack couldn't confirm whether Discord accepted the DM to {member}, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard. |
 | `dm.state.not_needed.level` | This level doesn't send a DM. |
 | `dm.state.not_needed.voided` | Quack didn't send a DM because the case was voided first. |
-| `dm.failure.dms_closed` | because their DMs are closed or they blocked Quack |
+| `dm.failure.dms_closed` | because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack) |
 | `dm.failure.not_in_shared_server` | because they no longer share a server with Quack |
-| `dm.failure.dm_channel_unavailable` | because Discord didn't open a DM channel |
-| `dm.failure.discord_refused` | because Discord refused the message (error {code}) |
+| `dm.failure.discord_unavailable` | because Discord wasn't available |
+| `dm.failure.discord_refused` | because Discord refused the message |
 
-Combined example (failed DM on a receipt): "**DM:** Quack couldn't send
-@Sam a DM because their DMs are closed or they blocked Quack. They can still
-see the case by signing in to the dashboard."
+Combined example (failed DM on the staff card): "**DM:** Quack couldn't
+send @Sam a DM because Discord didn't let Quack message them (their DMs may
+be closed, or they may have blocked Quack). They can still see the case by
+signing in to the dashboard."
 
 Member-facing (dashboard member view):
 
@@ -2235,8 +2701,8 @@ Member-facing (dashboard member view):
 | --- | --- |
 | `member.dm.in_progress` | Quack is sending you a DM about this case. |
 | `member.dm.sent` | Quack sent you a DM about this case. |
-| `member.dm.failed` | Quack couldn't send you a DM about this case, so it's shown here instead. |
-| `member.dm.unknown` | Quack couldn't confirm whether you got a DM about this case. Everything in it is shown here. |
+| `member.dm.failed` | Quack couldn't send you a DM about this case. You can see your case here. |
+| `member.dm.unknown` | Quack couldn't confirm whether you got a DM about this case. You can see your case here. |
 | `member.dm.not_needed` | This case didn't need a DM. |
 
 ### 12.8 DMs to members
@@ -2252,9 +2718,9 @@ Member-facing (dashboard member view):
 | `dm.case.details_heading` | **Details** | the case has non-link context |
 | `dm.case.detail_line` | **{label}:** {value} (booleans Yes/No; `message_link` fields never shown) | per field |
 | `dm.case.outcome.warning` | **What happens:** This is a warning. No other action is taken. | no action |
-| `dm.case.outcome.timeout` | **What happens:** You're timed out until {ends_at}. | timeout |
-| `dm.case.outcome.kick` | **What happens:** You're being removed from the server. | kick |
-| `dm.case.outcome.ban` | **What happens:** You're being banned from the server. | ban |
+| `dm.case.outcome.timeout` | **What happens:** The moderators decided to time you out until {ends_at}. | timeout |
+| `dm.case.outcome.kick` | **What happens:** The moderators decided to remove you from the server. | kick |
+| `dm.case.outcome.ban` | **What happens:** The moderators decided to ban you from the server. | ban |
 | `dm.case.appeal` | If you think this case is wrong, you can appeal it once. | appealable |
 | `dm.case.not_appealable` | This case can't be appealed. | not appealable |
 | `dm.case.footer_text` | {dm_footer} (the server's text) | set |
@@ -2262,16 +2728,17 @@ Member-facing (dashboard member view):
 | `dm.case.button.appeal` | Appeal | appealable (custom ID `1:ap:<case>`) |
 | `dm.case.button.dashboard` | Open in dashboard | always (link to `/guilds/{guild_id}/cases/{case_id}/appeal`) |
 
-`dm.appeal.*` (one per decision; every one ends with the subtext
-`-# Case #{number} · {server}` and a link button `dm.appeal.button` "View
+`dm.appeal.*` (one per appeal event, rendered from that event; every one
+ends with the subtext `-# Case #{number} · {server} · {event time}` and a
+link button `dm.appeal.button` "View
 appeal", or "Reply on the dashboard" for information requests):
 
 | Id | Heading | Body |
 | --- | --- | --- |
 | `dm.appeal.information_requested` | ### The moderators of {server} need more information about your appeal | > {reason}\nReply on the dashboard to continue your appeal for case #{number}. |
 | `dm.appeal.reopened` | ### The moderators of {server} reopened your appeal | > {reason}\nThey need more information. Reply on the dashboard to continue your appeal for case #{number}. |
-| `dm.appeal.accepted` | ### Your appeal for case #{number} in {server} was accepted | > {reason}\nThe case no longer counts against you. If it came with a timeout or ban, Quack is removing it. |
-| `dm.appeal.accepted.rejoin_ban` | (appended) | Once your ban is removed, you can rejoin with this invite: {invite} |
+| `dm.appeal.accepted` | ### Your appeal for case #{number} in {server} was accepted | > {reason}\nThe case no longer counts. Open your case to see what happened to any timeout or ban. |
+| `dm.appeal.accepted.rejoin_ban` | (appended) | If your ban is removed, you can rejoin with this invite: {invite} |
 | `dm.appeal.accepted.rejoin_kick` | (appended) | You can rejoin the server with this invite: {invite} |
 | `dm.appeal.rejected` | ### Your appeal for case #{number} in {server} was rejected | > {reason}\nThe case still counts. |
 | `dm.appeal.closed` | ### Your appeal for case #{number} in {server} was closed | > {reason} |
@@ -2294,6 +2761,7 @@ Member side:
 | `appeal.submit.not_yours` | This button isn't for your account. Sign in to the dashboard to see your own cases. |
 | `appeal.information.saved` | Your answer is added to the appeal for case #{number}. The moderators will review it. |
 | `appeal.information.not_requested` | The moderators haven't asked for more information on this appeal. |
+| `appeal.information.outdated` | This appeal changed since you opened it. Reload the page to see the latest question before you answer. |
 
 Staff side (appeal post, appeal card, `/appeals`):
 
@@ -2320,8 +2788,10 @@ Staff side (appeal post, appeal card, `/appeals`):
 | `appeal.modal.reason.label` | Reason the member will see |
 | `appeal.reason.default.accept` | We reviewed your appeal and voided the case. |
 | `appeal.reason.default.reject` | We reviewed your appeal, and the case stands. |
-| `appeal.decided.accepted` | You accepted the appeal for case #{number}. The case is voided, and {member} gets a DM. |
-| `appeal.decided.rejected` | You rejected the appeal for case #{number}. {member} gets a DM. |
+| `appeal.decided.accepted` | You accepted the appeal for case #{number}. The case is voided, and Quack will try to send {member} a DM. Open the case to see what happens to any timeout or ban. |
+| `appeal.decided.rejected` | You rejected the appeal for case #{number}. Quack will try to send {member} a DM. |
+| `appeal.closed_by_void` | Closed because the case was voided. |
+| `appeal.post.moved` | -# This appeal moved to {channel}. |
 | `appeals.heading` | ### Appeals waiting for a decision |
 | `appeals.row` | Case #{number} · {member} · {rule} · submitted {time} |
 | `appeals.empty` | No appeals are waiting for a decision. |
@@ -2355,21 +2825,24 @@ Each post is: the lead sentence below, an optional quote, and the subtext
 | `log.action_done.unban` | `action_done` ok | Quack unbanned {member}. The ban came from {case}. |
 | `log.action_done.unban_no_change` | `action_done` ok | {member} wasn't banned anymore when Quack tried to undo the ban from {case}. |
 | `log.action_failed` | `action_failed` failed | Quack couldn't {verb} {member} for {case}. {reason} — with a **Retry** button while retryable |
+| `log.action_failed.unconfirmed` | `action_failed` failed, reason `unconfirmed` | Quack couldn't confirm whether Discord applied the {action} to {member} for {case}. Check {member} in Discord before you retry. |
 | `log.action_retry_requested` | `action_retry_requested` ok | {actor} asked Quack to try the {action} for {case} again. |
 | `log.action_dismissed` | `action_dismissed` ok | {actor} dismissed the failed {action} for {case}. |
 | `log.action_undo_requested.remove_timeout` | `action_undo_requested` ok | {actor} asked Quack to remove {member}'s timeout from {case}. |
 | `log.action_undo_requested.unban` | `action_undo_requested` ok | {actor} asked Quack to unban {member}. The ban came from {case}. |
 | `log.action_undo_skipped.timeout` | `action_undo_skipped` ok | Quack left {member}'s timeout in place because case #{other} still applies, even though {case} was voided. |
 | `log.action_undo_skipped.ban` | `action_undo_skipped` ok | Quack left {member}'s ban in place because case #{other} still applies, even though {case} was voided. |
+| `log.action_undo_skipped.changed_timeout` | `action_undo_skipped` ok, `changed_outside_case` | Quack left {member}'s timeout in place after {case} was voided, because someone changed the timeout outside the case. Check it in Discord. |
+| `log.action_undo_skipped.changed_ban` | `action_undo_skipped` ok, `changed_outside_case` | Quack left {member}'s ban in place after {case} was voided, because the ban didn't come from a voided Quack case. Check it in Discord. |
 | `log.dm_sent.case` | `dm_sent` ok (not posted) | Quack sent {member} a DM about {case}. |
 | `log.dm_sent.appeal` | `dm_sent` ok (not posted) | Quack sent {member} a DM about their appeal for {case}. |
 | `log.dm_sent.ticket` | `dm_sent` ok (not posted) | Quack sent {member} the transcript of their ticket. |
 | `log.dm_failed.case` | `dm_failed` failed, state failed | Quack couldn't send {member} a DM about {case} {because}. They can still see the case by signing in to the dashboard. |
-| `log.dm_failed.case_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether {member} got the DM about {case}. Quack won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard. |
+| `log.dm_failed.case_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether Discord accepted the DM to {member} about {case}, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard. |
 | `log.dm_failed.appeal` | `dm_failed` failed, state failed | Quack couldn't send {member} a DM about their appeal for {case} {because}. They can still see the decision on the dashboard. |
-| `log.dm_failed.appeal_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether {member} got the DM about their appeal for {case}. They can still see the decision on the dashboard. |
-| `log.dm_failed.ticket` | `dm_failed` failed | Quack couldn't send {member} the transcript of their ticket {because}. Staff can find it in the ticket post. |
-| `log.dm_failed.ticket_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether {member} got the transcript of their ticket. Staff can find it in the ticket post. |
+| `log.dm_failed.appeal_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether Discord accepted the DM to {member} about their appeal for {case}. They can still see the decision on the dashboard. |
+| `log.dm_failed.ticket` | `dm_failed` failed | Quack couldn't send {member} the transcript of their ticket {because}. Staff can read it on the dashboard's ticket page. |
+| `log.dm_failed.ticket_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether Discord accepted the transcript DM to {member}. Staff can read it on the dashboard's ticket page. |
 | `log.appeal_submitted` | `appeal_submitted` ok | {member} appealed {case}. |
 | `log.appeal_information_requested` | `appeal_information_requested` ok | {actor} asked {member} for more information about their appeal for {case}. |
 | `log.appeal_information_provided` | `appeal_information_provided` ok | {member} added information to their appeal for {case}. |
@@ -2387,16 +2860,17 @@ Each post is: the lead sentence below, an optional quote, and the subtext
 | `log.module_enabled` | `module_enabled` ok | {actor} turned on {module}. |
 | `log.module_disabled` | `module_disabled` ok, by staff | {actor} turned off {module}. |
 | `log.module_disabled.channel_deleted` | `module_disabled` ok, by Quack | Quack turned off {module} because its channel was deleted. |
+| `log.module_disabled.quack_left` | `module_disabled` ok, by Quack (not posted) | Quack turned off {module} because Quack left the server. |
 | `log.module_settings_changed` | `module_settings_changed` ok | {actor} changed the {module} settings: {fields}. |
 | `log.quack_joined.first` | `quack_joined` ok | Quack joined the server and created the starter rule {rule}. Review it on the dashboard. |
 | `log.quack_joined.again` | `quack_joined` ok | Quack rejoined the server. |
 | `log.quack_left` | `quack_left` ok (not posted) | Quack left the server. |
 | `log.channel_setting_cleared` | `channel_setting_cleared` ok | Quack stopped using the {setting} because its channel was deleted. |
-| `log.log_channel_failed.not_staff_only` | `log_channel_failed` failed (not posted) | Quack couldn't post in the log channel because it isn't staff-only anymore. The entry is still in the moderation log. |
-| `log.log_channel_failed.discord_refused` | `log_channel_failed` failed (not posted) | Quack couldn't post in the log channel because Discord refused (error {code}). The entry is still in the moderation log. |
-| `log.log_channel_failed.retries_exhausted` | `log_channel_failed` failed (not posted) | Quack couldn't post an entry in the log channel because Discord kept failing. The entry is still in the moderation log. |
+| `log.log_channel_failed.not_staff_only` | `log_channel_failed` failed (not posted) | Quack stopped posting in the log channel because it isn't staff-only anymore. Entries are still in the moderation log. Fix the channel's permissions to resume. |
+| `log.log_channel_failed.discord_refused` | `log_channel_failed` failed (not posted) | Discord didn't let Quack post in the log channel. Entries are still in the moderation log. Check Quack's permissions there. |
+| `log.log_channel_failed.retries_exhausted` | `log_channel_failed` failed (not posted) | Quack couldn't confirm that an entry reached the log channel because Discord kept failing. Entries are still in the moderation log. |
 | `log.ticket_opened` | `ticket_opened` ok | {member} opened a ticket: {thread}. |
-| `log.ticket_closed` | `ticket_closed` ok | {actor} closed {member}'s ticket. The transcript is saved. |
+| `log.ticket_closed` | `ticket_closed` ok | {actor} closed {member}'s ticket. The transcript is saved on the dashboard. |
 | `log.ticket_closed.partial` | (appended) | Some messages may be missing from the transcript. |
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed | Quack couldn't add a honeypot case for {member}: {refusal}. |
 | `log.legacy` | `legacy` (imported, not posted) | Imported from the previous version of Quack: {action}. |
@@ -2446,6 +2920,8 @@ lowercased.
 | `setup.button.stop_evidence` | Stop copying files |
 | `setup.button.set_invite` | Set rejoin invite |
 | `setup.button.remove_invite` | Remove invite |
+| `setup.button.stop_appeals` | Stop posting appeals |
+| `setup.button.clear_rule` | Clear rule |
 | `setup.button.edit_warning` | Edit warning |
 | `setup.select.channel` | Choose a channel |
 | `setup.select.entry` | Channel where members open tickets |
@@ -2455,7 +2931,8 @@ lowercased.
 | `setup.log.saved` | Quack will post moderation log entries in {channel}. |
 | `setup.log.cleared` | Quack stopped posting moderation log entries. |
 | `setup.appeals.explain` | New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite. |
-| `setup.appeals.saved` | New appeals will be posted in {channel}. |
+| `setup.appeals.saved` | Appeals will be posted in {channel}, including open appeals that weren't posted yet. |
+| `setup.appeals.cleared` | Quack stopped posting new appeals. Review them with /appeals or on the dashboard. |
 | `setup.appeals.invite_saved` | Members whose appeal is accepted will get this invite: {invite} |
 | `setup.appeals.invite_cleared` | The rejoin invite is removed. |
 | `setup.evidence.explain` | Quack copies evidence files to this staff-only channel so they last after the original message is deleted. |
@@ -2469,6 +2946,7 @@ lowercased.
 | `setup.honeypot.explain` | A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely. |
 | `setup.honeypot.channel_saved` | The honeypot channel is {channel}. |
 | `setup.honeypot.rule_saved` | Posts in the honeypot channel will add a case under {rule}. |
+| `setup.honeypot.rule_cleared` | The honeypot no longer uses a rule. Choose one before turning it on. |
 | `setup.honeypot.rule_created` | Quack created the rule {rule} for the honeypot. Change it on the dashboard if you want a different outcome. |
 | `setup.honeypot.warning_saved` | The honeypot warning is updated. |
 | `setup.honeypot.on` | The honeypot is on in {channel}. |
@@ -2478,8 +2956,11 @@ lowercased.
 | `setup.activity_log.on` | The server activity log is on. |
 | `setup.activity_log.off` | The server activity log is off. |
 | `setup.created` | Quack created {channel} with staff-only permissions and saved it. |
-| `setup.create_failed.permission` | Quack couldn't create #{name} because it doesn't have the Manage Channels permission. Choose an existing channel instead. |
-| `setup.create_failed.discord` | Quack couldn't create #{name} because Discord refused (error {code}). Choose an existing channel instead. |
+| `setup.created_public` | Quack created {channel} so members can see it, and saved it. |
+| `setup.adopted` | Quack found {channel}, which it created a moment ago, and saved it. |
+| `setup.create_failed.permission` | Quack couldn't create #{name} because it needs the {permissions} permission. Give it to Quack's role, or choose an existing channel instead. |
+| `setup.create_failed.discord` | Discord didn't let Quack create #{name}. Choose an existing channel instead. |
+| `setup.create_unconfirmed` | Quack couldn't confirm whether Discord created #{name}. Open the channel list: choose #{name} if it's there, or try again. |
 | `setup.channel_not_staff_only` | {channel} isn't staff-only, so Quack didn't save it:\n{problems, one per line}\nFix its permissions, then choose it again. |
 | `setup.problem.not_text` | It isn't a text channel in this server. |
 | `setup.problem.everyone_can_view` | @everyone can view it. Deny View Channel for @everyone. |
@@ -2522,9 +3003,9 @@ Created channels (name, topic, first message):
 | Id | Text |
 | --- | --- |
 | `help.overview` | ### Quack\nQuack keeps track of moderation cases. Rules managers set up rules on the dashboard, moderators apply them, and Quack picks the outcome and carries it out.\n\n**Moderators:** /case add, /case view, /case list, /case history, /case void, /appeals\n**Rules:** /rules (rules are edited on the dashboard)\n**Setup:** /setup (needs Manage Server)\n\nUse /help with a topic for more. |
-| `help.cases` | ### Cases\nUse /case add, or right-click a message or member and choose **Apps → Add case**. Choose the rule, and Quack counts the member's earlier cases under it, picks the level, and carries out its action. Set private to True to keep the receipt to yourself.\n\nWhen you add a case from a message, Quack saves that message as evidence. Add more with **Add evidence** on the case. The member can see the case context, but not who added the case or who wrote the evidence.\n\nMade a mistake? Use /case void or **Void case**. The case stays in the history but stops counting, and Quack removes its timeout or ban. |
+| `help.cases` | ### Cases\nUse /case add, or right-click a message or member and choose **Apps → Add case**. Choose the rule, and Quack counts the member's earlier cases under it, picks the level, and carries out its action. Set private to True to keep the receipt to yourself.\n\nWhen you add a case from a message, Quack saves that message as evidence. Add more with **Add evidence** on the case. The member can see the case context, but not who added the case or who wrote the evidence.\n\nMade a mistake? Use /case void or **Void case**. The case stays in the history but stops counting. Open the case afterwards to check whether Quack removed its timeout or ban; a kick can't be undone.\n\nIf Quack couldn't carry out an action, the case shows **Retry** and **Dismiss**, and the dashboard's failed actions page lists every one. |
 | `help.rules` | ### Rules\nA rule is one kind of problem, like spam. Each rule has levels that start at a case count: for example a warning for the first case, a 1-hour timeout from the third, and a ban from the fifth. Counts are per member and per rule, and voided cases don't count. A rule can count only recent cases, like the last 30 days.\n\nRules are edited on the dashboard, and editing a rule never changes old cases. Use /rules to see this server's rules. |
-| `help.appeals` | ### Appeals\nA member can appeal each case once, from Quack's DM or from the dashboard, even after a ban. Choose the appeal channel with /setup. Moderators accept or reject appeals there, with /appeals, or on the dashboard, and the member gets a DM with the decision. Accepting an appeal voids the case and removes its timeout or ban. |
+| `help.appeals` | ### Appeals\nA member can appeal each case once, from Quack's DM or from the dashboard, even after a ban. Choose the appeal channel with /setup. Moderators accept or reject appeals there, with /appeals, or on the dashboard, and Quack tries to send the member a DM with the decision. Accepting an appeal voids the case, and Quack removes the timeout or ban it placed when Discord still shows it. |
 | `help.setup` | ### Setup\nRun /setup to choose the log channel, the appeal channel, and the evidence channel, and to turn on tickets, the honeypot, and the server activity log. Quack can create each channel for you with staff-only permissions. Everything in /setup is also in the dashboard settings. |
 | `help.dashboard_link` | Open the dashboard |
 | `rules.heading` | ### Rules |
@@ -2552,12 +3033,11 @@ Tickets:
 | `ticket.panel.off` | Tickets are turned off right now. |
 | `ticket.panel.button` | Open a ticket |
 | `ticket.panel.moved` | Tickets moved to {channel}. Open a ticket there. |
-| `ticket.open.opening` | Quack is opening your ticket. It will appear in {channel} in a moment. |
-| `ticket.open.ready` | Your ticket is ready: {thread}. Tell the staff what you need there. |
+| `ticket.open.opening` | Quack is opening your ticket. You'll be added to a private thread in {channel} in a moment, and Quack will mention you there. |
 | `ticket.open.exists` | You already have an open ticket: {thread}. |
 | `ticket.open.closing` | Your last ticket is still closing. Try again in a minute. |
 | `ticket.open.disabled` | Tickets are turned off in this server. |
-| `ticket.open.failed` | Quack couldn't open a ticket because Discord refused (error {code}). Ask a server administrator to check Quack's permissions in {channel}. |
+| `ticket.open.failed` | Quack couldn't open your ticket because Discord didn't let it create the thread. Ask a server administrator to check Quack's permissions in {channel}. |
 | `ticket.welcome` | {member}, your ticket is open. Tell us what you need help with, and a moderator will reply here. |
 | `ticket.button.close` | Close ticket |
 | `ticket.button.open_thread` | Open thread |
@@ -2565,21 +3045,28 @@ Tickets:
 | `ticket.post.heading` | ### Ticket from {member} |
 | `ticket.post.open` | Open · {thread} · opened {time} |
 | `ticket.post.opening` | Opening… |
+| `ticket.post.open_failed` | Quack couldn't open this ticket. {member} can try again. |
 | `ticket.post.closing` | Closing. Quack is saving the transcript. |
-| `ticket.post.closed` | Closed by {actor} {time}. The transcript is attached. |
-| `ticket.post.partial` | The transcript may be missing some messages, because Quack couldn't read the thread's full history. |
+| `ticket.post.closed` | Closed by {actor} {time}. |
+| `ticket.post.transcript_attached` | The transcript is attached. |
+| `ticket.post.transcript_dashboard` | The transcript is on the dashboard until {time}. |
+| `ticket.post.transcript_expired` | The transcript was kept until {time} and has been deleted. |
+| `ticket.post.partial` | The transcript may be missing some messages: {cause}. |
+| `ticket.post.partial.history` | Quack couldn't read the thread's full history |
+| `ticket.post.partial.trimmed` | it was cut to 8 MB |
+| `ticket.post.thread_not_deleted` | Quack couldn't delete the thread. A moderator can delete it in Discord. |
 | `ticket.close.closing` | Quack is closing this ticket and saving the transcript. |
 | `ticket.close.not_open` | This ticket is already closed or closing. |
 | `ticket.close.not_allowed` | Only the member who opened this ticket and moderators can close it. |
-| `ticket.fix.done` | Ticket access is fixed: only {member} and staff can see the thread. |
-| `ticket.fix.failed` | Quack couldn't fix the ticket's access because Discord refused (error {code}). |
+| `ticket.fix.done` | Quack added {member} to the thread. one: It removed 1 person who isn't staff. / other: It removed {count} people who aren't staff. |
+| `ticket.fix.failed` | Discord didn't let Quack fix the ticket's access. Check Quack's Manage Threads permission in {channel}. |
 | `dm.ticket_closed.heading` | ### Your ticket in {server} is closed |
 | `dm.ticket_closed.text` | Here's a copy of the conversation for your records. |
-| `ticket.thread_name` | ticket-{short id} |
+| `ticket.thread_name` | ticket-{ticket u22} |
 | `ticket.transcript.header` | Ticket transcript · {server} · opened {time UTC} by {member name} ({member id}) · closed {time UTC} |
 | `ticket.transcript.line` | [{time UTC}] {author name} ({author id}): {text} |
 | `ticket.transcript.file_line` | `  file: {name} ({size} bytes)` |
-| `ticket.transcript.partial` | Some messages may be missing: Quack couldn't read the thread's full history. |
+| `ticket.transcript.partial` | Some messages may be missing: {cause}. |
 
 Server activity log (posted in the routed channel):
 
@@ -2589,13 +3076,14 @@ Server activity log (posted in the routed channel):
 | `activity.before` | **Before:**\n> {text} |
 | `activity.before_unknown` | **Before:** Quack hadn't seen this message, so the earlier text isn't known. |
 | `activity.after` | **After:**\n> {text} |
+| `activity.after_empty` | **After:** the message has no text now. |
 | `activity.message_deleted` | A message from {author} was deleted in {channel}. |
 | `activity.message_deleted_unknown` | A message was deleted in {channel}. Quack hadn't seen it, so its author and text aren't known. |
 | `activity.messages_deleted_unknown` | {count} messages were deleted in {channel}. Quack hadn't seen them, so their authors and text aren't known. |
 | `activity.messages_bulk_deleted` | {count} messages were deleted at once in {channel}. |
 | `activity.bulk_known` | one: Quack had seen 1 of them: / other: Quack had seen {known} of them: |
 | `activity.bulk_row` | {author}: {text, cut to 200 characters} |
-| `activity.files` | Files: {names, comma-separated} |
+| `activity.files` | Files: {names, each linked to its original URL, comma-separated} |
 | `activity.embeds` | Link previews: {types} |
 | `activity.text_hidden` | Message text isn't shown, because this server's activity log hides it. |
 | `activity.message_ids` | -# Message IDs: {ids, comma-separated, at most 50} |
@@ -2620,14 +3108,15 @@ Honeypot:
 | `honeypot.warning.warning_only` | Posting here adds a case under {rule}. |
 | `honeypot.warning.tail` | This channel catches spam accounts. Staff can post here safely. |
 | `honeypot.warning.count` | -# one: 1 honeypot case so far. / other: {count} honeypot cases so far. |
-| `honeypot.warning.off` | -# The honeypot is turned off right now. |
+| `honeypot.warning.off` | ### The honeypot is off\nPosts here don't add cases right now. |
 | `honeypot.outcome.ban` | ban you |
 | `honeypot.outcome.kick` | remove you from the server |
 | `honeypot.outcome.timeout` | time you out for {duration} |
 | `honeypot.outcome.warning` | give you a warning |
 
 A custom warning replaces the heading and the generated sentences; the
-count line is always appended.
+count line is always appended. While the honeypot is off, the warning shows
+only `honeypot.warning.off` (a custom warning is not shown).
 
 ### 12.14 API messages
 
@@ -2638,17 +3127,17 @@ id fits, the API uses it; the API-only texts are:
 | --- | --- |
 | `api.sign_in_required` | Sign in with Discord to continue. |
 | `api.session_expired` | Your session has ended. Sign in again. |
-| `api.origin_rejected` | This request didn't come from the Quack dashboard. |
-| `api.csrf_rejected` | Quack couldn't verify this request came from your session. Reload the page and try again. |
+| `api.origin_rejected` | Quack only accepts changes made from its own dashboard. Open the dashboard and try again there. |
+| `api.csrf_rejected` | Quack couldn't verify this came from your session. Reload the page and try again. |
 | `api.not_found` | Quack couldn't find that. |
 | `api.server_not_found` | Quack isn't in that server, or you're not a member of it. |
 | `api.file_unavailable` | That file isn't available anymore. |
 | `api.validation_failed` | Some fields need fixing. |
-| `api.invalid_json` | The request body isn't valid JSON. |
-| `api.body_too_large` | The request is too large. The limit is 256 KB. |
-| `api.unsupported_media_type` | Send the request body as JSON. |
-| `api.idempotency_key_required` | This request needs an Idempotency-Key header. |
-| `api.idempotency_key_reused` | This Idempotency-Key was already used for a different request. Use a new key. |
+| `api.invalid_json` | Quack couldn't read what was sent. Reload the dashboard and try again. |
+| `api.body_too_large` | That's too much to save at once. The limit is 256 KB. |
+| `api.unsupported_media_type` | Quack couldn't read what was sent. Reload the dashboard and try again. |
+| `api.idempotency_key_required` | Quack couldn't tell whether this was already saved. Reload the dashboard and try again. |
+| `api.idempotency_key_reused` | This looks like a repeat of an earlier, different change. Reload the dashboard and try again. |
 | `api.rate_limited` | You're doing that too often. Try again in {seconds} seconds. |
 | `api.rule_changed` | Someone else saved this rule. Reload it to see the latest version before you save. |
 | `api.rule_name_taken` | Another active rule is already called {name}. Choose a different name. |
@@ -2658,11 +3147,15 @@ id fits, the API uses it; the API-only texts are:
 | `api.settings_changed` | Someone else changed the staff roles. Reload the settings and try again. |
 | `api.appeal_exists` | You already appealed this case. |
 | `api.appeal_not_allowed` | This case can't be appealed. |
-| `api.ticket_not_open` | This ticket is already closed or closing. |
 | `api.module_not_ready` | {Module} can't be turned on yet. |
 | `api.discord_unavailable` | Quack couldn't reach Discord, so nothing changed. Try again in a moment. |
 | `api.unavailable` | Quack is having trouble right now, so nothing changed. Try again in a moment. |
 | `api.internal_error` | Something went wrong inside Quack. If you changed something, check whether it was saved before you try again. |
+
+Sign-in pages (`/login?error=…`, route 2), not API errors:
+
+| Id | Text |
+| --- | --- |
 | `api.sign_in_failed` | Discord sign-in didn't finish. Start again. |
 | `api.sign_in_denied` | You cancelled the Discord sign-in. |
 
@@ -2683,7 +3176,7 @@ One `guild_settings` row per server, created by bootstrap (§17.5).
 | `log_channel_id` | NULL | Staff-only check (§13.1.3) with Quack needing View Channel and Send Messages. | `manage_settings` |
 | `appeal_channel_id` | NULL | Staff-only; View Channel, Send Messages. | `manage_settings` |
 | `evidence_channel_id` | NULL | Staff-only; View Channel, Send Messages, Attach Files. | `manage_settings` |
-| `appeal_invite_url` | NULL | `https://discord.gg/<code>` or `https://discord.com/invite/<code>`, code 2–32 of `[A-Za-z0-9-]`; stored as `https://discord.gg/<code>`. | `manage_settings` |
+| `appeal_invite_url` | NULL | Accepted input: `discord.gg/<code>`, `discord.com/invite/<code>`, or `discordapp.com/invite/<code>`, with or without `https://` and `www.`; code 2–64 of `[A-Za-z0-9_-]`. Stored as `https://discord.gg/<code>`. | `manage_settings` |
 | `dm_intro` | NULL | 0–1,000 characters; empty stores NULL. | `manage_settings` |
 | `dm_footer` | NULL | 0–500 characters; empty stores NULL. | `manage_settings` |
 | `starter_rule_id` | set at bootstrap | read-only | — |
@@ -2693,30 +3186,34 @@ Several settings may name the same channel.
 
 #### 13.1.2 Updating settings
 
-`PATCH /api/guilds/{guild_id}/settings` writes only the fields it contains,
-in one transaction:
+`PATCH /api/guilds/{guild_id}/settings` writes only the fields it contains:
 
-1. Validate every sent field (Discord checks happen before the transaction;
-   failures are reported per field).
-2. `SELECT … FROM guild_settings WHERE guild_id = $1 FOR UPDATE`.
+1. Gather the Discord facts the sent fields need (channels, overwrites,
+   roles) before any lock.
+2. One transaction: `SELECT … FROM guild_settings WHERE guild_id = $1 FOR
+   UPDATE`.
 3. When the request contains `moderator_role_ids` or
    `rules_manager_role_ids`, it must also contain `expected_version`; a
    mismatch with `guild_settings.version` → `409 settings_changed` and
    nothing is saved. This stops a stale page from putting back roles an
    administrator just removed.
-4. Channel checks use the moderator roles being saved when the request
-   contains them, else the stored ones.
+4. Validate every sent field (pure, `quack_core::settings`) against the
+   locked row and the facts from step 1; channel checks use the moderator
+   roles being saved when the request contains them, else the locked ones.
+   Failures are reported per field and nothing is saved.
 5. Update the sent columns, `version = version + 1`, `updated_at`,
-   `updated_by`; log `settings_changed` with the field names; `NOTIFY
+   `updated_by`; bind or move tracked messages the change affects (§8.3,
+   §10.2); log `settings_changed` with the field names; `NOTIFY
    quack_settings`.
 
-Module enable and disable are separate endpoints (§13.1.7).
+Module enable and disable are separate endpoints (§13.1.7). Module settings
+(`PUT …/modules/{module}/settings`) follow the same five steps on their own
+row.
 
 #### 13.1.3 Staff-only channel check
 
 `quack_core::permissions::check_staff_channel(channel, guild, settings, quack_needs) -> Vec<ChannelProblem>`,
-pure over cached channel and role data (REST fallback in the adapter). A
-staff destination passes when:
+pure over channel and role facts. A staff destination passes when:
 
 1. It is a text channel (type 0) in this server (`not_text`).
 2. The @everyone overwrite denies View Channel (`everyone_can_view`).
@@ -2728,33 +3225,56 @@ staff destination passes when:
 5. Quack's computed permissions in the channel include every permission in
    `quack_needs` (`quack_missing`).
 
-The check runs when a channel is saved and again before every post to a
-staff destination (log channel, appeal posts, evidence copies, ticket staff
-posts, server activity posts). Changing staff roles later never edits
-existing channel overwrites.
+The check runs when a channel is saved and again, from current facts (§2),
+before every post to a staff destination (log channel, appeal posts,
+evidence copies, ticket staff posts, server activity posts). It protects
+new posts only: a channel later opened to more people shows them what was
+already posted, and Discord offers no way to take that back (§20.4).
+Changing staff roles later never edits existing channel overwrites.
 
 #### 13.1.4 Creating channels
 
-`/setup` "Create" buttons call `quack_engine::setup::create_channel(kind)`:
-the name and topic come from §12.11, the first message is posted, and the
-channel is saved in the same step. Overwrites:
+`/setup` "Create" buttons call `quack_engine::setup::create_channel(kind)`.
+Creates for one server run one at a time (an in-process lock; Quack runs
+as one process, §17.5).
 
-| Kind | @everyone | Quack | Staff roles* |
+1. **Find first.** List the server's channels. A text channel with the
+   catalog name (§12.11) whose ID's timestamp is under 10 minutes old and
+   that has a member overwrite for Quack (every channel Quack creates has
+   one) is a channel Quack just made: adopt it (`setup.adopted`). This makes
+   a double click, or a retry after a lost answer, harmless.
+2. **Check.** Creation needs Manage Channels, and Discord lets Quack allow
+   or deny only permissions it holds itself; a missing permission →
+   `setup.create_failed.permission` naming it.
+3. **Create** the channel with the name, topic, and overwrites below.
+   `Unknown` → `setup.create_unconfirmed` (the next click finds it in step
+   1).
+4. **Save** the setting in one transaction (§13.1.2 steps 2–5), including
+   the tracked message the channel holds (the ticket panel, the honeypot
+   warning), so its first post is the normal sync (§10.3). The channel
+   intro message of a staff destination (§12.11 "First message") is then
+   created following §10.4; a failure there doesn't undo anything.
+5. Answer `setup.created` (staff destinations) or `setup.created_public`
+   (ticket entry, honeypot).
+
+| Kind | @everyone | Quack (member overwrite) | Staff roles* |
 | --- | --- | --- | --- |
 | Staff destination (log, appeals, evidence, ticket queue, server activity) | deny View Channel | allow View Channel, Send Messages, Read Message History, Attach Files, Embed Links | allow View Channel, Send Messages, Read Message History |
-| Ticket entry | allow View Channel, Read Message History, Send Messages in Threads; deny Send Messages, Create Public Threads, Create Private Threads | allow View Channel, Send Messages, Read Message History, Create Private Threads, Manage Threads, Send Messages in Threads | — |
+| Ticket entry | allow View Channel, Read Message History, Send Messages in Threads; deny Send Messages | allow View Channel, Send Messages, Read Message History, Create Private Threads, Manage Threads, Send Messages in Threads | — |
 | Honeypot | allow View Channel, Send Messages, Read Message History | allow View Channel, Send Messages, Read Message History, Manage Messages | — |
 
 \* Configured moderator roles that still exist; when none exist, every role
 with Administrator or Moderate Members.
 
-Creation needs Manage Channels: without it, `setup.create_failed.permission`.
-
 #### 13.1.5 Channel reconciliation
 
-A channel deleted while Quack is running (`CHANNEL_DELETE`) or while it was
-away (missing from the `GUILD_CREATE` channel list) clears every setting
-that points at it, in one transaction per server, guarded on the old value:
+A channel deleted while Quack is running (`CHANNEL_DELETE`), or one missing
+from the `GUILD_CREATE` channel list and confirmed gone by `GET
+/channels/{id}` answering 404 Unknown Channel, clears every setting that
+points at it, in one transaction per server. Each clear is
+compare-and-clear: it changes a setting only if it still holds that
+channel. A 403 or any other answer is not a deletion: the setting is kept
+and server health reports the channel as inaccessible.
 
 | Setting | Effect |
 | --- | --- |
@@ -2762,46 +3282,51 @@ that points at it, in one transaction per server, guarded on the old value:
 | Ticket entry or queue channel | Set NULL; tickets disabled (`channel_deleted`); log `module_disabled`. |
 | Honeypot channel | Set NULL; honeypot disabled (`channel_deleted`); warning row `gone`; log `module_disabled`. |
 | Server activity route | Route removed; when no route remains, the module is disabled (`channel_deleted`); log `module_settings_changed` or `module_disabled`. |
-| A ticket's thread (`THREAD_DELETE`, or on `GUILD_CREATE` an `open` ticket whose thread is not in the event's active-thread list and `GET /channels/{thread}` answers 404) | The ticket moves to `closing`, closed by Quack (§13.2.4). |
+| A ticket's thread (`THREAD_DELETE`, or on `GUILD_CREATE` an `opening` or `open` ticket whose thread is not in the event's thread list and `GET /channels/{thread}` answers 404) | The ticket closes (§13.2.2). |
 
 Tracked messages in a deleted channel are handled by their sync (§10.3).
 
 #### 13.1.6 The `Module` contract
 
-Each optional module is one crate implementing one trait, defined in
-`quack-engine`:
+Each optional module is one crate exporting one `Module` value, defined in
+`quack-engine`. What a module handles is static data, so routing has one
+source:
 
 ```rust
+/// What a module handles. The engine builds one dispatch table from every
+/// module's spec at startup and refuses to start on a duplicate key.
+pub struct ModuleSpec {
+    pub name: ModuleName,
+    pub setup_area: SetupArea,
+    pub events: &'static [EventKind],
+    pub component_codes: &'static [&'static str],
+    pub job_kinds: &'static [JobKind],
+}
+
 pub trait Module: Send + Sync + 'static {
-    /// Which module this is.
-    fn name(&self) -> ModuleName;
-    /// Whether this module consumes a gateway event kind.
-    fn wants(&self, kind: EventKind) -> bool;
-    /// Handle one gateway event (already filtered by `wants`).
-    fn on_event<'a>(&'a self, ctx: &'a Ctx, event: &'a GatewayEvent) -> BoxFuture<'a, ()>;
-    /// Custom-ID codes this module owns (§11.5).
-    fn component_codes(&self) -> &'static [&'static str];
-    /// Handle a button, select, or modal with one of those codes.
-    fn on_component<'a>(&'a self, ctx: &'a Ctx, call: ComponentCall) -> BoxFuture<'a, Msg>;
-    /// The `/setup` area this module owns.
-    fn setup_area(&self) -> SetupArea;
-    /// Render its `/setup` panel.
-    fn setup_panel<'a>(&'a self, ctx: &'a Ctx, guild: GuildId) -> BoxFuture<'a, Msg>;
-    /// Apply one `/setup` operation and return the re-rendered panel.
-    fn on_setup<'a>(&'a self, ctx: &'a Ctx, who: &'a Principal, op: SetupOp) -> BoxFuture<'a, Msg>;
-    /// Job kinds this module runs (§16.5).
-    fn job_kinds(&self) -> &'static [JobKind];
-    /// Run one claimed job of those kinds.
+    fn spec(&self) -> &'static ModuleSpec;
+    /// One gateway event of a kind in `spec().events`.
+    fn on_event<'a>(&'a self, ctx: &'a Ctx, event: &'a ModuleEvent) -> BoxFuture<'a, ()>;
+    /// A button, select, or modal with one of `spec().component_codes`.
+    fn on_component<'a>(&'a self, ctx: &'a Ctx, call: &'a ComponentCall) -> BoxFuture<'a, Msg>;
+    /// One claimed job of a kind in `spec().job_kinds`.
     fn run_job<'a>(&'a self, ctx: &'a Ctx, job: &'a ClaimedJob) -> BoxFuture<'a, JobResult>;
-    /// Why the module can't be turned on right now (empty = it can).
-    fn enable_problems<'a>(&'a self, ctx: &'a Ctx, guild: GuildId) -> BoxFuture<'a, Vec<ModuleProblem>>;
-    /// Called in the enable/disable transaction's aftermath (e.g. bump a panel).
-    fn on_enabled_changed<'a>(&'a self, ctx: &'a Ctx, guild: GuildId, enabled: bool) -> BoxFuture<'a, ()>;
+    /// Settle a job whose budget is spent, without calling Discord (§16.1).
+    fn finalize_job<'a>(&'a self, ctx: &'a Ctx, job: &'a ClaimedJob) -> BoxFuture<'a, JobResult>;
+    /// Its `/setup` panel, and one `/setup` operation (returns the re-rendered panel).
+    fn setup_panel<'a>(&'a self, ctx: &'a Ctx, guild: GuildId) -> BoxFuture<'a, Msg>;
+    fn on_setup<'a>(&'a self, ctx: &'a Ctx, who: &'a Principal, op: &'a SetupOp) -> BoxFuture<'a, Msg>;
+    /// Why it can't be turned on (empty = it can), from facts and the locked settings row.
+    fn enable_problems(&self, facts: &GuildFacts, settings: &ModuleSettings) -> Vec<ModuleProblem>;
+    /// Writes that go with turning it on or off (bump a panel), inside that transaction.
+    fn on_enabled_changed<'a>(&'a self, tx: &'a mut Tx, guild: GuildId, enabled: bool) -> BoxFuture<'a, Result<(), DbError>>;
 }
 ```
 
-`Ctx` gives access to the database pool, the `Discord` port, the caches,
-the engine (for the honeypot's system case entry), telemetry, and
+`ModuleEvent` and `ComponentCall` are engine types; `quack-bot` converts
+Twilight's types into them, so neither the engine nor a module sees
+Twilight. `Ctx` gives access to the database, the `Discord` port, the
+caches, the engine's use cases (the honeypot's case entry), and
 `quack-text`. HTTP routes for a module are thin handlers in `quack-api`
 that call the module crate's public service functions and DTOs (§14.3); a
 module never depends on `quack-api`.
@@ -2811,14 +3336,22 @@ module never depends on `quack-api`.
 `POST /api/guilds/{guild_id}/modules/{module}/enable` and `…/disable`
 (`manage_settings` + 2FA), also used by `/setup`:
 
-- Enable: `enable_problems` empty → one transaction sets `enabled = true`,
-  clears `disabled_reason`, bumps `version`, logs `module_enabled`, `NOTIFY
-  quack_settings`; then `on_enabled_changed`. Otherwise `409
-  module_not_ready` with `problems` (§12.11 `module.problem.*`).
-- Disable: sets `enabled = false`, `disabled_reason = NULL`, logs
-  `module_disabled`. Saved settings are kept.
+- Enable: gather facts; one transaction locks the module's settings row
+  (and, for the honeypot, its rule `FOR SHARE`, §4.12), computes
+  `enable_problems` against them and the facts, and, when there are none, sets `enabled = true`, clears `disabled_reason`, bumps `version`,
+  runs `on_enabled_changed`, logs `module_enabled`, and `NOTIFY
+  quack_settings`. Otherwise `409 module_not_ready` with `problems`
+  (§12.11 `module.problem.*`).
+- Disable: the same transaction shape: `enabled = false`, `disabled_reason
+  = NULL`, `on_enabled_changed`, log `module_disabled`. Saved settings are
+  kept.
 - Enabling an enabled module or disabling a disabled one is a no-op that
   returns the current state and writes nothing.
+
+Work already queued for a module when it is turned off finishes or stops
+by its own rule: honeypot hits admitted under the old configuration fail
+`policy_changed` (§13.4.2); open tickets stay open and can still be closed;
+server activity posts already queued are sent.
 
 ### 13.2 Tickets
 
@@ -2830,7 +3363,7 @@ from cases and appeals.
 | Column | Default | Validation |
 | --- | --- | --- |
 | `enabled` | false | via enable/disable only |
-| `disabled_reason` | NULL | `channel_deleted` |
+| `disabled_reason` | NULL | `channel_deleted`, `quack_left` |
 | `entry_channel_id` | NULL | text channel in the server |
 | `queue_channel_id` | NULL | staff-only; Quack needs View Channel, Send Messages, Attach Files |
 | `transcript_retention_days` | 90 | 1–365 |
@@ -2840,103 +3373,122 @@ lacking View Channel, Send Messages, Read Message History, Create Private
 Threads, Send Messages in Threads, or Manage Threads in the entry channel,
 queue not staff-only or lacking permissions.
 
-Changing the entry channel moves the panel (§10.3: the sync posts the
-panel in the new channel, then edits the old message to
-`ticket.panel.moved`). `PUT …/modules/tickets/settings` validates every
-field even while disabled.
+Changing the entry channel moves the panel (§10.3). `PUT
+…/modules/tickets/settings` validates every field even while disabled.
 
 #### 13.2.2 States
 
 `ticket_state`: `opening`, `open`, `closing`, `closed`. A partial unique
 index allows one ticket per member in `opening`, `open`, or `closing`, so a
 member has at most one live ticket and the "slot" is freed exactly when the
-ticket reaches `closed`. `closing` always ends (§13.2.4).
+ticket reaches `closed`. Every non-closed state ends: each has a job with a
+budget whose finalization moves it on.
 
 | From | Event | To |
 | --- | --- | --- |
 | (none) | Member clicks **Open a ticket** | `opening` (+ `open_ticket` job) |
-| `opening` | Thread created, member added, welcome posted | `open` |
-| `opening` | Thread creation refused (403/404) | `closed` (`close_reason = open_failed`) |
+| `opening` | Thread ready, member added, welcome posted | `open` (+ the `ticket_post` row and its sync) |
+| `opening` | A step definitely refused, the thread was deleted, or the job's budget is spent, and no thread exists | `closed` (`close_reason = open_failed`) |
+| `opening` | The same, but a thread exists | `closing` (`close_reason = open_failed`; the close job only deletes the thread) |
 | `open` | Member or moderator closes (button or dashboard) | `closing` (+ `close_ticket` job) |
 | `open` | Thread deleted (`THREAD_DELETE`) | `closing` (closed by Quack) |
-| `closing` | Close job finishes, or its budget runs out | `closed` |
+| `closing` | Close job settles, or its budget is spent | `closed` |
 
 #### 13.2.3 Opening
 
-1. Component `to`: defer ephemerally. Tickets disabled → `ticket.open.disabled`.
-2. Transaction: insert `tickets` (`opening`, `short_id` = first 10
-   characters of the ticket's u22) and the `open_ticket` job. A unique
-   violation → load the member's live ticket and answer
-   `ticket.open.exists` (`open`), `ticket.open.closing` (`closing`), or
-   `ticket.open.opening` (`opening`).
-3. The bot runs the `open_ticket` handler inline once; on `Done` it answers
-   `ticket.open.ready`, otherwise `ticket.open.opening` (the job continues).
+Component `to`: defer ephemerally. Tickets disabled → `ticket.open.disabled`.
+Transaction: insert `tickets` (`opening`) and the `open_ticket` job. A
+unique violation on `tickets_one_live` → load the member's live ticket and
+answer `ticket.open.exists` (`open`), `ticket.open.closing` (`closing`), or
+`ticket.open.opening` (`opening`); any other error is `error.internal`.
+Otherwise answer `ticket.open.opening`; the job does the rest, and the
+welcome message mentions the member in the new thread.
 
-`open_ticket` job (idempotent; budget 4, backoff 2 s, 10 s, 30 s):
+`open_ticket` job (budget 4, backoff 2 s, 10 s, 30 s):
 
 1. State not `opening` → `Done`.
-2. No `thread_id`: look for an active thread named `ticket-<short_id>` under
-   the entry channel (`GET /guilds/{g}/threads/active`) and adopt it; else
-   create a private thread (type 12, `invitable: false`,
-   `auto_archive_duration: 1440`). Save `thread_id` at once. Refused →
-   `closed` with `open_failed`.
-3. Add the member to the thread (`PUT /channels/{t}/thread-members/{m}`).
-4. Post `ticket.welcome` with a **Close ticket** button (pings the member;
-   nonce = ticket u22 + `w`).
-5. Create the `ticket_post` tracked message in the queue channel.
-6. Transaction: `open`, `opened_at`; log `ticket_opened`; register the
-   thread in the in-memory thread map.
+2. **Thread.** No `thread_id`: look for threads named `ticket-<ticket u22>`
+   (the full ID, so names never collide) under the entry channel, among
+   active threads (`GET /guilds/{g}/threads/active`) and archived private
+   threads (`GET /channels/{entry}/threads/archived/private`). One found →
+   adopt it; several → adopt the oldest and delete the others (they are
+   Quack's own duplicates); none → create a private thread (type 12,
+   `invitable: false`, `auto_archive_duration: 1440`). Save `thread_id` at
+   once. Refused → the open fails (§13.2.2).
+3. Add the member (`PUT /channels/{t}/thread-members/{m}`, idempotent).
+   Refused → the open fails.
+4. Post `ticket.welcome` with a **Close ticket** button (pings the member),
+   following §10.4 (`welcome_started_at`, nonce = ticket u22 + `w`).
+5. Transaction: `open`, `opened_at`; insert the `ticket_post` row in the
+   queue channel and its `sync_message` job; log `ticket_opened`. The ticket
+   post (`ticket.post.*`) shows the member, the state, and the transcript,
+   with **Close ticket** (`tc`) and **Fix access** (`tf`) while the ticket is
+   `open` and an **Open thread** link; each click re-checks the clicker.
+
+Finalization (budget spent): the open fails (§13.2.2).
 
 #### 13.2.4 Journal and closing
 
-- **Journal.** `MESSAGE_CREATE` in a thread of an `open` ticket inserts
-  `ticket_messages` (message ID, author, author name, text, file names and
-  sizes, sent time; `ON CONFLICT DO NOTHING`). Edits and deletes never
-  change journal rows, so the transcript keeps original wording. An event
-  dropped from a full gateway queue sets `tickets.journal_gaps = true`.
+- **Journal.** `MESSAGE_CREATE` in the thread of an `opening`, `open`, or
+  `closing` ticket that is not yet frozen inserts `ticket_messages`
+  (message ID, author, author name, text, file names and sizes, sent time;
+  `ON CONFLICT DO NOTHING`). Edits and deletes never change journal rows,
+  so the transcript keeps original wording. `journal_gaps` is set when an
+  event for the thread was dropped (§11.9), an insert failed after 3 tries
+  (recorded once the database accepts writes again), or the gateway
+  session was invalidated while the ticket was open.
 - **Closing.** Component `tc` or `POST …/tickets/{id}/close`: the ticket's
-  member or `moderate` + 2FA; ticket `open` (else `ticket.close.not_open`).
-  Transaction: `closing`, `closed_by`, `close_requested_at`, `close_ticket`
-  job. Answer `ticket.close.closing`.
+  member or `moderate` + 2FA. Transaction: lock the ticket; it must be
+  `open` (else `ticket.close.not_open`); `closing`, `closed_by`,
+  `close_requested_at`, `close_ticket` job. Answer `ticket.close.closing`.
 
 `close_ticket` job (each step records its completion column, so a retry
 resumes; budget 6, backoff 5 s, 30 s, 2 min, 10 min, 1 h):
 
-1. Lock the thread (`PATCH /channels/{t}` `locked: true`); 404 → skip.
-   `locked_at`.
-2. Transcript (unless `transcript_saved_at`): read the thread's history
-   (100 per page, oldest last, at most 10,000 messages) and merge with the
-   journal by message ID: journal text wins, history adds messages the
-   journal lacks. History unavailable (404, 403) → journal only.
-   `transcript_complete = history read fully AND NOT journal_gaps`. Render
-   with `ticket.transcript.*` (UTC times), cut at 8 MiB with
-   `ticket.transcript.partial`. Insert `ticket_transcripts` (content,
-   complete, `expires_at = now + retention`). `transcript_saved_at`.
-3. Bump the `ticket_post` (its sync attaches `ticket-<short_id>.txt`).
-4. Insert the `ticket_closed` DM with its job (the DM attaches the
-   transcript file; `ON CONFLICT DO NOTHING` on `ticket_id`).
-5. Delete the thread (`DELETE /channels/{t}`); 404 → done; 403 →
-   `thread_delete_failed = true` and continue. `thread_deleted_at`.
-6. Transaction: `closed`, `closed_at`; set journal rows' `expires_at`; log
-   `ticket_closed`; drop the thread from the thread map.
+1. **Freeze** the thread: `PATCH /channels/{t}` `{archived: true, locked:
+   true}`, so members can no longer post; 404 → the thread is gone.
+   `frozen_at`. The journal admits nothing after this.
+2. **Transcript** (skipped for `open_failed`; unless `transcript_saved_at`):
+   wait until this server's event queue has handled every event received
+   before `frozen_at` (at most 5 s). Read the thread's history, newest
+   first, at most 10 pages of 100, and merge with the journal by message ID:
+   journal text wins, history adds messages the journal lacks. `complete` =
+   the history reached the thread's first message, or (history unavailable)
+   the journal has no gaps. Render with `ticket.transcript.*` (UTC times);
+   over 8 MiB, cut at a UTF-8 boundary and mark partial (`trimmed`). Insert
+   `ticket_transcripts` (content, complete, partial cause, `expires_at = now
+   + retention`). `transcript_saved_at`.
+3. **Close** (one transaction): `closed`, `closed_at`; set the journal rows'
+   `expires_at`; unless `open_failed`, insert the `ticket_closed` DM with its
+   job (`ON CONFLICT DO NOTHING` on `ticket_id`); bump the `ticket_post`
+   (its sync attaches the transcript as a file once, §10.1
+   `attachment_id`); log `ticket_closed`. The slot is free from here.
+4. **Delete the thread**: `DELETE /channels/{t}`; 404 → done; 403 →
+   `thread_delete_failed = true` (the ticket post says so). `thread_deleted_at`.
+   The ticket is already `closed`; a retry runs only this step.
 
-Budget exhausted → step 6 runs anyway with whatever is saved (a journal-only
-transcript if step 2 never finished, `transcript_complete = false`), so
-no ticket stays `closing`.
+Finalization (budget spent, database only): a ticket not yet `closed`
+saves a journal-only transcript (partial, history unavailable) if none was
+saved, then runs step 3; a thread not yet deleted gets
+`thread_delete_failed = true`. No ticket stays `opening` or `closing`.
 
-- **Fix access** (component `tf`, `moderate` + 2FA, ticket `open`): re-add the
-  member; list thread members and remove everyone except the member, Quack,
-  the owner, and staff for Discord access. Answer `ticket.fix.done` or
-  `ticket.fix.failed`. Not logged.
+- **Fix access** (component `tf`, `moderate` + 2FA, ticket `open`):
+  unarchive the thread if it auto-archived, re-add the member, list thread
+  members, and remove everyone who is not the member, Quack, the owner, or
+  staff for Discord access by current facts. Answer `ticket.fix.done` with
+  the count removed, or `ticket.fix.failed`. Not logged.
 
 #### 13.2.5 Storage, jobs, retention
 
 Tables `ticket_settings`, `tickets`, `ticket_messages`,
 `ticket_transcripts` (§15). Jobs `open_ticket`, `close_ticket`. The tracked
 messages `ticket_panel` and `ticket_post`. Housekeeping deletes
-`ticket_transcripts` and `ticket_messages` rows past `expires_at`; tickets
-themselves are kept. Discord copies (staff post attachment, the member's DM)
-are not deleted.
+`ticket_transcripts` and `ticket_messages` rows past `expires_at`, and
+journal rows of tickets open for more than 90 days beyond their newest
+50,000 rows (marking `journal_gaps`); tickets themselves are kept. The
+dashboard serves a transcript to the ticket's member and to staff until
+`expires_at`; after that it answers `file_unavailable`. Discord copies (the
+staff post's file, the member's DM) are not deleted.
 
 Staff with `moderate` see tickets on the dashboard; Discord access to a
 private thread still needs Manage Threads or being added (known gap
@@ -2968,34 +3520,50 @@ channel_id)`, one channel per event. `activity_event`:
 
 `/setup` routes all nine events to one channel. The dashboard can route
 each event separately. Enable problems: no route; a route channel not
-staff-only or Quack lacking View Channel and Send Messages there; Quack
-lacking View Audit Log in the server.
+staff-only or Quack lacking View Channel and Send Messages there. Quack
+lacking View Audit Log is not an enable problem: the module runs without
+`member_banned` and `member_unbanned`, and its settings and server health
+show `module.problem.activity_needs_audit_log`.
 
 #### 13.3.2 Behaviour
 
 - **One message cache** (§11.10). Twilight's message cache is off, so the
   module's cache is the only one. Messages are cached on `MESSAGE_CREATE`
   in servers where the module is enabled, for text channels and threads.
-- **Consistent filtering.** Messages written by Quack or by webhooks are
-  ignored for create, edit, and delete. Messages in a channel that is itself
-  an activity route destination are ignored. Other bots are logged.
-- **Edits.** Missing fields in a partial update count as unknown, not
-  empty. When the text and file list are unchanged (an embed-only update),
-  nothing is posted. The cache keeps the newest version.
+- **Redaction first.** Before text is cached or posted it passes
+  `quack_core::modules::redact_secrets`, which replaces Discord bot tokens,
+  webhook URLs, and `token=`, `password=`, `secret=`, `authorization:`,
+  `bearer ` values with `[redacted]` (the Go patterns). The privacy flags
+  are applied both when caching and when posting, so turning text off also
+  stops it from being cached.
+- **Consistent filtering.** Messages written by Quack or by webhooks, and
+  messages in a channel that is itself an activity route destination, are
+  never posted. They are cached as tombstones (author kind only), so their
+  later edits and deletes are recognized and skipped rather than reported
+  as unknown. Other bots are logged.
+- **Edits.** A field missing from a partial update is unknown, not empty; an
+  empty text field is known-empty (`activity.after_empty`). Known fields
+  merge into the cached copy one by one. When the text and file list are
+  unchanged (an embed-only update), nothing is posted.
 - **Deletes.** A cached message posts at once with its author and text.
-  Uncached deletes are batched per channel for 60 seconds or until 50 IDs:
-  one ID → `activity.message_deleted_unknown`; more →
+  Uncached deletes are batched per channel for 60 seconds or until 50 IDs
+  (at most 1,000 open batches; more are posted at once unbatched): one ID →
+  `activity.message_deleted_unknown`; more →
   `activity.messages_deleted_unknown` with `activity.message_ids`.
 - **Privacy flags.** `include_message_content = false` replaces text with
-  `activity.text_hidden`; the other flags drop file names and embed types.
+  `activity.text_hidden`; the other flags drop file names (with their
+  links) and embed types.
 - **Delivery.** In memory, not durable: a bounded queue of 10,000 posts and
-  2 sender tasks. Each post re-checks the destination (§13.1.3, result
-  cached per channel for 60 seconds) and creates the message with a nonce
-  (event hash, 25 characters). `RetryAfter` or `Unknown` → up to 2 more
-  tries after 1 s and 2 s with the same nonce; definite refusals are not
-  retried. Counted as
-  `quack.activity_log.events{event,outcome}` with outcomes `posted`,
-  `filtered`, `dropped` (queue full), `failed`.
+  2 sender tasks. At delivery each post re-reads the route from the config
+  cache (a changed route sends it to the new channel; a removed route or a
+  disabled module drops it) and re-checks the destination (§13.1.3, result
+  cached per channel for 60 seconds), then creates the message following
+  §10.4 (nonce: event hash, 25 characters). `RetryAfter` or `Unknown` → up
+  to 2 more tries within the window; definite refusals are not retried.
+  Counted as `quack.activity_log.events{quack.activity.event,quack.activity.stage}`
+  with stages `seen`, `posted`, `dropped` (queue full, route gone), `failed`
+  (refused or out of tries). Disabling the module or Quack leaving the
+  server empties its batches and cache for that server.
 - **Graceful shutdown** flushes pending delete batches and drains the queue
   within the shutdown deadline (§17.5).
 
@@ -3009,14 +3577,16 @@ under the honeypot's rule through the normal case path.
 | Column | Default | Validation |
 | --- | --- | --- |
 | `enabled` | false | via enable/disable only |
-| `disabled_reason` | NULL | `channel_deleted` |
+| `disabled_reason` | NULL | `channel_deleted`, `quack_left` |
 | `channel_id` | NULL | text channel; Quack needs View Channel, Send Messages, Read Message History, Manage Messages |
-| `rule_id` | NULL | active rule of this server with no required fields (§3.8) |
+| `rule_id` | NULL | active rule of this server with no required fields (§3.8); cleared with "Clear rule" while the honeypot is off |
 | `warning_text` | NULL | 0–1,500 characters; NULL or empty uses the generated warning |
+| `version` | 1 | incremented by every change, including enable and disable |
 
 Enable problems: channel missing, rule missing, rule with required fields,
 Quack lacking channel permissions. Turning it on from `/setup` with no rule
-chosen uses or creates the "Honeypot" rule (§3.8).
+creates the "Honeypot" rule (§3.8). Re-enabling reactivates a `gone`
+warning (§10.2).
 
 #### 13.4.2 From post to case
 
@@ -3024,35 +3594,49 @@ chosen uses or creates the "Honeypot" rule (§3.8).
    Ignored when the author is a bot (any bot, including Quack), a webhook,
    or staff for Discord access (owner, Administrator, Moderate Members, a
    configured moderator role; from the message's member payload and the
-   config cache). This matches the core rule that cases are never about bots
-   (§2.3 check 5).
-2. Insert `honeypot_hits` (message ID unique, member, `pending`) and enqueue
-   the `honeypot_case` job keyed `honeypot_case:<guild>:<member>`
-   (coalesced). A full gateway queue drops the event and counts
-   `quack.honeypot.hits{outcome="dropped"}`.
+   config cache). This matches the core rule that cases are never about
+   bots (§2.3 check 5).
+2. Insert `honeypot_hits` (message ID unique, member, `pending`, the
+   honeypot `version` and `rule_id` at that moment) and enqueue the
+   `honeypot_case` job keyed `honeypot_case:<guild>:<member>` (coalesced). A
+   full gateway queue drops the event and counts it (§11.9).
 3. `honeypot_case` job (budget 5, backoff 5 s, 30 s, 2 min, 10 min):
-   1. Load the member's `pending` hits.
-   2. A hit of this member in `case_created` within the last 30 seconds →
-      attach the pending hits to that case (a burst is one case).
-   3. Otherwise apply the rule (§4.2) with source `honeypot`, actor Quack,
-      operation key `honeypot:<guild>:<first pending message ID>`, and the
-      first hit's message as evidence.
-   4. Created or replayed → hits `case_created` with `case_id`; enqueue
+   1. Load the member's `pending` hits, ordered by message ID. This is the
+      batch; its identity is its first message ID, which stays the same
+      until the batch settles because later hits have larger IDs.
+   2. Re-check the poster from current facts (§2): now staff for Discord
+      access, or a bot → hits `failed` (`exempt`).
+   3. A valid case created from this member's hits under the same honeypot
+      `version`, whose first hit is less than 30 seconds older than this
+      batch's first hit → attach the batch to that case (a burst is one
+      case).
+   4. Otherwise apply the rule (§4.2) with source `honeypot`, actor Quack,
+      operation key `honeypot:<first message ID>`, the batch's honeypot
+      `version` (checked under lock, §4.2 step 8), and the first hit's
+      message as evidence.
+   5. Created or replayed → hits `case_created` with `case_id`; enqueue
       `honeypot_cleanup` per hit; bump the warning.
-   5. A refusal (§2.3) or a missing rule → hits `failed` with the refusal;
-      log `honeypot_case_failed` (for honeypot cases the engine does not
-      also write `case_create_refused`). Their messages are kept.
-   6. `DiscordUnavailable` → retry.
-4. `honeypot_cleanup` job (keyed `honeypot_cleanup:<message_id>`; budget 10,
-   backoff 1, 2, 4, 8, 16, 32, 64, 64, 64 s): delete the message; 404 counts
-   as done; record `cleaned_up_at`.
+   6. A refusal (§2.3), `HoneypotPolicyChanged` (`policy_changed`), or a
+      missing or archived rule (`rule_unavailable`) → hits `failed` with the
+      code; log `honeypot_case_failed` (for honeypot cases the engine does
+      not also write `case_create_refused`). Their messages are kept.
+   7. `DiscordUnavailable` → retry. Finalization → hits `failed`
+      (`discord_unavailable`), logged.
+4. `honeypot_cleanup` job (keyed `honeypot_cleanup:<guild>:<message>`; budget 10,
+   backoff 1, 2, 4, 8, 16, 32, 64, 64, 64 s): while the case's evidence row
+   for that message is still `saving`, `Defer` (at most 10 minutes), so the
+   post is saved before it is deleted; then delete the message; 404 counts
+   as done; record `cleaned_up_at`. Finalization records
+   `cleanup_failed_at`; the post stays and staff can delete it.
 
 #### 13.4.3 The warning
 
 The `honeypot_warning` tracked message in the honeypot channel renders
-`honeypot.warning.*` from the rule's levels (or the custom text) plus the
-count of distinct cases created from hits. It is bumped by a new honeypot
-case, settings changes, enable/disable, and its own deletion (re-posted).
+`honeypot.warning.*` from the bound rule's current levels (or the custom
+text) plus the count of distinct cases created from hits; while the
+honeypot is off it shows only `honeypot.warning.off`. It is bumped by a new
+honeypot case, settings changes, enable and disable, edits of the bound
+rule, and its own deletion (posted again, §10.3).
 
 ---
 
@@ -3064,26 +3648,37 @@ as the dashboard files, served by `quack serve`. axum 0.8, routes in
 
 ### 14.1 Conventions
 
-- JSON in and out (`Content-Type: application/json`); other request media
-  types → `415 unsupported_media_type`.
-- Discord IDs and UUIDs are **strings** in JSON. Timestamps are RFC 3339 UTC
-  with milliseconds. Enums are the snake_case values defined in this
-  document.
-- `{guild_id}` is the Discord server ID. `{case_ref}` is a case number, a
-  case UUID, or a legacy ULID (mapped, §19.3). Other path IDs are UUIDs.
+- JSON in and out. A route that takes a body requires `Content-Type:
+  application/json` (else `415 unsupported_media_type`); routes without a
+  body (archive, restore, retry, dismiss, undo, enable, disable, logout)
+  take none and ignore the header.
+- Discord IDs, UUIDs, and context numbers are **strings** in JSON, so no
+  client rounds them. Case numbers and versions are JSON numbers; case
+  numbers never exceed 2^53 − 1 (§4.4), so they are exact in JavaScript. Timestamps are RFC 3339 UTC with
+  milliseconds. Enums are the snake_case values defined in this document.
+  Snowflakes are parsed by one checked parser (positive, below 2^63); a
+  value that does not fit is `400 validation_failed`, never wrapped.
+- `{guild_id}` is the Discord server ID. In staff routes `{case_ref}` is a
+  case number, a case UUID, or a legacy ULID (mapped, §19.3). Member routes
+  take `{case_id}`: a UUID or a legacy ULID, never a number. Other path IDs
+  are UUIDs, or legacy ULIDs for links from the Go era.
 - Lists use keyset pagination: `limit` (1–100, default 50) and `cursor`
-  (opaque base64url); responses carry `next_cursor` (null on the last
-  page). No offsets.
-- Every write (POST, PUT, PATCH) under `/api/guilds` and `/api/me` requires
-  `Idempotency-Key` (8–200 printable ASCII characters) and is idempotent
-  through `operation_keys` (§4.3), except the auth routes.
+  (opaque base64url of the last row's sort key plus a hash of the filters;
+  a cursor reused with other filters is `400 validation_failed`); responses
+  carry `next_cursor` (null on the last page). No offsets. Lists that are
+  bounded by a limit (a case's actions, a rule's versions up to its version
+  count, settings directories) are returned whole.
+- Every write (POST, PUT, PATCH, DELETE) under `/api/guilds` and `/api/me`
+  requires `Idempotency-Key` (8–200 printable ASCII characters) and is
+  idempotent through `operation_keys` (§4.3), except the auth routes.
 - Every response carries `traceparent` (W3C) so a report can be matched to
-  its trace; errors also put it in `error.trace_id`.
+  its trace; errors also put the 32-hex trace ID in `error.trace_id` (null
+  when there is no trace).
 
 ### 14.2 Routes
 
-Capability "staff:X" means a session, membership in the server (checked
-live), capability X, and the 2FA rule. "member" means a signed-in session
+Capability "staff:X" means a session, membership in an installed server
+(current facts, §2), capability X, and the 2FA rule. "member" means a signed-in session
 acting as the member. Rate classes are in §14.7. Pages are dashboard
 routes (§14.11).
 
@@ -3094,7 +3689,7 @@ routes (§14.11).
 | 3 | GET | `/api/auth/me` | session | — | `Me` | — | read | every signed-in page |
 | 4 | POST | `/api/auth/logout` | session + CSRF | — | 204 | naturally | write | sidebar |
 | 5 | GET | `/api/guilds` | session | — | `{guilds: GuildSummary[]}` | — | read | `/guilds` |
-| 6 | GET | `/api/guilds/{guild_id}/me` | session + member of server | — | `GuildMe` | — | read | staff layout |
+| 6 | GET | `/api/guilds/{guild_id}/me` | session + member of server | — | `GuildMe` (with exact pending-appeal and failed-action counts for staff) | — | read | staff layout |
 | 7 | GET | `/api/guilds/{guild_id}/health` | staff:manage_settings | — | `Health` | — | read | overview, settings |
 | 8 | GET | `/api/guilds/{guild_id}/statistics` | staff:moderate | query `from`, `to` | `Statistics` | — | read | overview |
 | 9 | GET | `/api/guilds/{guild_id}/directory/members` | staff:moderate | query `query` (1–100 chars) and `limit` (1–25, default 10), or `ids` (comma-separated, ≤ 100) | `{members: DirectoryMember[]}` | — | read | cases, case dialog, member chips |
@@ -3109,10 +3704,10 @@ routes (§14.11).
 | 18 | GET | `/api/guilds/{guild_id}/rules/{rule_id}/export` | staff:manage_rules | — | `RuleFile` | — | read | rules/$ruleId |
 | 19 | POST | `/api/guilds/{guild_id}/rules/import` | staff:manage_rules | `{confirm: true, file: RuleFile, name?: string}` | 201 `Rule` | yes | write | rules |
 | 20 | GET | `/api/guilds/{guild_id}/cases` | staff:moderate | query `member_id`, `moderator_id`, `rule_id`, `state` (`valid`\|`voided`), `action_state`, `appeal_state`, `number`, `created_after`, `created_before`, `limit`, `cursor` | `{cases: CaseSummary[], next_cursor}` | — | read | cases, overview, member |
-| 21 | POST | `/api/guilds/{guild_id}/cases` | staff:moderate | `{member_id, rule_id, context: {key: value}, evidence_links: string[], replaces_case_number?: number}` | 201 `Case` | yes | case_create | case dialog |
+| 21 | POST | `/api/guilds/{guild_id}/cases` | staff:moderate | `{member_id, rule_id, rule_version?: number, context: {key: value}, evidence_links: string[], replaces_case_number?: number}` | 201 `Case` | yes | case_create | case dialog |
 | 22 | GET | `/api/guilds/{guild_id}/cases/{case_ref}` | staff:moderate | — | `Case` | — | read | cases/$caseRef |
 | 23 | POST | `/api/guilds/{guild_id}/cases/{case_ref}/void` | staff:moderate | `{reason}` | `Case` | yes | write | cases/$caseRef |
-| 24 | PUT | `/api/guilds/{guild_id}/cases/{case_ref}/context` | staff:moderate | `{context: {key: value}}` | `Case` | yes | write | cases/$caseRef |
+| 24 | PUT | `/api/guilds/{guild_id}/cases/{case_ref}/context` | staff:moderate | `{context: {key: value}, expected_context_revision: number}` | `Case` | yes | write | cases/$caseRef |
 | 25 | POST | `/api/guilds/{guild_id}/cases/{case_ref}/evidence` | staff:moderate | `{links: string[]}` (1–10) | `Case` | yes | write | cases/$caseRef |
 | 26 | GET | `/api/guilds/{guild_id}/cases/{case_ref}/evidence/{file_id}` | staff:moderate | — | 302 to a signed Discord URL | — | read | cases/$caseRef |
 | 27 | GET | `/api/guilds/{guild_id}/members/{member_id}/summary` | staff:moderate | — | `MemberSummary` | — | read | members/$memberId |
@@ -3122,7 +3717,7 @@ routes (§14.11).
 | 31 | POST | `/api/guilds/{guild_id}/actions/{action_id}/undo` | staff:moderate | — | 201 `Action` (the undo) | yes | action_control | cases/$caseRef |
 | 32 | GET | `/api/guilds/{guild_id}/appeals` | staff:moderate | query `state`, `limit`, `cursor` | `{appeals: AppealSummary[], next_cursor}` | — | read | appeals |
 | 33 | GET | `/api/guilds/{guild_id}/appeals/{appeal_id}` | staff:moderate | — | `Appeal` | — | read | appeals/$appealId |
-| 34 | POST | `/api/guilds/{guild_id}/appeals/{appeal_id}/decision` | staff:moderate | `{decision, reason, expected_version}` | `Appeal` | yes | write | appeals/$appealId |
+| 34 | POST | `/api/guilds/{guild_id}/appeals/{appeal_id}/decision` | staff:moderate | `{decision: "request_information" \| "accept" \| "reject" \| "close" \| "reopen", reason, expected_version}` | `Appeal` | yes | write | appeals/$appealId |
 | 35 | GET | `/api/guilds/{guild_id}/mod-log` | staff:moderate | §9.6 filters | `{entries: ModLogEntry[], next_cursor}` | — | read | mod-log, member |
 | 36 | GET | `/api/guilds/{guild_id}/settings` | staff:manage_settings | — | `Settings` | — | read | settings, overview |
 | 37 | PATCH | `/api/guilds/{guild_id}/settings` | staff:manage_settings (+ manage_staff_roles for moderator roles) | `SettingsPatch` | `Settings` | yes | write | settings |
@@ -3140,14 +3735,21 @@ routes (§14.11).
 | 49 | GET | `/api/guilds/{guild_id}/tickets/{ticket_id}/transcript` | the ticket's member, or staff:moderate | — | `{content, complete, expires_at}` | — | read | modules/tickets |
 | 50 | POST | `/api/guilds/{guild_id}/tickets/{ticket_id}/close` | the ticket's member, or staff:moderate | — | `Ticket` | yes | write | modules/tickets |
 | 51 | GET | `/api/me/cases` | member | query `guild_id` (optional), `limit`, `cursor` | `{cases: MemberCaseSummary[], next_cursor}` | — | read | member case view |
-| 52 | GET | `/api/me/cases/{case_ref}` | member | — | `MemberCase` | — | read | `/guilds/$guildId/cases/$caseId/appeal` |
-| 53 | GET | `/api/me/cases/{case_ref}/evidence/{file_id}` | member | — | 302 | — | read | member case view |
-| 54 | POST | `/api/me/cases/{case_ref}/appeal` | member | `{statement}` | 201 `MemberCase` | yes | member_write | member case view |
-| 55 | POST | `/api/me/cases/{case_ref}/appeal/information` | member | `{text}` | `MemberCase` | yes | member_write | member case view |
+| 52 | GET | `/api/me/cases/{case_id}` | member | — | `MemberCase` | — | read | `/guilds/$guildId/cases/$caseId/appeal` |
+| 53 | GET | `/api/me/cases/{case_id}/evidence/{file_id}` | member | — | 302 | — | read | member case view |
+| 54 | POST | `/api/me/cases/{case_id}/appeal` | member | `{statement}` | 201 `MemberCase` | yes | member_write | member case view |
+| 55 | POST | `/api/me/cases/{case_id}/appeal/information` | member | `{text, expected_version}` | `MemberCase` | yes | member_write | member case view |
 | 56 | GET | `/livez` | public | — | `{"status":"ok"}` | — | none | (probes) |
 | 57 | GET | `/readyz` | public | — | `Readiness` (200 or 503) | — | none | (probes) |
+| 58 | GET | `/api/guilds/{guild_id}/cases/preview` | staff:moderate | query `member_id`, `rule_id` | `CasePreview` | — | read | case dialog |
+| 59 | GET | `/api/guilds/{guild_id}/rules/{rule_id}/versions/{version}` | staff:moderate or manage_rules | — | `RuleVersion` | — | read | rules/$ruleId (history) |
 
-`{module}` is `tickets`, `activity-log`, or `honeypot`.
+`{module}` is `tickets`, `activity-log`, or `honeypot` in URLs; the same
+modules are `tickets`, `activity_log`, `honeypot` in JSON (one fixed
+conversion). Member routes (51–55) find the case by its ID and its member
+in one query; any other case is `404 not_found`. Ticket routes 48–50 give
+the ticket's member the member projection (no staff IDs) and staff the full
+one.
 
 **Dropped from the Go API** (no dashboard caller or replaced): `POST
 /auth/logout-all`; JSON-mode sign-in and bearer sessions; `/status`,
@@ -3170,10 +3772,18 @@ means present and nullable. All types derive `ToSchema`.
 type Me = { account: { id: string; username: string; global_name: string | null; avatar_url: string },
             csrf_token: string, session: { expires_at: string } }
 type Capabilities = { moderate: boolean; manage_rules: boolean; manage_settings: boolean; manage_staff_roles: boolean }
+// `capabilities` are effective (after the 2FA rule); `mfa_blocked` is true when
+// the account would have a staff capability but lacks a recorded 2FA confirmation.
 type GuildSummary = { guild_id: string; name: string; icon_url: string | null; installed: boolean;
-                      capabilities: Capabilities; mfa_required: boolean; can_install: boolean }
+                      capabilities: Capabilities; mfa_required: boolean; mfa_blocked: boolean; can_install: boolean }
 type GuildMe = { guild: { guild_id: string; name: string; icon_url: string | null; owner_id: string },
-                 capabilities: Capabilities; mfa_required: boolean; is_owner: boolean }
+                 capabilities: Capabilities; mfa_required: boolean; mfa_blocked: boolean; is_owner: boolean;
+                 counts: { pending_appeals: number; failed_actions: number } | null }
+type Permission = "view_channel" | "send_messages" | "send_messages_in_threads" | "embed_links" | "attach_files"
+  | "read_message_history" | "moderate_members" | "kick_members" | "ban_members" | "manage_messages"
+  | "manage_channels" | "manage_threads" | "create_private_threads" | "view_audit_log"
+type ChannelProblem = { code: "not_text" | "everyone_can_view" | "role_can_view" | "member_can_view" | "quack_missing"
+                        | "inaccessible" | "missing"; message: string }
 type Health = { quack_in_server: boolean; missing_permissions: Permission[];
                 channels: { setting: string; channel_id: string; problems: ChannelProblem[] }[];
                 modules: Record<"tickets" | "activity_log" | "honeypot", { enabled: boolean; problems: ModuleProblem[] }> }
@@ -3192,55 +3802,69 @@ type RuleSummary = { id: string; name: string; description: string; current_vers
 type Rule = { id: string; current_version: number; archived_at: string | null; created_at: string;
               created_by: string | null; updated_at: string; updated_by: string | null;
               definition: RuleDefinition; versions: { version: number; created_at: string; created_by: string | null; reconstructed: boolean }[] }
+type RuleVersion = { rule_id: string; version: number; created_at: string; created_by: string | null;
+                     reconstructed: boolean; definition: RuleDefinition }
 type RuleFile = { format: "quack-rule"; format_version: 1; exported_at: string; rule: RuleDefinition }
 type CaseSummary = { id: string; number: number; member_id: string; rule_id: string | null; rule_name: string;
-                     rule_version: number | null; source: CaseSource; moderator_id: string | null; created_at: string;
-                     voided_at: string | null; action: { kind: ActionKind; state: ActionState; outcome_text: string } | null;
-                     dm_state: DmState; appeal_state: AppealState | null }
-type Case = CaseSummary & { case_count: number | null; level_index: number | null; level_from_case_count: number | null;
-  reason: string; appealable: boolean; fields: Field[]; context: Record<string, string | number | boolean>;
+                     rule_version: number | null; level_index: number | null; source: CaseSource; moderator_id: string | null;
+                     created_at: string; voided_at: string | null;
+                     action: { kind: ActionKind; state: ActionState; outcome_text: string } | null;
+                     dm_state: DmState | "not_needed"; appeal_state: AppealState | null }
+type CasePreview = { rule_version: number; counted_cases: number; case_count: number; level_index: number;
+                     level: Level; counting_window_days: number | null; at: string }
+// context values: strings (text, message links, canonical decimal numbers) or booleans
+type Case = CaseSummary & { case_count: number | null; level_from_case_count: number | null;
+  reason: string; appealable: boolean; fields: Field[]; context: Record<string, string | boolean>; context_revision: number;
   void: { by: string | null; reason: string; at: string; cause: "staff" | "appeal_accepted" } | null;
   replaces_case_number: number | null; replaced_by_case_number: number | null;
-  actions: Action[]; dm: Dm; evidence: Evidence[]; appeal: AppealSummary | null;
+  actions: Action[]; dm: Dm | null; evidence: Evidence[]; appeal: AppealSummary | null;
   imported: { v4_action: string; v4_moderator: string | null; v4_reason: string } | null;
-  timeline: ModLogEntry[]; member_timeline: { at: string; text: string }[] }
+  timeline: ModLogEntry[]; member_timeline: { at: string; text: string }[]; timeline_truncated: boolean }
+// purpose is derived from undo_of_action_id
 type Action = { id: string; case_id: string; case_number: number; kind: ActionKind; purpose: "original" | "undo";
-  state: ActionState; outcome_text: string; timeout_ends_at: string | null; delete_message_seconds: number | null;
-  attempts: number; next_attempt_at: string | null; failure_reason: ActionFailure | null;
-  http_status: number | null; discord_code: number | null; skipped_because_case_number: number | null;
+  undo_of_action_id: string | null; state: ActionState; outcome_text: string; timeout_ends_at: string | null;
+  delete_message_seconds: number | null; attempts: number; next_attempt_at: string | null; failure_reason: ActionFailure | null;
+  http_status: number | null; discord_code: number | null; skip_reason: "other_case_applies" | "changed_outside_case" | null;
+  skipped_because_case_number: number | null;
   requested_by: string | null; dismissed_at: string | null; dismissed_by: string | null; done_at: string | null;
   created_at: string; attempt_log: { number: number; started_at: string; finished_at: string | null;
   outcome: AttemptOutcome | null; http_status: number | null; discord_code: number | null }[];
   can_retry: boolean; can_dismiss: boolean; can_undo: boolean }
 type ActionListItem = Action & { member_id: string; rule_name: string }
+// dm is null when the level sends no DM ("not needed")
 type Dm = { state: DmState; failure: DmFailure | null; outcome_text: string; settled_at: string | null }
 type Evidence = { id: string; state: EvidenceState; failure: EvidenceFailure | null; state_text: string;
   channel_id: string; message_id: string; url: string; author_id: string | null; content: string | null;
   message_created_at: string | null; message_edited_at: string | null;
   embeds: { type: string; title: string | null; description: string | null; url: string | null }[];
-  files: { id: string; filename: string; content_type: string; size_bytes: number; copy_state: FileCopyState; state_text: string }[];
-  added_by: string | null; created_at: string }
+  files: { id: string; filename: string; content_type: string | null; size_bytes: number; copy_state: FileCopyState; state_text: string }[];
+  files_not_saved: number; added_by: string | null; created_at: string }
 type AppealSummary = { id: string; case_id: string; case_number: number; member_id: string; rule_name: string;
                        state: AppealState; version: number; created_at: string; updated_at: string }
 type Appeal = AppealSummary & { statement: string; decided_by: string | null; decided_at: string | null;
-  decision_reason: string | null; events: { id: string; kind: AppealEventKind; actor_id: string | null; text: string; created_at: string }[];
+  decision_reason: string | null; events: { id: string; kind: AppealEventKind; actor_id: string | null; text: string;
+  closed_by_void: boolean; created_at: string }[];
   case: CaseSummary }
 type MemberCaseSummary = { id: string; number: number; guild: { guild_id: string; name: string; icon_url: string | null };
   rule_name: string; reason: string; created_at: string; voided_at: string | null; action_text: string;
   can_appeal: boolean; appeal_state: AppealState | null }
 type MemberCase = MemberCaseSummary & { void_reason: string | null; undo_text: string | null; timeout_ends_at: string | null;
-  dm_text: string; context: { label: string; kind: FieldKind; value: string | number | boolean }[];
-  evidence: { id: string; content: string | null; embeds: { type: string; title: string | null; description: string | null }[];
-              files: { id: string; filename: string; content_type: string; size_bytes: number; available: boolean }[] }[];
+  dm_text: string;
+  // message_link values are replaced by the text of member.context.link_saved
+  context: { label: string; kind: FieldKind; value: string | boolean }[];
+  evidence: { id: string; content: string | null; embeds: { type: string; title: string | null }[];
+              files: { id: string; filename: string; content_type: string | null; size_bytes: number; available: boolean }[] }[];
+  // only when both cases are about this member (§4.8)
   replaces_case_number: number | null; replaced_by_case_number: number | null;
-  appeal: { id: string; state: AppealState; statement: string; created_at: string; can_reply: boolean;
+  appeal: { id: string; state: AppealState; version: number; statement: string; created_at: string; can_reply: boolean;
             events: { kind: AppealEventKind; text: string; at: string; by_you: boolean }[] } | null;
-  timeline: { at: string; text: string }[] }
+  timeline: { at: string; text: string }[]; timeline_truncated: boolean }
 type MemberSummary = { member_id: string; total: number; valid: number; voided: number;
                        by_rule: { rule_id: string | null; rule_name: string; valid: number; voided: number }[] }
 type ModLogEntry = { id: string; kind: ModLogKind; result: ModLogResult; actor_id: string | null; source: ModLogSource;
   case_id: string | null; case_number: number | null; member_id: string | null; appeal_id: string | null;
-  action_id: string | null; rule_id: string | null; ticket_id: string | null; detail: object; text: string; created_at: string }
+  action_id: string | null; rule_id: string | null; ticket_id: string | null; detail: object; text: string;
+  links: { case?: string; appeal?: string; member?: string; rule?: string; ticket?: string }; created_at: string }  // dashboard paths derived from the typed IDs
 type Settings = { version: number; moderator_role_ids: string[]; rules_manager_role_ids: string[];
   log_channel_id: string | null; appeal_channel_id: string | null; evidence_channel_id: string | null;
   appeal_invite_url: string | null; dm_intro: string | null; dm_footer: string | null;
@@ -3254,16 +3878,27 @@ type TicketSettings = { entry_channel_id: string | null; queue_channel_id: strin
 type TicketsModule = ModuleState & { settings: TicketSettings; open_tickets: number }
 type ActivityLogSettings = { routes: Partial<Record<ActivityEvent, string>>; include_message_content: boolean;
                              include_file_names: boolean; include_embed_types: boolean }
-type ActivityLogModule = ModuleState & { settings: ActivityLogSettings; posted_last_hour: number; dropped_last_hour: number }
+// counters are in-process and reset when Quack restarts
+type ActivityLogModule = ModuleState & { settings: ActivityLogSettings; posted_since_start: number; dropped_since_start: number }
 type HoneypotSettings = { channel_id: string | null; rule_id: string | null; warning_text: string | null }
-type HoneypotModule = ModuleState & { settings: HoneypotSettings; cases_created: number; pending_hits: number; failed_hits: number }
-type Ticket = { id: string; short_id: string; member_id: string; state: TicketState; thread_id: string | null;
-  opened_at: string | null; closed_at: string | null; closed_by: string | null; close_reason: "open_failed" | null;
-  transcript_available: boolean; transcript_complete: boolean | null; created_at: string }
-type Readiness = { ready: boolean; checks: Record<"database" | "migrations" | "gateway" | "workers" | "shutdown", "ok" | "failing"> }
+type HoneypotModule = ModuleState & { settings: HoneypotSettings; eligible_rules: { id: string; name: string }[];
+                                      cases_created: number; pending_hits: number; failed_hits: number }
+// The ticket's member gets this without closed_by (closed_by_you instead).
+type Ticket = { id: string; member_id: string; state: TicketState; thread_id: string | null; created_at: string;
+  opened_at: string | null; close_requested_at: string | null; closed_at: string | null; closed_by: string | null;
+  closed_by_you?: boolean; close_reason: "open_failed" | null; thread_delete_failed: boolean;
+  transcript: { state: "available" | "expired"; complete: boolean; partial_cause: "history" | "trimmed" | null;
+                expires_at: string } | null }
+type Readiness = { ready: boolean; checks: Record<"database" | "migrations" | "fence" | "gateway" | "workers" | "shutdown", "ok" | "failing"> }
 ```
 
-`activity_log` module counts come from in-process counters since start.
+`activity_log` module counts come from in-process counters since start and
+are named `_since_start` for that reason.
+
+**Case preview** (route 58): the counted cases, case count, and level the
+rule's current version would choose for that member now (§3.4), so the case
+dialog can show what will happen; the POST sends that `rule_version` back,
+and a rule edited in between is `409 rule_changed`.
 
 **Statistics** (route 8): `to` defaults to now and `from` to one calendar
 month before `to`; the range must be 1 second to 366 days (else
@@ -3280,50 +3915,63 @@ per-moderator ranking.
 Discord OAuth 2.0 authorization code flow with PKCE (S256), scopes
 `identify guilds`, redirect URI `<QUACK_PUBLIC_URL>/api/auth/callback`
 (register it in the Discord developer portal). The `oauth2` crate builds the
-URLs and does the exchange through a small reqwest adapter.
+URLs and does the exchange through a small reqwest adapter in `quack-api`,
+traced like every outbound call (§18.4).
 
-1. **Login** (route 1). `redirect_to` must start with `/`, must not start
-   with `//`, and must contain no `\` or control characters; otherwise
-   `/guilds`. Generate `state` (32 random bytes), a PKCE verifier (64
-   characters), and a browser nonce (32 random bytes). Insert
-   `oauth_states (state_hash = SHA-256(state), code_verifier, redirect_to,
-   nonce_hash, expires_at = now + 10 min)`. Set cookie `quack_oauth=<nonce>`
-   (`HttpOnly; Secure`¹`; SameSite=Lax; Path=/api/auth; Max-Age=600`).
-   302 to `https://discord.com/oauth2/authorize?…&state=…&code_challenge=…&code_challenge_method=S256`.
-2. **Callback** (route 2). `error` → 302 `/login?error=denied`.
-   `DELETE FROM oauth_states WHERE state_hash = $1 AND expires_at > now() RETURNING *`
-   (single use); no row, or the cookie nonce's hash differs → 302
-   `/login?error=failed`. Exchange the code (10 s deadline, response body ≤
-   1 MiB, no redirects), `GET /users/@me` with the access token, upsert
-   `discord_accounts (mfa_enabled, mfa_checked_at = now())`, create the
-   session, clear `quack_oauth`, set the session cookie, 302 to
-   `redirect_to`. Any failure → 302 `/login?error=failed`. Metric
-   `quack.auth.sign_ins{outcome}` (`ok`, `denied`, `failed`).
+Cookie names: on `https` public URLs `__Host-quack_oauth` and
+`__Host-quack_session` (`Secure; Path=/`, no `Domain`); on `http`, which is
+allowed only for a loopback public URL in development, `quack_oauth` and
+`quack_session` without `Secure`. Both are `HttpOnly; SameSite=Lax`.
+
+1. **Login** (route 1). `redirect_to` (at most 2,048 characters) is parsed
+   once as a URL relative to `QUACK_PUBLIC_URL`; its resolved origin must
+   equal the public URL's origin, and only its path, query, and fragment are
+   kept; anything else becomes `/guilds`. Generate `state` (32 random
+   bytes), a PKCE verifier (64 characters), and a browser nonce (32 random
+   bytes). Insert `oauth_states (state_hash = SHA-256(state), code_verifier,
+   redirect_to, nonce_hash, expires_at = now + 10 min)`. Set the OAuth cookie
+   to the nonce (`Max-Age=600`). 302 to
+   `https://discord.com/oauth2/authorize?…&state=…&code_challenge=…&code_challenge_method=S256`.
+2. **Callback** (route 2).
+   `DELETE FROM oauth_states WHERE state_hash = $1 AND nonce_hash = $2 AND expires_at > now() RETURNING *`
+   with the hash of the cookie's nonce, so a state is consumed only by the
+   browser that started it; no row → 302 `/login?error=failed`. Then:
+   `error` parameter → 302 `/login?error=denied`. Exchange the code (10 s
+   deadline, response body ≤ 1 MiB, no redirects), `GET /users/@me` with the
+   access token, then one transaction: upsert `discord_accounts
+   (mfa_enabled, mfa_checked_at = now())`, create the session, and delete
+   the browser's previous session row if it sent one. Clear the OAuth
+   cookie, set the session cookie, 302 to `redirect_to`. Any failure → 302
+   `/login?error=failed`. Metric `quack.auth.sign_ins{quack.sign_in.outcome}`
+   (`done`, `cancelled` for the `error` parameter, `refused` for a missing
+   or mismatched state, `failed`).
 3. **Session.** 32 random bytes, sent base64url in the cookie; the table
    stores only `SHA-256(id)`. Row: account, CSRF token (32 random bytes),
    the Discord access token encrypted with AES-256-GCM under
-   `QUACK_SESSION_SECRET` (needed only for route 5), `created_at`,
-   `last_seen_at`, `expires_at = now + min(Discord token lifetime, 7 days)`.
-   There is no refresh: when the session ends the member signs in again.
-   Each request: `SELECT … WHERE id_hash = $1 AND expires_at > now()`; touch
-   `last_seen_at` at most every 5 minutes.
-4. **Cookie.** `__Host-quack_session` when `QUACK_PUBLIC_URL` is `https`,
-   `quack_session` otherwise (local development). `HttpOnly; Secure`¹`;
-   SameSite=Lax; Path=/; Max-Age=<seconds until expires_at>`.
-5. **Logout** (route 4) deletes the row and clears the cookie.
+   `QUACK_SESSION_SECRET` (a fresh random nonce per encryption, the session
+   ID hash and account ID as associated data; needed only for route 5),
+   `key_fingerprint` (the first 8 bytes of SHA-256 of the secret),
+   `created_at`, `last_seen_at`, `expires_at = now + min(Discord token
+   lifetime, 7 days)`. There is no refresh: when the session ends the member
+   signs in again. Each request: `SELECT … WHERE id_hash = $1 AND expires_at
+   > now() AND key_fingerprint = $2`; touch `last_seen_at` at most every 5
+   minutes. Rotating the secret therefore signs everyone out; housekeeping
+   deletes the old rows.
+4. **Cookie.** The session cookie has `Max-Age=<seconds until
+   expires_at>`.
+5. **Logout** (route 4, origin and CSRF checked like every mutation) deletes
+   the row and clears the cookie.
 
-¹ `Secure` is set whenever `QUACK_PUBLIC_URL` is `https`.
-
-Server membership for staff routes is checked live through the `Discord`
-port (member cache, REST fallback), never from the session.
-Route 5 combines the account's Discord server list (`GET
-/users/@me/guilds` with the session's token, cached 60 s), the servers where
-Quack is installed, and capabilities computed per installed server
-(`can_install` = not installed and the account has Manage Server there).
+Server membership for staff routes is checked from current facts (§2),
+never from the session. Route 5 combines the account's Discord server list
+(`GET /users/@me/guilds` with the session's token, cached 60 s), the
+servers where Quack is installed, and capabilities computed per installed
+server (`can_install` = not installed and the account has Manage Server
+there).
 
 ### 14.5 CSRF and origin
 
-For POST, PUT, PATCH, and DELETE under `/api`:
+For every POST, PUT, PATCH, and DELETE under `/api`, logout included:
 
 1. `Origin` must equal the origin of `QUACK_PUBLIC_URL`. Without `Origin`,
    `Sec-Fetch-Site` must be `same-origin`. Otherwise `403 origin_rejected`.
@@ -3363,10 +4011,12 @@ error text.
 | 403 | `missing_capability` | `error.missing_capability.<capability>` | |
 | 403 | `mfa_required` | `error.mfa_required` | |
 | 404 | `not_found` | `api.not_found`, `error.case_not_found`, `error.appeal_not_found`, `error.rule_not_found` | |
+| 404 | `action_not_found` | `error.action_not_found` | |
 | 404 | `server_not_found` | `api.server_not_found` | |
 | 404 | `file_unavailable` | `api.file_unavailable` | |
 | 409 | `idempotency_key_reused` | `api.idempotency_key_reused` | |
-| 409 | `rule_changed` | `api.rule_changed` | |
+| 409 | `rule_changed` | `api.rule_changed`, or `error.rule_changed` for case creation | |
+| 409 | `context_changed` | `error.context_changed` | |
 | 409 | `rule_name_taken` | `api.rule_name_taken` | |
 | 409 | `rule_used_by_honeypot` | `api.rule_used_by_honeypot` | |
 | 409 | `required_field_on_honeypot_rule` | `api.required_field_on_honeypot_rule` | |
@@ -3374,11 +4024,12 @@ error text.
 | 409 | `settings_changed` | `api.settings_changed` | |
 | 409 | `case_already_voided` | `error.case_already_voided` | |
 | 409 | `case_voided` | `error.case_voided` or `appeal.submit.voided` | |
-| 409 | `action_not_retryable` | `error.action_not_retryable` / `error.action_not_dismissable` | |
+| 409 | `action_not_retryable` | `error.action_not_retryable` | |
+| 409 | `action_not_dismissable` | `error.action_not_dismissable` | |
 | 409 | `action_not_undoable` | `error.action_not_undoable` | |
-| 409 | `appeal_changed` | `error.appeal_changed` | |
+| 409 | `appeal_changed` | `error.appeal_changed`, or `appeal.information.outdated` on member routes | |
 | 409 | `appeal_exists` | `api.appeal_exists` | |
-| 409 | `ticket_not_open` | `api.ticket_not_open` | |
+| 409 | `ticket_not_open` | `ticket.close.not_open` | |
 | 409 | `module_not_ready` | `api.module_not_ready` | `problems` |
 | 409 | `replacement_invalid` | `error.replacement_invalid` | |
 | 413 | `body_too_large` | `api.body_too_large` | |
@@ -3387,7 +4038,8 @@ error text.
 | 422 | `member_refused` | the matching `refusal.*` | `fields: [{field: "member_id", code: <refusal>}]` |
 | 422 | `appeal_not_allowed` | `api.appeal_not_allowed` | |
 | 422 | `timeout_window_passed` | `error.timeout_window_passed` | |
-| 422 | `evidence_limit_reached` | `error.evidence_limit_reached` | |
+| 422 | `evidence_limit_reached` | `error.evidence_limit_reached` (also for more than 50 evidence sources at creation) | |
+| 422 | `too_many_links` | `error.too_many_links` | |
 | 428 | `idempotency_key_required` | `api.idempotency_key_required` | |
 | 429 | `rate_limited` | `api.rate_limited` | `retry_after_seconds`, header `Retry-After` |
 | 502 | `discord_unavailable` | `api.discord_unavailable` | |
@@ -3417,15 +4069,19 @@ eviction). A refused request gets 429 with `Retry-After`.
 | `member_write` | account | 10 per minute |
 
 Client IP is the socket peer, or, when `QUACK_TRUSTED_PROXY_HOPS = n > 0`,
-the n-th address from the right of `X-Forwarded-For`. Metric
-`quack.http.rate_limited{class}`.
+the n-th address from the right of `X-Forwarded-For`. Set it only when every
+connection reaches Quack through those proxies and they overwrite the
+header; otherwise a client can choose its own address. Metric
+`quack.http.rate_limited{quack.rate_limit.class}`.
 
 ### 14.8 Limits, timeouts, headers
 
 - Request body ≤ 262,144 bytes (`413 body_too_large`).
-- Whole request deadline 10 s (`503 unavailable`); header read 5 s; idle
-  keep-alive 60 s. Database statement timeout 5 s (2 s inside case
-  creation, §4.2).
+- Request deadline 10 s (`503 unavailable`) for everything before a write
+  transaction begins; once it has begun, the request finishes (statement and
+  lock timeouts bound it), so "nothing changed" is never said about a write
+  that committed. Header read 5 s; idle keep-alive 60 s. Database statement
+  timeout 5 s (2 s inside case creation, §4.2).
 - Headers on every response: `X-Content-Type-Options: nosniff`,
   `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`,
   `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and
@@ -3442,9 +4098,11 @@ the n-th address from the right of `X-Forwarded-For`. Metric
   checks dependencies, so outages don't cause restart loops.
 - `GET /readyz`: 200 when every check is `ok`, else 503; body `Readiness`.
   Checks: `database` (`SELECT 1` within 1 s), `migrations` (the applied set
-  equals the binary's set, verified at startup), `gateway` (shard
-  connected and `READY` received), `workers` (every job dispatcher ticked
-  within the last 15 s), `shutdown` (not shutting down).
+  equals the binary's set, verified at startup), `fence` (this process
+  holds the singleton lock, §17.5), `gateway` (the shard's current session
+  is `READY` or `RESUMED`), `workers` (every job dispatcher completed a
+  claim-and-dispatch pass within the last 15 s; a pass that is blocked
+  waiting for a handler does not count), `shutdown` (not shutting down).
 
 ### 14.10 Dashboard files
 
@@ -3459,11 +4117,15 @@ the n-th address from the right of `X-Forwarded-For`. Metric
 | Other methods outside `/api` | 405 with `Allow: GET, HEAD` |
 
 Text responses (HTML, JS, CSS, JSON, SVG) are gzip-compressed when the
-client accepts it. Dashboard CSP: `default-src 'self'; img-src 'self'
-https://cdn.discordapp.com https://media.discordapp.net data:; style-src
-'self' 'unsafe-inline'; script-src 'self' https://visitors.now; connect-src
-'self' https://visitors.now; frame-ancestors 'none'; base-uri 'none';
-form-action 'self'`.
+client accepts it. Dashboard CSP (the Go server's, unchanged; the
+visitors.now analytics script loads from `cdn.visitors.now` and reports to
+`e.visitors.now`): `default-src 'self'; script-src 'self'
+https://cdn.visitors.now; style-src 'self' 'unsafe-inline'; img-src 'self'
+data: https://cdn.discordapp.com https://media.discordapp.net; font-src
+'self'; connect-src 'self' https://e.visitors.now; frame-ancestors 'none';
+base-uri 'self'; form-action 'self'`. At startup `serve` checks that
+`QUACK_DASHBOARD_DIR` contains `index.html` and refuses to start
+otherwise.
 
 ### 14.11 Dashboard URL map
 
@@ -3487,6 +4149,8 @@ The dashboard keeps redirects from the Go-era paths `/guilds/{id}/audit`
 → `/mod-log` and `/guilds/{id}/modules/logging` → `/modules/activity-log`.
 Member links from old DMs carry internal ULIDs (server and case); the member
 page ignores the server segment and resolves the case by ULID (§19.3).
+Staff deep links from the Go era (`/guilds/{id}/appeals/{ulid}`,
+`/rules/{ulid}`) resolve the same way, after the staff check.
 
 ### 14.12 OpenAPI and the TypeScript client
 
@@ -3513,17 +4177,29 @@ PostgreSQL 18. Rules:
   whose key is the Discord server ID, and natural-key tables.
 - Discord snowflakes are `bigint` (always positive, below 2^63); newtypes in
   Rust (`GuildId`, `MemberId`, `AccountId`, `ChannelId`, `MessageId`,
-  `RoleId`), strings in JSON.
+  `RoleId`), strings in JSON. One checked parser converts them; a value that
+  does not fit is rejected, never wrapped.
 - `timestamptz` everywhere; the application writes UTC.
 - Every tenant table has `guild_id`. A child that must belong to the same
   server as its parent uses a composite foreign key `(guild_id, parent_id)`
-  against `UNIQUE (guild_id, id)`.
-- States are Postgres enums; invariants are `CHECK` constraints.
-- Migrations are immutable SQL files in `crates/quack-db/migrations/`
-  (`0001_core.sql`, `0002_modules.sql`, then one file per change), applied by
-  `quack migrate` (sqlx migrator, ledger `_sqlx_migrations`). `quack serve`
-  only verifies the applied set equals the binary's set, unless started with
-  `--migrate`.
+  against `UNIQUE (guild_id, id)`; a child that must be about the same
+  member as its case (actions, appeals, DMs, honeypot hits) uses `(guild_id,
+  case_id, member_id)`; evidence files and undo actions must also match
+  their parent's case.
+- States are Postgres enums; invariants are `CHECK` constraints. Text limits
+  are enforced by the application on every write (§3.9); a CHECK repeats a
+  limit only where imported data cannot exceed it, and otherwise only
+  requires non-empty text.
+- **One migration file per change, in dependency order.** The schema below
+  is `crates/quack-db/migrations/0001_initial.sql`: the SQL blocks of
+  §15.1–§15.7 concatenated in this order, including the triggers. A test
+  applies that exact file to an empty PostgreSQL 18 database in one
+  transaction. Later changes are new files (`0002_…`). `quack migrate` (sqlx
+  migrator, ledger `_sqlx_migrations`) applies them; `quack serve` only
+  verifies the applied set equals the binary's set, unless started with
+  `--migrate`. The triggers reject changes even for the table owner; for
+  defense in depth `serve` may run as a role that owns nothing and has only
+  `INSERT` and `SELECT` on `mod_log` and `rule_versions` (§20.3).
 - `NOTIFY` channels: `quack_jobs` (payload: job kind), `quack_rules`
   (payload: guild ID), `quack_settings` (payload: guild ID).
 
@@ -3536,15 +4212,17 @@ CREATE TYPE action_kind            AS ENUM ('timeout', 'kick', 'ban', 'remove_ti
 CREATE TYPE action_state           AS ENUM ('pending', 'running', 'done', 'failed', 'cancelled', 'skipped');
 CREATE TYPE action_failure         AS ENUM ('quack_not_in_server', 'quack_missing_permission', 'quack_role_too_low',
                                             'member_is_owner', 'member_not_in_server', 'member_is_administrator',
-                                            'timeout_window_passed', 'discord_refused', 'retries_exhausted');
-CREATE TYPE attempt_outcome        AS ENUM ('done', 'no_change', 'refused', 'rate_limited', 'unknown', 'interrupted');
+                                            'timeout_window_passed', 'discord_refused', 'retries_exhausted',
+                                            'unconfirmed');
+CREATE TYPE action_skip_reason     AS ENUM ('other_case_applies', 'changed_outside_case');
+CREATE TYPE attempt_outcome        AS ENUM ('done', 'no_change', 'refused', 'not_sent', 'unknown', 'interrupted');
 CREATE TYPE discord_permission     AS ENUM ('moderate_members', 'kick_members', 'ban_members');
 CREATE TYPE dm_kind                AS ENUM ('case', 'appeal_update', 'ticket_closed');
 CREATE TYPE dm_state               AS ENUM ('pending', 'sending', 'sent', 'failed', 'unknown', 'not_needed');
-CREATE TYPE dm_failure             AS ENUM ('dms_closed', 'not_in_shared_server', 'dm_channel_unavailable', 'discord_refused');
+CREATE TYPE dm_failure             AS ENUM ('dms_closed', 'not_in_shared_server', 'discord_unavailable', 'discord_refused');
 CREATE TYPE evidence_state         AS ENUM ('saving', 'saved', 'failed');
 CREATE TYPE evidence_failure       AS ENUM ('message_deleted', 'moderator_no_access', 'quack_no_access', 'other_server', 'discord_error');
-CREATE TYPE file_copy_state        AS ENUM ('pending', 'copied', 'link_only', 'too_large', 'unsupported_type', 'copy_failed', 'limit_reached');
+CREATE TYPE file_copy_state        AS ENUM ('pending', 'copied', 'link_only', 'too_large', 'unsupported_type', 'copy_failed');
 CREATE TYPE appeal_state           AS ENUM ('pending', 'needs_information', 'accepted', 'rejected', 'closed');
 CREATE TYPE appeal_event_kind      AS ENUM ('submitted', 'information_requested', 'information_provided',
                                             'accepted', 'rejected', 'closed', 'reopened');
@@ -3568,7 +4246,8 @@ CREATE TYPE job_kind               AS ENUM ('run_action', 'send_dm', 'sync_messa
                                             'housekeeping');
 CREATE TYPE ticket_state           AS ENUM ('opening', 'open', 'closing', 'closed');
 CREATE TYPE ticket_close_reason    AS ENUM ('open_failed');
-CREATE TYPE module_disabled_reason AS ENUM ('channel_deleted');
+CREATE TYPE transcript_partial     AS ENUM ('history', 'trimmed');
+CREATE TYPE module_disabled_reason AS ENUM ('channel_deleted', 'quack_left');
 CREATE TYPE activity_event         AS ENUM ('message_edited', 'message_deleted', 'messages_bulk_deleted', 'member_joined',
                                             'member_left', 'member_banned', 'member_unbanned', 'server_changed',
                                             'channel_changed');
@@ -3594,7 +4273,7 @@ CREATE TABLE guilds (
 -- Per-server case number counter; its row lock serializes case creation.
 CREATE TABLE case_counters (
   guild_id    bigint PRIMARY KEY REFERENCES guilds (guild_id),
-  last_number bigint NOT NULL DEFAULT 0 CHECK (last_number >= 0)
+  last_number bigint NOT NULL DEFAULT 0 CHECK (last_number BETWEEN 0 AND 9007199254740991)  -- 2^53 - 1
 );
 
 -- Discord accounts that signed in to the dashboard; holds the 2FA confirmation.
@@ -3608,9 +4287,10 @@ CREATE TABLE discord_accounts (
 -- Dashboard sessions. Only the SHA-256 of the session ID is stored.
 CREATE TABLE sessions (
   id_hash                  bytea PRIMARY KEY CHECK (octet_length(id_hash) = 32),
-  account_id               bigint NOT NULL CHECK (account_id > 0),
+  account_id               bigint NOT NULL REFERENCES discord_accounts (account_id),
   csrf_token               text NOT NULL CHECK (char_length(csrf_token) = 43),
   discord_token_ciphertext bytea NOT NULL,                          -- AES-256-GCM(nonce || ciphertext || tag)
+  key_fingerprint          bytea NOT NULL CHECK (octet_length(key_fingerprint) = 8),  -- which session secret
   created_at               timestamptz NOT NULL DEFAULT now(),
   last_seen_at             timestamptz NOT NULL DEFAULT now(),
   expires_at               timestamptz NOT NULL
@@ -3637,7 +4317,7 @@ CREATE INDEX oauth_states_expiry ON oauth_states (expires_at);
 CREATE TABLE rules (
   id              uuid PRIMARY KEY DEFAULT uuidv7(),
   guild_id        bigint NOT NULL REFERENCES guilds (guild_id),
-  name            text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),  -- current version's name
+  name            text NOT NULL CHECK (char_length(name) >= 1),     -- current version's name; 1-100 on write (§3.3)
   current_version integer NOT NULL CHECK (current_version >= 1),
   archived_at     timestamptz NULL,
   created_at      timestamptz NOT NULL DEFAULT now(),
@@ -3665,76 +4345,136 @@ CREATE TABLE rule_versions (
 ALTER TABLE rules ADD FOREIGN KEY (id, current_version)
   REFERENCES rule_versions (rule_id, version) DEFERRABLE INITIALLY DEFERRED;
 
+-- Rejects every UPDATE, DELETE, and TRUNCATE on permanent history.
 CREATE FUNCTION reject_change() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  RAISE EXCEPTION '% rows are immutable', TG_TABLE_NAME USING ERRCODE = 'insufficient_privilege';
+  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME USING ERRCODE = 'insufficient_privilege';
 END $$;
-CREATE TRIGGER rule_versions_immutable BEFORE UPDATE OR DELETE ON rule_versions
+CREATE TRIGGER rule_versions_no_change BEFORE UPDATE OR DELETE ON rule_versions
   FOR EACH ROW EXECUTE FUNCTION reject_change();
+CREATE TRIGGER rule_versions_no_truncate BEFORE TRUNCATE ON rule_versions
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_change();
 
 -- Core server settings.
 CREATE TABLE guild_settings (
   guild_id                       bigint PRIMARY KEY REFERENCES guilds (guild_id),
-  version                        bigint NOT NULL DEFAULT 1,       -- optimistic check for staff role edits
-  moderator_role_ids             bigint[] NOT NULL DEFAULT '{}' CHECK (cardinality(moderator_role_ids) <= 25),
-  rules_manager_role_ids         bigint[] NOT NULL DEFAULT '{}' CHECK (cardinality(rules_manager_role_ids) <= 25),
-  log_channel_id                 bigint NULL,
-  appeal_channel_id              bigint NULL,
-  evidence_channel_id            bigint NULL,
-  appeal_invite_url              text NULL CHECK (appeal_invite_url ~ '^https://discord\.gg/[A-Za-z0-9-]{2,32}$'),
-  dm_intro                       text NULL CHECK (char_length(dm_intro) BETWEEN 1 AND 1000),
-  dm_footer                      text NULL CHECK (char_length(dm_footer) BETWEEN 1 AND 500),
+  version                        bigint NOT NULL DEFAULT 1 CHECK (version >= 1),  -- optimistic check for staff role edits
+  moderator_role_ids             bigint[] NOT NULL DEFAULT '{}'
+                                 CHECK (cardinality(moderator_role_ids) <= 25 AND array_position(moderator_role_ids, NULL) IS NULL),
+  rules_manager_role_ids         bigint[] NOT NULL DEFAULT '{}'
+                                 CHECK (cardinality(rules_manager_role_ids) <= 25 AND array_position(rules_manager_role_ids, NULL) IS NULL),
+  log_channel_id                 bigint NULL CHECK (log_channel_id > 0),
+  appeal_channel_id              bigint NULL CHECK (appeal_channel_id > 0),
+  evidence_channel_id            bigint NULL CHECK (evidence_channel_id > 0),
+  appeal_invite_url              text NULL CHECK (appeal_invite_url ~ '^https://discord\.gg/[A-Za-z0-9_-]{2,64}$'),
+  dm_intro                       text NULL CHECK (char_length(dm_intro) >= 1),   -- 1-1,000 on write
+  dm_footer                      text NULL CHECK (char_length(dm_footer) >= 1),  -- 1-500 on write
   starter_rule_id                uuid NULL,
   starter_notice_acknowledged_at timestamptz NULL,
   updated_at                     timestamptz NOT NULL DEFAULT now(),
   updated_by                     bigint NULL,
   FOREIGN KEY (guild_id, starter_rule_id) REFERENCES rules (guild_id, id)
 );
+
+-- Module settings (one row each per server, created by bootstrap).
+CREATE TABLE ticket_settings (
+  guild_id                  bigint PRIMARY KEY REFERENCES guilds (guild_id),
+  enabled                   boolean NOT NULL DEFAULT false,
+  disabled_reason           module_disabled_reason NULL,
+  entry_channel_id          bigint NULL CHECK (entry_channel_id > 0),
+  queue_channel_id          bigint NULL CHECK (queue_channel_id > 0),
+  transcript_retention_days smallint NOT NULL DEFAULT 90 CHECK (transcript_retention_days BETWEEN 1 AND 365),
+  version                   bigint NOT NULL DEFAULT 1 CHECK (version >= 1),
+  updated_at                timestamptz NOT NULL DEFAULT now(),
+  updated_by                bigint NULL,
+  CHECK (NOT enabled OR (entry_channel_id IS NOT NULL AND queue_channel_id IS NOT NULL
+                         AND entry_channel_id <> queue_channel_id)),
+  CHECK (NOT (enabled AND disabled_reason IS NOT NULL))
+);
+
+CREATE TABLE activity_log_settings (
+  guild_id                bigint PRIMARY KEY REFERENCES guilds (guild_id),
+  enabled                 boolean NOT NULL DEFAULT false,
+  disabled_reason         module_disabled_reason NULL,
+  include_message_content boolean NOT NULL DEFAULT true,
+  include_file_names      boolean NOT NULL DEFAULT true,
+  include_embed_types     boolean NOT NULL DEFAULT true,
+  version                 bigint NOT NULL DEFAULT 1 CHECK (version >= 1),
+  updated_at              timestamptz NOT NULL DEFAULT now(),
+  updated_by              bigint NULL,
+  CHECK (NOT (enabled AND disabled_reason IS NOT NULL))
+);
+
+CREATE TABLE activity_log_routes (
+  guild_id   bigint NOT NULL REFERENCES activity_log_settings (guild_id),
+  event      activity_event NOT NULL,
+  channel_id bigint NOT NULL CHECK (channel_id > 0),
+  PRIMARY KEY (guild_id, event)
+);
+CREATE INDEX activity_log_routes_channel ON activity_log_routes (guild_id, channel_id);
+
+CREATE TABLE honeypot_settings (
+  guild_id        bigint PRIMARY KEY REFERENCES guilds (guild_id),
+  enabled         boolean NOT NULL DEFAULT false,
+  disabled_reason module_disabled_reason NULL,
+  channel_id      bigint NULL CHECK (channel_id > 0),
+  rule_id         uuid NULL,
+  warning_text    text NULL CHECK (char_length(warning_text) >= 1),  -- 1-1,500 on write
+  version         bigint NOT NULL DEFAULT 1 CHECK (version >= 1),    -- stamped on every hit (§13.4.2)
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  updated_by      bigint NULL,
+  FOREIGN KEY (guild_id, rule_id) REFERENCES rules (guild_id, id),
+  CHECK (NOT enabled OR (channel_id IS NOT NULL AND rule_id IS NOT NULL)),
+  CHECK (NOT (enabled AND disabled_reason IS NOT NULL))
+);
 ```
 
-### 15.4 Cases, actions, DMs, evidence, appeals
-
-Module tables (§15.7) are created before `dms` because `dms` references
-`tickets`; the listing here groups tables by topic.
+### 15.4 Cases, actions, evidence, appeals
 
 ```sql
 -- One row per case. Never deleted.
 CREATE TABLE cases (
   id                         uuid PRIMARY KEY DEFAULT uuidv7(),
   guild_id                   bigint NOT NULL REFERENCES guilds (guild_id),
-  number                     bigint NOT NULL CHECK (number >= 1),
+  number                     bigint NOT NULL CHECK (number BETWEEN 1 AND 9007199254740991),
   member_id                  bigint NOT NULL CHECK (member_id > 0),
+  member_joined_at           timestamptz NULL,                    -- the membership the case is about; NULL when imported
   source                     case_source NOT NULL,
-  moderator_id               bigint NULL,                         -- NULL for honeypot and some imported cases
+  moderator_id               bigint NULL CHECK (moderator_id > 0), -- NULL for honeypot and some imported cases
   rule_id                    uuid NULL,
   rule_version               integer NULL,
   case_count                 integer NULL CHECK (case_count >= 1),
-  level_index                smallint NULL CHECK (level_index BETWEEN 1 AND 10),
+  level_index                smallint NULL CHECK (level_index >= 1),
   level_from_case_count      integer NULL CHECK (level_from_case_count >= 1),
   action_kind                action_kind NULL CHECK (action_kind IN ('timeout', 'kick', 'ban')),
   timeout_seconds            integer NULL CHECK (timeout_seconds BETWEEN 1 AND 2419200),
   ban_delete_message_seconds integer NULL CHECK (ban_delete_message_seconds BETWEEN 0 AND 604800),
   sends_dm                   boolean NOT NULL,
-  context                    jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(context) = 'object'),  -- field key → value
-  operation_key              text NULL CHECK (char_length(operation_key) <= 200),
+  context                    jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(context) = 'object'),  -- field key -> value
+  context_revision           integer NOT NULL DEFAULT 1 CHECK (context_revision >= 1),
+  operation_key              text NULL CHECK (char_length(operation_key) BETWEEN 1 AND 400),  -- <account>:<operation>:<key>
+  request_hash               bytea NULL CHECK (octet_length(request_hash) = 32),
   replaces_case_id           uuid NULL,
   voided_at                  timestamptz NULL,
-  voided_by                  bigint NULL,                         -- NULL = Quack (never today) or imported
-  void_reason                text NULL CHECK (char_length(void_reason) BETWEEN 1 AND 1000),
+  voided_by                  bigint NULL,                         -- NULL = Quack or unknown (imported)
+  void_reason                text NULL CHECK (char_length(void_reason) >= 1),  -- 1-1,000 on write
   void_cause                 void_cause NULL,
-  imported                   jsonb NULL,                          -- {v4_action, v4_moderator, v4_reason, v4_source_id}
+  imported                   jsonb NULL CHECK (jsonb_typeof(imported) = 'object'),  -- {v4_action, v4_moderator, v4_reason, v4_source_id}
   created_at                 timestamptz NOT NULL DEFAULT now(),
   updated_at                 timestamptz NOT NULL DEFAULT now(),
   UNIQUE (guild_id, number),
   UNIQUE (guild_id, id),
+  UNIQUE (guild_id, id, member_id),
   UNIQUE (guild_id, operation_key),
-  UNIQUE (replaces_case_id),
   FOREIGN KEY (guild_id, rule_id) REFERENCES rules (guild_id, id),
   FOREIGN KEY (rule_id, rule_version) REFERENCES rule_versions (rule_id, version),
   FOREIGN KEY (guild_id, replaces_case_id) REFERENCES cases (guild_id, id),
+  CHECK (replaces_case_id IS DISTINCT FROM id),
+  CHECK ((rule_id IS NULL) = (rule_version IS NULL)),
+  CHECK (request_hash IS NULL OR operation_key IS NOT NULL),
   CHECK ((voided_at IS NULL) = (void_reason IS NULL) AND (voided_at IS NULL) = (void_cause IS NULL)),
   CHECK ((source = 'imported') = (imported IS NOT NULL)),
-  CHECK (source = 'imported' OR (rule_id IS NOT NULL AND rule_version IS NOT NULL AND case_count IS NOT NULL
+  CHECK (source = 'imported' OR (rule_id IS NOT NULL AND case_count IS NOT NULL
                                  AND level_index IS NOT NULL AND level_from_case_count IS NOT NULL)),
   CHECK (source IN ('honeypot', 'imported') OR moderator_id IS NOT NULL),
   CHECK ((action_kind IS NOT DISTINCT FROM 'timeout') = (timeout_seconds IS NOT NULL)),
@@ -3743,9 +4483,12 @@ CREATE TABLE cases (
 );
 CREATE INDEX cases_escalation ON cases (guild_id, member_id, rule_id, created_at)
   WHERE voided_at IS NULL AND source <> 'imported';
+CREATE UNIQUE INDEX cases_replaces ON cases (replaces_case_id) WHERE replaces_case_id IS NOT NULL;
 CREATE INDEX cases_member     ON cases (guild_id, member_id, number DESC);
 CREATE INDEX cases_rule       ON cases (guild_id, rule_id, number DESC);
 CREATE INDEX cases_moderator  ON cases (guild_id, moderator_id, number DESC) WHERE moderator_id IS NOT NULL;
+CREATE INDEX cases_created    ON cases (guild_id, created_at);                -- statistics
+CREATE INDEX cases_honeypot   ON cases (guild_id) WHERE source = 'honeypot';  -- the warning's count
 CREATE INDEX cases_member_all ON cases (member_id, created_at DESC, id DESC);  -- a member's own cases
 
 -- Original actions (timeout, kick, ban) and undo actions (remove_timeout, unban).
@@ -3753,20 +4496,21 @@ CREATE TABLE actions (
   id                      uuid PRIMARY KEY DEFAULT uuidv7(),
   guild_id                bigint NOT NULL,
   case_id                 uuid NOT NULL,
-  member_id               bigint NOT NULL,                        -- copy of the case's member, for the undo guard
+  member_id               bigint NOT NULL,                        -- the case's member (composite FK), for the undo guard
   kind                    action_kind NOT NULL,
-  undo_of_action_id       uuid NULL,                              -- set exactly for undo actions
+  undo_of_action_id       uuid NULL,                              -- set exactly for undo actions; same case
   state                   action_state NOT NULL DEFAULT 'pending',
-  timeout_ends_at         timestamptz NULL,                       -- fixed at case creation (§5.2)
+  timeout_ends_at         timestamptz NULL,                       -- fixed at case creation, whole seconds (§5.2)
   delete_message_seconds  integer NULL CHECK (delete_message_seconds BETWEEN 0 AND 604800),
   requested_by            bigint NULL,                            -- staff who requested an undo or retry; NULL = Quack
-  attempts                integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  attempts                integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),  -- in the current round
   next_attempt_at         timestamptz NULL,
   last_attempt_at         timestamptz NULL,
   failure_reason          action_failure NULL,
   failure_permission      discord_permission NULL,                -- for quack_missing_permission
   failure_http_status     smallint NULL,
   failure_discord_code    integer NULL,
+  skip_reason             action_skip_reason NULL,
   skipped_because_case_id uuid NULL,
   no_change               boolean NOT NULL DEFAULT false,         -- done because the desired state already held
   done_at                 timestamptz NULL,
@@ -3775,30 +4519,39 @@ CREATE TABLE actions (
   created_at              timestamptz NOT NULL DEFAULT now(),
   updated_at              timestamptz NOT NULL DEFAULT now(),
   UNIQUE (guild_id, id),
+  UNIQUE (guild_id, case_id, id),
   UNIQUE (undo_of_action_id),
-  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id),
-  FOREIGN KEY (guild_id, undo_of_action_id) REFERENCES actions (guild_id, id),
+  FOREIGN KEY (guild_id, case_id, member_id) REFERENCES cases (guild_id, id, member_id),
+  FOREIGN KEY (guild_id, case_id, undo_of_action_id) REFERENCES actions (guild_id, case_id, id),
   FOREIGN KEY (guild_id, skipped_because_case_id) REFERENCES cases (guild_id, id),
+  CHECK (undo_of_action_id IS DISTINCT FROM id),
   CHECK ((kind IN ('remove_timeout', 'unban')) = (undo_of_action_id IS NOT NULL)),
   CHECK ((kind = 'timeout') = (timeout_ends_at IS NOT NULL)),
   CHECK ((kind = 'ban') = (delete_message_seconds IS NOT NULL)),
   CHECK ((state = 'failed') = (failure_reason IS NOT NULL)),
+  CHECK (state = 'failed' OR (failure_permission IS NULL AND failure_http_status IS NULL
+                              AND failure_discord_code IS NULL)),
   CHECK ((failure_reason IS NOT DISTINCT FROM 'quack_missing_permission') = (failure_permission IS NOT NULL)),
-  CHECK ((state = 'skipped') = (skipped_because_case_id IS NOT NULL)),
+  CHECK ((state = 'skipped') = (skip_reason IS NOT NULL)),
+  CHECK ((skip_reason IS NOT DISTINCT FROM 'other_case_applies') = (skipped_because_case_id IS NOT NULL)),
+  CHECK (state <> 'skipped' OR undo_of_action_id IS NOT NULL),
+  CHECK (state <> 'cancelled' OR undo_of_action_id IS NULL),
   CHECK ((state = 'done') = (done_at IS NOT NULL)),
+  CHECK (NOT no_change OR state = 'done'),
   CHECK (dismissed_at IS NULL OR state = 'failed'),
   CHECK ((dismissed_at IS NULL) = (dismissed_by IS NULL))
 );
 CREATE UNIQUE INDEX actions_one_original ON actions (case_id) WHERE undo_of_action_id IS NULL;
 CREATE INDEX actions_case   ON actions (case_id);
-CREATE INDEX actions_member ON actions (guild_id, member_id, kind) WHERE state IN ('pending', 'running', 'done');
-CREATE INDEX actions_review ON actions (guild_id, updated_at DESC, id DESC) WHERE state = 'failed';
+CREATE INDEX actions_member ON actions (guild_id, member_id, kind) WHERE state IN ('running', 'done');
+CREATE INDEX actions_review ON actions (guild_id, created_at DESC, id DESC) WHERE state = 'failed' AND dismissed_at IS NULL;
+CREATE INDEX actions_guild_state ON actions (guild_id, state, created_at DESC, id DESC);
 
--- Every attempt, recorded before the Discord call.
+-- Every attempt, opened before the Discord call.
 CREATE TABLE action_attempts (
   guild_id     bigint NOT NULL,
   action_id    uuid NOT NULL,
-  number       integer NOT NULL CHECK (number >= 1),
+  number       integer NOT NULL CHECK (number >= 1),               -- across all rounds
   started_at   timestamptz NOT NULL,
   finished_at  timestamptz NULL,
   outcome      attempt_outcome NULL,
@@ -3806,9 +4559,172 @@ CREATE TABLE action_attempts (
   discord_code integer NULL,
   PRIMARY KEY (action_id, number),
   FOREIGN KEY (guild_id, action_id) REFERENCES actions (guild_id, id),
-  CHECK ((finished_at IS NULL) = (outcome IS NULL))
+  CHECK ((finished_at IS NULL) = (outcome IS NULL)),
+  CHECK (finished_at IS NULL OR finished_at >= started_at)
 );
+CREATE UNIQUE INDEX action_attempts_one_open ON action_attempts (action_id) WHERE finished_at IS NULL;
 
+-- Saved messages. One row per (case, message).
+CREATE TABLE evidence (
+  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
+  guild_id                    bigint NOT NULL,
+  case_id                     uuid NOT NULL,
+  channel_id                  bigint NOT NULL CHECK (channel_id > 0),
+  message_id                  bigint NOT NULL CHECK (message_id > 0),
+  added_by                    bigint NULL,                        -- NULL = Quack (honeypot, imported)
+  state                       evidence_state NOT NULL DEFAULT 'saving',
+  failure                     evidence_failure NULL,
+  author_id                   bigint NULL,
+  content                     text NULL CHECK (char_length(content) <= 4000),
+  message_created_at          timestamptz NULL,
+  message_edited_at           timestamptz NULL,
+  embeds                      jsonb NOT NULL DEFAULT '[]'
+                              CHECK (jsonb_typeof(embeds) = 'array' AND jsonb_array_length(embeds) <= 10),
+  files_not_saved             integer NOT NULL DEFAULT 0 CHECK (files_not_saved >= 0),
+  copy_skipped_not_staff_only boolean NOT NULL DEFAULT false,
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  saved_at                    timestamptz NULL,
+  UNIQUE (guild_id, id),
+  UNIQUE (guild_id, case_id, id),
+  UNIQUE (case_id, message_id),
+  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id),
+  CHECK ((state = 'failed') = (failure IS NOT NULL)),
+  CHECK ((state = 'saved') = (saved_at IS NOT NULL))
+);
+CREATE INDEX evidence_case ON evidence (case_id, created_at, id);
+
+-- Files of a saved message (at most 10 per message, 100 per case), and their copies.
+CREATE TABLE evidence_files (
+  id                 uuid PRIMARY KEY DEFAULT uuidv7(),
+  guild_id           bigint NOT NULL,
+  case_id            uuid NOT NULL,
+  evidence_id        uuid NOT NULL,
+  position           smallint NOT NULL CHECK (position BETWEEN 1 AND 10),
+  attachment_id      bigint NULL CHECK (attachment_id > 0),       -- the original's Discord attachment ID
+  filename           text NOT NULL CHECK (char_length(filename) BETWEEN 1 AND 255),
+  content_type       text NULL CHECK (char_length(content_type) <= 191),
+  size_bytes         bigint NOT NULL CHECK (size_bytes >= 0),
+  original_url       text NOT NULL CHECK (char_length(original_url) <= 2048),
+  copy_state         file_copy_state NOT NULL DEFAULT 'pending',
+  copy_started_at    timestamptz NULL,                            -- the upload's nonce window (§10.4)
+  copy_channel_id    bigint NULL,
+  copy_message_id    bigint NULL,
+  copy_attachment_id bigint NULL,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (evidence_id, position),
+  FOREIGN KEY (guild_id, case_id, evidence_id) REFERENCES evidence (guild_id, case_id, id),
+  CHECK (num_nonnulls(copy_channel_id, copy_message_id, copy_attachment_id)
+         = CASE WHEN copy_state = 'copied' THEN 3 ELSE 0 END)
+);
+CREATE INDEX evidence_files_case ON evidence_files (case_id);
+
+-- One appeal per case.
+CREATE TABLE appeals (
+  id               uuid PRIMARY KEY DEFAULT uuidv7(),
+  guild_id         bigint NOT NULL,
+  case_id          uuid NOT NULL,
+  member_id        bigint NOT NULL,                               -- the case's member (composite FK)
+  state            appeal_state NOT NULL DEFAULT 'pending',
+  version          integer NOT NULL DEFAULT 1 CHECK (version >= 1),
+  statement        text NOT NULL CHECK (char_length(statement) >= 1),  -- 1-4,000 on write
+  decided_by       bigint NULL,                                   -- latest staff decision
+  decided_at       timestamptz NULL,
+  decision_reason  text NULL CHECK (char_length(decision_reason) >= 1),
+  first_decided_at timestamptz NULL,                              -- first accept/reject/close, for metrics
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (case_id),
+  UNIQUE (guild_id, id),
+  FOREIGN KEY (guild_id, case_id, member_id) REFERENCES cases (guild_id, id, member_id)
+);
+CREATE INDEX appeals_guild_state   ON appeals (guild_id, state, created_at, id);
+CREATE INDEX appeals_guild_created ON appeals (guild_id, created_at DESC, id DESC);
+
+-- Appeal timeline: statement, replies, decisions.
+CREATE TABLE appeal_events (
+  id             uuid PRIMARY KEY DEFAULT uuidv7(),
+  guild_id       bigint NOT NULL,
+  appeal_id      uuid NOT NULL,
+  kind           appeal_event_kind NOT NULL,
+  actor_id       bigint NULL,                                     -- member or staff; NULL = Quack
+  text           text NOT NULL CHECK (char_length(text) >= 1),    -- 1-4,000 (replies) or 1-2,000 (reasons) on write
+  closed_by_void boolean NOT NULL DEFAULT false,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (guild_id, id),
+  FOREIGN KEY (guild_id, appeal_id) REFERENCES appeals (guild_id, id),
+  CHECK (NOT closed_by_void OR (kind = 'closed' AND actor_id IS NULL))
+);
+CREATE INDEX appeal_events_appeal ON appeal_events (appeal_id, created_at, id);
+```
+
+### 15.5 Tickets
+
+Ticket tables come before DMs and the moderation log, which reference them.
+
+```sql
+CREATE TABLE tickets (
+  id                   uuid PRIMARY KEY DEFAULT uuidv7(),
+  guild_id             bigint NOT NULL REFERENCES guilds (guild_id),
+  member_id            bigint NOT NULL CHECK (member_id > 0),
+  state                ticket_state NOT NULL DEFAULT 'opening',
+  entry_channel_id     bigint NOT NULL,                           -- the thread's parent
+  thread_id            bigint NULL UNIQUE,                        -- named ticket-<id u22>
+  opened_at            timestamptz NULL,
+  close_requested_at   timestamptz NULL,
+  closed_at            timestamptz NULL,
+  closed_by            bigint NULL,                               -- member or staff; NULL = Quack
+  close_reason         ticket_close_reason NULL,
+  journal_gaps         boolean NOT NULL DEFAULT false,            -- the journal may be missing messages
+  welcome_started_at   timestamptz NULL,                          -- the welcome's nonce window (§10.4)
+  welcome_posted_at    timestamptz NULL,
+  frozen_at            timestamptz NULL,                          -- close step 1 done
+  transcript_saved_at  timestamptz NULL,                          -- close step 2 done
+  thread_deleted_at    timestamptz NULL,                          -- close step 4 done
+  thread_delete_failed boolean NOT NULL DEFAULT false,
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  updated_at           timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (guild_id, id),
+  UNIQUE (guild_id, id, member_id),
+  CHECK ((state = 'closed') = (closed_at IS NOT NULL)),
+  CHECK (state <> 'open' OR (thread_id IS NOT NULL AND opened_at IS NOT NULL)),
+  CHECK (close_reason IS NULL OR state IN ('closing', 'closed'))
+);
+CREATE UNIQUE INDEX tickets_one_live ON tickets (guild_id, member_id) WHERE state IN ('opening', 'open', 'closing');
+CREATE INDEX tickets_guild_state ON tickets (guild_id, state, created_at, id);
+
+-- Ticket journal: original text of every message seen in a ticket thread before it froze.
+CREATE TABLE ticket_messages (
+  guild_id    bigint NOT NULL,
+  ticket_id   uuid NOT NULL,
+  message_id  bigint NOT NULL,
+  author_id   bigint NOT NULL,
+  author_name text NOT NULL CHECK (char_length(author_name) >= 1),
+  text        text NOT NULL,
+  files       jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(files) = 'array'),  -- [{name, size}]
+  sent_at     timestamptz NOT NULL,
+  expires_at  timestamptz NULL,                                   -- set at close
+  PRIMARY KEY (ticket_id, message_id),
+  FOREIGN KEY (guild_id, ticket_id) REFERENCES tickets (guild_id, id)
+);
+CREATE INDEX ticket_messages_expiry ON ticket_messages (expires_at) WHERE expires_at IS NOT NULL;
+
+CREATE TABLE ticket_transcripts (
+  ticket_id     uuid PRIMARY KEY,
+  guild_id      bigint NOT NULL,
+  content       text NOT NULL CHECK (octet_length(content) <= 8388608),
+  complete      boolean NOT NULL,
+  partial_cause transcript_partial NULL,
+  captured_at   timestamptz NOT NULL DEFAULT now(),
+  expires_at    timestamptz NOT NULL,
+  FOREIGN KEY (guild_id, ticket_id) REFERENCES tickets (guild_id, id),
+  CHECK (complete = (partial_cause IS NULL))
+);
+CREATE INDEX ticket_transcripts_expiry ON ticket_transcripts (expires_at);
+```
+
+### 15.6 DMs, moderation log, tracked messages, jobs, operation keys, drafts, import
+
+```sql
 -- Case DMs, appeal update DMs, ticket transcript DMs.
 CREATE TABLE dms (
   id                   uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -3823,113 +4739,24 @@ CREATE TABLE dms (
   failure_discord_code integer NULL,
   channel_id           bigint NULL,                               -- the DM channel
   message_id           bigint NULL,
-  attempted_at         timestamptz NULL,                          -- set when state became 'sending'
+  first_attempt_at     timestamptz NULL,                          -- start of the nonce window (§10.4)
   settled_at           timestamptz NULL,
   created_at           timestamptz NOT NULL DEFAULT now(),
   UNIQUE (appeal_event_id),
   UNIQUE (ticket_id),
-  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id),
+  FOREIGN KEY (guild_id, case_id, member_id) REFERENCES cases (guild_id, id, member_id),
   FOREIGN KEY (guild_id, appeal_event_id) REFERENCES appeal_events (guild_id, id),
-  FOREIGN KEY (guild_id, ticket_id) REFERENCES tickets (guild_id, id),
+  FOREIGN KEY (guild_id, ticket_id, member_id) REFERENCES tickets (guild_id, id, member_id),
   CHECK (kind <> 'case'          OR (case_id IS NOT NULL AND appeal_event_id IS NULL AND ticket_id IS NULL)),
   CHECK (kind <> 'appeal_update' OR (case_id IS NOT NULL AND appeal_event_id IS NOT NULL AND ticket_id IS NULL)),
   CHECK (kind <> 'ticket_closed' OR (ticket_id IS NOT NULL AND case_id IS NULL AND appeal_event_id IS NULL)),
   CHECK ((state = 'failed') = (failure IS NOT NULL)),
+  CHECK (state NOT IN ('sending', 'sent') OR (channel_id IS NOT NULL AND first_attempt_at IS NOT NULL)),
   CHECK ((state = 'sent') = (message_id IS NOT NULL)),
   CHECK ((settled_at IS NULL) = (state IN ('pending', 'sending')))
 );
 CREATE UNIQUE INDEX dms_one_per_case ON dms (case_id) WHERE kind = 'case';
 
--- Saved messages. One row per (case, message).
-CREATE TABLE evidence (
-  id                          uuid PRIMARY KEY DEFAULT uuidv7(),
-  guild_id                    bigint NOT NULL,
-  case_id                     uuid NOT NULL,
-  channel_id                  bigint NOT NULL,
-  message_id                  bigint NOT NULL,
-  added_by                    bigint NULL,                        -- NULL = Quack (honeypot, imported)
-  state                       evidence_state NOT NULL DEFAULT 'saving',
-  failure                     evidence_failure NULL,
-  author_id                   bigint NULL,
-  content                     text NULL CHECK (char_length(content) <= 4000),
-  message_created_at          timestamptz NULL,
-  message_edited_at           timestamptz NULL,
-  embeds                      jsonb NOT NULL DEFAULT '[]'
-                              CHECK (jsonb_typeof(embeds) = 'array' AND jsonb_array_length(embeds) <= 10),
-  copy_skipped_not_staff_only boolean NOT NULL DEFAULT false,
-  created_at                  timestamptz NOT NULL DEFAULT now(),
-  saved_at                    timestamptz NULL,
-  UNIQUE (guild_id, id),
-  UNIQUE (case_id, message_id),
-  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id),
-  CHECK ((state = 'failed') = (failure IS NOT NULL))
-);
-CREATE INDEX evidence_case ON evidence (case_id, created_at, id);
-
--- Files of a saved message, and their copies in the evidence channel.
-CREATE TABLE evidence_files (
-  id                 uuid PRIMARY KEY DEFAULT uuidv7(),
-  guild_id           bigint NOT NULL,
-  case_id            uuid NOT NULL,
-  evidence_id        uuid NOT NULL,
-  position           smallint NOT NULL CHECK (position BETWEEN 1 AND 10),
-  filename           text NOT NULL CHECK (char_length(filename) BETWEEN 1 AND 255),
-  content_type       text NOT NULL CHECK (char_length(content_type) <= 191),
-  size_bytes         bigint NOT NULL CHECK (size_bytes >= 0),
-  original_url       text NOT NULL CHECK (char_length(original_url) <= 2048),
-  copy_state         file_copy_state NOT NULL DEFAULT 'pending',
-  copy_channel_id    bigint NULL,
-  copy_message_id    bigint NULL,
-  copy_attachment_id bigint NULL,
-  created_at         timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (evidence_id, position),
-  FOREIGN KEY (guild_id, evidence_id) REFERENCES evidence (guild_id, id),
-  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id),
-  CHECK ((copy_state = 'copied') = (copy_message_id IS NOT NULL AND copy_channel_id IS NOT NULL
-                                    AND copy_attachment_id IS NOT NULL))
-);
-CREATE INDEX evidence_files_case ON evidence_files (case_id);
-
--- One appeal per case.
-CREATE TABLE appeals (
-  id               uuid PRIMARY KEY DEFAULT uuidv7(),
-  guild_id         bigint NOT NULL,
-  case_id          uuid NOT NULL,
-  member_id        bigint NOT NULL,
-  state            appeal_state NOT NULL DEFAULT 'pending',
-  version          integer NOT NULL DEFAULT 1 CHECK (version >= 1),
-  statement        text NOT NULL CHECK (char_length(statement) BETWEEN 1 AND 4000),
-  decided_by       bigint NULL,                                   -- latest staff decision
-  decided_at       timestamptz NULL,
-  decision_reason  text NULL CHECK (char_length(decision_reason) BETWEEN 1 AND 2000),
-  first_decided_at timestamptz NULL,                              -- first accept/reject/close, for metrics
-  created_at       timestamptz NOT NULL DEFAULT now(),
-  updated_at       timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (case_id),
-  UNIQUE (guild_id, id),
-  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id)
-);
-CREATE INDEX appeals_guild_state   ON appeals (guild_id, state, created_at, id);
-CREATE INDEX appeals_guild_created ON appeals (guild_id, created_at DESC, id DESC);
-
--- Appeal timeline: statement, replies, decisions.
-CREATE TABLE appeal_events (
-  id         uuid PRIMARY KEY DEFAULT uuidv7(),
-  guild_id   bigint NOT NULL,
-  appeal_id  uuid NOT NULL,
-  kind       appeal_event_kind NOT NULL,
-  actor_id   bigint NULL,                                         -- member or staff; NULL = Quack
-  text       text NOT NULL CHECK (char_length(text) BETWEEN 1 AND 4000),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (guild_id, id),
-  FOREIGN KEY (guild_id, appeal_id) REFERENCES appeals (guild_id, id)
-);
-CREATE INDEX appeal_events_appeal ON appeal_events (appeal_id, created_at, id);
-```
-
-### 15.5 Moderation log, tracked messages, jobs, idempotency, drafts
-
-```sql
 -- Append-only moderation log (§9).
 CREATE TABLE mod_log (
   id         uuid PRIMARY KEY DEFAULT uuidv7(),
@@ -3960,73 +4787,98 @@ CREATE INDEX mod_log_member     ON mod_log (guild_id, member_id, created_at DESC
 CREATE INDEX mod_log_actor      ON mod_log (guild_id, actor_id, created_at DESC, id DESC) WHERE actor_id IS NOT NULL;
 CREATE INDEX mod_log_appeal     ON mod_log (appeal_id) WHERE appeal_id IS NOT NULL;
 CREATE INDEX mod_log_rule       ON mod_log (rule_id, created_at DESC, id DESC) WHERE rule_id IS NOT NULL;
--- plus the triggers in §9.3
+CREATE TRIGGER mod_log_no_change BEFORE UPDATE OR DELETE ON mod_log
+  FOR EACH ROW EXECUTE FUNCTION reject_change();
+CREATE TRIGGER mod_log_no_truncate BEFORE TRUNCATE ON mod_log
+  FOR EACH STATEMENT EXECUTE FUNCTION reject_change();
 
--- Tracked Discord messages (§10). owner_id is a case, appeal, or ticket ID by kind.
+-- Tracked Discord messages (§10). The owner column matches the kind.
 CREATE TABLE messages (
   id                uuid PRIMARY KEY DEFAULT uuidv7(),
   guild_id          bigint NOT NULL REFERENCES guilds (guild_id),
   kind              message_kind NOT NULL,
-  owner_id          uuid NULL,
-  channel_id        bigint NOT NULL,
-  message_id        bigint NULL,                                  -- NULL until first posted
-  private           boolean NOT NULL DEFAULT false,               -- an ephemeral receipt
+  case_id           uuid NULL,
+  appeal_id         uuid NULL,
+  ticket_id         uuid NULL,
+  channel_id        bigint NULL,                                  -- NULL: an appeal post waiting for a channel
+  message_id        bigint NULL,                                  -- NULL until posted
+  generation        integer NOT NULL DEFAULT 1 CHECK (generation >= 1),
+  create_started_at timestamptz NULL,                             -- the current create's nonce window (§10.4)
+  private           boolean NOT NULL DEFAULT false,               -- a private receipt (token edits only)
   interaction_token text NULL,                                    -- secret; never logged
   token_expires_at  timestamptz NULL,
   wanted_revision   integer NOT NULL DEFAULT 1,
   posted_revision   integer NOT NULL DEFAULT 0,
+  wanted_at         timestamptz NOT NULL DEFAULT now(),
   state             message_state NOT NULL DEFAULT 'active',
-  stale_channel_id  bigint NULL,                                  -- previous location after a move
-  stale_message_id  bigint NULL,
+  stale             jsonb NOT NULL DEFAULT '[]'                   -- [{channel_id, message_id}] to clean up
+                    CHECK (jsonb_typeof(stale) = 'array' AND jsonb_array_length(stale) <= 5),
+  attachment_id     bigint NULL,                                  -- the attached transcript file
   last_error        text NULL CHECK (char_length(last_error) <= 200),  -- machine code, e.g. "http_403_50001"
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
-  CHECK ((kind IN ('ticket_panel', 'honeypot_warning')) = (owner_id IS NULL)),
+  FOREIGN KEY (guild_id, case_id)   REFERENCES cases (guild_id, id),
+  FOREIGN KEY (guild_id, appeal_id) REFERENCES appeals (guild_id, id),
+  FOREIGN KEY (guild_id, ticket_id) REFERENCES tickets (guild_id, id),
+  CHECK ((kind = 'case_receipt') = (case_id IS NOT NULL)),
+  CHECK ((kind = 'appeal_post') = (appeal_id IS NOT NULL)),
+  CHECK ((kind = 'ticket_post') = (ticket_id IS NOT NULL)),
+  CHECK (channel_id IS NOT NULL OR kind = 'appeal_post'),
   CHECK ((interaction_token IS NULL) = (token_expires_at IS NULL)),
+  CHECK (interaction_token IS NULL OR kind = 'case_receipt'),
   CHECK (NOT private OR kind = 'case_receipt'),
-  CHECK (posted_revision <= wanted_revision),
-  CHECK ((stale_channel_id IS NULL) = (stale_message_id IS NULL))
+  CHECK (wanted_revision >= 1 AND posted_revision BETWEEN 0 AND wanted_revision)
 );
-CREATE UNIQUE INDEX messages_owner     ON messages (kind, owner_id) WHERE owner_id IS NOT NULL;
-CREATE UNIQUE INDEX messages_singleton ON messages (guild_id, kind) WHERE owner_id IS NULL;
+CREATE UNIQUE INDEX messages_case      ON messages (case_id) WHERE case_id IS NOT NULL;
+CREATE UNIQUE INDEX messages_appeal    ON messages (appeal_id) WHERE appeal_id IS NOT NULL;
+CREATE UNIQUE INDEX messages_ticket    ON messages (ticket_id) WHERE ticket_id IS NOT NULL;
+CREATE UNIQUE INDEX messages_singleton ON messages (guild_id, kind) WHERE kind IN ('ticket_panel', 'honeypot_warning');
+CREATE INDEX messages_location         ON messages (channel_id, message_id) WHERE message_id IS NOT NULL;
+CREATE INDEX messages_waiting          ON messages (guild_id) WHERE kind = 'appeal_post' AND (channel_id IS NULL OR state = 'gone');
 
 -- The job queue (§16).
 CREATE TABLE jobs (
-  id              uuid PRIMARY KEY DEFAULT uuidv7(),
-  kind            job_kind NOT NULL,
-  key             text NULL UNIQUE CHECK (char_length(key) <= 200),   -- dedupe key
-  guild_id        bigint NULL,                                    -- for logs only; no foreign key
-  payload         jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(payload) = 'object'),
-  run_at          timestamptz NOT NULL DEFAULT now(),
-  attempts        integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
-  max_attempts    integer NOT NULL CHECK (max_attempts >= 1),
-  locked_until    timestamptz NULL,
-  locked_by       text NULL CHECK (char_length(locked_by) <= 64),
-  rerun_requested boolean NOT NULL DEFAULT false,
-  last_error      text NULL CHECK (char_length(last_error) <= 500),
-  trace_context   text NULL CHECK (char_length(trace_context) <= 256), -- W3C traceparent of the enqueuer
-  dead_at         timestamptz NULL,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now(),
-  CHECK ((locked_until IS NULL) = (locked_by IS NULL))
+  id            uuid PRIMARY KEY DEFAULT uuidv7(),
+  kind          job_kind NOT NULL,
+  key           text NOT NULL UNIQUE CHECK (char_length(key) BETWEEN 1 AND 200),  -- <kind>:<owner ids>
+  guild_id      bigint NULL REFERENCES guilds (guild_id),         -- NULL only for housekeeping
+  payload       jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(payload) = 'object'),  -- immutable IDs only
+  run_at        timestamptz NOT NULL DEFAULT now(),
+  attempts      integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  max_attempts  integer NOT NULL CHECK (max_attempts >= 1),
+  claim_token   uuid NULL,                                        -- the current claim's fence
+  locked_until  timestamptz NULL,
+  rerun_at      timestamptz NULL,                                 -- enqueued again while claimed
+  last_error    text NULL CHECK (char_length(last_error) <= 500),
+  trace_context text NULL CHECK (char_length(trace_context) <= 256),  -- W3C traceparent of the first enqueuer
+  dead_at       timestamptz NULL,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  CHECK (key = kind::text OR starts_with(key, kind::text || ':')),
+  CHECK ((claim_token IS NULL) = (locked_until IS NULL)),
+  CHECK (dead_at IS NULL OR claim_token IS NULL),
+  CHECK ((kind = 'housekeeping') = (guild_id IS NULL))
 );
-CREATE INDEX jobs_ready ON jobs (kind, run_at) WHERE dead_at IS NULL;
-CREATE INDEX jobs_dead  ON jobs (dead_at) WHERE dead_at IS NOT NULL;
+CREATE INDEX jobs_runnable ON jobs (kind, run_at, id) WHERE dead_at IS NULL AND locked_until IS NULL;
+CREATE INDEX jobs_leased   ON jobs (locked_until) WHERE locked_until IS NOT NULL;
+CREATE INDEX jobs_dead     ON jobs (kind, dead_at) WHERE dead_at IS NOT NULL;
 
 -- Operation keys (§4.3). `response` is a result reference, e.g. {"case_id": "…"}.
 CREATE TABLE operation_keys (
-  scope           text NOT NULL CHECK (char_length(scope) BETWEEN 1 AND 300),
+  guild_id        bigint NOT NULL CHECK (guild_id >= 0),          -- 0 = no server (DMs, /api/me)
+  account_id      bigint NOT NULL CHECK (account_id >= 0),        -- 0 = Quack
+  operation       text NOT NULL CHECK (char_length(operation) BETWEEN 1 AND 120),
   key             text NOT NULL CHECK (char_length(key) BETWEEN 1 AND 200),
   request_hash    bytea NOT NULL CHECK (octet_length(request_hash) = 32),
   response_status smallint NOT NULL,
-  response        jsonb NOT NULL,
+  response        jsonb NOT NULL CHECK (jsonb_typeof(response) = 'object'),
   created_at      timestamptz NOT NULL DEFAULT now(),
   expires_at      timestamptz NOT NULL,
-  PRIMARY KEY (scope, key)
+  PRIMARY KEY (guild_id, account_id, operation, key)
 );
 CREATE INDEX operation_keys_expiry ON operation_keys (expires_at);
 
--- Multi-page /case add drafts (§11.6).
+-- /case add drafts (§11.6).
 CREATE TABLE case_drafts (
   id                 uuid PRIMARY KEY,
   guild_id           bigint NOT NULL REFERENCES guilds (guild_id),
@@ -4039,195 +4891,105 @@ CREATE TABLE case_drafts (
   source_channel_id  bigint NULL,                                 -- the message command's message
   source_message_id  bigint NULL,
   values             jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(values) = 'object'),
-  page               smallint NOT NULL DEFAULT 1 CHECK (page BETWEEN 1 AND 3),
+  page               smallint NOT NULL DEFAULT 1 CHECK (page BETWEEN 1 AND 3),  -- 3 = every page saved
   expires_at         timestamptz NOT NULL,
   created_at         timestamptz NOT NULL DEFAULT now(),
   updated_at         timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (guild_id, rule_id) REFERENCES rules (guild_id, id),
+  FOREIGN KEY (rule_id, rule_version) REFERENCES rule_versions (rule_id, version),
   CHECK ((rule_id IS NULL) = (rule_version IS NULL)),
   CHECK ((source_channel_id IS NULL) = (source_message_id IS NULL))
 );
 CREATE INDEX case_drafts_expiry ON case_drafts (expires_at);
 
--- Importer runs (§19).
+-- Importer runs and per-server completion (§19).
 CREATE TABLE import_runs (
   id                 uuid PRIMARY KEY DEFAULT uuidv7(),
   mode               text NOT NULL CHECK (mode IN ('dry_run', 'apply')),
-  source_fingerprint text NOT NULL,                               -- SHA-256 of the source ledger and row counts
+  source_fingerprint text NOT NULL,                               -- SHA-256 over the source snapshot (§19.11)
+  transform_version  integer NOT NULL,
+  evaluated_at       timestamptz NOT NULL,                        -- the fixed "now" of the import
   started_at         timestamptz NOT NULL DEFAULT now(),
   finished_at        timestamptz NULL,
   report             jsonb NULL
 );
+CREATE TABLE import_guilds (
+  guild_id           bigint PRIMARY KEY REFERENCES guilds (guild_id),
+  run_id             uuid NOT NULL REFERENCES import_runs (id),
+  source_fingerprint text NOT NULL,
+  imported_at        timestamptz NOT NULL DEFAULT now()
+);
 ```
 
-### 15.6 Ownership notes
+### 15.7 Honeypot hits
 
-- `messages.owner_id` is polymorphic (case, appeal, or ticket by `kind`)
-  and has no foreign key; the sync job treats a missing owner as `gone`.
+```sql
+-- One row per post in the honeypot channel. Pruned after 30 days (§16.6).
+CREATE TABLE honeypot_hits (
+  guild_id          bigint NOT NULL REFERENCES guilds (guild_id),
+  message_id        bigint NOT NULL,
+  channel_id        bigint NOT NULL,
+  member_id         bigint NOT NULL,
+  settings_version  bigint NOT NULL,                              -- honeypot_settings.version when admitted
+  rule_id           uuid NULL,                                    -- honeypot_settings.rule_id when admitted
+  state             honeypot_hit_state NOT NULL DEFAULT 'pending',
+  case_id           uuid NULL,
+  failure           text NULL CHECK (char_length(failure) <= 64), -- a MemberRefusal code, exempt, policy_changed, ...
+  cleaned_up_at     timestamptz NULL,                             -- the post was deleted
+  cleanup_failed_at timestamptz NULL,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (guild_id, message_id),
+  FOREIGN KEY (guild_id, case_id, member_id) REFERENCES cases (guild_id, id, member_id),
+  FOREIGN KEY (guild_id, rule_id) REFERENCES rules (guild_id, id),
+  CHECK ((state = 'case_created') = (case_id IS NOT NULL)),
+  CHECK ((state = 'failed') = (failure IS NOT NULL)),
+  CHECK (cleaned_up_at IS NULL OR cleanup_failed_at IS NULL)
+);
+CREATE INDEX honeypot_hits_pending ON honeypot_hits (guild_id, member_id, message_id) WHERE state = 'pending';
+CREATE INDEX honeypot_hits_burst   ON honeypot_hits (guild_id, member_id, created_at) WHERE state = 'case_created';
+CREATE INDEX honeypot_hits_expiry  ON honeypot_hits (created_at);
+```
+
+### 15.8 Ownership notes
+
 - `jobs` rows are work, not records: deleted on success, kept as `dead` for
   7 days.
 - Nothing references `sessions`, `oauth_states`, `operation_keys`,
   `case_drafts`, or `jobs`; housekeeping deletes their expired rows.
+  `honeypot_hits` are pruned after 30 days (the warning counts honeypot
+  cases from `cases`, not hits).
 - Rows in `cases`, `rule_versions`, `mod_log`, `appeals`, `appeal_events`,
   `actions`, `action_attempts`, `dms`, and `evidence*` are never deleted.
+- Each job's payload holds only immutable IDs; the handler loads and checks
+  every row it names against the job's `guild_id`.
 
-### 15.7 Module tables
-
-```sql
-CREATE TABLE ticket_settings (
-  guild_id                  bigint PRIMARY KEY REFERENCES guilds (guild_id),
-  enabled                   boolean NOT NULL DEFAULT false,
-  disabled_reason           module_disabled_reason NULL,
-  entry_channel_id          bigint NULL,
-  queue_channel_id          bigint NULL,
-  transcript_retention_days smallint NOT NULL DEFAULT 90 CHECK (transcript_retention_days BETWEEN 1 AND 365),
-  version                   bigint NOT NULL DEFAULT 1,
-  updated_at                timestamptz NOT NULL DEFAULT now(),
-  updated_by                bigint NULL,
-  CHECK (NOT enabled OR (entry_channel_id IS NOT NULL AND queue_channel_id IS NOT NULL
-                         AND entry_channel_id <> queue_channel_id)),
-  CHECK (NOT (enabled AND disabled_reason IS NOT NULL))
-);
-
-CREATE TABLE tickets (
-  id                   uuid PRIMARY KEY DEFAULT uuidv7(),
-  guild_id             bigint NOT NULL REFERENCES guilds (guild_id),
-  short_id             text NOT NULL CHECK (short_id ~ '^[A-Za-z0-9_-]{10}$'),  -- in the thread name
-  member_id            bigint NOT NULL,
-  state                ticket_state NOT NULL DEFAULT 'opening',
-  entry_channel_id     bigint NOT NULL,                           -- the thread's parent
-  thread_id            bigint NULL UNIQUE,
-  opened_at            timestamptz NULL,
-  close_requested_at   timestamptz NULL,
-  closed_at            timestamptz NULL,
-  closed_by            bigint NULL,                               -- member or staff; NULL = Quack
-  close_reason         ticket_close_reason NULL,
-  journal_gaps         boolean NOT NULL DEFAULT false,            -- a journal event was dropped
-  locked_at            timestamptz NULL,                          -- close step 1 done
-  transcript_saved_at  timestamptz NULL,                          -- close step 2 done
-  thread_deleted_at    timestamptz NULL,                          -- close step 5 done
-  thread_delete_failed boolean NOT NULL DEFAULT false,
-  created_at           timestamptz NOT NULL DEFAULT now(),
-  updated_at           timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (guild_id, id),
-  UNIQUE (guild_id, short_id),
-  CHECK ((state = 'closed') = (closed_at IS NOT NULL))
-);
-CREATE UNIQUE INDEX tickets_one_live ON tickets (guild_id, member_id) WHERE state IN ('opening', 'open', 'closing');
-CREATE INDEX tickets_guild_state ON tickets (guild_id, state, created_at, id);
-
--- Ticket journal: original text of every message seen in an open ticket.
-CREATE TABLE ticket_messages (
-  guild_id    bigint NOT NULL,
-  ticket_id   uuid NOT NULL,
-  message_id  bigint NOT NULL,
-  author_id   bigint NOT NULL,
-  author_name text NOT NULL CHECK (char_length(author_name) BETWEEN 1 AND 100),
-  text        text NOT NULL CHECK (char_length(text) <= 4000),
-  files       jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(files) = 'array'),  -- [{name, size}]
-  sent_at     timestamptz NOT NULL,
-  expires_at  timestamptz NULL,                                   -- set at close
-  PRIMARY KEY (ticket_id, message_id),
-  FOREIGN KEY (guild_id, ticket_id) REFERENCES tickets (guild_id, id)
-);
-CREATE INDEX ticket_messages_expiry ON ticket_messages (expires_at) WHERE expires_at IS NOT NULL;
-
-CREATE TABLE ticket_transcripts (
-  ticket_id   uuid PRIMARY KEY,
-  guild_id    bigint NOT NULL,
-  content     text NOT NULL CHECK (octet_length(content) <= 8388608),
-  complete    boolean NOT NULL,
-  captured_at timestamptz NOT NULL DEFAULT now(),
-  expires_at  timestamptz NOT NULL,
-  FOREIGN KEY (guild_id, ticket_id) REFERENCES tickets (guild_id, id)
-);
-CREATE INDEX ticket_transcripts_expiry ON ticket_transcripts (expires_at);
-
-CREATE TABLE activity_log_settings (
-  guild_id                bigint PRIMARY KEY REFERENCES guilds (guild_id),
-  enabled                 boolean NOT NULL DEFAULT false,
-  disabled_reason         module_disabled_reason NULL,
-  include_message_content boolean NOT NULL DEFAULT true,
-  include_file_names      boolean NOT NULL DEFAULT true,
-  include_embed_types     boolean NOT NULL DEFAULT true,
-  version                 bigint NOT NULL DEFAULT 1,
-  updated_at              timestamptz NOT NULL DEFAULT now(),
-  updated_by              bigint NULL,
-  CHECK (NOT (enabled AND disabled_reason IS NOT NULL))
-);
-
-CREATE TABLE activity_log_routes (
-  guild_id   bigint NOT NULL REFERENCES activity_log_settings (guild_id),
-  event      activity_event NOT NULL,
-  channel_id bigint NOT NULL,
-  PRIMARY KEY (guild_id, event)
-);
-CREATE INDEX activity_log_routes_channel ON activity_log_routes (channel_id);
-
-CREATE TABLE honeypot_settings (
-  guild_id        bigint PRIMARY KEY REFERENCES guilds (guild_id),
-  enabled         boolean NOT NULL DEFAULT false,
-  disabled_reason module_disabled_reason NULL,
-  channel_id      bigint NULL,
-  rule_id         uuid NULL,
-  warning_text    text NULL CHECK (char_length(warning_text) BETWEEN 1 AND 1500),
-  version         bigint NOT NULL DEFAULT 1,
-  updated_at      timestamptz NOT NULL DEFAULT now(),
-  updated_by      bigint NULL,
-  FOREIGN KEY (guild_id, rule_id) REFERENCES rules (guild_id, id),
-  CHECK (NOT enabled OR (channel_id IS NOT NULL AND rule_id IS NOT NULL)),
-  CHECK (NOT (enabled AND disabled_reason IS NOT NULL))
-);
-
--- One row per post in the honeypot channel.
-CREATE TABLE honeypot_hits (
-  guild_id      bigint NOT NULL REFERENCES guilds (guild_id),
-  message_id    bigint NOT NULL,
-  channel_id    bigint NOT NULL,
-  member_id     bigint NOT NULL,
-  state         honeypot_hit_state NOT NULL DEFAULT 'pending',
-  case_id       uuid NULL,
-  failure       text NULL CHECK (char_length(failure) <= 64),     -- a MemberRefusal code or 'rule_unavailable'
-  cleaned_up_at timestamptz NULL,                                 -- the post was deleted
-  created_at    timestamptz NOT NULL DEFAULT now(),
-  updated_at    timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (guild_id, message_id),
-  FOREIGN KEY (guild_id, case_id) REFERENCES cases (guild_id, id),
-  CHECK ((state = 'case_created') = (case_id IS NOT NULL)),
-  CHECK ((state = 'failed') = (failure IS NOT NULL))
-);
-CREATE INDEX honeypot_hits_member ON honeypot_hits (guild_id, member_id, state, created_at);
-```
-
-Creation order inside the migrations: enums; `guilds`, `case_counters`,
-`discord_accounts`, `sessions`, `oauth_states`; `rules`, `rule_versions`,
-`guild_settings`; `cases`, `actions`, `action_attempts`, `evidence`,
-`evidence_files`, `appeals`, `appeal_events`; the ticket tables; `dms`;
-`mod_log`; `messages`, `jobs`, `operation_keys`, `case_drafts`,
-`import_runs`; the remaining module tables; triggers.
-
-### 15.8 Hot-path queries
+### 15.9 Hot-path queries
 
 | Query | SQL shape | Index |
 | --- | --- | --- |
 | Case number | `UPDATE case_counters SET last_number = last_number + 1 WHERE guild_id = $1 RETURNING last_number` | `case_counters_pkey` |
+| Rule under lock | `SELECT current_version, archived_at FROM rules WHERE guild_id = $1 AND id = $2 FOR SHARE` | `rules_guild_id_id_key` |
 | Escalation count | `SELECT count(*) FROM cases WHERE guild_id = $1 AND member_id = $2 AND rule_id = $3 AND voided_at IS NULL AND source <> 'imported' AND created_at >= $4` | `cases_escalation` |
 | Case by number | `… WHERE guild_id = $1 AND number = $2` | `cases_guild_id_number_key` |
 | Case list, newest first | `… WHERE guild_id = $1 AND number < $cursor ORDER BY number DESC LIMIT $n` (+ filters) | `cases_guild_id_number_key`; `cases_member` / `cases_rule` / `cases_moderator` with those filters |
 | A member's own cases | `… WHERE member_id = $1 AND (created_at, id) < $cursor ORDER BY created_at DESC, id DESC` | `cases_member_all` |
-| Undo guard | §5.6 | `actions_member` |
-| Actions that need review | `… WHERE guild_id = $1 AND state = 'failed' AND dismissed_at IS NULL ORDER BY updated_at DESC, id DESC` | `actions_review` |
-| Job claim | §16.2 | `jobs_ready` |
-| Operation key replay | `SELECT … FROM operation_keys WHERE scope = $1 AND key = $2` | `operation_keys_pkey` |
-| Session | `SELECT … FROM sessions WHERE id_hash = $1 AND expires_at > now()` | `sessions_pkey` |
+| Undo guard, member busy | §5.6; `… WHERE guild_id = $1 AND member_id = $2 AND state = 'running'` | `actions_member` |
+| Failed actions | `… WHERE guild_id = $1 AND state = 'failed' AND dismissed_at IS NULL ORDER BY created_at DESC, id DESC` | `actions_review` (dismissed ones: `actions_guild_state`) |
+| Job claim | §16.2 | `jobs_runnable`; the lease sweep uses `jobs_leased` |
+| Operation key replay | `SELECT … FROM operation_keys WHERE guild_id = $1 AND account_id = $2 AND operation = $3 AND key = $4` | `operation_keys_pkey` |
+| Session | `SELECT … FROM sessions WHERE id_hash = $1 AND expires_at > now() AND key_fingerprint = $2` | `sessions_pkey` |
 | Moderation log page | `… WHERE guild_id = $1 AND (created_at, id) < $cursor ORDER BY created_at DESC, id DESC LIMIT $n` | `mod_log_guild_time` (or the filter's partial index) |
 | Case timeline | `… FROM mod_log WHERE case_id = $1 ORDER BY created_at, id` | `mod_log_case` |
 | Pending appeals | `… WHERE guild_id = $1 AND state = 'pending' ORDER BY created_at, id` | `appeals_guild_state` |
-| Tracked message bump | §10.2 | `messages_owner` / `messages_singleton` |
-| Rules cache load | `SELECT r.*, v.definition FROM rules r JOIN rule_versions v ON v.rule_id = r.id AND v.version = r.current_version WHERE r.guild_id = ANY($1) AND r.archived_at IS NULL` | `rules_guild`, `rule_versions_pkey` |
+| Tracked message bump | §10.2 | `messages_case` / `messages_appeal` / `messages_ticket` / `messages_singleton` |
+| Tracked message by location | `… WHERE channel_id = $1 AND message_id = $2` | `messages_location` |
+| Rules cache load | `SELECT r.*, v.definition FROM rules r JOIN rule_versions v ON v.rule_id = r.id AND v.version = r.current_version WHERE r.guild_id = ANY($1)` | `rules_guild`, `rule_versions_pkey` |
 | Live ticket of a member | `… WHERE guild_id = $1 AND member_id = $2 AND state IN ('opening','open','closing')` | `tickets_one_live` |
-| Honeypot burst | `… WHERE guild_id = $1 AND member_id = $2 AND state = 'case_created' AND created_at >= now() - interval '30 seconds'` | `honeypot_hits_member` |
-| Expiry sweeps | `DELETE … WHERE expires_at < now()` in batches of 1,000 | `*_expiry` |
+| Honeypot batch | `… WHERE guild_id = $1 AND member_id = $2 AND state = 'pending' ORDER BY message_id` | `honeypot_hits_pending` |
+| Honeypot burst | `… WHERE guild_id = $1 AND member_id = $2 AND state = 'case_created' AND created_at >= $3` | `honeypot_hits_burst` |
+| Statistics | one `count(*) … GROUP BY` per bucket over `cases` / `actions` / `appeals` / `mod_log` `WHERE guild_id = $1 AND created_at >= $from AND created_at < $to` | `cases_created`, `mod_log_guild_time`, `appeals_guild_created`; actions join their case |
+| Expiry sweeps | `DELETE … WHERE ctid IN (SELECT ctid … WHERE expires_at < now() LIMIT 1000)`, repeated | `*_expiry` |
 
 ---
 
@@ -4240,128 +5002,178 @@ and rolled-back work never runs.
 ### 16.1 Lifecycle
 
 ```
-enqueue ──> ready (run_at ≤ now, unlocked) ──claim──> locked (attempts + 1)
-                ^                                         │
-                │                 Retry(at) / Defer(at)   │  Done ──> deleted (or re-armed when rerun_requested)
-                └─────────────────────────────────────────┤
-                       lease expired (crash) ─────────────┘  Dead ──> dead_at set, kept 7 days
+enqueue ──> runnable (run_at ≤ now, unclaimed) ──claim──> claimed (attempts + 1, token, lease)
+                ^                                            │
+                │   Retry(at) / Defer(at) / Continue          │  Done ──> deleted (or runnable again at rerun_at)
+                └────────────────────────────────────────────┤
+                  lease expired: sweep unclaims it ──────────┘  attempts > max ──> finalize ──> Done / Dead
 ```
 
-`JobResult` (returned by handlers):
+- **Claim** returns a fresh `claim_token` and `locked_until`, both from
+  PostgreSQL (`now()`), never from the worker's clock.
+- **Fence.** Every transaction a handler runs (start, progress, settle)
+  ends with the fence: `UPDATE jobs SET updated_at = now() WHERE id = $1 AND
+  claim_token = $2 AND locked_until > now()` (or, in the settle, the job's
+  own update or delete with the same predicate). No row → the whole
+  transaction rolls back, domain writes included, and the handler stops: it
+  lost its lease. Running it last keeps `jobs` last in the lock order
+  (§4.12). In
+  addition every domain write is a compare-and-set on the state the handler
+  read (an action still `running` with the attempt it opened, a DM still
+  `sending`, a message row still at its generation), so a handler that lost
+  its lease can never overwrite newer state.
+- **Deadline.** Each handler runs under a hard deadline of its lease minus
+  15 seconds (§16.5). Before starting a Discord call it checks the time left;
+  when less than that call's deadline plus 5 seconds remains, it saves
+  progress and returns `Continue`. A handler that hits the deadline is
+  dropped; dropping a future may not stop a request Discord already
+  received, which is why every effect is read back before it is repeated
+  (§5.1, §10.4).
+- **Lease sweep.** Each dispatcher pass unclaims expired leases (`UPDATE
+  jobs SET claim_token = NULL, locked_until = NULL WHERE locked_until <
+  now() AND dead_at IS NULL`, index `jobs_leased`) and counts
+  `quack.job.lease_expired`. The handler that runs next finds the domain
+  record mid-effect (an open attempt, a `sending` DM) and resolves it by its
+  own rule.
+- **Budget.** A claim increments `attempts`. When `attempts >
+  max_attempts`, or a handler returns `Retry` on its last attempt, the
+  runner calls the kind's **finalize** instead: a database-only
+  transaction that settles the domain record terminally (§16.5) and
+  finishes the job. Finalize never calls Discord, so a job can never run
+  past its budget, however often its process crashes.
+
+`JobResult` (returned by handlers; applied in the handler's settle
+transaction, `quack_db::jobs::settle(tx, claim, result)`):
 
 | Result | Effect |
 | --- | --- |
-| `Done` | Delete the row, unless `rerun_requested` is set: then clear it, unlock, reset `attempts = 0`, `run_at = now()`. |
-| `Retry { at, error }` | Unlock, `run_at = at`, `last_error = error`. A handler returns `Retry` only when `attempts < max_attempts`; on the last attempt it settles its domain state and returns `Done` or `Dead`. |
-| `Defer { at }` | Like `Retry` but `attempts = attempts - 1` (the attempt did not count). |
-| `Dead { error }` | `dead_at = now()`, unlock, `last_error`. Domain state is already terminal. |
-| `Reschedule { at }` | Periodic jobs: unlock, `attempts = 0`, `run_at = at`. |
-
-`locked_by` is a fresh token per claim (`<instance id>:<claim uuid>`), and
-every settle statement is fenced with `WHERE id = $1 AND locked_by = $2`, so
-a worker that lost its lease cannot settle. Handlers settle their domain
-state and the job in **one transaction** (`quack_db::jobs::settle(tx,
-claim, result)`).
+| `Done` | Delete the row; if `rerun_at` is set (enqueued again while claimed), keep it instead: unclaim, `attempts = 0`, `run_at = rerun_at`, `rerun_at = NULL`. |
+| `Retry { at, error }` | Unclaim, `run_at = at`, `last_error = error`. |
+| `Defer { at }` | Like `Retry` but `attempts = attempts - 1`: the run did not count (a busy member, a DM still sending). |
+| `Continue` | `Defer` at now: progress is saved and the work continues in a new run. |
+| `Dead { error }` | `dead_at = now()`, unclaim, `last_error`. Only for a job whose records are missing or malformed; the domain is already terminal or has nothing to settle. |
+| `Reschedule { at }` | Periodic jobs: unclaim, `attempts = 0`, `run_at = at`. |
 
 ### 16.2 Claim
 
 ```sql
 WITH picked AS (
-  SELECT id, locked_until AS previous_lock
-  FROM jobs
-  WHERE kind = $1 AND dead_at IS NULL AND run_at <= now()
-    AND (locked_until IS NULL OR locked_until < now())
+  SELECT id FROM jobs
+  WHERE kind = $1 AND dead_at IS NULL AND locked_until IS NULL AND run_at <= now()
   ORDER BY run_at, id
   LIMIT $2
   FOR UPDATE SKIP LOCKED
 )
 UPDATE jobs j
-SET locked_until = now() + make_interval(secs => $3),
-    locked_by    = $4 || ':' || gen_random_uuid()::text,
+SET claim_token  = gen_random_uuid(),
+    locked_until = now() + make_interval(secs => $3),
     attempts     = j.attempts + 1,
     updated_at   = now()
 FROM picked
 WHERE j.id = picked.id
 RETURNING j.id, j.kind, j.key, j.guild_id, j.payload, j.attempts, j.max_attempts,
-          j.locked_by, j.trace_context, j.run_at, j.created_at, picked.previous_lock;
+          j.claim_token, j.locked_until, j.trace_context, j.run_at, j.created_at;
 ```
 
-Uses `jobs_ready`. A non-NULL `previous_lock` means the previous attempt's
-lease expired: `quack.job.lease_expired{kind}` is incremented and the handler
-resolves the unknown attempt per §16.5.
+Uses `jobs_runnable` (verified with `EXPLAIN` on PostgreSQL 18: an index
+scan with no sort). `$2` is the number of permits the dispatcher holds.
 
 ### 16.3 Enqueue and coalescing
+
+Every job is keyed: `key` is `<kind>:<owner IDs>` built by
+`quack_db::jobs::JobKey` from the kind and the full owner identity
+(`run_action:<action id>`, `honeypot_case:<guild>:<member>`), and the
+payload holds only immutable IDs, so one key always means the same payload.
 
 ```sql
 INSERT INTO jobs (kind, key, guild_id, payload, run_at, max_attempts, trace_context)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (key) DO UPDATE SET
-  run_at          = LEAST(jobs.run_at, EXCLUDED.run_at),
-  payload         = EXCLUDED.payload,
-  rerun_requested = jobs.rerun_requested OR jobs.locked_until IS NOT NULL,
-  attempts        = CASE WHEN jobs.dead_at IS NOT NULL THEN 0 ELSE jobs.attempts END,
-  dead_at         = NULL,
-  updated_at      = now();
+  run_at     = CASE WHEN jobs.locked_until IS NULL THEN LEAST(jobs.run_at, EXCLUDED.run_at) ELSE jobs.run_at END,
+  rerun_at   = CASE WHEN jobs.locked_until IS NOT NULL
+                    THEN LEAST(COALESCE(jobs.rerun_at, EXCLUDED.run_at), EXCLUDED.run_at) ELSE jobs.rerun_at END,
+  attempts   = CASE WHEN jobs.dead_at IS NOT NULL THEN 0 ELSE jobs.attempts END,
+  dead_at    = NULL,
+  updated_at = now();
 SELECT pg_notify('quack_jobs', $1::text);
 ```
 
 A keyed job therefore exists at most once: enqueueing it again while it
-waits moves it earlier; while it runs, marks it to run once more after it
-finishes; when it is dead, revives it with a fresh budget. The notify is
-delivered on commit. Metric `quack.job.enqueued{kind}`.
+waits moves it earlier; while it is claimed, records `rerun_at` so it runs
+once more after it finishes (never earlier than requested); when it is
+dead, a new triggering change (a staff retry, a new bump) revives it with a
+fresh budget. `trace_context` keeps the first enqueuer's. PostgreSQL
+delivers the notification on commit and folds identical notifications in
+one transaction. Metric `quack.jobs.enqueued{quack.job.kind}`.
 
 ### 16.4 Dispatch and wake-up
 
 - One dispatcher task per kind. It wakes on `NOTIFY quack_jobs` for its
-  kind, on a 2-second poll, or at the earliest known future `run_at`
-  (whichever is first), then claims up to `min(free permits, 10)` jobs.
+  kind, when one of its handlers finishes (permits freed), on a 2-second
+  poll, or at the earliest `run_at` of its unclaimed jobs (whichever is
+  first). Each pass sweeps expired leases (§16.1), then claims as many jobs
+  as it holds permits for and starts them.
 - Permits: a per-kind limit (§16.5) and a global limit
-  `QUACK_WORKER_CONCURRENCY` (default 16) shared by all kinds.
-- One dedicated `PgListener` connection; after it reconnects, every
-  dispatcher claims immediately (NOTIFY messages may have been missed).
+  `QUACK_WORKER_CONCURRENCY` (default 16). Global permits are handed out
+  round-robin across kinds that are waiting, so one busy kind cannot starve
+  the others. A freed global permit wakes the next waiting kind.
+- One dedicated `PgListener` connection outside the pool; after it
+  reconnects, every dispatcher runs a pass immediately (notifications may
+  have been missed).
 - Each handler runs inside a span `job {kind}` linked to `trace_context`
-  (§18.4) and a `tokio::time::timeout` of the lease minus 5 seconds. A
-  timeout drops the future without settling; the lease expires and the next
-  claim resolves the attempt.
-- Every dispatcher updates a heartbeat (an atomic timestamp) on each loop;
-  readiness requires all heartbeats within 15 seconds.
+  (§18.4).
+- Every dispatcher records a heartbeat at the end of each pass; readiness
+  requires every heartbeat within 15 seconds (§14.9).
+- Durable times (`run_at`, `locked_until`) come from PostgreSQL; local waits
+  use monotonic time, and no wait is longer than the 2-second poll.
 - Ordering is FIFO by `run_at` per kind; actions are additionally
   serialized per member (§5.4).
 
 ### 16.5 Job kinds
 
-| Kind | Payload | Key | Per-kind limit | Lease | Backoff (after attempt n) | Max attempts | Why it is idempotent | Attempt started, outcome unknown → |
+The handler deadline is the lease minus 15 seconds.
+
+| Kind | Payload | Key | Per-kind limit | Lease | Backoff (after attempt n) | Max attempts | Why it is safe to repeat | Finalize (database only) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `run_action` | `{action_id}` | `action:<id>` | 8 | 60 s | 5 s, 15 s, 1 min, 5 min, 15 min, 1 h, 3 h | 8 | Fixed timeout end; ban, unban, kick, remove timeout converge (§5.2); state checked first. | Retry (`interrupted`). |
-| `send_dm` | `{dm_id}` | `dm:<id>` | 4 | 60 s | 5 s, 30 s (only before `sending`) | 3 | `sending` is recorded before the send and is never sent again; the nonce dedupes the in-job repeat. | DM becomes `unknown`; never resent. |
-| `sync_message` | `{message_row_id}` | `message:<id>` | 4 | 30 s | 2 s, 10 s, 1 min, 5 min, 30 min | 6 | Renders current state; edits converge; creates use a per-revision nonce. | Retry (an edit repeats harmlessly; a create repeats with the same nonce). |
-| `post_mod_log` | `{entry_id}` | `mod_log_post:<id>` | 2 | 30 s | 10 s, 30 s, 1 min, 2 min | 5 | One message per entry, nonce = entry ID; retries stay inside Discord's nonce window. | Retry with the same nonce; exhausted → `log_channel_failed`. |
-| `capture_evidence` | `{evidence_id}` | `evidence:<id>` | 4 | 120 s | 10 s, 1 min, 5 min | 4 | Fetch is a read; each file is marked copied only after Discord confirms; uploads use the file ID as nonce. | Retry. |
-| `honeypot_case` | `{guild_id, member_id}` | `honeypot_case:<guild>:<member>` | 2 | 60 s | 5 s, 30 s, 2 min, 10 min | 5 | Case creation uses a deterministic operation key; hit updates are guarded on `pending`. | Retry. |
-| `honeypot_cleanup` | `{guild_id, channel_id, message_id}` | `honeypot_cleanup:<message_id>` | 2 | 30 s | 1 s, 2 s, 4 s, 8 s, 16 s, 32 s, 64 s, 64 s, 64 s | 10 | Delete is idempotent (404 = done). | Retry. |
-| `open_ticket` | `{ticket_id}` | `ticket_open:<id>` | 2 | 60 s | 2 s, 10 s, 30 s | 4 | Adopts an existing thread named `ticket-<short_id>`; each step checks saved progress. | Retry. |
-| `close_ticket` | `{ticket_id}` | `ticket_close:<id>` | 2 | 300 s | 5 s, 30 s, 2 min, 10 min, 1 h | 6 | Each step records its completion column. | Retry; exhausted → closed with what is saved (§13.2.4). |
-| `housekeeping` | `{}` | `housekeeping` | 1 | 300 s | `Reschedule` every 10 min | 1 | Deletes of expired rows. | Runs again next time. |
+| `run_action` | `{action_id}` | `run_action:<action>` | 8 | 60 s | 5 s, 15 s, 1 min, 5 min, 15 min, 1 h, 3 h | 8 | Every attempt reads Discord before acting (§5.1); start and settle are compare-and-set on the action's state and attempt. | An open attempt → `interrupted`; the action → `failed` (`unconfirmed` or `retries_exhausted`, §5.5); wake nothing. |
+| `send_dm` | `{dm_id}` | `send_dm:<dm>` | 4 | 120 s | 5 s, 30 s (only while `pending`) | 3 | One nonce per DM, repeated only inside the window (§10.4). | `pending` → `failed` (`discord_unavailable`); `sending` → `unknown`; wake a waiting kick or ban (§6.2). |
+| `sync_message` | `{message_row_id}` | `sync_message:<row>` | 4 | 60 s | 2 s, 10 s, 1 min, 5 min, 30 min | 6 | One writer per row; renders current state; write-back compared on the generation (§10.3). | `last_error = "exhausted"`; the next bump tries again. |
+| `post_mod_log` | `{entry_id, channel_id}` | `post_mod_log:<entry>` | 2 | 60 s | 10 s, 30 s, 2 min, 10 min, 1 h | 6 | Nonce = entry ID inside the window; the channel is pinned (§9.4). | `log_channel_failed` once per outage. |
+| `capture_evidence` | `{evidence_id}` | `capture_evidence:<evidence>` | 4 | 120 s | 10 s, 1 min, 5 min | 4 | The snapshot is stored once under the case lock; each file has its own state and nonce (§7.2). | Pending files → `copy_failed`; the item → `saved` (snapshot stored) or `failed` (`discord_error`). |
+| `honeypot_case` | `{member_id}` | `honeypot_case:<guild>:<member>` | 2 | 60 s | 5 s, 30 s, 2 min, 10 min | 5 | Case creation uses the batch's operation key; hit updates are guarded on `pending` (§13.4.2). | The batch's hits → `failed` (`discord_unavailable`); log `honeypot_case_failed`. |
+| `honeypot_cleanup` | `{channel_id, message_id}` | `honeypot_cleanup:<guild>:<message>` | 2 | 30 s | 1 s, 2 s, 4 s, 8 s, 16 s, 32 s, 64 s, 64 s, 64 s | 10 | Delete is idempotent (404 = done). | `cleanup_failed_at`. |
+| `open_ticket` | `{ticket_id}` | `open_ticket:<ticket>` | 2 | 60 s | 2 s, 10 s, 30 s | 4 | The thread is looked up by its full name before any create; each step checks saved progress (§13.2.3). | The open fails (§13.2.2). |
+| `close_ticket` | `{ticket_id}` | `close_ticket:<ticket>` | 2 | 300 s | 5 s, 30 s, 2 min, 10 min, 1 h | 6 | Each step records its completion column (§13.2.4). | §13.2.4 finalization. |
+| `housekeeping` | `{}` | `housekeeping` | 1 | 300 s | `Reschedule` | 1 | Deletes of expired rows. | `Reschedule` in 10 min. |
+
+Every handler first checks that its server is still installed; when it is
+not, an action fails `quack_not_in_server`, a tracked message becomes
+`gone`, honeypot hits fail (`quack_left`), and a DM is still attempted
+(Discord refuses it if Quack shares no server with the member).
 
 ### 16.6 Periodic work
 
 - `housekeeping` is ensured at startup (`INSERT … ON CONFLICT (key) DO
-  NOTHING`) and reschedules itself every 10 minutes. Each run deletes, in
-  batches of 1,000: expired `sessions`, `oauth_states`, `operation_keys`,
-  `case_drafts`; `jobs` with `dead_at` older than 7 days; `ticket_transcripts`
-  and `ticket_messages` past `expires_at`. It also marks private receipts
-  whose token expired as `gone` and clears expired `interaction_token`
-  values.
-- DB-backed gauges (§18.2) are observed by a separate 60-second task, not a
-  job.
+  NOTHING`). Each run deletes, in batches of 1,000 for at most 60 seconds:
+  expired `sessions` (and sessions under another `key_fingerprint`),
+  `oauth_states`, `operation_keys`, `case_drafts`; `jobs` with `dead_at`
+  older than 7 days; `ticket_transcripts` and `ticket_messages` past
+  `expires_at`; `honeypot_hits` older than 30 days; journal rows over the
+  cap (§13.2.5). It marks private receipts whose token expired `gone` and
+  clears expired `interaction_token` values. When rows remain it
+  reschedules at once, otherwise in 10 minutes.
+- Database-backed gauges (§18.2) are observed by a separate 60-second task,
+  not a job, using the same predicates as the claim (`jobs.ready` counts
+  unclaimed, due, not dead rows). Gauges with no rows for a label report 0.
 
 ### 16.7 Shutdown
 
 On shutdown (§17.5) dispatchers stop claiming at once. In-flight handlers
-get up to 20 seconds to finish; after that their futures are dropped
-without settling, their leases expire, and the next process resolves them by
-the per-kind rule above. Nothing is lost because every state change was
-committed before the Discord call (§5.4, §6.4).
+run until the drain deadline. At the deadline the Discord client stops
+accepting new calls (they fail before anything is sent), then the remaining
+handlers are dropped without settling. Their leases expire, and the next
+process resolves each by the rules above. Nothing is lost because every
+state change was committed before the Discord call (§5.4, §6.4).
 
 ---
 
@@ -4376,7 +5188,7 @@ durable state is in PostgreSQL, so a restart loses nothing.
 | --- | --- | --- |
 | `quack serve [--config <file>] [--migrate]` | Gateway, interactions, HTTP API, dashboard files, job workers. With `--migrate`, applies pending migrations first; otherwise refuses to start when migrations are not current. | all serve keys |
 | `quack migrate [--config <file>]` | Applies pending migrations, prints the applied list. | `QUACK_DATABASE_URL` |
-| `quack import-mysql --source <mysql-url> [--dry-run] [--report <file>] [--config <file>]` | One-time import (§19). | `QUACK_DATABASE_URL` |
+| `quack import-mysql [--dry-run] [--report <file>] [--config <file>]` | One-time import (§19) from `QUACK_IMPORT_SOURCE_URL`. | `QUACK_DATABASE_URL`, `QUACK_IMPORT_SOURCE_URL` |
 | `quack commands sync [--config <file>]` | Registers slash commands (§11.2). | Discord token and application ID |
 
 Exit codes: 0 success, 1 runtime failure, 2 usage or configuration error
@@ -4389,24 +5201,25 @@ dependencies from the stack audit plus the additions in §20.5.
 
 | Crate | Owns | Depends on | Public surface |
 | --- | --- | --- | --- |
-| `quack-core` | Pure domain. No I/O, no async, no SQL, no Discord types. | — | `ids` (`GuildId`, `AccountId`, `MemberId`, `ChannelId`, `RoleId`, `MessageId` snowflake newtypes; `CaseId`, `RuleId`, `ActionId`, `AppealId`, `AppealEventId`, `DmId`, `EvidenceId`, `FileId`, `TicketId`, `MessageRowId`, `JobId` UUID newtypes; `to_u22`/`from_u22`; `ulid_to_uuid`); `rule` (`RuleDefinition`, `Field`, `FieldKind`, `Level`, `LevelAction`, `Strictness`, `RuleProblem`); `escalation` (`select_level`, `LevelChoice`, `counting_cutoff`); `permissions` (`Permissions` bits, `Capability`, `Capabilities`, `ActorFacts`, `derive_capabilities`, `ApplyFacts`, `MemberRefusal`, `check_member`, `check_action_permission`, `check_staff_channel`, `ChannelProblem`, `is_staff_for_access`); `case` (`CaseSource`, `VoidCause`, `CaseDecision`, `ContextValues`, `ContextProblem`, `validate_context`, `MessageLink::parse`); `action` (`ActionKind`, `ActionState`, `ActionFailure`, `AttemptOutcome`, `ActionEvent`, `transition`, `RETRY_BACKOFF`, `undo_kind`); `dm` (`DmKind`, `DmState`, `DmFailure`, `transition`); `evidence` (`EvidenceState`, `EvidenceFailure`, `FileCopyState`, `copy_eligibility`); `appeal` (`AppealState`, `AppealEventKind`, `AppealDecision`, `transition`, `eligibility`); `modlog` (`ModLogKind`, `ModLogResult`, `ModLogSource`, `ModLogEntry`, `is_posted`, `redact`); `modules` (`ModuleName`, `ModuleProblem`, `ActivityEvent`, `TicketState`, `HoneypotHitState`); `limits`; `DomainError`. |
-| `quack-text` | Every user-facing string (§12) and the neutral message model. | core | `Msg`, `Block`, `Row`, `Button`, `ButtonAction`, `Select`, `Tone`, `Surface` (`Discord` renders mentions, `Plain` renders names); one function per message id in modules `command`, `error`, `case`, `action`, `dm`, `evidence`, `appeal`, `log`, `setup`, `help`, `rules`, `ticket`, `activity`, `honeypot`, `api`; `fmt` (`duration`, `plural`, `escape_markdown`, `timestamp`). |
-| `quack-telemetry` | OTel setup and the instrument catalog. | — | `init(TelemetryConfig) -> Result<TelemetryGuard>`, `TelemetryGuard::shutdown`, `Metrics` (every instrument in §18.2 as a typed field) and `metrics()`, attribute enums, `trace::{current_traceparent, link_from_traceparent}`, span constructors (`span::interaction`, `span::gateway`, `span::job`, `span::db`, `span::discord`). |
-| `quack-db` | PostgreSQL: migrations, every query (sqlx macros, offline data in `.sqlx/`), the job queue, sessions, tracked messages. | core, telemetry | `Db` (pool + `begin`), `migrate`, `verify_migrations`; query modules `guilds`, `settings`, `rules`, `cases`, `actions`, `dms`, `evidence`, `appeals`, `modlog`, `messages`, `operation_keys`, `drafts`, `sessions`, `accounts`, `stats`, `tickets`, `activity_log`, `honeypot`, `import`; `jobs` (`NewJob`, `enqueue`, `claim`, `settle`, `ClaimedJob`, `JobResult`, `Listener`); `notify` (`quack_rules`, `quack_settings`). |
-| `quack-discord` | Twilight 0.18: gateway, caches, REST with typed outcomes, rendering, custom IDs, command definitions. | core, text, telemetry | `DiscordClient` (implements `quack_engine::Discord` through a thin adapter in the binary — see note), `Gateway` (`run(tx)` yielding `GatewayEvent`), `GuildCache`, `MemberCache`, `render(&Msg) -> RenderedMessage`, `custom_id::{CustomId, encode, decode, decode_legacy}`, `commands::{definitions, sync}`, `Responder` (ack, defer, modal, edit original, follow-up), `permissions::{in_channel, in_guild}`. |
-| `quack-engine` | Use cases and job handlers; defines the `Discord` port and the `Module` contract. | core, text, db, telemetry | `Engine`, `Ctx`, `Principal`, `Discord` (trait), `Outcome`, `Refusal`, `ApplyFacts` loader; `cases::{apply_rule, void_case, edit_context, add_evidence, get, list, member_summary}`; `actions::{run, retry, dismiss, undo}`; `dms::send`; `evidence::{capture, resolve_file}`; `appeals::{submit, add_information, decide, get, list}`; `messages::{bump, sync}`; `modlog::{list, post}`; `rules::{create, edit, archive, restore, import, export, get, list}`; `settings::{get, patch, acknowledge_starter_notice}`; `setup::{create_channel, panel, apply}`; `guilds::{bootstrap, left, reconcile_channels}`; `stats::compute`; `drafts`; `jobs::Runner`; `Module`; `RulesCache`, `ConfigCache`. |
+| `quack-core` | Pure domain. No I/O, no async, no SQL, no Discord types. | — | `ids` (`GuildId`, `AccountId`, `MemberId`, `ChannelId`, `RoleId`, `MessageId`, `AttachmentId` snowflake newtypes with one checked parser; `CaseId`, `RuleId`, `ActionId`, `AppealId`, `AppealEventId`, `DmId`, `EvidenceId`, `FileId`, `TicketId`, `MessageRowId`, `JobId` UUID newtypes; `to_u22`/`from_u22`; `ulid_to_uuid`); `rule` (`RuleDefinition` with `context_fields()`, `Field`, `FieldKind`, `Level`, `LevelAction`, `Strictness::{New, Imported { reconstructed }}`, `RuleProblem`); `escalation` (`select_level`, `LevelChoice`, `counting_cutoff`); `permissions` (`Permissions` bits, `Capability`, `Capabilities`, `ActorFacts`, `derive_capabilities`, `GuildFacts`, `MemberFacts`, `ChannelFacts`, `ApplyFacts`, `MemberRefusal`, `check_member`, `check_action_permission`, `check_staff_channel`, `ChannelProblem`, `is_staff_for_access`); `case` (`CaseSource`, `VoidCause`, `CaseDecision`, `ContextValues`, `ContextProblem`, `Decimal`, `validate_context`, `MessageLink::parse`, `find_message_links`); `action` (`ActionKind`, `ActionState`, `ActionFailure`, `ActionSkipReason`, `AttemptOutcome`, `ActionEvent`, `transition`, `may_have_applied`, `controls`, `Controls`, `parse_case_marker`, `RETRY_BACKOFF`, `undo_kind`); `dm` (`DmKind`, `DmState`, `DmFailure`, `transition`); `evidence` (`EvidenceState`, `EvidenceFailure`, `FileCopyState`, `copy_eligibility`); `appeal` (`AppealState`, `AppealEventKind`, `AppealDecision`, `transition`, `eligibility`); `modlog` (`ModLogKind`, `ModLogResult`, `ModLogSource`, `ModLogEntry`, `is_posted`, `redact`); `messages` (`MessageKind`, `MessageState`); `modules` (`ModuleName`, `ModuleProblem`, `ModuleDisabledReason`, `ActivityEvent`, `TicketState`, `TranscriptPartial`, `HoneypotHitState`, `redact_secrets`); `settings` (validation of §13.1.1); `limits` (including `NONCE_WINDOW`); `DomainError`. |
+| `quack-text` | Every user-facing string (§12) and the neutral message model. | core | `Msg`, `Block`, `Row`, `Button`, `ButtonAction`, `Select`, `Tone`, `Surface` (`Discord` renders mentions, `Plain` renders names), `ReceiptView` (the public receipt's fields, §11.7); one function per message id in modules `command`, `error`, `case`, `action`, `dm`, `evidence`, `appeal`, `log`, `setup`, `help`, `rules`, `ticket`, `activity`, `honeypot`, `api`; `fmt` (`duration`, `plural`, `escape_markdown`, `timestamp`). |
+| `quack-telemetry` | OTel setup and the instrument catalog (`METRICS.md`, §18). | — | `init(&TelemetryConfig) -> Result<TelemetryGuard>`, `TelemetryGuard::{with_deadline, force_flush, shutdown}`, `metrics()` (the typed instrument families), `labels` (attribute enums), `keys`, `spans` (`interaction`, `gateway`, `http`, `job`, `db`, `discord`, `record`, `record_status`, `record_error`, `event`, `SpanEvent`), `current_trace_context`, `trace_context_of`, `parse_trace_context`. |
+| `quack-db` | PostgreSQL: migrations, every query (sqlx macros, offline data in `.sqlx/`), the job queue, sessions, tracked messages. | core, telemetry | `Db` (pool + `begin`), `migrate`, `verify_migrations`, `Fence` (the singleton lock, §17.5); query modules `guilds`, `settings`, `rules`, `cases`, `actions`, `dms`, `evidence`, `appeals`, `modlog`, `messages`, `operation_keys`, `drafts`, `sessions`, `accounts`, `stats`, `tickets`, `activity_log`, `honeypot`, `import`; `jobs` (`JobKind`, `JobKey`, `NewJob`, `enqueue`, `claim`, `sweep_leases`, `fence`, `settle`, `ClaimedJob`, `JobResult`, `Listener`); `notify` (`quack_rules`, `quack_settings`). |
+| `quack-discord` | Twilight 0.18: gateway, caches, REST with typed outcomes, rendering, custom IDs, command definitions. | core, text, telemetry | `DiscordClient`, `Gateway` (`run(tx)` yielding Twilight events), `GuildCache`, `MemberCache`, `render(&Msg) -> RenderedMessage`, `custom_id::{CustomId, encode, decode, decode_legacy}`, `commands::{definitions, sync}`, `Responder` (ack, defer, modal, edit original, follow-up), `permissions::{in_channel, in_guild}`. |
+| `quack-engine` | Use cases and job handlers; defines the `Discord` port, the `Module` contract, and the neutral input types (`ModuleEvent`, `ComponentCall`, `FetchedMessage`, `SentMessage`). | core, text, db, telemetry | `Engine`, `Ctx`, `Principal`, `Discord` (trait), `Outcome`, `Refusal`, facts loader; `cases::{apply_rule, void_case, edit_context, add_evidence, get, list, preview, member_summary}`; `actions::{run, finalize, retry, dismiss, undo}`; `dms::{send, finalize}`; `evidence::{capture, finalize, resolve_file}`; `appeals::{submit, add_information, decide, get, list}`; `messages::{bump, sync}`; `modlog::{list, post}`; `rules::{create, edit, archive, restore, import, export, get, list}`; `settings::{get, patch, acknowledge_starter_notice}`; `setup::{create_channel, panel, apply}`; `guilds::{bootstrap, left, reconcile_channels}`; `stats::compute`; `drafts`; `jobs::Runner`; `Module`, `ModuleSpec`; `RulesCache`, `ConfigCache`. |
 | `quack-tickets`, `quack-activity-log`, `quack-honeypot` | The optional modules (§13). | core, text, db, engine, telemetry | `module() -> Arc<dyn Module>`; service functions and DTOs used by `quack-api` (`settings`, `update_settings`, `list`, `get`, `transcript`, `close` for tickets). |
-| `quack-api` | axum HTTP API, OAuth, sessions, CSRF, rate limits, OpenAPI, static files. | core, text, db, engine, modules, telemetry | `router(ApiState) -> axum::Router`, `ApiState`, `openapi::document()`, extractors (`SessionAccount`, `Staff<Capability>`, `MemberSelf`, `IdempotencyKey`), `ApiError`. |
-| `quack-bot` | Interaction and gateway routing into engine calls and replies. | core, text, engine, discord, modules, telemetry | `Bot::new`, `Bot::on_interaction`, `Bot::on_event`. |
+| `quack-api` | axum HTTP API, OAuth (its own small traced client), sessions, CSRF, rate limits, OpenAPI, static files. | core, text, db, engine, modules, telemetry | `router(ApiState) -> axum::Router`, `ApiState`, `openapi::document()`, extractors (`SessionAccount`, `Staff<Capability>`, `MemberSelf`, `IdempotencyKey`), `ApiError`. |
+| `quack-bot` | Interaction and gateway routing into engine calls and replies; converts Twilight events into `ModuleEvent` and `ComponentCall`. | core, text, engine, discord, modules, telemetry | `Bot::new`, `Bot::on_interaction`, `Bot::on_event`. |
 | `quack-import` | MySQL → PostgreSQL importer (only crate with sqlx `mysql`). | core, db | `run(ImportOptions) -> Result<Report>`, `Report`. |
 | `quack-testkit` | Test helpers (dev-dependency only). | core, engine, db | `FakeDiscord`, `TestDb` (Postgres 18 in Testcontainers, migrated), `fixtures`. |
-| `quack` (bin) | Config, CLI, wiring, shutdown. | everything | `main`. |
+| `quack` (bin) | Config, CLI, wiring, shutdown, and `DiscordPort`. | everything | `main`. |
 
-Note: `quack-discord` may not depend on `quack-engine` (adapters never
-import each other's implementation, and the engine must not see Twilight).
-The binary therefore contains `DiscordPort`, a ~200-line adapter that
-implements `quack_engine::Discord` by calling `quack_discord::DiscordClient`
-and the caches, mapping types both ways.
+`quack-discord` may not depend on `quack-engine` (adapters never import
+each other, and the engine must not see Twilight). The binary therefore
+contains `DiscordPort`, a small adapter that implements
+`quack_engine::Discord` by calling `quack_discord::DiscordClient` and the
+caches, mapping types both ways. This placement is a Rust detail the
+charter leaves open (§20.5).
 
 Rules: dependencies point toward `quack-core`; adapters never import each
 other; `quack-engine` uses Postgres concretely (tests run against real
@@ -4418,41 +5231,46 @@ unless they have two real implementations (`Module` has three).
 ```rust
 /// Everything the engine and modules need from Discord. Implemented by the
 /// binary's `DiscordPort` (over quack-discord) and by quack-testkit's `FakeDiscord`.
+/// Every method borrows its arguments for the future's lifetime `'a`.
 pub trait Discord: Send + Sync + 'static {
-    // Facts (gateway cache first, REST fallback; never cached as "absent").
-    fn guild_facts(&self, guild: GuildId) -> BoxFuture<'_, Outcome<GuildFacts>>;
-    fn member(&self, guild: GuildId, member: MemberId) -> BoxFuture<'_, Outcome<Option<MemberFacts>>>;
-    fn channel_facts(&self, guild: GuildId, channel: ChannelId) -> BoxFuture<'_, Outcome<Option<ChannelFacts>>>;
+    // Facts (cache only under the freshness rules of §2, else REST; "absent" is never cached).
+    fn guild_facts<'a>(&'a self, guild: GuildId) -> BoxFuture<'a, Outcome<GuildFacts>>;
+    fn member<'a>(&'a self, guild: GuildId, member: MemberId, fresh: Fresh) -> BoxFuture<'a, Outcome<Membership>>;
+    fn channel_facts<'a>(&'a self, guild: GuildId, channel: ChannelId) -> BoxFuture<'a, Outcome<Option<ChannelFacts>>>;
+    fn guild_channels<'a>(&'a self, guild: GuildId) -> BoxFuture<'a, Outcome<Vec<ChannelFacts>>>;
+    fn ban<'a>(&'a self, guild: GuildId, member: MemberId) -> BoxFuture<'a, Outcome<Option<BanFacts>>>;
+    fn is_thread_member<'a>(&'a self, thread: ChannelId, account: AccountId) -> BoxFuture<'a, Outcome<bool>>;
+    fn search_members<'a>(&'a self, guild: GuildId, query: &'a str, limit: u8) -> BoxFuture<'a, Outcome<Vec<MemberFacts>>>;
+    fn accounts<'a>(&'a self, ids: &'a [AccountId]) -> BoxFuture<'a, Outcome<Vec<AccountFacts>>>;
 
     // Actions (§5.1). `reason` is the X-Audit-Log-Reason value.
-    fn timeout(&self, guild: GuildId, member: MemberId, until: OffsetDateTime, reason: &str) -> BoxFuture<'_, Outcome<()>>;
-    fn remove_timeout(&self, guild: GuildId, member: MemberId, reason: &str) -> BoxFuture<'_, Outcome<()>>;
-    fn kick(&self, guild: GuildId, member: MemberId, reason: &str) -> BoxFuture<'_, Outcome<()>>;
-    fn ban(&self, guild: GuildId, member: MemberId, delete_message_seconds: u32, reason: &str) -> BoxFuture<'_, Outcome<()>>;
-    fn unban(&self, guild: GuildId, member: MemberId, reason: &str) -> BoxFuture<'_, Outcome<()>>;
+    fn timeout<'a>(&'a self, guild: GuildId, member: MemberId, until: OffsetDateTime, reason: &'a str) -> BoxFuture<'a, Outcome<()>>;
+    fn remove_timeout<'a>(&'a self, guild: GuildId, member: MemberId, reason: &'a str) -> BoxFuture<'a, Outcome<()>>;
+    fn kick<'a>(&'a self, guild: GuildId, member: MemberId, reason: &'a str) -> BoxFuture<'a, Outcome<()>>;
+    fn ban_member<'a>(&'a self, guild: GuildId, member: MemberId, delete_message_seconds: u32, reason: &'a str) -> BoxFuture<'a, Outcome<()>>;
+    fn unban<'a>(&'a self, guild: GuildId, member: MemberId, reason: &'a str) -> BoxFuture<'a, Outcome<()>>;
 
-    // Messages.
-    fn open_dm(&self, account: AccountId) -> BoxFuture<'_, Outcome<ChannelId>>;
-    fn send(&self, channel: ChannelId, msg: &Msg, files: &[OutgoingFile], nonce: &Nonce) -> BoxFuture<'_, Outcome<MessageId>>;
-    fn edit(&self, channel: ChannelId, message: MessageId, msg: &Msg, files: &[OutgoingFile]) -> BoxFuture<'_, Outcome<()>>;
-    fn edit_interaction_original(&self, token: &InteractionToken, msg: &Msg) -> BoxFuture<'_, Outcome<(ChannelId, MessageId)>>;
-    fn delete_message(&self, channel: ChannelId, message: MessageId) -> BoxFuture<'_, Outcome<()>>;
-    fn fetch_message(&self, channel: ChannelId, message: MessageId) -> BoxFuture<'_, Outcome<FetchedMessage>>;
-    fn fetch_history(&self, channel: ChannelId, before: Option<MessageId>, limit: u8) -> BoxFuture<'_, Outcome<Vec<FetchedMessage>>>;
+    // Messages. Creates follow §10.4.
+    fn open_dm<'a>(&'a self, account: AccountId) -> BoxFuture<'a, Outcome<ChannelId>>;
+    fn send<'a>(&'a self, channel: ChannelId, msg: &'a Msg, files: &'a [OutgoingFile], nonce: &'a Nonce) -> BoxFuture<'a, Outcome<SentMessage>>;
+    fn edit<'a>(&'a self, channel: ChannelId, message: MessageId, msg: &'a Msg, files: &'a FileEdit) -> BoxFuture<'a, Outcome<SentMessage>>;
+    fn edit_interaction_original<'a>(&'a self, token: &'a InteractionToken, msg: &'a Msg) -> BoxFuture<'a, Outcome<()>>;
+    fn delete_message<'a>(&'a self, channel: ChannelId, message: MessageId) -> BoxFuture<'a, Outcome<()>>;
+    fn fetch_message<'a>(&'a self, channel: ChannelId, message: MessageId) -> BoxFuture<'a, Outcome<FetchedMessage>>;
+    fn fetch_history<'a>(&'a self, channel: ChannelId, before: Option<MessageId>, limit: u8) -> BoxFuture<'a, Outcome<Vec<FetchedMessage>>>;
 
     // Files.
-    fn download_attachment(&self, url: &Url, max_bytes: u64) -> BoxFuture<'_, Outcome<Bytes>>;
-    fn refresh_attachment_url(&self, url: &Url) -> BoxFuture<'_, Outcome<Url>>;
+    fn download_attachment<'a>(&'a self, url: &'a Url, max_bytes: u64) -> BoxFuture<'a, Outcome<Bytes>>;
 
     // Channels and threads.
-    fn create_channel(&self, guild: GuildId, spec: &ChannelSpec) -> BoxFuture<'_, Outcome<ChannelId>>;
-    fn create_private_thread(&self, parent: ChannelId, name: &str) -> BoxFuture<'_, Outcome<ChannelId>>;
-    fn find_active_thread(&self, guild: GuildId, parent: ChannelId, name: &str) -> BoxFuture<'_, Outcome<Option<ChannelId>>>;
-    fn add_thread_member(&self, thread: ChannelId, member: MemberId) -> BoxFuture<'_, Outcome<()>>;
-    fn remove_thread_member(&self, thread: ChannelId, member: MemberId) -> BoxFuture<'_, Outcome<()>>;
-    fn thread_members(&self, thread: ChannelId) -> BoxFuture<'_, Outcome<Vec<MemberId>>>;
-    fn lock_thread(&self, thread: ChannelId) -> BoxFuture<'_, Outcome<()>>;
-    fn delete_channel(&self, channel: ChannelId) -> BoxFuture<'_, Outcome<()>>;
+    fn create_channel<'a>(&'a self, guild: GuildId, spec: &'a ChannelSpec) -> BoxFuture<'a, Outcome<ChannelId>>;
+    fn create_private_thread<'a>(&'a self, parent: ChannelId, name: &'a str) -> BoxFuture<'a, Outcome<ChannelId>>;
+    fn find_threads<'a>(&'a self, guild: GuildId, parent: ChannelId, name: &'a str) -> BoxFuture<'a, Outcome<Vec<ChannelId>>>;
+    fn add_thread_member<'a>(&'a self, thread: ChannelId, member: MemberId) -> BoxFuture<'a, Outcome<()>>;
+    fn remove_thread_member<'a>(&'a self, thread: ChannelId, member: MemberId) -> BoxFuture<'a, Outcome<()>>;
+    fn thread_members<'a>(&'a self, thread: ChannelId) -> BoxFuture<'a, Outcome<Vec<MemberId>>>;
+    fn set_thread_state<'a>(&'a self, thread: ChannelId, archived: bool, locked: bool) -> BoxFuture<'a, Outcome<()>>;
+    fn delete_channel<'a>(&'a self, channel: ChannelId) -> BoxFuture<'a, Outcome<()>>;
 }
 
 /// The typed result of one Discord call.
@@ -4461,11 +5279,25 @@ pub enum Outcome<T> {
     Done(T),
     /// Discord definitely refused; nothing changed.
     Refused(Refusal),
-    /// Rate limited before anything happened; try again after the delay.
+    /// Rate limited before anything was sent; try again after the delay.
     RetryAfter(Duration),
-    /// The call may or may not have taken effect (timeout, 5xx, connection reset).
+    /// The request was never sent (connection refused, shutting down): nothing changed.
+    NotSent(NotSentCause),
+    /// The request may or may not have taken effect (deadline, 5xx, connection reset after sending).
     Unknown(UnknownCause),
 }
+
+/// A member lookup: `Absent` only for Discord's 404 Unknown Member.
+pub enum Membership { Present(MemberFacts), Absent }
+
+/// `Cached` allows the member cache under §2's rules; `Rest` always asks Discord (action reads, §5.1).
+pub enum Fresh { Cached, Rest }
+
+/// What a create or edit returned: where the message is and the attachment IDs Discord assigned.
+pub struct SentMessage { pub channel_id: ChannelId, pub message_id: MessageId, pub attachments: Vec<(String, AttachmentId)> }
+
+/// Files on an edit: keep the existing attachment, or replace it.
+pub enum FileEdit { None, Keep(AttachmentId), Replace(OutgoingFile) }
 
 pub struct Refusal { pub status: u16, pub code: Option<u32>, pub kind: RefusalKind }
 
@@ -4485,48 +5317,45 @@ pub enum RefusalKind {
 }
 
 pub enum UnknownCause { Timeout, ServerError(u16), Connection }
+pub enum NotSentCause { Connection, ShuttingDown }
 ```
 
 Every REST call has a 10-second deadline (30 seconds for file downloads and
-uploads), runs inside a `discord {method} {route}` span, and records
-`quack.discord.*` metrics (§18.2). Twilight's rate limiter is used; when it
-reports a wait longer than 10 seconds the call returns `RetryAfter`.
-Twilight's own retries are off; the per-kind policies above decide.
+uploads), runs inside a `{method} {route}` client span, and records
+`http.client.request.duration` and the rate-limit instruments (§18).
+Twilight's rate limiter is used; when it reports a wait longer than 10
+seconds the call returns `RetryAfter`. Twilight's own retries are off; the
+per-kind policies decide.
 
-`GuildFacts` (owner, MFA required, roles with positions and permissions,
-Quack's member and computed permissions), `MemberFacts` (roles, highest
-position, Administrator flag, bot flag, timeout end, display names),
-`ChannelFacts` (type, parent, overwrites, Quack's computed permissions),
-and `FetchedMessage` (author, content, timestamps, embeds, attachments,
-server) are plain structs in `quack-engine`.
+`GuildFacts`, `MemberFacts` (roles, highest position, Administrator flag,
+bot flag, `joined_at`, timeout end, display names), `ChannelFacts` (type,
+parent, overwrites, Quack's computed permissions), `BanFacts` (reason), and
+`AccountFacts` are plain structs in `quack-core::permissions`, because the
+pure checks take them. `FetchedMessage` (author, content, timestamps,
+embeds, attachments with IDs, server) and `SentMessage` live in
+`quack-engine`. Dashboard OAuth calls (`/oauth2/token`, `/users/@me`,
+`/users/@me/guilds`) are not part of this port: `quack-api` makes them
+with its own small client, traced the same way.
 
 ### 17.4 Dependency diagram
 
-```
-                       ┌──────────────┐
-                       │  quack (bin) │  config, CLI, DiscordPort, wiring
-                       └──────┬───────┘
-          ┌──────────────┬────┴─────────┬───────────────┬──────────────┐
-          v              v              v               v              v
-     quack-bot       quack-api    quack-import     quack-discord   (modules)
-          │              │              │               │          tickets
-          │              │              │               │          activity-log
-          │              │              │               │          honeypot
-          └───────┬──────┴──────┬───────┘               │              │
-                  v             v                       │              │
-             quack-engine <─────┴───────────────────────┼──────────────┘
-                  │                                     │
-          ┌───────┼─────────────┐                       │
-          v       v             v                       v
-      quack-db  quack-text  quack-telemetry        quack-text, quack-telemetry
-          │       │
-          └───┬───┘
-              v
-         quack-core
-```
+Drawn from the table in §17.2 (`A ──> B` means A depends on B):
 
-`quack-bot` also depends on `quack-discord` (to reply to interactions) and
-on the module crates (to route their components).
+```
+quack (bin)          ──> every crate below
+quack-bot            ──> quack-discord, quack-tickets, quack-activity-log, quack-honeypot, quack-engine, quack-text, quack-core
+quack-api            ──> quack-tickets, quack-activity-log, quack-honeypot, quack-engine, quack-db, quack-text, quack-core
+quack-tickets,
+quack-activity-log,
+quack-honeypot       ──> quack-engine, quack-db, quack-text, quack-core
+quack-import         ──> quack-db, quack-core
+quack-discord        ──> quack-text, quack-core
+quack-engine         ──> quack-db, quack-text, quack-core
+quack-db             ──> quack-core
+quack-text           ──> quack-core
+quack-testkit (dev)  ──> quack-engine, quack-db, quack-core
+quack-telemetry      (depends on nothing; used by every crate except quack-core, quack-text, quack-import)
+```
 
 ### 17.5 Startup and shutdown
 
@@ -4538,55 +5367,85 @@ on the module crates (to route their components).
 3. Connect the pool (`QUACK_DATABASE_MAX_CONNECTIONS`, acquire timeout 5 s,
    `statement_timeout = 5s` per connection). With `--migrate`, apply
    migrations; then verify they are current (else exit 1).
-4. Build the Discord REST client; `GET /users/@me` to validate the token
-   and learn Quack's own account ID.
-5. Sync commands (§11.2).
-6. Start the job runner: `LISTEN quack_jobs`, ensure the `housekeeping`
-   job, start one dispatcher per kind. Start the 60-second gauge task.
-7. Start the cache listener (`LISTEN quack_rules, quack_settings`).
-8. Connect the gateway shard; start the event dispatch queues.
-9. Bind `QUACK_LISTEN_ADDR` and serve HTTP.
-10. `/readyz` turns ready when the gateway reports `READY` and every
-    dispatcher has ticked.
+4. **Singleton fence.** On a dedicated connection outside the pool, take
+   `pg_try_advisory_lock(<the constant 0x517561636B>)`. Not acquired (an
+   older instance is still running during a rolling deploy) → retry every
+   5 seconds, logging, with readiness false. If that connection is ever lost,
+   the process stops all work and exits 1, so two instances never act at
+   once.
+5. Bind `QUACK_LISTEN_ADDR` and serve HTTP (`/livez` at once; `/readyz`
+   false until step 10). API requests are served; their facts come from
+   REST until the gateway has loaded the server (§2).
+6. Build the Discord REST client; `GET /users/@me` to validate the token and
+   learn Quack's own account ID; `GET /gateway/bot` (more than one shard
+   recommended → exit 1, §11.9).
+7. Sync commands (§11.2).
+8. Load the rules and config caches; start the cache listener (`LISTEN
+   quack_rules, quack_settings`).
+9. Connect the gateway shard; start the event dispatch queues. When `READY`
+   has arrived and every server in it has sent `GUILD_CREATE` (or 30
+   seconds passed), start the job runner: `LISTEN quack_jobs`, ensure the
+   `housekeeping` job, start one dispatcher per kind and the 60-second gauge
+   task.
+10. `/readyz` turns ready when the fence is held, the gateway session is
+    `READY` or `RESUMED`, and every dispatcher has completed a pass.
 
 **Server bootstrap** (`guilds::bootstrap`, on `GUILD_CREATE`, one
 transaction):
 
 1. Upsert `guilds` (name, icon, owner, MFA, `installed = true`,
    `left_at = NULL`).
-2. First time only: create `case_counters`, `guild_settings`, the module
-   settings rows (all off), the starter rule (§3.7) with version 1, set
-   `starter_rule_id`; log `quack_joined` (`first_join`).
+2. Insert each child row that is missing, independently: `case_counters`,
+   `guild_settings`, `ticket_settings`, `activity_log_settings`,
+   `honeypot_settings` (`INSERT … ON CONFLICT DO NOTHING`). When this
+   inserted `guild_settings` (a first join, not an imported server), also
+   create the starter rule (§3.7) with version 1, set `starter_rule_id`, and
+   log `quack_joined` (`first_join`).
 3. Returning after leaving: log `quack_joined` (`first_join = false`).
 4. Reconcile channel settings against the event's channel list (§13.1.5).
 
-**Shutdown** (SIGTERM or SIGINT; total budget 30 seconds; set the platform's
-grace period above 35 seconds):
+**Leaving a server** (`GUILD_DELETE` without `unavailable`, or missing from
+`READY`, one transaction): `installed = false`, `left_at = now()`; every
+enabled module is turned off with `disabled_reason = quack_left` (logged,
+not posted), because its channels and settings may be stale when Quack
+comes back; log `quack_left`; drop the server's caches. Settings and
+history are kept. After a re-add, modules stay off until an administrator
+turns them on.
+
+**Shutdown** (SIGTERM or SIGINT). Every step shares one deadline, 30
+seconds after the signal; set the platform's grace period to at least 35
+seconds.
 
 1. Mark not ready (`/readyz` → 503).
-2. Stop job dispatchers from claiming; stop accepting new interactions
-   (new ones get no ack and Discord shows them as failed).
-3. Start HTTP graceful shutdown (in-flight requests finish, up to 10 s).
-4. Close the gateway shard with a normal close frame.
-5. Flush the server activity log's pending delete batches and drain its
-   queue (up to 5 s).
-6. Wait for in-flight job handlers (up to 20 s, from step 2).
-7. Shut down telemetry (flush spans, metrics, logs; up to 5 s).
-8. Close the pool. Exit 0.
+2. Stop admission: dispatchers stop claiming; the gateway stops handing out
+   new events and interactions (Discord shows unacknowledged interactions
+   as failed); HTTP stops accepting new connections.
+3. Drain, concurrently and until 5 seconds before the deadline: in-flight
+   interaction handlers, HTTP requests, the server activity log's delete
+   batches and queue, and job handlers.
+4. At that point the Discord client stops accepting new calls; remaining
+   handlers are dropped (§16.7). Close the gateway with a normal close frame,
+   close the pool, and close the fence connection.
+5. Flush telemetry with the time left (`TelemetryGuard::with_deadline`,
+   at most 5 seconds). Exit 0.
 
 ### 17.6 Caches and invalidation
 
 - **Rules cache**: loaded for all installed servers at startup in one
   query, then per server on `NOTIFY quack_rules '<guild_id>'` (sent in every
   transaction that creates, edits, archives, restores, or imports a rule).
-  Used by autocomplete, pickers, `/case add` modals, `/setup` rule select.
+  Used by autocomplete, pickers, `/case add` modals, `/setup` rule select,
+  and early validation; never to decide which version a case uses (§3.1).
 - **Config cache**: `guild_settings` plus the three module settings rows
   per server; reloaded on `NOTIFY quack_settings '<guild_id>'`. Used by
   autocomplete capability checks, setup modals, honeypot filtering, activity
   routing.
-- After the listener reconnects, both caches reload fully.
+- Every reload carries the rows' `version` (rules: `current_version` and
+  `updated_at`), and a reload never replaces a newer entry, so a slow reload
+  cannot undo a faster one. After the listener reconnects, both caches
+  reload fully under the same rule.
 - Caches never grant access by themselves for writes: every write re-checks
-  capabilities with fresh Discord facts and reads rows inside its
+  capabilities from current facts (§2) and reads rows inside its
   transaction.
 
 ### 17.7 Configuration
@@ -4594,26 +5453,28 @@ grace period above 35 seconds):
 Environment variables (`QUACK_*`) or an optional TOML file
 (`--config <file>`) using the same names in lowercase without the prefix
 (`database_url = "…"`). Environment variables win over the file. Unknown
-keys in the file are an error. Secrets belong in the environment.
+keys in the file are an error. Secrets belong in the environment. Quack
+never reads `.env` itself; the development commands export it (§20.2).
 
 | Variable | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `QUACK_DATABASE_URL` | Postgres URL | required | Connection string. |
-| `QUACK_DATABASE_MAX_CONNECTIONS` | integer 2–200 | 20 | Pool size (one extra connection is used by the listener and one per running action for its advisory lock, within this pool). |
+| `QUACK_DATABASE_MAX_CONNECTIONS` | integer 4–200 | 20 | Pool size for queries and transactions. The listener and the fence each use one more dedicated connection outside the pool; member locks are transaction-scoped and need none. |
 | `QUACK_DISCORD_TOKEN` | secret | required for `serve`, `commands sync` | Bot token. |
 | `QUACK_DISCORD_APPLICATION_ID` | snowflake | required for `serve`, `commands sync` | Application ID (also the OAuth client ID). |
 | `QUACK_DISCORD_CLIENT_SECRET` | secret | required for `serve` | OAuth client secret. |
-| `QUACK_PUBLIC_URL` | URL, `http` or `https`, no path | required for `serve` | Dashboard links, OAuth redirect (`<url>/api/auth/callback`), CSRF origin, cookie `Secure`. |
+| `QUACK_PUBLIC_URL` | absolute URL, `https`, or `http` only for `localhost`, `127.0.0.1`, or `[::1]`; no credentials, path, query, or fragment | required for `serve` | Dashboard links, OAuth redirect (`<url>/api/auth/callback`), CSRF origin, cookie names and `Secure`. |
 | `QUACK_LISTEN_ADDR` | socket address | `0.0.0.0:8080` | HTTP listen address. |
-| `QUACK_SESSION_SECRET` | base64, exactly 32 bytes | required for `serve` | Encrypts Discord tokens stored in sessions. Rotating it signs everyone out. |
-| `QUACK_DASHBOARD_DIR` | path | `dashboard` | Directory with the built dashboard (`index.html`, `assets/`). |
-| `QUACK_OTLP_ENDPOINT` | URL | unset | OTLP/HTTP base URL (`/v1/traces`, `/v1/metrics`, `/v1/logs` are appended). Unset: no export; logs still go to stdout. |
+| `QUACK_SESSION_SECRET` | base64, exactly 32 bytes | required for `serve` | Encrypts Discord tokens stored in sessions. Rotating it signs everyone out (§14.4). |
+| `QUACK_DASHBOARD_DIR` | path | `dashboard` | Directory with the built dashboard (`index.html`, `assets/`); checked at startup. |
+| `QUACK_OTLP_ENDPOINT` | URL | unset | OTLP/HTTP base URL (`/v1/traces`, `/v1/metrics`, `/v1/logs` are appended). Unset: no export; logs still go to stderr. |
 | `QUACK_SERVICE_NAME` | string | `quack` | `service.name`. |
 | `QUACK_ENVIRONMENT` | string | `development` | `deployment.environment.name` resource attribute. |
-| `QUACK_LOG_LEVEL` | `tracing` filter directive | `info` | Log and span level filter. |
+| `QUACK_LOG_LEVEL` | `tracing` filter directive | `info` | Log filter (traces use their own fixed `info` filter, §18.5). |
 | `QUACK_WORKER_CONCURRENCY` | integer 1–64 | 16 | Jobs running at once across all kinds. |
 | `QUACK_DEV_GUILD_ID` | snowflake | unset | Register commands to this server only. |
 | `QUACK_TRUSTED_PROXY_HOPS` | integer 0–5 | 0 | Proxies in front of Quack, for the client IP (§14.7). |
+| `QUACK_IMPORT_SOURCE_URL` | secret MySQL URL | required for `import-mysql` only | The Go database to import (§19). Kept out of command lines and logs. |
 
 Everything else in this document is a constant in code.
 
@@ -4641,188 +5502,120 @@ Everything else in this document is a constant in code.
 ## 18. Telemetry
 
 Traces, metrics, and logs go over OTLP/HTTP (protobuf) using OpenTelemetry
-0.33.1, `tracing` 0.1.44, and `tracing-opentelemetry` 0.34.0. Logs go
-through `tracing` and carry the current trace and span IDs.
+0.33.1, `tracing` 0.1.44, and `tracing-opentelemetry` 0.34.0, all set up by
+`crates/quack-telemetry`. Logs go through `tracing`.
 
 ### 18.1 Rules
 
-- **Cardinality.** Metric attributes are small enums only. Server, account,
-  channel, case, appeal, action, message, and job IDs never appear on
-  metrics; they go on spans and logs.
-- **Catalog.** Every instrument is a field of `quack_telemetry::Metrics`,
-  created once at startup with the name, unit, description, and buckets
-  below; attribute values are Rust enums in `quack_telemetry::attr`, so names
-  and values cannot drift.
+- **Cardinality.** Metric attributes are small closed enums only (the
+  crate's `labels`); server, account, channel, case, appeal, action,
+  message, and job IDs never appear on metrics. They go on spans and logs.
+  Labels documented as "static names chosen in code" (command, route, table,
+  cache, queue, module-log kind) take values only from `&'static str`
+  constants in Quack's code, never from input; a test feeds raw routes,
+  malformed methods, and unknown event names and checks they map to a
+  fallback value.
+- **Catalog.** `crates/quack-telemetry/METRICS.md` is generated from the
+  crate's catalog (`UPDATE_METRICS_DOC=1 cargo test -p quack-telemetry
+  metrics_doc`) and is the **source of truth** for every instrument's name,
+  type, unit, attributes, attribute values, and histogram buckets. This
+  section does not repeat those; it says where each instrument is recorded
+  (§18.2) and lists the changes the crate must make for this design
+  (§18.3). After those changes, METRICS.md and this section agree, and a
+  test checks that every instrument named here exists in the catalog.
+- **Durations are seconds**, histograms included.
 - **Failure isolation.** A slow or absent collector never blocks moderation:
-  exporters use bounded queues and drop on overflow.
+  exporters use bounded batches and drop on overflow.
 
-### 18.2 Instruments
+### 18.2 Where each instrument is recorded
 
-Types: C = counter, UDC = up-down counter, H = histogram, G = observable
-gauge. Units: `s` seconds, `By` bytes, `{x}` a count of x. "DB task" = the
-60-second gauge task (§16.6).
-
-**Interactions**
-
-| Name | Type | Unit | Attributes (allowed values) | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.interaction.count` | C | `{interaction}` | `kind` (command, component, modal, autocomplete); `command` (case_add, case_view, case_list, case_void, case_history, appeals, rules, setup, help, add_case_message, add_case_member, or a custom-ID code from §11.5, `legacy`, `unknown`); `outcome` (ok, refused, error) | Interactions handled. | quack-bot router, after the reply |
-| `quack.interaction.ack.duration` | H | `s` | `kind` | Receive to acknowledgement. Buckets B_FAST. | quack-bot, on ack |
-| `quack.interaction.duration` | H | `s` | `kind`, `command` | Receive to final reply. Buckets B_REQ. | quack-bot |
-| `quack.interaction.errors` | C | `{error}` | `kind`; `reason` (missing_capability, mfa_required, member_refused, not_found, conflict, validation, discord_unavailable, expired, legacy, ack_late, internal) | Interactions answered with an error. | quack-bot |
-
-**Cases**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.case.created` | C | `{case}` | `source` (discord, dashboard, honeypot); `action_kind` (none, timeout, kick, ban) | Cases created. | engine `apply_rule`, after commit |
-| `quack.case.create.duration` | H | `s` | `source` | `apply_rule` from start to commit. Buckets B_REQ. | engine |
-| `quack.case.create.refused` | C | `{refusal}` | `reason` (MemberRefusal values, missing_capability, mfa_required, rule_archived, validation) | Case creations refused. | engine |
-| `quack.case.level` | H | `{level}` | `source` | Chosen level index. Buckets B_LEVEL. | engine |
-| `quack.case.voided` | C | `{case}` | `cause` (staff, appeal_accepted) | Cases voided. | engine `void_case` |
-
-**Actions**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.action.attempts` | C | `{attempt}` | `kind` (timeout, kick, ban, remove_timeout, unban); `outcome` (done, no_change, refused, rate_limited, unknown, interrupted); `reason` (ActionFailure values, none) | Attempts settled. | engine `actions::run` |
-| `quack.action.finished` | C | `{action}` | `kind`; `state` (done, failed, cancelled, skipped) | Actions reaching a terminal state. | engine |
-| `quack.action.time_to_done` | H | `s` | `kind` | Case creation (or undo request) to `done`. Buckets B_LONG. | engine |
-| `quack.action.retries` | C | `{retry}` | `kind` | Automatic retries scheduled. | engine |
-| `quack.action.undo.skipped` | C | `{action}` | `kind` (remove_timeout, unban) | Undo actions left in place by the guard. | engine |
-| `quack.action.failed.current` | G | `{action}` | `kind` | Actions in `failed`, not dismissed. | DB task |
-
-**DMs**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.dm.outcomes` | C | `{dm}` | `kind` (case, appeal_update, ticket_closed); `state` (sent, failed, unknown, not_needed); `reason` (DmFailure values, none) | DMs settled. | engine `dms::send`, void |
-| `quack.dm.send.duration` | H | `s` | `kind` | `sending` to settled. Buckets B_REQ. | engine |
-
-**Appeals**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.appeal.submitted` | C | `{appeal}` | — | Appeals submitted. | engine |
-| `quack.appeal.transitions` | C | `{transition}` | `decision` (request_information, information_provided, accept, reject, close, reopen, auto_close) | Appeal state changes. | engine |
-| `quack.appeal.time_to_decision` | H | `s` | `decision` (accept, reject, close) | Submission to the first accept, reject, or close. Buckets B_DECISION. | engine |
-| `quack.appeal.open` | G | `{appeal}` | `state` (pending, needs_information) | Open appeals. | DB task |
-
-**Evidence**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.evidence.captures` | C | `{item}` | `outcome` (saved, failed); `reason` (EvidenceFailure values, none) | Evidence items settled. | engine `evidence::capture` |
-| `quack.evidence.files_copied` | C | `{file}` | `outcome` (FileCopyState values except pending) | Files processed. | engine |
-| `quack.evidence.bytes_copied` | C | `By` | — | Bytes uploaded to evidence channels. | engine |
-
-**Moderation log and tracked messages**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.mod_log.entries` | C | `{entry}` | `kind` (ModLogKind values); `result` (ok, failed, refused) | Entries written. | quack-db `modlog::insert` |
-| `quack.mod_log.posts` | C | `{post}` | `outcome` (posted, no_channel, channel_missing, not_staff_only, refused, retry, exhausted) | Log channel post attempts. | engine `modlog::post` |
-| `quack.message.syncs` | C | `{sync}` | `kind` (MessageKind values); `outcome` (edited, posted, reposted, gone, retry, failed) | Tracked message syncs. | engine `messages::sync` |
-| `quack.message.sync.lag` | H | `s` | `kind` | Bump to posted. Buckets B_LONG. | engine |
-
-**Jobs**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.job.enqueued` | C | `{job}` | `kind` (JobKind values) | Jobs inserted or coalesced. | quack-db `jobs::enqueue` |
-| `quack.job.started` | C | `{job}` | `kind` | Jobs claimed. | job runner |
-| `quack.job.finished` | C | `{job}` | `kind`; `outcome` (done, retry, deferred, dead, rescheduled, timed_out) | Handler results. | job runner |
-| `quack.job.duration` | H | `s` | `kind` | Handler run time. Buckets B_REQ. | job runner |
-| `quack.job.queue_wait` | H | `s` | `kind` | `run_at` to claim. Buckets B_LONG. | job runner |
-| `quack.job.lease_expired` | C | `{job}` | `kind` | Claims that found an expired lease. | job runner |
-| `quack.job.ready` | G | `{job}` | `kind` | Ready jobs (`run_at ≤ now`, unlocked, not dead). | DB task |
-| `quack.job.oldest_ready_age` | G | `s` | `kind` | Age of the oldest ready job. | DB task |
-| `quack.job.dead` | G | `{job}` | `kind` | Dead jobs kept for inspection. | DB task |
-
-**Discord REST**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.discord.requests` | C | `{request}` | `route` (Twilight route pattern, e.g. `PATCH /guilds/{guild_id}/members/{user_id}`); `method`; `status_class` (2xx, 3xx, 4xx, 5xx, none); `outcome` (done, refused, retry_after, unknown) | REST calls. | quack-discord client wrapper |
-| `quack.discord.request.duration` | H | `s` | `route`, `method` | Call duration including rate-limit wait. Buckets B_REQ. | quack-discord |
-| `quack.discord.rate_limit.hits` | C | `{hit}` | `route`; `scope` (route, global, shared) | 429 responses and limiter waits. | quack-discord |
-| `quack.discord.rate_limit.wait` | H | `s` | `route` | Time spent waiting on the limiter. Buckets B_REQ. | quack-discord |
-
-**Gateway and caches**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.gateway.events` | C | `{event}` | `event` (the §11.9 event names, `other`) | Dispatch events received. | quack-discord gateway loop |
-| `quack.gateway.event.duration` | H | `s` | `event` | Handling time. Buckets B_FAST. | quack-bot |
-| `quack.gateway.heartbeat.latency` | H | `s` | — | Heartbeat round trip. Buckets B_FAST. | gateway loop |
-| `quack.gateway.connections` | C | `{connection}` | `kind` (connect, resume, reconnect, invalid_session) | Shard connection events. | gateway loop |
-| `quack.gateway.connected` | G | `1` | — | 1 when the shard is connected and READY. | gateway loop |
-| `quack.gateway.guilds` | G | `{guild}` | — | Servers in the guild cache. | gateway loop |
-| `quack.gateway.queue.depth` | G | `{event}` | `queue` (events_0, events_1, events_2, events_3, activity_posts, interactions) | Items waiting. | quack-bot, activity log |
-| `quack.gateway.queue.dropped` | C | `{event}` | `queue` | Items dropped because a queue was full. | quack-bot, activity log |
-| `quack.cache.size` | G | `{entry}` | `cache` (guilds, members, rules, config, activity_messages, interactions, directory, account_guilds) | Entries held. | each cache |
-| `quack.cache.lookups` | C | `{lookup}` | `cache`; `result` (hit, miss) | Lookups. | each cache |
-| `quack.cache.evictions` | C | `{entry}` | `cache`; `cause` (capacity, expired, invalidated) | Evictions. | each cache |
-
-**HTTP API**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `http.server.request.duration` | H | `s` | `http.request.method`, `http.route`, `http.response.status_code`, `error.type` | Semconv; from the Tower layer. Buckets B_REQ. | quack-api |
-| `http.server.active_requests` | UDC | `{request}` | `http.request.method` | Semconv. | quack-api |
-| `quack.auth.sign_ins` | C | `{sign_in}` | `outcome` (ok, denied, failed) | OAuth callbacks. | quack-api |
-| `quack.http.rate_limited` | C | `{request}` | `class` (sign_in, read, write, case_create, action_control, member_write) | 429 responses. | quack-api |
-| `quack.sessions.active` | G | `{session}` | — | Unexpired sessions. | DB task |
-
-**Database**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `db.client.operation.duration` | H | `s` | `db.system.name` (postgresql), `db.operation.name` (SELECT, INSERT, UPDATE, DELETE, WITH, LISTEN), `db.collection.name` (table name) | Semconv. Buckets B_FAST. | quack-db query wrapper |
-| `db.client.connection.count` | G | `{connection}` | `db.client.connection.state` (idle, used) | Pool connections. | quack-db |
-| `db.client.connection.wait_time` | H | `s` | — | Pool acquire time. Buckets B_FAST. | quack-db |
-| `quack.db.transaction.duration` | H | `s` | `name` (apply_rule, void_case, settle_action, settle_dm, decide_appeal, submit_appeal, patch_settings, edit_rule, enqueue, claim, settle_job, bootstrap, other) | Transaction begin to commit. Buckets B_FAST. | quack-db `Db::begin` guard |
-| `quack.db.retries` | C | `{retry}` | `reason` (serialization_failure, deadlock) | Transactions retried (at most 3 times). | quack-db |
-| `quack.db.errors` | C | `{error}` | `class` (unique_violation, foreign_key_violation, check_violation, serialization_failure, deadlock, statement_timeout, connection, other) | Database errors. | quack-db |
-
-**Modules**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.ticket.opened` | C | `{ticket}` | `outcome` (open, open_failed) | Tickets that left `opening`. | tickets |
-| `quack.ticket.closed` | C | `{ticket}` | `transcript` (complete, partial); `by` (member, staff, quack) | Tickets closed. | tickets |
-| `quack.ticket.open` | G | `{ticket}` | — | Tickets in `open`. | DB task |
-| `quack.ticket.transcript.size` | H | `By` | — | Transcript size. Buckets B_BYTES. | tickets |
-| `quack.activity_log.events` | C | `{event}` | `event` (ActivityEvent values); `outcome` (posted, filtered, dropped, failed) | Server activity handled. | activity log |
-| `quack.honeypot.hits` | C | `{hit}` | `outcome` (recorded, ignored_staff, ignored_bot, dropped, case_created, joined_burst, failed) | Honeypot posts. | honeypot |
-| `quack.honeypot.cleanups` | C | `{message}` | `outcome` (done, retry, failed) | Bait deletions. | honeypot |
-
-**Runtime and process**
-
-| Name | Type | Unit | Attributes | Description | Recorded in |
-| --- | --- | --- | --- | --- | --- |
-| `quack.runtime.workers` | G | `{thread}` | — | Tokio worker threads. | telemetry, every 15 s |
-| `quack.runtime.alive_tasks` | G | `{task}` | — | Alive Tokio tasks. | telemetry |
-| `quack.runtime.global_queue_depth` | G | `{task}` | — | Tokio global queue depth. | telemetry |
-| `quack.runtime.busy_time` | C | `s` | — | Sum of worker busy durations (busy ratio = rate / workers). | telemetry |
-| `process.cpu.time` | C | `s` | `cpu.mode` (user, system) | From `/proc/self/stat`. | telemetry |
-| `process.memory.usage` | G | `By` | — | Resident set size. | telemetry |
-| `process.open_file_descriptor.count` | G | `{fd}` | — | Open file descriptors. | telemetry |
-| `quack.build.info` | G | `1` | `version`, `commit` (one value per process) | Always 1. | telemetry |
-| `quack.uptime` | G | `s` | — | Seconds since start. | telemetry |
-
-### 18.3 Histogram buckets
-
-| Set | Boundaries |
+| Instrument (METRICS.md) | Recorded in |
 | --- | --- |
-| B_FAST (s) | 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5 |
-| B_REQ (s) | 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30 |
-| B_LONG (s) | 0.1, 0.5, 1, 2, 5, 10, 30, 60, 300, 900, 3600, 14400, 86400 |
-| B_DECISION (s) | 60, 300, 900, 3600, 14400, 43200, 86400, 259200, 604800, 2592000 |
-| B_BYTES (By) | 1024, 16384, 131072, 1048576, 4194304, 8388608 |
-| B_LEVEL | 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 |
+| `quack.interaction.ack.duration`, `quack.interaction.duration`, `quack.interaction.errors` | `quack-bot` router: on ack; after the final reply; on a refused or failed answer. |
+| `quack.cases.created`, `quack.case.create.duration`, `quack.case.level` | engine `apply_rule`, after commit. |
+| `quack.cases.refused` | engine `apply_rule`, on every refusal (Discord, dashboard, honeypot). |
+| `quack.cases.voided` | engine `void_case`, after commit. |
+| `quack.action.attempts`, `quack.action.retries`, `quack.actions.finished`, `quack.action.completion.duration`, `quack.action.undo.skipped` | engine `actions::run` and `actions::finalize`, in their settle. |
+| `quack.actions.failed` | gauge task (failed, not dismissed). |
+| `quack.dm.outcomes`, `quack.dm.send.duration` | engine `dms::send`, `dms::finalize`, and void (`not_needed`). |
+| `quack.appeal.transitions`, `quack.appeal.decision.duration` | engine `appeals`, after commit. |
+| `quack.appeals.open` | gauge task (`pending` plus `needs_information`). |
+| `quack.evidence.captures`, `quack.evidence.files`, `quack.evidence.bytes` | engine `evidence::capture`. |
+| `quack.modlog.entries` | `quack-db` `modlog::insert`, after commit. |
+| `quack.modlog.posts` | engine `modlog::post`. |
+| `quack.message.syncs`, `quack.message.sync.lag` | engine `messages::sync`. |
+| `quack.jobs.enqueued` | `quack-db` `jobs::enqueue`, after commit. |
+| `quack.jobs.started`, `quack.job.queue.wait`, `quack.job.duration`, `quack.job.lease_expired` | job runner. |
+| `quack.jobs.ready`, `quack.jobs.oldest_ready.age`, `quack.jobs.dead` | gauge task, with the claim's predicates (§16.6). |
+| `http.client.request.duration`, `quack.discord.rate_limit.hits`, `quack.discord.rate_limit.wait` | `quack-discord` client wrapper and `quack-api`'s OAuth client. One rate-limit observation per limiter wait; a 429 response is counted by the request's status. |
+| `quack.gateway.event.duration`, `quack.gateway.heartbeat.latency`, `quack.gateway.connection.events`, `quack.gateway.connected`, `quack.gateway.guilds` | gateway loop and `quack-bot`. |
+| `quack.queue.depth`, `quack.queue.dropped` | every bounded in-memory queue: the 4 event queues, the interaction pool, the activity post queue. |
+| `quack.cache.size`, `quack.cache.lookups`, `quack.cache.evictions` | each cache of §11.10. |
+| `http.server.request.duration`, `http.server.active_requests` | `quack-api` Tower layer (the in-flight count is decremented by a drop guard, so cancelled requests are counted). |
+| `quack.auth.sign_ins`, `quack.http.rate_limited` | `quack-api`. |
+| `quack.sessions.active` | gauge task. |
+| `db.client.operation.duration`, `db.client.connection.*`, `quack.db.transaction.duration`, `quack.db.transaction.retries` | `quack-db` query wrapper and `Db::begin` guard (rollbacks included). A CTE is recorded by its business verb (`UPDATE` for the claim). |
+| `quack.tickets.opened`, `quack.tickets.closed`, `quack.tickets.open`, `quack.ticket.transcript.size` | tickets module; `open` from the gauge task. |
+| `quack.activity_log.events` | activity log module. |
+| `quack.honeypot.hits`, `quack.honeypot.cleanups` | honeypot module. |
+| `quack.runtime.*`, `process.*`, `quack.build.info` | telemetry crate, every 30 s. |
 
-Configured with explicit-bucket views at meter provider creation.
+Mapping of domain values to the crate's generic labels:
+
+| Domain value | Label value |
+| --- | --- |
+| `ActionFailure` | `quack.reason`: `quack_missing_permission` → `missing_permission`; `quack_role_too_low` → `role_hierarchy`; `member_is_owner` → `member_is_owner`; `member_not_in_server` → `member_not_found`; `quack_not_in_server`, `member_is_administrator` → `not_allowed`; `timeout_window_passed` → `invalid`; `discord_refused` → `discord`; `retries_exhausted` → `retries_exhausted`; `unconfirmed` → `timeout` |
+| `DmFailure` | `quack.reason`: `dms_closed` → `dms_closed`; `not_in_shared_server` → `no_shared_server`; `discord_unavailable` → `retries_exhausted`; `discord_refused` → `discord` |
+| `MemberRefusal`, missing capability, 2FA | `quack.reason`: `role_hierarchy` (role checks), `member_not_found`, `member_is_owner`, `missing_permission` (Quack's permission, capability), `not_allowed` (self, bot, administrator, 2FA) |
+| Appeal events `submitted` / `information_requested` / `information_provided` / `accepted` / `rejected` / `closed` (staff or by void) / `reopened` | `quack.appeal.transition`: `submit` / `request_info` / `reply` / `accept` / `reject` / `close` / `reopen` |
+| Honeypot: case created or burst joined / ignored (staff, bot, exempt) / failed (refusal, policy changed, Discord) | `quack.honeypot.outcome`: `actioned` / `exempt` / `failed`; dropped events are `quack.queue.dropped` |
+| Log channel post: posted / moved, no channel / refused, exhausted / unknown after the window | `quack.outcome`: `done` / `skipped` / `failed` / `unknown` |
+| Tracked message sync: edited or posted / gone / exhausted or refused | `quack.outcome`: `done` / `skipped` / `failed` |
+
+### 18.3 Changes `quack-telemetry` must make
+
+Each is old → new. METRICS.md is regenerated with them.
+
+1. Span names (OTel semantic conventions): `http {method} {route}` →
+   `{method} {route}`; `db {operation} {table}` → `{operation} {table}`;
+   `discord {method} {template}` → `{method} {template}`. Unchanged:
+   `interaction {kind} {command}`, `gateway {event}`, `job {kind}`.
+2. `labels::JobKind`: `run_action, case_dm, appeal_dm, sync_message,
+   post_log_entry, capture_evidence, honeypot_cleanup, ticket_transcript,
+   housekeeping` → `run_action, send_dm, sync_message, post_mod_log,
+   capture_evidence, honeypot_case, honeypot_cleanup, open_ticket,
+   close_ticket, housekeeping`.
+3. `labels::JobOutcome`: `done, retry, dead` → `done, retry, deferred,
+   continued, rescheduled, finalized, dead, lost_lease, timed_out`.
+4. `labels::CaseSource` (`quack.case.source`): `slash_command,
+   message_command, user_command, dashboard, module` → `discord, dashboard,
+   honeypot`. The interaction kind stays on the interaction instruments.
+5. `labels::DmKind` (`quack.dm.kind`): `case, appeal` → `case,
+   appeal_update, ticket_closed`.
+6. `labels::MessageKind` (`quack.message.kind`): add `ticket_post`.
+7. `labels::ActivityStage` (`quack.activity.stage`): `seen, posted,
+   dropped` → `seen, posted, dropped, failed`.
+8. `quack.action.attempts`: attribute `quack.outcome` → new
+   `quack.action.attempt.outcome` (`done, no_change, refused, not_sent,
+   unknown, interrupted`).
+9. `quack.modlog.entries`: attribute `quack.outcome` → new
+   `quack.modlog.result` (`ok, failed, refused`).
+10. New instruments: `quack.job.lease_expired` (counter, `{job}`,
+    `quack.job.kind`); `quack.jobs.dead` (observed gauge, `{job}`,
+    `quack.job.kind`); `quack.actions.finished` (counter, `{action}`,
+    `quack.action.kind`, new label `quack.action.state` with `done, failed,
+    cancelled, skipped`); `quack.cases.refused` (counter, `{refusal}`,
+    `quack.case.source`, `quack.reason`).
+11. `spans::interaction`: add `quack.interaction.id`. `spans::job`: add
+    `quack.job.max_attempts` and `quack.guild.id`. New `spans::use_case(name:
+    &'static str, guild_id)` (`use_case {name}`, INTERNAL).
+12. `SpanEvent`: add `CaseVoided` (`case.voided`), `ModLogEntry`
+    (`mod_log.entry`), `Refused` (`refused`).
+
+Everything else in this design uses the crate as it is: its instrument
+names, its attribute keys (`quack.guild.id`, `quack.actor.id`,
+`quack.job.queue_wait` in seconds, `quack.discord.rate_limit.wait` in
+seconds), its buckets, its stderr logging, its defaults in §18.6.
 
 ### 18.4 Spans
 
@@ -4831,13 +5624,13 @@ child span.
 
 | Span name | Kind | Attributes | Events |
 | --- | --- | --- | --- |
-| `interaction {kind} {command}` | SERVER | `quack.guild_id`, `quack.actor_id`, `quack.interaction.id`, `quack.interaction.kind`, `quack.command`, `quack.outcome` | `acked` (`ack.type`, `ack.latency_ms`), `replied`, `refused` (`reason`) |
-| `gateway {event}` | INTERNAL | `quack.guild_id`, `gateway.event`, `gateway.sequence` | — |
-| `{method} {route}` (HTTP server semconv, e.g. `GET /api/guilds/{guild_id}/cases`) | SERVER | `http.request.method`, `http.route`, `http.response.status_code`, `url.scheme`, `user_agent.original`, `quack.account_id`, `quack.guild_id` | — |
-| `job {kind}` | CONSUMER | `quack.job.id`, `quack.job.kind`, `quack.job.attempt`, `quack.job.max_attempts`, `quack.job.queue_wait_ms`, `quack.job.outcome`, `quack.guild_id`; a span **link** to the enqueuer | — |
-| `{operation} {table}` (DB semconv, e.g. `UPDATE case_counters`) | CLIENT | `db.system.name`, `db.namespace`, `db.operation.name`, `db.collection.name`, `db.query.summary`, `db.response.status_code` (on error), `error.type` | — |
-| `{method} {route pattern}` (HTTP client semconv, e.g. `PUT /guilds/{guild_id}/bans/{user_id}`) | CLIENT | `http.request.method`, `url.template`, `server.address` (discord.com), `http.response.status_code`, `discord.error_code`, `discord.rate_limit.wait_ms`, `quack.discord.outcome` | — |
-| `use_case {name}` (e.g. `use_case apply_rule`) | INTERNAL | `quack.guild_id`, IDs relevant to the use case | domain events below |
+| `interaction {kind} {command}` (new root) | SERVER | `quack.interaction.kind`, `quack.command`, `quack.guild.id`, `quack.actor.id`, `quack.interaction.id`, `quack.interaction.outcome` (recorded at the end) | `acked`, `replied`, `refused` |
+| `gateway {event}` | CONSUMER | `quack.gateway.event`, `quack.guild.id` | — |
+| `{method} {route}` (HTTP server, e.g. `GET /api/guilds/{guild_id}/cases`; new root, an incoming `traceparent` is ignored) | SERVER | `http.request.method`, `http.route`, `http.response.status_code` | — |
+| `job {kind}` (new root with a **link** to the enqueuer's trace) | CONSUMER | `messaging.operation.type = process`, `quack.job.kind`, `quack.job.id`, `quack.job.attempt`, `quack.job.max_attempts`, `quack.job.queue_wait` (s), `quack.guild.id`, `quack.job.outcome` (recorded at the end) | — |
+| `{operation} {table}` (DB, e.g. `UPDATE case_counters`) | CLIENT | `db.system.name`, `db.operation.name`, `db.collection.name`, `db.query.summary`; `error.type` on failure | — |
+| `{method} {url.template}` (HTTP client, e.g. `PUT /guilds/{guild_id}/bans/{user_id}`) | CLIENT | `http.request.method`, `url.template`, `server.address`, `http.response.status_code`, `quack.discord.outcome`, `quack.discord.rate_limit.wait` (s) | `rate_limited` |
+| `use_case {name}` (e.g. `use_case apply_rule`) | INTERNAL | `quack.guild.id`, IDs relevant to the use case | domain events below |
 
 Domain events (on the current span): `case.created` (`case.id`,
 `case.number`, `level_index`, `action_kind`), `case.voided` (`case.id`,
@@ -4846,90 +5639,99 @@ Domain events (on the current span): `case.created` (`case.id`,
 `failure`), `appeal.transition` (`appeal.id`, `from`, `to`),
 `evidence.captured` (`evidence.id`, `state`), `message.synced`
 (`message_row.id`, `kind`, `outcome`), `mod_log.entry` (`entry.id`, `kind`,
-`result`).
+`result`). Span status and events never carry Discord or SQL error text,
+only status codes and error classes.
 
-**Propagation into jobs.** `enqueue` stores the current span context as a
-W3C `traceparent` in `jobs.trace_context`. The `job {kind}` span is a new
-root (its own trace) with a span link to that context, so a retry hours
-later stays a short trace while still pointing at the request that caused
-it. HTTP requests accept an incoming `traceparent`; Discord interactions
-start new traces.
+**Propagation into jobs.** `enqueue` stores `current_trace_context()` (a W3C
+`traceparent`) in `jobs.trace_context`; a coalesced enqueue keeps the first
+one. The `job {kind}` span is a new root with a span link to that context,
+so a retry hours later stays a short trace while still pointing at the
+request that caused it. Interactions and HTTP requests start new traces.
 
 ### 18.5 Logs
 
-- Emitted with `tracing`, exported over OTLP (`opentelemetry-appender-tracing`)
-  and written to stdout: JSON lines when stdout is not a terminal, compact
-  text otherwise. Every record carries `trace_id` and `span_id` when inside a
-  span.
+- Emitted with `tracing`, written to **stderr** (JSON lines when stderr is
+  not a terminal, text otherwise; the binary chooses), and exported over
+  OTLP (`opentelemetry-appender-tracing`), where every record carries the
+  current trace and span IDs. JSON stderr lines carry the span fields.
+- Filters: `QUACK_LOG_LEVEL` filters logs (stderr and OTLP); spans are
+  exported at `info` regardless, so lowering log verbosity never drops
+  traces. The export bridges exclude `opentelemetry*`, `hyper`,
+  `hyper_util`, `reqwest`, `h2`, `tonic`, and `tower` events to avoid
+  feedback loops; those still reach stderr.
 - Fields: `timestamp`, `level`, the Rust module path, `message`, and
-  structured IDs (`guild_id`, `case_id`, `action_id`, `appeal_id`, `job_kind`, `job_id`,
-  `account_id`) as span fields.
+  structured IDs (`guild_id`, `case_id`, `action_id`, `appeal_id`,
+  `job_kind`, `job_id`, `account_id`) as span fields.
 - Levels: `error` for failures needing an operator; `warn` for degraded but
-  handled conditions (dropped events, exhausted retries, exporter failures);
-  `info` for lifecycle (startup, shutdown, gateway connect); `debug` for
-  per-request detail.
+  handled conditions (dropped events, exhausted retries, exporter
+  failures); `info` for lifecycle (startup, shutdown, gateway connect);
+  `debug` for per-request detail.
 - **Never logged** (and never span attributes): the bot token, the client
-  secret, the session secret, OAuth codes and states, Discord access tokens,
-  session IDs, CSRF tokens, interaction tokens, message or evidence content,
-  case reasons, context values, appeal text, transcripts, DM text, IP
-  addresses, and Discord error bodies (only status and error code). Secrets
-  are held in a `Secret<T>` newtype whose `Debug` and `Display` print
-  `[redacted]`. Request logs use the route pattern, never the raw path or
-  query.
-- SDK and transport crates (`opentelemetry*`, `hyper`, `reqwest`, `h2`) are
-  filtered out of the OTLP log bridge to avoid feedback loops; their
-  warnings still reach stdout.
+  secret, the session secret, the import source URL, OAuth codes and
+  states, Discord access tokens, session IDs, CSRF tokens, interaction
+  tokens, message or evidence content, case reasons, context values, appeal
+  text, transcripts, DM text, IP addresses, and Discord error bodies (only
+  status and error code). Secrets are held in a `Secret<T>` newtype whose
+  `Debug` and `Display` print `[redacted]`. Request logs use the route
+  pattern, never the raw path or query.
 
 ### 18.6 Resource and export
 
+These are the crate's defaults; the binary passes the configuration.
+
 - Resource attributes: `service.name` (`QUACK_SERVICE_NAME`),
-  `service.version` (crate version), `service.instance.id` (random UUID per
-  process), `deployment.environment.name` (`QUACK_ENVIRONMENT`),
-  `host.name`, `process.pid`, `vcs.ref.head.revision` (git commit, set at
-  build time).
-- Export: OTLP/HTTP protobuf to `QUACK_OTLP_ENDPOINT` with the blocking
-  reqwest client built on the synchronous startup path. Spans: batch
-  processor, queue 4,096, batch 512, every 5 s, export timeout 10 s.
-  Metrics: periodic reader every 15 s, cumulative temporality. Logs: batch
-  processor, queue 4,096, every 5 s.
-- Sampling: parent-based, always on (moderation volume is low).
-- Shutdown flushes all three providers within 5 seconds (§17.5).
-- Export failures write one stderr warning per signal per minute.
+  `service.version` (the binary's crate version), `service.instance.id`
+  (`<hostname>-<pid>`), `deployment.environment.name`
+  (`QUACK_ENVIRONMENT`). Dashboards sum over instances.
+- Export: OTLP/HTTP protobuf to `QUACK_OTLP_ENDPOINT`, 5-second export
+  timeout. Spans and logs: the SDK's batch processors (bounded queues that
+  drop when full). Metrics: periodic reader every 30 seconds, cumulative
+  temporality, explicit-bucket views from the catalog.
+- Sampling: parent-based, always on (moderation volume is low; every root
+  is Quack's own).
+- Shutdown flushes all three providers within the time left of the shutdown
+  deadline, at most 5 seconds (§17.5). Export errors are reported by the
+  SDK on stderr.
 
 ### 18.7 Dashboards and alerts to build
 
 Dashboards:
 
 1. **Moderation**: cases by source and action kind; level distribution;
-   actions by outcome and reason; time to done (p50/p95); DM outcomes by
-   reason; appeals submitted, open, and time to decision.
+   refusals; actions by attempt outcome and reason; completion time
+   (p50/p95); DM outcomes by reason; appeals by transition, open, and time to
+   decision.
 2. **Reliability**: job ready depth and oldest-ready age by kind; job
    outcomes; lease expirations; dead jobs; failed actions waiting for staff;
    tracked message sync lag; log channel post outcomes.
-3. **Discord**: REST requests by route and outcome; rate-limit hits and
-   wait; gateway connected, reconnects, heartbeat latency; event rate and
-   drops; interaction ack latency (p50/p99) and errors.
-4. **API and database**: request rate, latency, and 5xx by route; sign-ins;
-   rate-limit rejections; pool usage and wait; query and transaction
-   latency; DB errors and retries.
-5. **Runtime**: CPU, memory, file descriptors, Tokio busy time and queue
-   depth, cache sizes and hit rates.
+3. **Discord**: REST requests by route and outcome (count of
+   `http.client.request.duration`); rate-limit hits and wait; gateway
+   connected, connection events, heartbeat latency; event rate and drops;
+   interaction ack latency (p50/p99) and errors.
+4. **API and database**: request rate, latency, and 5xx by route (from
+   `http.server.request.duration`); sign-ins; rate-limit rejections; pool
+   usage, wait, and timeouts; query and transaction latency; DB errors (by
+   `error.type`) and retries.
+5. **Runtime**: CPU, memory, file descriptors, threads, Tokio busy time,
+   parks, and global queue depth, cache sizes and hit rates.
 
-Alerts:
+Alerts (rates and increases over counters; gauges report explicit zeros):
 
 | Alert | Condition |
 | --- | --- |
 | Not ready | `/readyz` failing for 2 minutes. |
+| Telemetry missing | No `quack.build.info` series for 5 minutes (the collector or exporter is down, which is different from healthy zeros). |
 | Gateway down | `quack.gateway.connected` = 0 for 2 minutes. |
-| Slow acknowledgements | p99 `quack.interaction.ack.duration` > 1.5 s for 10 minutes, or any `ack_late` errors. |
-| Job backlog | `quack.job.oldest_ready_age{kind="run_action"}` > 120 s, or any kind > 600 s, for 5 minutes. |
-| Dead jobs | `quack.job.dead` > 0 for `run_action`, `send_dm`, or `close_ticket`. |
-| Failed actions | `quack.action.failed.current` grows by 10 or more in an hour. |
-| DM couldn't confirm | `quack.dm.outcomes{state="unknown"}` > 5 in an hour. |
-| Discord rate limits | Global rate-limit hits > 0 in 5 minutes. |
-| Dropped events | `quack.gateway.queue.dropped` > 0 in 5 minutes. |
-| API errors | 5xx ratio > 2% for 10 minutes. |
-| Database | Pool wait p95 > 100 ms or DB errors > 10/min for 5 minutes. |
+| Slow acknowledgements | p99 `quack.interaction.ack.duration` > 1.5 s for 10 minutes, or any observation above 3 s. |
+| Job backlog | `quack.jobs.oldest_ready.age{quack.job.kind="run_action"}` > 120 s, or any kind > 600 s, for 5 minutes. |
+| Leases expiring | `quack.job.lease_expired` increases on 3 consecutive 5-minute windows. |
+| Dead jobs | `quack.jobs.dead` > 0 for `run_action`, `send_dm`, or `close_ticket`. |
+| Failed actions | `quack.actions.failed` grows by 10 or more in an hour. |
+| Unconfirmed effects | `quack.dm.outcomes{quack.dm.outcome="unknown"}` grows by 5 or more in an hour, or `quack.action.attempts{quack.action.attempt.outcome="unknown"}` by 20 or more. |
+| Discord rate limits | `quack.discord.rate_limit.hits{quack.discord.rate_limit.scope="global"}` increases in 5 minutes. |
+| Dropped events | `quack.queue.dropped` increases in 5 minutes. |
+| API errors | 5xx share of `http.server.request.duration` count > 2% for 10 minutes. |
+| Database | p95 `db.client.connection.wait_time` > 100 ms, any `db.client.connection.timeouts`, or failed operations > 10/min, for 5 minutes. |
 
 ---
 
@@ -4940,33 +5742,55 @@ section because they are the source data.
 
 `quack import-mysql` copies the Go system's MySQL database into an empty or
 partly imported PostgreSQL database once, at cutover. It lives in
-`quack-import`, the only crate with sqlx's `mysql` feature.
+`quack-import`, the only crate with sqlx's `mysql` feature. Three rules
+govern it:
+
+1. **Nothing uncertain is replayed.** A Discord effect that may already have
+   happened (a running execution, a notification being sent) is imported as
+   a terminal "couldn't confirm" outcome for staff to review, never retried.
+2. **Legacy data is imported as it was, or reported, never silently
+   changed or dropped.** Values over the new limits are kept and listed;
+   rows that cannot be imported are listed with their keys.
+3. **The import is deterministic.** It reads one consistent snapshot,
+   evaluates every time comparison against one fixed `evaluated_at`, and
+   maps IDs by a fixed function, so a rerun produces the same rows.
 
 ### 19.1 Preconditions
 
-- The Go bot is stopped (no writers). The importer refuses to run when
-  `quack_schema_migrations` in MySQL is not one of the accepted ledgers:
-  versions `1–3`, `1–4`, or `1–5` with the names `baseline`,
+- The Go bot and its dashboard server are stopped and fenced (§19.12 step
+  3). The importer reads the source over `QUACK_IMPORT_SOURCE_URL` with a
+  read-only account, in one `REPEATABLE READ` snapshot (`START TRANSACTION
+  WITH CONSISTENT SNAPSHOT`), session time zone `+00:00`; every
+  `datetime(3)` is read as UTC.
+- The source's `quack_schema_migrations` must be one of the accepted
+  ledgers: versions `1–3`, `1–4`, or `1–5` with the names `baseline`,
   `audit_mirror_deliveries`, `launch_announcement`, `staff_roles`,
-  `discord_user_mfa` in order. Missing later tables or columns (role lists,
-  `discord_user_mfa`) read as empty.
-- The PostgreSQL schema is migrated (`quack migrate`).
-- The source account is read-only. The importer reads in one `REPEATABLE
-  READ` snapshot (`START TRANSACTION WITH CONSISTENT SNAPSHOT`), with the
-  session time zone set to `+00:00`; every `datetime(3)` is read as UTC.
+  `discord_user_mfa` in order.
+- **Source manifest.** `quack_import::manifest` lists, for each accepted
+  ledger, every source table and column with its disposition: mapped (to
+  which column, by which rule in this section) or dropped (with the reason).
+  Before reading data the importer compares it with
+  `information_schema.columns`; a missing or unexpected column aborts. The
+  report includes the manifest, so every source column's fate is on record.
+- The PostgreSQL schema is migrated (`quack migrate`), and `quack serve` is
+  not running against it: the importer takes the singleton fence (§17.5)
+  for the whole run and refuses to start when it is held.
 
 ### 19.2 Command and modes
 
 ```
-quack import-mysql --source mysql://user:pass@host:3306/quack [--dry-run] [--report report.json]
+QUACK_IMPORT_SOURCE_URL=mysql://… quack import-mysql [--dry-run] [--report report.json]
 ```
 
-- `--dry-run` reads everything, runs every transformation and validation,
-  writes nothing to PostgreSQL except an `import_runs` row, and prints the
-  report.
-- Without `--dry-run` the import writes in one PostgreSQL transaction per
-  server (plus one for global tables), so a failure leaves each server
-  either fully imported or untouched.
+- `--dry-run` reads everything, runs every transformation, and writes every
+  server's rows inside transactions that are rolled back, so every
+  constraint is checked for real. It keeps only its `import_runs` row (mode
+  `dry_run`) and prints the report.
+- Without `--dry-run` the import writes one PostgreSQL transaction per
+  server, including its `import_guilds` row, plus one for global tables
+  (`discord_accounts`), so a failure leaves each server either fully
+  imported or untouched. Jobs for a server are inserted only in that
+  server's transaction.
 - The report goes to stdout (human summary) and, with `--report`, to a JSON
   file; it is also stored in `import_runs.report`.
 
@@ -4975,137 +5799,157 @@ quack import-mysql --source mysql://user:pass@host:3306/quack [--dry-run] [--rep
 - **ULID → UUID.** Deterministic and order-preserving. A ULID is 128 bits:
   a 48-bit millisecond timestamp `T` and 80 random bits `R`. The UUID is
   `T (48 bits) ‖ 0b0111 (version 7) ‖ R[0..12) ‖ 0b10 (variant) ‖ R[12..74)`;
-  bits `R[74..80)` are dropped. Ordering by `(T, R)` maps to ordering by
-  `(T, R[0..74))`, so UUID order equals ULID order except for ULIDs that
-  share their first 122 meaningful bits; the importer checks every mapped
-  key is unique per table and aborts on a collision.
-  `quack_core::ids::ulid_to_uuid` is this function; the runtime uses it to
-  resolve legacy ULIDs in custom IDs and URLs (§11.5, §14.1).
+  bits `R[74..80)` are dropped, so 122 bits of the ULID are kept. The
+  importer checks that every mapped key is unique per table and aborts on a
+  collision. `quack_core::ids::ulid_to_uuid` is this function; the runtime
+  uses it to resolve legacy ULIDs in custom IDs and URLs (§11.5, §14.1),
+  always followed by the normal ownership or capability check. Guessing a
+  legacy ULID that maps to someone's record requires knowing that record's
+  ULID.
 - **Snowflake strings → `bigint`.** Trimmed decimal of 1–20 digits, value in
   `1..=i64::MAX`. Empty string and `quack-system` → NULL (Quack). Anything
-  else → the row is reported and skipped (for references) or the import
-  aborts (for primary identities like `guilds.discord_guild_id`).
+  else → the row is reported (`invalid_snowflake`) and, for a required
+  value, the row and everything that depends on it are reported and skipped;
+  a server whose own ID is invalid aborts.
 - **Server.** The internal `guilds.id` ULID disappears; every child maps its
   `guild_id` ULID to the server's Discord ID through the `guilds` table.
 - **Booleans** `tinyint(1)` must be 0 or 1. **Unsigned** values must fit
-  the new column type (case numbers ≤ 2^63−1; versions ≤ 2^31−1); otherwise
-  abort with the offending table and key.
-- **Text** sentinels `''` → NULL for optional fields. Over-length text is
-  cut to the new limit with "…" and counted in the report (`truncated`
-  section), never silently.
+  the new column type (case numbers ≤ 2^53 − 1; versions ≤ 2^31 − 1);
+  otherwise abort with the offending table and key.
+- **Text** sentinels `''` → NULL for optional fields. Text longer than a new
+  limit is imported unchanged and listed in the report (`over_limit`, per
+  column); the limit applies at the next edit. Invalid UTF-8 or control
+  characters other than tab and newline are reported and replaced with
+  U+FFFD (`normalized`). Invalid JSON aborts the server with the key.
+- **Ties** are broken by source timestamp, then source ID.
 
 ### 19.4 Table mapping
 
 | MySQL table | PostgreSQL | Transformation |
 | --- | --- | --- |
-| `guilds` | `guilds`, `case_counters` | `discord_guild_id` → `guild_id`; `name` cut to 100; `icon_url` → `icon_hash` (the hash segment of the CDN URL, else NULL); `owner_discord_user_id` → `owner_id`; `is_active` → `installed`; `created_at` → `first_joined_at`; `mfa_required = false` until the next `GUILD_CREATE`. `case_counters.last_number = max(cases.case_number)` for the server (0 if none). |
-| `guild_settings` | `guild_settings` | CSV role lists → `bigint[]` (deduplicated, cut to 25); `audit_mirror_channel_discord_id` → `log_channel_id`; `appeal_queue_channel_discord_id` → `appeal_channel_id`; `managed_evidence_channel_discord_id` → `evidence_channel_id`; `appeal_rejoin_url` → `appeal_invite_url` (re-validated; invalid → NULL, reported); `notification_introduction` → `dm_intro` (cut to 1,000), `notification_footer` → `dm_footer` (cut to 500); `starter_policy_template_id` → `starter_rule_id`; `starter_policy_notice_acknowledged_at` → `starter_notice_acknowledged_at`. Dropped: `appeal_review_reason_required`, `starter_policy_notice_pending` (derived), `launch_announced_at`. `version = 1`. |
+| `guilds` | `guilds`, `case_counters` | `discord_guild_id` → `guild_id`; `name` (Discord caps it at 100); `icon_url` → `icon_hash` (the hash segment of the CDN URL, else NULL); `owner_discord_user_id` → `owner_id`; `is_active` → `installed`; `created_at` → `first_joined_at`; `updated_at` kept; `left_at` NULL (unknown); `mfa_required = false` until the next `GUILD_CREATE`. `case_counters.last_number = max(cases.case_number)` for the server (0 if none). |
+| `guild_settings` | `guild_settings` | `moderator_role_ids`, `rules_manager_role_ids` (comma-separated) → `bigint[]` (deduplicated; each invalid entry reported; more than 25 → the server aborts); `audit_mirror_channel_discord_id` → `log_channel_id`; `appeal_queue_channel_discord_id` → `appeal_channel_id`; `managed_evidence_channel_discord_id` → `evidence_channel_id`; `appeal_rejoin_url` → `appeal_invite_url` (re-validated; invalid → NULL, reported); `notification_introduction` → `dm_intro`, `notification_footer` → `dm_footer` (as they are); `starter_policy_template_id` → `starter_rule_id`; `starter_policy_notice_acknowledged_at` → `starter_notice_acknowledged_at`; `updated_at` kept. Dropped: `id`, `created_at`, `appeal_review_reason_required`, `starter_policy_notice_pending` (derived), `launch_announced_at`. `version = 1`. |
 | `staff_members` | — | Dropped (attribution comes from Discord; counts reported). |
-| `discord_user_mfa` | `discord_accounts` | Direct. Absent table → nothing. |
+| `discord_user_mfa` | `discord_accounts` | `discord_user_id` → `account_id`; `mfa_enabled`, `mfa_checked_at`, `updated_at` kept; `created_at` dropped. Absent table → nothing. |
 | `case_templates` + `case_template_context_fields` + `case_template_levels` + `case_template_level_actions` | `rules`, `rule_versions` | §19.5. |
 | `cases` | `cases` | §19.6. |
 | `case_action_executions` | `actions` | §19.7. |
-| `case_action_attempts` | `action_attempts` | `attempt_number` → `number`; `started_at`, `finished_at`; status `succeeded` → `done`, `failed` → by `error_code`: suffix `rate_limited` → `rate_limited`; `network_error`, `discord_server_error`, `context_cancelled`, `discord_error` → `unknown`; `lease_expired` → `interrupted`; any other → `refused`. `running` with no finish → `interrupted`, `finished_at = started_at`. Payload JSON dropped; HTTP status and Discord code NULL. |
-| `case_notifications` | `dms` (kind `case`) | `pending`, `prepared`, `claimed` → `pending` (sent after cutover); `sending` → `unknown`; `sent` → `sent` (`delivery_message_discord_id` → `message_id`; `sent_at` → `settled_at`); `failed` with `last_error_code = 'case_voided'` → `not_needed`; other `failed` → `failed` with `failure`: code ending `permission_or_hierarchy_denied` → `dms_closed`, `dm_prepare_failed` → `dm_channel_unavailable`, else `discord_refused`. Nonce: the new DM ID. Rendered text dropped. |
-| `case_evidence_snapshots` | `evidence` | `capture_outcome`: `captured`, `uploaded` → `saved`; `deleted` → `failed`/`message_deleted`; `inaccessible` → `failed`/`quack_no_access`; `unavailable` → `failed`/`discord_error`. Uploaded synthetic snapshots (`uploaded`, the file ID as message ID) keep their IDs. `embeds_json` → summaries `{type, title, description, url}` (first 10). `content` cut to 4,000. Duplicate `(case, message)` rows: the earliest is kept, the rest are reported. |
-| `case_evidence_attachments` | `evidence_files` | `position` by creation order (1–10; extras reported); `copy_outcome` `preserved` → `copied` (copy IDs from `preserved_*`), `metadata_only` → `link_only`. |
-| `case_events` | — | Not imported: the case timeline is rebuilt from cases, actions, DMs, appeals, and the moderation log. Counts reported. |
-| `case_publications` | `messages` (kind `case_receipt`) | `message_id`, `channel_id`, `case_id`; `wanted_revision = posted_revision = 1` (old receipts are not re-rendered; their old buttons resolve through §11.5). |
-| `appeals` | `appeals` | Same states. `statement` (or legacy `content`, or joined `answers_json` values when `statement` is empty) cut to 4,000; `reviewed_by_discord_user_id` → `decided_by`; `reviewed_at` → `decided_at`; `decision_reason` cut to 2,000; `version` kept; `first_decided_at` = earliest accepted/rejected/closed event time. NULL `case_id` → skipped and reported. |
-| `appeal_events` | `appeal_events` | `submitted` → `submitted`; `information_requested` → `information_requested`; `information_submitted` → `information_provided`; `reopened`, `accepted`, `rejected`, `closed` same. `body` → `text` (empty → the decision reason, else "(no text)"). `actor_type = staff` with empty actor → NULL. |
-| `appeal_notifications` | `dms` (kind `appeal_update`) and `messages` (kind `appeal_post`) | `audience = member`: one DM per `event_id`, state mapping as for case notifications (`delivery_outcome_unknown` → `unknown`; `delivery_deferred` and `pending` → `pending`). `audience = staff`: the latest row per appeal with a `delivery_message_id` becomes the appeal's `appeal_post` (`wanted_revision = 2`, `posted_revision = 1` for `pending` or `needs_information` appeals so the new buttons replace the old ones; `1`/`1` otherwise). |
+| `case_action_attempts` | `action_attempts` | `execution_id` → `action_id` (the guild comes from the action); `attempt_number` → `number`; `started_at`, `finished_at`; status `succeeded` → `done` (`no_change` when the response says `reversal_noop`), `failed` → by `error_code`: suffix `rate_limited` → `not_sent`; `network_error`, `discord_server_error`, `context_cancelled`, `discord_error` → `unknown`; `lease_expired` → `interrupted`; any other → `refused`. `running` with no finish → `interrupted`, `finished_at = started_at`. The response payload is read for §19.7 first, then dropped with `worker_id`, `duration_ms`, `error_message`, and the attempt row's own ID and timestamps; HTTP status and Discord code NULL. |
+| `case_notifications` | `dms` (kind `case`) | One per case. `pending`, `prepared`, `claimed` → `pending` (sent after cutover). `sending` → `unknown` (`first_attempt_at` and `settled_at` = the row's `updated_at`). `sent` with a `prepared_channel_discord_id` and `delivery_message_discord_id` → `sent` (`channel_id`, `message_id`; `first_attempt_at` and `settled_at` = `sent_at`); `sent` without both → `unknown`, reported. `failed` with `last_error_code = 'case_voided'` → `not_needed`; other `failed` → `failed` with `failure`: code ending `permission_or_hierarchy_denied` → `dms_closed`, `dm_prepare_failed` → `discord_unavailable`, else `discord_refused`; `settled_at` = `updated_at`. A case whose level sent a DM but has no notification row gets no DM row (counted, never invented). Dropped after classification: `attempt_count`, `last_error`, `lease_token`, `lease_expires_at`, rendered text. |
+| `case_evidence_snapshots` | `evidence` | `capture_outcome`: `captured`, `uploaded` → `saved` (`saved_at` = `updated_at`); `deleted` → `failed`/`message_deleted`; `inaccessible` → `failed`/`quack_no_access`; `unavailable` → `failed`/`discord_error`. `channel_discord_id`, `message_discord_id`, `author_discord_user_id`, message timestamps mapped. Uploaded synthetic snapshots (`uploaded`, the file ID as message ID) keep their IDs. `embeds_json` → summaries `{type, title, description, url}` (first 10; the rest counted). `content` (Go kept at most 4,000 characters). Duplicate `(case, message)` rows: the earliest is kept and its files merged by attachment ID; the rest are reported. Dropped: `capture_warning`, `message_url` (derived). |
+| `case_evidence_attachments` | `evidence_files` | `position` by creation order (1–10; extras counted in `files_not_saved` and reported); `filename`, `content_type`, `size_bytes`, `url` → `original_url`; `attachment_id` from the URL path. `copy_outcome` `preserved` → `copied` only when the copy channel, message, and attachment IDs can all be read from `preserved_url` and agree with the preserved ID columns; otherwise `link_only`, reported. `metadata_only` → `link_only`. `warning` dropped after classification. |
+| `case_events` | — | Not imported; the case timeline is rebuilt from cases, actions, attempts, DMs, appeals, and the moderation log, which hold the same facts. Counts per event type reported. |
+| `case_publications` | `messages` (kind `case_receipt`) | One per case: the latest row with a message ID. `message_id`, `channel_id`; `wanted_revision = posted_revision = 1` (old receipts are not re-rendered; their old buttons resolve through §11.5). Dropped: `presentation_json` (after checking its server ID), digest, retry fields, `revision`, `refresh_requested`. |
+| `appeals` | `appeals` | Same states. `target_discord_user_id` must equal the case's member (else reported and skipped); `statement`; `reviewed_by_discord_user_id` → `decided_by`; `reviewed_at` → `decided_at`; `decision_reason`; `version` kept; `first_decided_at` = earliest accepted/rejected/closed event time. NULL `case_id` → skipped and reported. `review_message_discord_id` is a candidate for the appeal post. `metadata_json` dropped. |
+| `appeal_events` | `appeal_events` | `event_type`: `submitted`, `information_requested`, `information_submitted` → `information_provided`, `reopened`, `accepted`, `rejected`, `closed`; `actor_discord_user_id` → `actor_id` (`actor_type = staff` with empty actor → NULL); `created_at` kept; `body` → `text` (empty → "(no text)"). A close caused by a void (`metadata_json` says so) → `closed_by_void`. Dropped: `actor_type`, `metadata_json`, `updated_at`. |
+| `appeal_notifications` | `dms` (kind `appeal_update`) and `messages` (kind `appeal_post`) | `audience = member`: one DM per `event_id` (the guild, appeal, and event must agree with the event row), mapped like case notifications (`delivery_outcome_unknown`, `sending` → `unknown`; `delivery_deferred`, `pending` → `pending`); `target_discord_user_id` must equal the appeal's member. `audience = staff`: the latest row per appeal with a `delivery_message_id` (or the appeal's `review_message_discord_id`) becomes the appeal's `appeal_post`, with `wanted_revision = 2`, `posted_revision = 1` for `pending` or `needs_information` appeals so the new buttons replace the old ones (`1`/`1` otherwise). An appeal with no staff row gets an appeal post with no channel (§8.3). Bodies and leases dropped. |
 | `audit_log_entries` | `mod_log` | §19.8. |
-| `audit_mirror_deliveries` | — | Not imported; old entries are never re-posted. Undelivered counts reported. |
-| `module_configurations` (`tickets`) | `ticket_settings`, `messages` (`ticket_panel`) | `entry_channel_discord_id`, `queue_channel_discord_id`, `transcript_retention_days`, `enabled`. The panel (`entry_panel_channel_id`, `entry_panel_message_id`) becomes a tracked message with `wanted_revision = 2`, `posted_revision = 1` (re-rendered with new buttons at startup). |
-| `module_configurations` (`general_logging`) | `activity_log_settings`, `activity_log_routes` | `channels` map: `message_edit` → `message_edited`, `message_delete` → `message_deleted`, `message_bulk_delete` → `messages_bulk_deleted`, `member_join` → `member_joined`, `member_leave` → `member_left`, `discord_ban` → `member_banned`, `discord_unban` → `member_unbanned`, `guild_change` → `server_changed`, `channel_change` → `channel_changed`. `include_attachment_metadata` → `include_file_names`, `include_embed_metadata` → `include_embed_types`. Dropped: `cache_entries_per_guild`, `max_delivery_attempts`. |
-| `module_configurations` (`honeypots`) | `honeypot_settings`, `messages` (`honeypot_warning`) | `channel_discord_id`, `template_id` → `rule_id`, `warning_text` (the legacy default text → NULL), `enabled`; a non-empty `disabled_reason` → `enabled = false`, `disabled_reason = channel_deleted` when it says the channel was deleted, else NULL. The warning message becomes a tracked message (`wanted_revision = 2`, `posted_revision = 1`). |
-| `tickets` | `tickets` | `open` → `open`; `resolved`, `cancelled` → `closed`; `short_id` = first 10 characters of the mapped UUID's u22; `thread_discord_channel_id` → `thread_id`; `resolved_by`/`resolved_at` → `closed_by`/`closed_at`; `entry_channel_id` from the settings; step columns set to `closed_at` for closed tickets. `log_channel_discord_id` + `log_message_discord_id` → a `ticket_post` tracked message (`1`/`1`). |
-| `ticket_events` | — | Not imported (derived from ticket columns). |
+| `audit_mirror_deliveries` | — | Not imported; old entries are never re-posted. Counts by state reported. |
+| `module_configurations` (`tickets`) | `ticket_settings`, `messages` (`ticket_panel`) | `enabled`, `updated_at`, and from `config_json`: `entry_channel_discord_id`, `queue_channel_discord_id`, `transcript_retention_days`. The panel (`entry_panel_channel_id`, `entry_panel_message_id`) becomes a tracked message with `wanted_revision = 2`, `posted_revision = 1`. An enabled configuration missing a channel becomes disabled, reported. |
+| `module_configurations` (`general_logging`) | `activity_log_settings`, `activity_log_routes` | `enabled`, `updated_at`; `channels` map (NULL → empty): `message_edit` → `message_edited`, `message_delete` → `message_deleted`, `message_bulk_delete` → `messages_bulk_deleted`, `member_join` → `member_joined`, `member_leave` → `member_left`, `discord_ban` → `member_banned`, `discord_unban` → `member_unbanned`, `guild_change` → `server_changed`, `channel_change` → `channel_changed` (an invalid channel ID drops that route, reported). `include_message_content`, `include_attachment_metadata` → `include_file_names`, `include_embed_metadata` → `include_embed_types`. Dropped: `cache_entries_per_guild`, `max_delivery_attempts`. Enabled with no route → disabled, reported. |
+| `module_configurations` (`honeypots`) | `honeypot_settings`, `messages` (`honeypot_warning`) | `enabled`, `updated_at`; `channel_discord_id`, `template_id` → `rule_id`, `warning_text` (the legacy default text → NULL); a non-empty `disabled_reason` → `enabled = false`, `disabled_reason = channel_deleted` when it says the channel was deleted, else NULL. `warning_channel_discord_id` + `warning_message_id` become the tracked warning (`wanted_revision = 2`, `posted_revision = 1`). |
+| `tickets` | `tickets` | `open` → `open` (`opened_at` = `created_at`); `resolved`, `cancelled` → `closed` (`closed_at` = `resolved_at`, else `updated_at`); `owner_discord_user_id` → `member_id`; `thread_discord_channel_id` → `thread_id`; `resolved_by_discord_user_id` → `closed_by`; `entry_channel_id` from the settings at import; step columns set to `closed_at` for closed tickets. Two live tickets for one member: the newest stays `open`, the others become `closed`, reported. `log_channel_discord_id` + `log_message_discord_id` → a `ticket_post` tracked message (`1`/`1`). A closed ticket whose `close_notice` shows a member DM was attempted gets a `ticket_closed` DM row in its mapped state, so it is never sent again. Dropped after checking: `queue_delivery_attempt_id`, `transcript_url`, other metadata. |
+| `ticket_events` | — | Not imported (lifecycle timestamps are on the ticket). Counts reported. |
 | `ticket_member_states` | — | Not imported (the slot is derived, §13.2.2). |
-| `ticket_message_journal` | `ticket_messages` | Direct; `author_name` NULL → "unknown"; `files = []`. |
-| `ticket_transcripts` | `ticket_transcripts` | Direct; `complete = true`; rows already expired are skipped and counted. |
-| `honeypot_triggers` | `honeypot_hits` | `created` → `case_created`; `failed`, `exempt` → `failed` (`failure` = old `failure_code` or `exempt`); `pending` → `pending` (a `honeypot_case` job is enqueued per member). |
-| `honeypot_message_cleanups` | `honeypot_hits.cleaned_up_at` | `completed_at` copied to the matching hit; incomplete cleanups for created hits enqueue `honeypot_cleanup`. |
+| `ticket_message_journal` | `ticket_messages` | `message_discord_id`, `author_discord_user_id`, `body` → `message_id`, `author_id`, `text`; `author_name` NULL → "unknown"; `files = []`; the thread ID must match the ticket's. |
+| `ticket_transcripts` | `ticket_transcripts` | Content as stored; `complete` from the Go row's completeness flag when present, else `false` with `partial_cause = history`; rows already expired at `evaluated_at` are skipped and counted. |
+| `honeypot_triggers` | `honeypot_hits` | `channel_discord_id`, `message_discord_id`, `target_discord_user_id` mapped; `settings_version = 1`; `template_id` → `rule_id`. `created` → `case_created`; `failed`, `exempt` → `failed` (`failure` = old `failure_code` or `exempt`); `pending` → §19.9. |
+| `honeypot_message_cleanups` | `honeypot_hits.cleaned_up_at` | `completed_at` copied to the matching hit; incomplete cleanups for created hits enqueue `honeypot_cleanup` (deleting the bait is idempotent). |
 | `honeypot_warning_refreshes` | — | Not imported (the tracked message replaces it). |
 | `v4_import_batches`, `v4_import_sources` | — | Not imported; each v4-imported case keeps its source ID in `cases.imported`. |
 | `quack_schema_migrations` | `import_runs.report` | Recorded in the report only. |
+
+Every mapped table's source `id` (ULID) becomes the row's UUID by §19.3,
+and its timestamps are kept where a target column exists; the manifest
+lists every other column.
 
 ### 19.5 Rules and their versions
 
 For each `case_templates` row:
 
-1. `rules`: `id` = mapped ULID; `guild_id`; `name` cut to 100 (when two
-   non-archived rules in a server end up with the same lowercase name, the
-   later one gets " (2)", " (3)" … and is reported); `current_version` =
-   `version`; `archived_at`; `created_by`/`updated_by` from the Discord ID
-   columns.
-2. The **current version** is built from the child rows, validated with
-   `Strictness::New`:
-   - `name`, `description` (cut to 500), `reason` = `reason_template` (cut
-     to 1,000), `appealable`, `counting_window_days` = `case_decay_days` (0
-     → null).
-   - `fields`: context fields by `position`; `field_type` `boolean` →
-     `boolean`, `discord_message_link` → `message_link`, others same; label
-     cut to 100.
+1. `rules`: `id` = mapped ULID; `guild_id`; `name` (kept; when two
+   non-archived rules in a server have the same lowercase name, the later
+   one by §19.3's tie-break gets " (2)", " (3)" …, checked against every
+   name in the server, and is reported); `current_version` = `version`;
+   `archived_at`; `created_by`/`updated_by` from the Discord ID columns.
+   Dropped: `slug`, `default_template_id` (after checking it), child IDs and
+   timestamps, level `name`, `max_retries`.
+2. The **current version** is built from the child rows and validated with
+   `Strictness::Imported { reconstructed: false }` (§3.3):
+   - `name`, `description`, `reason` = `reason_template`, `appealable`,
+     `counting_window_days` = `case_decay_days` (0 → null).
+   - `fields`: context fields by `position`, keeping `key` and `required`;
+     `field_type` `boolean` → `boolean`, `discord_message_link` →
+     `message_link`, others same.
    - `levels`: the default level (`is_default`, threshold 0) becomes
      `from_case_count = 1`; other levels use `trigger_case_count`. If a
      non-default level also has threshold 1, it replaces the default level
      (the Go code never chose the default in that case) and the dropped
-     default is reported. Level names are dropped. `notify_user` →
-     `send_dm`. Actions: `timeout_user {duration_seconds}` → `timeout`,
+     default is reported. `notify_user` → `send_dm`. Actions from
+     `config_json`: `timeout_user {duration_seconds}` → `timeout`,
      `kick_user` → `kick`, `ban_user {delete_message_seconds}` → `ban`
-     (missing → 0); `max_retries` dropped. More than 10 levels → abort for
-     that server with the rule named.
-   - A current definition that fails validation aborts that server's import
-     with every problem listed.
+     (missing → 0).
+   - Size-limit violations (more than 10 levels or fields, long texts) are
+     kept and reported (`over_limit`); a structural failure aborts that
+     server's import with every problem listed.
 3. **Older versions** referenced by cases (`cases.template_version <
    case_templates.version`) are reconstructed from those cases'
-   `template_snapshot_json`: name, reason, appealable, decay, and fields from
-   `template`/`context_fields`; levels = the distinct `selected_level`s seen
-   across those cases (as above). They are stored with `reconstructed =
-   true` and validated with `Strictness::Historical`. Versions no case used
-   are not created (version numbers may have gaps). The report lists every
-   reconstructed version and how many levels it knows.
+   `template_snapshot_json`: name, reason, appealable, decay, and fields
+   (`type`, `key`, `required`) from `template`/`context_fields`; levels =
+   the distinct `selected_level`s seen across those cases, each at its
+   snapshot position, with its `timeout_duration_seconds` and actions. They
+   are stored with `reconstructed = true` and validated with
+   `Strictness::Imported { reconstructed: true }`. When cases disagree about
+   the same version, the earliest case's snapshot wins and the others are
+   reported (`conflicting_snapshots`). Versions no case used are not created
+   (version numbers may have gaps). The report lists every reconstructed
+   version and how many levels it knows.
 
 ### 19.6 Cases
 
 | Column | Source |
 | --- | --- |
 | `id`, `number`, `member_id`, `created_at`, `updated_at` | mapped `id`, `case_number`, `target_discord_user_id`, timestamps |
+| `member_joined_at` | NULL (unknown; a kick then compares with the case's `created_at`, §5.1) |
 | `source` | `dashboard`, `discord`, `honeypot` same; `v4_import` → `imported` |
 | `moderator_id` | `moderator_discord_user_id` (NULL for honeypot and `quack-system`) |
 | `rule_id`, `rule_version` | `template_id`, `template_version` (imported cases: NULL) |
 | `case_count` | snapshot `selected_level.matched_case_count` |
-| `level_index`, `level_from_case_count` | the snapshot's level located in the version's levels (`trigger_case_count` 0 → 1) |
-| `action_kind`, `timeout_seconds`, `ban_delete_message_seconds` | snapshot `actions[0]` |
+| `level_index`, `level_from_case_count` | the snapshot level's position in the version it used (`trigger_case_count` 0 → 1), even when the normalized current version no longer has that level |
+| `action_kind`, `timeout_seconds`, `ban_delete_message_seconds` | snapshot `actions[0]` (`timeout_duration_seconds` for timeouts) |
 | `sends_dm` | snapshot `selected_level.notify_user` |
-| `context` | `context_values_json` array → object `key → value` |
-| `operation_key` | `idempotency_key` |
-| `replaces_case_id` | `replaces_case_id` (checked: same server, the replaced case voided; otherwise dropped and reported) |
-| `voided_at`, `voided_by`, `void_reason`, `void_cause` | `voided_*`; `void_cause = appeal_accepted` when an accepted appeal exists for the case, else `staff`; empty reason → "(no reason recorded)" |
-| `imported` | v4 cases: `{v4_action, v4_moderator, v4_reason, v4_source_id}` from `metadata_json.v4` and `reason`; `sends_dm = false`, no action |
+| `context` | `context_values_json` array → object `key → value`; numbers → canonical decimal strings |
+| `operation_key` | `idempotency_key` → `legacy:<key>` (kept for uniqueness only; the new scopes never produce it) |
+| `replaces_case_id` | `replaces_case_id` (checked: same server, the replaced case voided, not itself, not replaced twice; otherwise dropped and reported) |
+| `voided_at`, `voided_by`, `void_reason`, `void_cause` | `voided_at`, `voided_by_discord_user_id`, `voided_reason`; `void_cause = appeal_accepted` when an accepted appeal exists for the case, else `staff`; empty reason → "(no reason recorded)". `validity` is compared with `voided_at` and disagreements are reported. |
+| `imported` | v4 cases: `{v4_action, v4_moderator, v4_reason, v4_source_id}` from `action_type`, `moderator_display_name`, `reason`, `source_id`; `sends_dm = false`, no action |
 
 A non-imported case whose snapshot lacks `selected_level` or `template`
 aborts that server's import with the case number listed (an operator must
 decide). Dropped columns: `correlation_id`, `context_*` coordinates (their
-messages are evidence rows), `metadata_json` (except v4), and
+messages are evidence rows), `metadata_json` (except v4), `source_name`,
+`target_departed`, `target_missing`, `action_expires_at`, `historical`, and
 `template_snapshot_json` (after use).
 
 ### 19.7 Actions
 
 | Column | Source |
 | --- | --- |
-| `id`, `case_id`, `guild_id`, `member_id` | mapped execution ID; the case and its member |
-| `kind` | `timeout_user` → `timeout`, `kick_user` → `kick`, `ban_user` → `ban`, `remove_timeout` → `remove_timeout`, `unban_user` → `unban`; `send_dm` rows are skipped and counted |
-| `undo_of_action_id` | `reversal_of_execution_id` |
-| `timeout_ends_at` | for `done` timeouts: the last successful attempt's `response_payload_json.timeout_until`; otherwise `case.created_at + duration_seconds` |
-| `delete_message_seconds` | `config_snapshot_json.delete_message_seconds` (0 when absent) |
+| `id`, `case_id`, `guild_id`, `member_id` | mapped execution ID; the case, its server, and its member |
+| `kind` | `timeout_user` → `timeout`, `kick_user` → `kick`, `ban_user` → `ban`, `remove_timeout` → `remove_timeout`, `unban_user` → `unban`; `send_dm` rows and their attempts are skipped and counted |
+| `undo_of_action_id` | `reversal_of_execution_id` (the original must be in the same case) |
+| `timeout_ends_at` | timeouts only: for `done`, the last successful attempt's `response_payload_json.timeout_until`; when that is missing, `case.created_at + duration_seconds`, reported (`derived_timeout_end`) |
+| `delete_message_seconds` | bans only: `config_snapshot_json.delete_message_seconds`, else the case's `ban_delete_message_seconds`, else 0; NULL for every other kind |
 | `requested_by` | `config_snapshot_json.requested_by` |
-| `state` | `succeeded` → `done`; `pending`, `retrying`, `running` → `pending` with a `run_action` job (in-flight work resumes, §19.9); `cancelled` → `cancelled`; `failed` → see the next table |
-| `attempts` | `attempt_count` |
-| `dismissed_at`, `dismissed_by` | same |
-| `done_at` | `finished_at` for `done` |
-| `no_change` | response `reversal_noop = true` |
+| `state` | `succeeded` → `done`; `cancelled` → `cancelled`; `failed` → the table below; `pending`, `retrying`, `running` → §19.9 |
+| `attempts` | 0: the current round's budget starts at cutover (the attempt rows keep the history) |
+| `dismissed_at`, `dismissed_by` | `dismissed_at`, `dismissed_by_discord_user_id` |
+| `done_at`, `no_change` | `finished_at` for `done`; `no_change` when the last successful attempt's payload says `reversal_noop` |
+
+Dropped after reconciliation: `template_action_id`, `position`,
+`idempotency_key`, `notify_user`, `notification_type`, `max_retries`,
+`retry_backoff_ms`, `safe_for_retry`, `last_error`, `correlation_id`,
+`lease_token`, `lease_expires_at`, `reversal_appeal_id`, `next_retry_at`.
 
 Failed executions, by `last_error_code`:
 
@@ -5115,11 +5959,12 @@ Failed executions, by `last_error_code`:
 | `unknown_member_or_resource` | timeout: `failed`, `member_not_in_server`; others: `failed`, `discord_refused`, HTTP 404 |
 | `validation_failed`, `discord_failure`, `invalid_action_config`, `unsupported_action` | `failed`, `discord_refused`, HTTP 400 |
 | `guild_not_found` | `failed`, `quack_not_in_server` |
-| `lease_expired_review_required`, `network_error`, `discord_server_error`, `rate_limited`, `context_cancelled`, `discord_error`, `discord_unavailable`, `guild_lookup_failed` | `failed`, `retries_exhausted` |
-| `reversal_ownership_conflict`, `reversal_provenance_unavailable` | `skipped` when the §5.6 guard, run at import time, finds another valid case (`skipped_because_case_id`); otherwise `failed`, `retries_exhausted` |
-| `reversal_authorization_unavailable`, `reversal_permission_denied` | `failed`, `retries_exhausted` |
+| `rate_limited`, `discord_unavailable`, `guild_lookup_failed` (when no attempt may have applied) | `failed`, `retries_exhausted` |
+| `lease_expired_review_required`, `network_error`, `discord_server_error`, `context_cancelled`, `discord_error`, or any code after an attempt that may have applied | `failed`, `unconfirmed` |
+| `reversal_ownership_conflict`, `reversal_provenance_unavailable` | `skipped`, `skip_reason = changed_outside_case` (the Go system could not show the effect was its own; nothing is evaluated against live Discord during import) |
+| `reversal_authorization_unavailable`, `reversal_permission_denied` | `failed`, `discord_refused`, HTTP 403 |
 | `case_voided` | `cancelled` |
-| any other | `failed`, `retries_exhausted` |
+| any other | `failed`, `unconfirmed` |
 
 ### 19.8 Moderation log
 
@@ -5156,13 +6001,17 @@ none re-posted:
 | anything else (reads, `evidence.capture`, `case_action.attempt`, `case_action.retrying`, `honeypot.trigger.detected`, `honeypot.case.created`, `case_template.export`, `v4_import.*`, mirror bookkeeping, unknown names) | `legacy` |
 
 `result`: `success` → `ok`, `failure` → `failed`, `denied` → `refused`.
-`source`: `imported` for all. `actor_id` from `actor_discord_user_id`. Typed
-links filled from `resource_type`/`resource_id` and from metadata keys
-`case_id`, `target_discord_user_id`/`member_discord_user_id`, `appeal_id`;
-a link to a row that was not imported stays NULL. `detail` for mapped kinds
-holds what the new kind needs when derivable, plus `{"legacy_action": …}`;
-for `legacy` it is §9.5's redacted `{action, resource_type, resource_id,
-failure_reason}`. `created_at` kept; `id` = mapped ULID.
+`source`: `imported` for all. `actor_id` from `actor_discord_user_id`.
+Typed links are filled from `resource_type`/`resource_id` and from metadata
+keys `case_id`, `target_discord_user_id`/`member_discord_user_id`,
+`appeal_id`, then checked against each other (the appeal's case, the case's
+member); a link to a row that was not imported, or one that disagrees, is
+left NULL and reported. `detail` for mapped kinds holds what the new kind
+needs when derivable, plus `{"legacy_action": …}`; for `legacy` it is
+§9.5's redacted `{action, resource_type, resource_id, failure_reason}`.
+`created_at` kept; `id` = mapped ULID; `trace_id` NULL (a Go
+`correlation_id` is not a W3C trace ID). Dropped: `actor_permission_bits`,
+`source`, `correlation_id`, `request_id`, `updated_at`.
 
 ### 19.9 In-flight work at cutover
 
@@ -5171,16 +6020,16 @@ resolved like this:
 
 | Old state | New state |
 | --- | --- |
-| Execution `pending`, `retrying` | Action `pending` + `run_action` job: runs after cutover. |
-| Execution `running` | Action `pending` + job; its open attempt becomes `interrupted`. Safe because actions are idempotent (§5.2), except that a timeout's end is now `case.created_at + duration` rather than the Go attempt's time. |
-| Execution on a voided case, `pending`/`retrying` | `cancelled`. |
-| Notification `pending`, `prepared`, `claimed` | DM `pending` + `send_dm` job: sent after cutover. For a kick or ban whose action is also pending, the action job waits for the DM (§6.3). |
+| Execution `pending` or `retrying` on a valid case, with no attempt that may have applied | Action `pending` + `run_action` job: runs after cutover (every attempt reads Discord first, §5.1). |
+| Execution `running`, or `pending`/`retrying` after an attempt that may have applied (§5.2) | Action `failed` (`unconfirmed`); an open attempt becomes `interrupted`. Never replayed: staff see it on the failed actions page and decide. |
+| Original execution on a voided case, `pending`/`retrying` with no attempt that may have applied | `cancelled`. Undo executions on voided cases are never cancelled (§4.7); they follow the rows above. |
+| Notification `pending`, `prepared`, `claimed` (never sent) | DM `pending` + `send_dm` job: sent after cutover. For a kick or ban whose action is also pending, the action waits for the DM (§6.3). |
 | Notification `sending` | DM `unknown`. Never sent. |
-| Appeal notification (member) `pending` or deferred `failed` | DM `pending` + job. `sending` → `unknown`. |
+| Appeal notification (member) `pending` or deferred | DM `pending` + job. `sending` or delivery unknown → `unknown`. |
 | Appeal staff post with `refresh_requested` | Appeal post re-rendered (`wanted_revision = 2`). |
 | Audit mirror delivery not delivered | Dropped (reported). |
 | Publication with `refresh_requested` | Not re-rendered; old buttons resolve through §11.5. |
-| Honeypot trigger `pending` | If a case with the Go operation key `honeypot:<guild ULID>:<message ID>` exists, the hit becomes `case_created` with that case (and a cleanup job). Otherwise hit `pending` + `honeypot_case` job. |
+| Honeypot trigger `pending` | A case with the Go operation key `honeypot:<guild ULID>:<message ID>` exists → the hit becomes `case_created` with that case (and a cleanup job). Otherwise `failed` (`imported_pending`), reported: Quack never acts after cutover on a hit admitted under Go's configuration. |
 | Ticket member slot reservation without a ticket | Dropped. |
 | Ticket `open` whose thread no longer exists | `open`; the first `GUILD_CREATE` reconciliation (§13.1.5) finds the thread gone and closes the ticket. |
 
@@ -5190,16 +6039,18 @@ resolved like this:
 
 | Section | Contents |
 | --- | --- |
-| `source` | MySQL server version, ledger rows, snapshot time, per-table row counts. |
+| `source` | MySQL server version, ledger rows, snapshot time, `evaluated_at`, per-table row counts and digests, the source manifest. |
 | `written` | Per-table rows written (or that would be written, in dry-run), per server. |
-| `skipped` | Per table: count and reason code, with up to 20 example keys each (IDs only, no content). Reason codes: `dm_action_row` (Go `send_dm` executions), `null_case_appeal`, `expired_transcript`, `duplicate_evidence`, `extra_attachment`, `invalid_snowflake`, `missing_parent`, `invalid_replacement`, `invalid_invite`. |
-| `truncated` | Per column: count of values cut to the new limit. |
+| `skipped` | Per table: count and reason code, with up to 20 example keys each (IDs only, no content). Reason codes: `dm_action_row` (Go `send_dm` executions), `null_case_appeal`, `member_mismatch`, `expired_transcript`, `duplicate_evidence`, `extra_attachment`, `invalid_snowflake`, `missing_parent`, `invalid_replacement`, `invalid_invite`, `invalid_route`, `duplicate_live_ticket`. |
+| `over_limit` | Per column: count of values longer or larger than the new limit, with example keys. Imported unchanged. |
+| `normalized` | Per column: count of values whose invalid characters were replaced. |
+| `derived` | Values the importer had to derive: `derived_timeout_end`, `unconfirmed_dm` (sent rows without handles), `copy_unavailable`. |
 | `renamed_rules` | Rules renamed for name uniqueness (old name, new name). |
-| `reconstructed_versions` | `(rule, version, known levels)`. |
+| `reconstructed_versions` | `(rule, version, known levels)`; `conflicting_snapshots`. |
 | `dropped_default_levels` | Rules whose default level was replaced (§19.5). |
-| `legacy_mod_log` | Count of `legacy` entries by old action name. |
+| `legacy_mod_log` | Count of `legacy` entries by old action name; links left NULL. |
 | `in_flight` | Counts per row of §19.9. |
-| `checks` | Relationship checks: every case's rule version exists; every action's case exists and matches server; replacement links are same-server and point at voided cases; appeal case and member match; counters ≥ max case number; mapped UUID uniqueness. Each `ok` or the failing keys. |
+| `checks` | Relationship checks: every case's rule version exists; every action's case exists and matches server and member; undo actions match their original's case; replacement links are same-server and point at voided cases; appeal case and member match; DM members match their case or ticket; counters ≥ max case number; mapped UUID uniqueness. Each `ok` or the failing keys. |
 | `problems` | Errors that aborted a server, per server. |
 
 The import exits 0 when every server imported and every check passed, 1
@@ -5207,47 +6058,65 @@ otherwise. Dry runs exit the same way.
 
 ### 19.11 Re-running
 
-Mapped IDs are deterministic, every insert is `ON CONFLICT DO NOTHING`
-(append-only `mod_log` included: inserts only), counters use
-`GREATEST(last_number, $max)`, and jobs use their keys. A second run after a
-complete import writes nothing and reports zero new rows; a run after a
-partial failure completes the missing servers. Changing source data between
-runs is not supported: when the source fingerprint (ledger plus per-table
-row counts) differs from an earlier `apply` run's, the importer refuses;
-to import a different source, drop and re-create the PostgreSQL database and
-run `quack migrate` again.
+- The **source fingerprint** is SHA-256 over the ledger, the manifest
+  version, the transform version, and, per table, a digest of every row in
+  primary-key order. It changes when any source row changes.
+- A server is imported in one transaction together with its
+  `import_guilds` row. A rerun skips servers already in `import_guilds` with
+  the same fingerprint and imports the rest, so a rerun after a partial
+  failure completes the missing servers. A server already imported with a
+  different fingerprint makes the importer refuse: to import changed source
+  data, drop and re-create the PostgreSQL database and run `quack migrate`
+  again.
+- Inserts never use `ON CONFLICT DO NOTHING`: a row that already exists
+  must be identical to the one the importer would write, or the import
+  fails naming both keys. Unique-constraint collisions (active rule names,
+  case numbers, live tickets, one DM per event) are errors with both source
+  keys, not skipped rows.
+- Counters use `GREATEST(last_number, $max)`; jobs are inserted only in
+  their server's transaction.
 
 ### 19.12 Cutover runbook
 
-1. **Rehearse.** Restore a production backup into a staging MySQL; run
-   `quack import-mysql --dry-run` against an empty staging Postgres; fix
-   every `problems` entry; then a real import; run `quack serve` against a
-   staging Discord application and walk through §20.3's checklist.
+1. **Rehearse.** Restore a production backup into a uniquely named staging
+   MySQL container; import into an empty staging Postgres; run `quack
+   serve` with a **staging Discord application that is in no production
+   server**, so every Discord effect on production coordinates is refused
+   (Unknown Guild, no mutual server) and nothing reaches real members. Walk
+   through §20.3's checklist, then delete the staging databases.
 2. **Announce** a maintenance window (expected under 15 minutes for
    current data sizes).
-3. **Stop the Go bot** (`quack serve` and the dashboard server). Confirm no
-   process holds the MySQL `quack_schema_migrations` lock or writes.
+3. **Fence the Go system** at the deployment layer: scale the Go bot and
+   its dashboard server to zero; confirm no Go process is running and that
+   MySQL shows no connections from them (`SHOW PROCESSLIST`); make the
+   MySQL account read-only.
 4. **Back up MySQL** (`mysqldump --single-transaction`) and verify the dump
    restores.
 5. **Prepare Postgres**: create the database; `quack migrate`.
-6. **Dry run** against production: `quack import-mysql --dry-run --report
-   dry.json`; review `problems`, `checks`, `in_flight`.
-7. **Import**: `quack import-mysql --report import.json`; it must exit 0.
-8. **Start Quack** with the production configuration (same Discord
-   application and token as Go). Startup syncs commands (removing Go-only
-   commands), reconnects the gateway, re-renders appeal posts, ticket panels,
-   and honeypot warnings, and runs in-flight jobs.
-9. **Verify**: `/readyz` is ready; `quack.job.ready` drains; spot-check three
-   servers (`/case view` of the newest case, `/case history`, the dashboard
-   case page, a member's appeal page from an old DM link); confirm
-   `quack.action.failed.current` and `quack.dm.outcomes` look normal.
-10. **Keep MySQL** read-only for 30 days, then archive the dump.
-
-**Rollback** (only before members act on the new system for long): stop
-Quack; start the Go bot against the untouched MySQL. Work done by Quack
-after cutover (cases, actions, DMs) exists only in Postgres and must be
-replayed by hand from its moderation log; therefore roll back only within
-the maintenance window.
+6. **Dry run** against production: `QUACK_IMPORT_SOURCE_URL=… quack
+   import-mysql --dry-run --report dry.json`; review `problems`, `checks`,
+   `in_flight`, `over_limit`.
+7. **Import**: `QUACK_IMPORT_SOURCE_URL=… quack import-mysql --report
+   import.json`; it must exit 0. Review the report.
+8. **Decision.** Until now nothing Rust did has reached Discord (neither
+   `migrate` nor `import-mysql` calls it). Rolling back here means: start
+   the Go system again against the untouched MySQL with its original
+   configuration. Record the decision.
+9. **Point of no return: start `quack serve`** with the production
+   configuration (same Discord application and token as Go). Record the
+   time. From this moment Rust syncs commands (removing Go-only commands),
+   connects the gateway, re-renders appeal posts, ticket panels, and
+   honeypot warnings, and runs imported pending work; Discord reflects
+   Rust's actions and PostgreSQL holds state MySQL does not.
+10. **Verify**: `/readyz` is ready; `quack.jobs.ready` drains; spot-check
+    three servers (`/case view` of the newest case, `/case history`, the
+    dashboard case page, a member's appeal page from an old DM link, an old
+    appeal button, the failed actions page); confirm `quack.actions.failed`
+    and `quack.dm.outcomes` look normal.
+11. **After step 9, recovery is roll-forward only**: fix Rust and redeploy.
+    Never restart Go against MySQL: its case counters, deliveries, and
+    actions are stale, and it would repeat or contradict what Rust did.
+    Keep MySQL read-only for 30 days for reference, then archive the dump.
 
 ---
 
@@ -5265,48 +6134,88 @@ Testcontainers with pinned image digests and clean up their containers.
 
 | Layer | What is tested | How |
 | --- | --- | --- |
-| `quack-core` | Rule validation (every problem code), escalation (proptest: monotonic level choice, first level at count 1, last level for large counts, window cutoff), capability derivation (owner, Administrator, Manage Server, moderator roles with and without deleted roles, fallback, 2FA), member checks in order, staff-channel check, every state machine (proptest: random event sequences never leave the transition tables; terminal states stay terminal), context validation per kind, message link parsing, `ulid_to_uuid` (order preserved, deterministic), u22 round trip. | Unit tests and proptest (regression seeds committed). |
+| `quack-core` | Rule validation (every problem code), escalation (proptest: monotonic level choice, first level at count 1, last level for large counts, window cutoff), capability derivation (owner, Administrator, Manage Server, moderator roles with and without deleted roles, fallback, 2FA), member checks in order, staff-channel check, every state machine (proptest: random event sequences never leave the transition tables; `done`, `cancelled`, `skipped`, `sent`, `unknown`, `not_needed`, `accepted`, `closed` stay terminal; the only way out of `failed` is a staff retry), `may_have_applied`, `controls`, `parse_case_marker`, context validation per kind (decimals at the 10^15 and 6-decimal edges), message link parsing and `find_message_links`, `redact_secrets`, `ulid_to_uuid` (order preserved, deterministic), u22 round trip. | Unit tests and proptest (regression seeds committed). |
 | `quack-text` | Every message id and every listed variant, both surfaces (`Discord`, `Plain`); Markdown escaping; trimming to 4,000 characters; durations and plurals. | `insta` snapshots. |
-| `quack-db` | Migrations apply to an empty database; every CHECK and trigger (mod_log append-only, rule_versions immutable); job queue: 8 concurrent claimers never claim the same row, lease expiry reclaim, fenced settle rejects stale tokens, coalescing and `rerun_requested`, dead-job revival. | `TestDb` (Postgres 18). |
+| `quack-db` | `0001_initial.sql` applies to an empty database in one transaction; every CHECK, composite key, and trigger (`mod_log` and `rule_versions` reject UPDATE, DELETE, TRUNCATE); job queue: 8 concurrent claimers never claim the same row, the lease sweep, a fenced transaction with a stale token rolls back its domain writes, a claim beyond the budget is finalized without running, coalescing and `rerun_at`, dead-job revival; the claim uses `jobs_runnable` (`EXPLAIN` with 20,000 leased rows). | `TestDb` (Postgres 18). |
 | `quack-engine` | §20.1.1 scenarios. | `TestDb` + `FakeDiscord` (records calls, scripts outcomes per call, can "crash" a handler between steps). |
-| `quack-discord` | Components V2 JSON for every `Msg` shape; custom ID encode/decode (proptest: round trip, ≤ 100 characters); legacy decode; REST outcome classification for every `RefusalKind` code, 429, 5xx, timeouts, connection reset; command definitions (snapshot) and the sync diff; captured interaction and gateway payloads decode. | `insta`, proptest, `httpmock` on loopback with Twilight's proxy setting. |
-| `quack-api` | OAuth login and callback against a mocked Discord (state single use, nonce mismatch, error param); session expiry; CSRF and origin; rate limits; every error code's status and envelope; idempotency replay and reuse; member isolation (another member's case is 404); capability per route; static file rules; `openapi_is_current`. | `axum` `oneshot`, `TestDb`, `FakeDiscord`, `httpmock`. |
-| Modules | Tickets: open adopts an existing thread; close resumes after a crash at each step; forced close on budget exhaustion; one live ticket per member. Server activity log: filtering, edit diffing, uncached delete batching, drops counted. Honeypot: burst joins one case, refusal keeps messages, staff and bots ignored, cleanup idempotent. | `TestDb` + `FakeDiscord`. |
-| `quack-import` | A MySQL 8.4 container loaded with the Go schema (versions 3 and 5 ledgers) and fixtures covering every table and every mapping row in §19; dry run writes nothing; apply matches expected rows; re-run is a no-op; checks catch planted inconsistencies. | Testcontainers MySQL + `TestDb`. |
+| `quack-discord` | Components V2 JSON for every `Msg` shape, including maximal inputs against the 40-component and 4,000-character budget; deferred callbacks carry only the ephemeral flag; custom ID encode/decode (proptest: round trip, ≤ 100 characters); every legacy shape of §11.5; REST outcome classification for every `RefusalKind` code, 429, 5xx, timeouts, connection refused (`NotSent`) and reset after sending (`Unknown`); command definitions (snapshot) and the sync diff; captured interaction and gateway payloads decode. | `insta`, proptest, `httpmock` on loopback with Twilight's proxy setting. |
+| `quack-api` | OAuth login and callback against a mocked Discord (state single use, state consumed only with its browser nonce, error param, redirect_to canonicalization); session expiry and key rotation; CSRF and origin on every mutation including logout; rate limits; every error code's status and envelope; idempotency replay, reuse, scoping per actor and operation, and replay refused after a capability is lost; member isolation (another member's case, file, or appeal is 404; replacement links across members hidden); capability per route; static file rules; `openapi_is_current`. | `axum` `oneshot`, `TestDb`, `FakeDiscord`, `httpmock`. |
+| Modules | Tickets: open adopts an existing thread after a lost create (active and archived); an open failure frees the slot and deletes a created thread; close resumes after a crash at each step; finalization on budget exhaustion; one live ticket per member. Server activity log: redaction, filtering and tombstones, edit diffing with known-empty text, uncached delete batching, drops counted. Honeypot: a settings change between hit and case fails the hits (`policy_changed`); burst joins one case; refusal keeps messages; staff and bots ignored; cleanup waits for evidence and is idempotent. | `TestDb` + `FakeDiscord`. |
+| `quack-import` | A MySQL 8.4 container loaded with the Go schema (versions 3 and 5 ledgers) and fixtures covering every table and every mapping row in §19; the manifest rejects an unexpected column; dry run runs every constraint and keeps nothing; apply matches expected rows; uncertain executions and notifications become `unconfirmed`/`unknown` and no job runs them; re-run is a no-op; a changed source row is refused; checks catch planted inconsistencies. | Testcontainers MySQL + `TestDb`. |
 
 #### 20.1.1 Engine scenarios (each one test)
 
+`FakeDiscord` scripts outcomes per call and keeps the state Discord would
+have (members, timeouts, bans with reasons, messages by nonce), so a test
+can make a call succeed on Discord while its answer is lost. Each scenario
+below is run at every crash boundary it names.
+
 1. Two concurrent `apply_rule` calls for the same member and rule get
    consecutive case numbers and consecutive case counts.
-2. The same operation key twice (sequential and concurrent) creates one case;
-   a different request with the key is refused.
+2. Operation keys: the same key twice (sequential and concurrent) creates
+   one case; a different request with the key is refused; two staff using
+   the same key create two cases; a replay after the actor lost `moderate`
+   is refused.
 3. Each member refusal; Quack-caused refusals write `case_create_refused`,
    others write nothing.
-4. Kick with DM: the action job is enqueued only when the DM settles; a
-   failed DM still releases the kick.
-5. Void with a `pending` action cancels it; with a `done` timeout queues
-   `remove_timeout`; with a `running` ban, the ban settling `done` queues
-   `unban` in the same transaction.
-6. Crash after the attempt row is written: the next claim marks it
-   `interrupted` and retries; after 8 unknown attempts the action fails with
-   `retries_exhausted`.
-7. Timeout end time is identical on every attempt; an attempt after the end
-   fails with `timeout_window_passed`.
-8. Undo guard: a newer valid case with a ban makes the undo `skipped` with
-   that case's number.
-9. Staff retry of an original action on a voided case is refused; retry of
-   an undo works; dismiss hides from review; retry after dismiss is refused.
-10. DM crash while `sending` becomes `unknown` and is never sent again.
-11. Appeal: every legal transition, every illegal one (409), version
-    mismatch, accept voids and queues undo, direct void closes an open
-    appeal and sends one DM.
-12. Tracked message bumped while its sync runs is synced again.
-13. Evidence capture: deleted message, moderator without access, Quack
-    without access, other server, file too large, unsupported type, copy
-    failure, per-case caps.
-14. Draft: double submit of a page, expired draft, rule edited mid-draft.
-15. Settings: stale `expected_version` with role lists → 409; moderator role
-    change without `manage_staff_roles` → 403.
+4. Rule archived or edited between the cache read and the case transaction:
+   archived → `rule_archived`; edited → the case uses the new version, or
+   `rule_changed` when the version was pinned.
+5. Kick with DM: the action waits for the DM; a failed DM still releases it;
+   a DM stuck in `sending` delays it by at most 120 seconds.
+6. Void against an action, on both sides of the start commit: void first →
+   `cancelled`, no Discord call; start first → the undo is queued and runs
+   only after the attempt settles. The ban applies on Discord but its answer
+   is lost: the retry reads the ban (this case's marker) and records `done`;
+   the void's undo reads the marker and unbans.
+7. Crash after the attempt opens, before and after Discord applied it: the
+   next run settles `interrupted` and retries, reading Discord first; 8
+   unknown attempts end `unconfirmed`; a claim beyond the budget is
+   finalized without any Discord call.
+8. A handler that lost its lease: its settle transaction rolls back and
+   leaves the newer state untouched.
+9. Timeout: the end time is identical on every attempt; a longer current
+   timeout is left alone (`no_change`); an attempt after the end fails with
+   `timeout_window_passed`.
+10. Kick: the member left and rejoined before the retry → `no_change`, no
+    `DELETE` call.
+11. Undo provenance: another valid case's ban is in force → `skipped`
+    (`other_case_applies`); the timeout end differs → `skipped`
+    (`changed_outside_case`); a ban without a marker → `skipped`; a ban with
+    a voided case's marker → unbanned; nothing in place → `no_change`.
+12. Staff controls: retry of an original on a voided case is refused; retry
+    of an undo works; dismiss hides from the failed list; concurrent retry
+    and dismiss → exactly one wins; buttons match `controls`.
+13. DM: a crash while `sending` inside the window resumes with the same
+    nonce and Discord holds one message; after the window → `unknown`; a
+    refusal after an unknown create → `unknown`; a rate limit before any
+    unknown create → back to `pending`; a void before the start →
+    `not_needed`; after the start the DM proceeds.
+14. Appeals: every legal transition, every illegal one (409); a submit
+    racing a void never leaves an appeal on a voided case; an old
+    information reply (stale version) is refused; accept voids with the
+    fixed reason and keeps the decision reason on its event; reopen on a
+    voided case is refused; two quick decisions send two DMs, each with its
+    own event's text.
+15. Tracked messages: a bump during a sync is synced again; a move during a
+    create cleans up the created message; a private receipt past its token
+    is `gone` and never created; a create whose answer is lost is not
+    duplicated inside the window and is created once more after it.
+16. Evidence: caps under concurrent adds; a failed item captured again on
+    re-add; a crash between file copies resumes at the next file; deleted
+    message, moderator without access (including a private thread), Quack
+    without access, other server, file too large, unsupported or missing
+    type, copy failure.
+17. Drafts: double submit of a page; expired draft; another moderator's
+    draft; rule edited mid-draft; the final apply fails transiently and Try
+    again creates exactly one case.
+18. Settings: stale `expected_version` with role lists → 409; moderator role
+    change without `manage_staff_roles` → 403; channel validation uses the
+    locked roles.
+19. Context edits: two editors at the same revision → the second gets
+    `context_changed`; links inside text become evidence.
+20. Leaving and rejoining a server turns modules off; queued work for an
+    uninstalled server settles by §16.5.
 
 ### 20.2 Development
 
@@ -5323,7 +6232,9 @@ touches other Compose projects or their containers):
 | `postgres` | `postgres:18` (pinned digest), database `quack`, user `quack`, password `quack`, named volume | `55432:5432` | default |
 | `otel` | `grafana/otel-lgtm` (pinned digest): OTLP receiver, Tempo, Prometheus, Loki, Grafana | `4318:4318`, `3001:3000` | `otel` |
 
-`.env` (not committed; `.env.example` is):
+`.env` (not committed; `.env.example` is). Quack does not read it; export it
+into the shell first (`set -a; . ./.env; set +a`) or use a tool such as
+direnv:
 
 ```
 QUACK_DATABASE_URL=postgres://quack:quack@localhost:55432/quack
@@ -5374,12 +6285,18 @@ configuration, or the API updates this document in the same commit.
   (`QUACK_DASHBOARD_DIR=/app/dashboard`), exposing 8080, entrypoint
   `quack serve`.
 - Release: run `quack migrate` as a one-off step, then roll the single
-  `quack serve` instance. Exactly one instance per Discord application (one
-  gateway shard; two instances would double-handle events).
+  `quack serve` instance. Exactly one instance per Discord application acts
+  at a time: the singleton fence (§17.5) makes a new instance wait until the
+  old one has exited.
+- Database role: run `migrate` as the schema owner and, preferably, `serve`
+  as a role that owns nothing, with `SELECT, INSERT, UPDATE, DELETE` on the
+  tables it changes and only `SELECT, INSERT` on `mod_log` and
+  `rule_versions`.
 - Probes: liveness `GET /livez`, readiness `GET /readyz`. Termination grace
   period ≥ 35 seconds.
 - Discord application: privileged intents Server Members and Message
-  Content; OAuth redirect `<QUACK_PUBLIC_URL>/api/auth/callback`; install
+  Content (approval from Discord once the application is in 100 or more
+  servers); OAuth redirect `<QUACK_PUBLIC_URL>/api/auth/callback`; install
   scopes `bot applications.commands`; bot permissions View Channel, Send
   Messages, Send Messages in Threads, Embed Links, Attach Files, Read
   Message History, Moderate Members, Kick Members, Ban Members, Manage
@@ -5390,8 +6307,8 @@ configuration, or the API updates this document in the same commit.
   daily `pg_dump`; restore drill every quarter.
 
 **Health and monitoring.** Use the dashboards and alerts in §18.7.
-`quack.job.ready`, `quack.job.oldest_ready_age`, and `quack.job.dead` show
-background work; `quack.action.failed.current` shows actions waiting for
+`quack.jobs.ready`, `quack.jobs.oldest_ready.age`, and `quack.jobs.dead`
+show background work; `quack.actions.failed` shows actions waiting for
 staff.
 
 **Incidents.**
@@ -5399,9 +6316,10 @@ staff.
 | Situation | What happens | What to do |
 | --- | --- | --- |
 | Postgres down | `/readyz` fails; interactions answer `error.internal`; jobs stop; nothing committed is lost. | Restore Postgres. Quack resumes on its own. |
-| Discord down or rate limiting | Jobs retry within their budgets; actions may end `retries_exhausted`; log posts may be dropped after 5 attempts. | After recovery, staff retry failed actions from "Actions that need review". |
-| Dead jobs | Rows with `dead_at` in `jobs`, visible in metrics. | Inspect `last_error`; fix the cause; re-enqueue by repeating the triggering operation (or `UPDATE jobs SET dead_at = NULL, attempts = 0, run_at = now() WHERE id = …`, the only sanctioned manual edit). |
-| A stuck "in progress" | Cannot persist past the budgets in §16.5. | Check `quack.job.oldest_ready_age`; check the gateway and Discord status. |
+| Discord down or rate limiting | Jobs retry within their budgets; actions may end `retries_exhausted` or `unconfirmed`; log posts are retried for about an hour. | After recovery, staff review the failed actions page; check `unconfirmed` ones in Discord before retrying. |
+| Dead jobs | Rows with `dead_at` in `jobs` (only for missing or malformed records), visible in `quack.jobs.dead`. | Inspect `last_error`; fix the cause; `UPDATE jobs SET dead_at = NULL, attempts = 0, run_at = now() WHERE id = …` is the only sanctioned manual edit, and safe because every handler re-checks its record's state first. |
+| A stuck "in progress" | Cannot persist past the budgets in §16.5: every exhausted job is finalized. | Check `quack.jobs.oldest_ready.age` and `quack.job.lease_expired`; check the gateway and Discord status. |
+| Two instances started | The second waits for the fence and stays not ready. | Stop the extra instance. |
 | Leaked bot token or client secret | — | Rotate in the developer portal; update the environment; restart. |
 | Leaked session secret | Discord tokens in sessions are exposed. | Rotate `QUACK_SESSION_SECRET` (signs everyone out) and `DELETE FROM sessions`. |
 | Revoke one account's sessions | — | `DELETE FROM sessions WHERE account_id = …`. |
@@ -5422,37 +6340,59 @@ without confirmation, a former moderator, every member check); cases
 public receipts, multi-page form, evidence with and without an evidence
 channel, the DM with DMs open and closed, void and undo, the undo guard
 with two cases, retry and dismiss); appeals (from a DM after a ban, every
-decision, the appeal post, DMs); each module; the log channel; `SIGTERM`
-with jobs in flight, confirming nothing runs twice after restart; and the
-full import runbook (§19.12) on a production copy.
+decision, the appeal post, DMs); each module, including ticket thread
+freezing and deletion; the log channel; private receipts after 15 minutes;
+a ban and a timeout applied by hand in Discord, then voiding the case (the
+undo leaves them in place); a forced lost response (block the network after
+a request) for a DM and a log post, checking Discord's nonce returns the
+first message; `SIGTERM` with jobs in flight, confirming nothing runs twice
+after restart; a second instance waiting on the fence; and the full import
+runbook (§19.12) on a production copy.
 
 ### 20.4 Known gaps
 
-1. **One process, one shard.** Quack supports up to 2,500 servers (Discord's
-   single-shard limit) and must run as one instance.
+1. **One process, one shard.** Quack supports one gateway shard (about
+   2,500 servers; `serve` refuses to start when Discord recommends more)
+   and one acting instance (the singleton fence).
 2. **2FA is only as fresh as the last dashboard sign-in.** Quack cannot read
    2FA with the bot token.
 3. **Staff channel overwrites are not re-synced** when staff roles change;
    new moderator roles must be added to existing staff channels by hand.
-4. **Private ticket threads** are visible only to members added to them and
+4. **Discord permissions are not a way to take things back.** Quack checks
+   that a staff channel is staff-only before each post, but appeal
+   statements, evidence copies, transcripts, and log posts already in a
+   channel stay visible to anyone who can see it later.
+5. **Private ticket threads** are visible only to members added to them and
    to people with Manage Threads; a moderator without Manage Threads cannot
    open a ticket thread from the staff post.
-5. **Server activity log is best effort.** Posts are in memory and lost on
+6. **Server activity log is best effort.** Posts are in memory and lost on
    a crash or a full queue (counted).
-6. **Log channel posts are dropped after about 4 minutes of Discord
-   failures** (5 attempts inside the nonce window) to avoid duplicates; the
-   dashboard always has the full log.
-7. **A tracked message create whose result is unknown, retried after
-   Discord's nonce window, can post twice.** Retries happen within 12
-   seconds, so this needs a long stall.
-8. **A kick or ban DM is sent before the action**; if the action then fails,
-   the DM still says the member is being removed or banned.
-9. **Discord-native moderation is invisible to the undo guard.** Voiding a
-   case removes its timeout or ban even if a moderator separately applied
-   one in Discord.
-10. **Reconstructed rule versions are partial** (only the levels cases
+7. **One duplicate post is possible after a long outage.** A message create
+   whose answer was lost, retried after the 60-second nonce window, posts
+   again: a staff post, a log channel post, an evidence copy, a public
+   receipt, or a ticket welcome can appear twice. Member DMs never do: an
+   unconfirmed DM is reported and not resent. Quack does not reconcile by
+   reading channel history.
+8. **A kick or ban DM is sent before the action.** It describes the
+   decision; if the action then fails, the member was told about a decision
+   Quack couldn't carry out (the case page shows the outcome).
+9. **Native moderation is recognized only by what Discord shows.** An undo
+   removes a timeout only when its end equals the case's, and a ban only
+   when its reason carries the marker of a voided Quack case. A moderator's
+   own timeout with exactly the same end, or a ban whose reason copies
+   Quack's marker, is indistinguishable and would be removed.
+10. **Overlapping timeouts.** When two valid cases time out the same member
+    and the later one is voided while the earlier still applies, the
+    current (later) timeout stays until it ends; Quack does not shorten it
+    to the earlier case's end.
+11. **A honeypot ban that deletes messages** can remove the post before
+    Quack saves it as evidence (the default honeypot rule deletes nothing).
+12. **Reconstructed rule versions are partial** (only the levels cases
     used).
-11. **No live-server rehearsal yet** (§20.3).
+13. **A worker that outlives its lease** (a Discord answer slower than the
+    15-second margin) can land an older tracked-message edit after a newer
+    one; the next bump corrects it.
+14. **No live-server rehearsal yet** (§20.3).
 
 ### 20.5 Decisions for the owner
 
@@ -5462,79 +6402,98 @@ this document first.
 1. **Server key.** `guilds.guild_id` is the Discord server ID (`bigint`)
    instead of a UUID: it removes the internal-ID mapping layer and makes
    every tenant foreign key readable.
-2. **Fixed retry budget.** 8 attempts over about 4.6 hours for every action
-   replaces the per-level `max_retries` (0–10) setting; old values are
-   dropped on import. Rationale: actions are now idempotent, so a knob adds
-   nothing but configuration.
+2. **Fixed retry budget.** 8 attempts per round over about 4.6 hours for
+   every action replaces the per-level `max_retries` (0–10) setting; old
+   values are dropped on import. Rationale: actions read Discord before
+   acting, so a knob adds nothing but configuration.
 3. **Level names dropped.** Levels are shown as "level N (starts at case
    M)".
 4. **Rule slugs dropped.** Names must be unique among a server's active
    rules (case-insensitive); the importer renames clashes and reports them.
-5. **New and changed limits**: at most 10 levels per rule and 100 active
-   rules per server (new, needed to bound caches and pickers); description
-   500 characters; void reason 1,000 (was unbounded); DM introduction 1,000
-   and footer 500 (were 2,000 bytes); decision reason 2,000 (kept); file
-   copies up to 10 MiB (was 25 MiB; Discord's base upload limit is 10 MiB).
+5. **New and changed limits** (for new writes; imported values over them are
+   kept and reported): at most 10 levels per rule and 100 active rules per
+   server (new, needed to bound caches and pickers); rule names 100
+   characters (Go stored 191); description 500; void reason 1,000 (was
+   unbounded); DM introduction 1,000 and footer 500 (were unbounded); file
+   copies up to 10 MiB (was 25 MiB; Discord's base upload limit is 10 MiB);
+   case numbers up to 2^53 − 1. Kept from Go: level thresholds up to
+   1,000,000, decision reasons 2,000, statements and replies 4,000, message
+   link input 4,000, invite codes with `_`.
 6. **Decision reasons are always required**; the per-server
    `appeal_review_reason_required` switch is dropped. Discord modals are
    prefilled with default text.
 7. **Appeal reversal offers are dropped.** Accepting voids the case, which
-   queues guarded undo actions; a skipped undo can be done by hand with the
-   Remove timeout/Unban button.
-8. **Undo actions re-check only Quack's own access** at run time, not the
-   requesting moderator's current authority (checked when they voided or
-   pressed the button).
+   queues guarded undo actions (§5.6). A skipped undo is final: whatever
+   Discord shows then belongs to the case that still applies, whose own void
+   removes it.
+8. **Queued actions check only Quack's own access when they run.** Staff
+   authority (including role hierarchy for a remove-timeout retry or undo)
+   is checked when staff ask.
 9. **Timeouts on members with Administrator are refused before the case
    exists** (new member check 10), instead of failing afterwards.
 10. **A timeout whose fixed end has passed fails** with
-    `timeout_window_passed` rather than counting as done.
-11. **Kick and ban DMs describe the decision** ("You're being banned")
-    because they are sent before the action.
-12. **New DM failure reason `dm_channel_unavailable`** for a DM channel that
-    could not be opened after 3 tries.
+    `timeout_window_passed` rather than counting as done, and Quack never
+    shortens a longer timeout that is already in place.
+11. **Every case DM describes the decision** ("The moderators decided to …")
+    because kick and ban DMs are sent before the action and a timeout DM
+    may arrive before Discord confirms it.
+12. **DM failure reasons**: `discord_unavailable` for a DM channel that
+    could not be opened or a DM Discord kept rate limiting; error 50007 is
+    reported as "Discord didn't let Quack message them", not as "no shared
+    server" (only 50278 says that).
 13. **All staff reads are ephemeral**, including `/case view`, `/case
     list`, `/case history`, `/appeals`, and `/help` (some were public).
 14. **Guided `/setup`** (one panel) replaces the subcommands `/setup
     appeals`, `audit`, `evidence`, `tickets`, `honeypot`, and `logging`.
 15. **`/case add` has no `message_link` or `file` options** (the charter's
     option list). Evidence comes from the "Add case" message command, from
-    `message_link` fields, and from Add evidence. File uploads are no longer
-    possible from Discord except as attachments of a linked message.
+    `message_link` fields and links inside text answers, and from Add
+    evidence. File uploads are no longer possible from Discord except as
+    attachments of a linked message.
 16. **Edit context in Discord is limited to rules with at most 5 fields**;
-    larger ones are edited on the dashboard.
-17. **Prefilled-modal exception.** Edit context and re-opening a draft page
-    do one primary-key read (300 ms deadline) before responding with the
-    modal, because Discord needs the prefilled values in the first response.
+    larger ones are edited on the dashboard. The staff card does not page;
+    long details continue on the dashboard.
+17. **Prefilled-modal exception.** Edit context, Try again on a draft page,
+    and the setup invite and warning modals authorize and read their one row
+    in a single query (300 ms deadline) before responding with the modal,
+    because Discord needs the prefilled values in the first response.
 18. **Message-link auto-fill.** A case started from a message fills empty
     `message_link` fields with that message's link.
 19. **Modals open only for rules with a required field**; optional context
-    is added afterwards (kept from Go).
-20. **Activity log defaults**: message text, file names, and embed types on;
-    per-event routing kept; cache size and delivery-attempt settings dropped
-    (constants).
+    is added afterwards (kept from Go). A rule with no fields takes free-text
+    context (`details`, kept from Go).
+20. **Activity log defaults**: message text, file names (with links), and
+    embed types on; per-event routing kept; secret redaction kept; cache
+    size and delivery-attempt settings dropped (constants).
 21. **Activity log posts are not durable jobs** (in-memory queue with drop
     counting), because they are high volume and best effort.
 22. **Honeypot rule protection.** Archiving the honeypot's rule or making
     one of its fields required is refused, instead of the Go behavior of
-    turning the honeypot off afterwards.
+    turning the honeypot off afterwards; the setting can be cleared while
+    the honeypot is off. Quack never adopts an existing rule by its name.
 23. **Honeypot ignores every bot** (cases are never about bots); refused
-    hits keep their message.
+    hits keep their message; hits admitted under older settings fail
+    instead of applying.
 24. **Honeypot bait deletions** appear in the server activity log as
     ordinary deletions.
 25. **Tickets**: one live ticket per member is a partial unique index (the
-    slot table is gone); closing is a durable job that always finishes,
-    with a journal-only transcript if needed. "Fix access" is kept and not
-    logged.
+    slot table is gone); opening and closing are durable jobs that always
+    finish; closing freezes (archives and locks) the thread, then deletes
+    it; transcripts read at most 1,000 messages of history (was 10,000; the
+    journal covers what Quack saw). The open reply does not wait for the
+    thread. "Fix access" is kept and not logged.
 26. **Moderation log scope**: reads and exports are not recorded; `dm_sent`
     and `evidence_added` are recorded but not posted; imported Go entries
     that have no new kind are kept as `legacy`.
-27. **Log channel retries** stay inside Discord's nonce window (10 s to 2
-    min, 5 attempts) instead of the Go schedule of 1 min to 6 h, trading
-    possible loss in long outages for no duplicates.
+27. **Log channel retries** run up to about an hour (6 attempts) instead of
+    the Go schedule of 1 minute to 6 hours; past the nonce window a retry
+    can post a duplicate (§20.4).
 28. **Not imported**: `case_events`, `ticket_events`, `staff_members`,
     `audit_mirror_deliveries`, `ticket_member_states`,
-    `honeypot_warning_refreshes`, `v4_import_*` (timelines are rebuilt; all
-    counts are reported).
+    `honeypot_warning_refreshes`, `v4_import_*` (timelines are rebuilt from
+    rows that hold the same facts; all counts are reported). Uncertain
+    in-flight effects are imported as `unconfirmed`/`unknown`, and pending
+    honeypot hits fail, rather than being replayed.
 29. **Sessions last as long as the Discord token (at most 7 days)** with no
     sliding renewal; `POST /auth/logout-all` is dropped (operators delete
     rows).
@@ -5546,8 +6505,11 @@ this document first.
     `futures-util` (`BoxFuture`), `bytes`, `url`. Versions: the ones the
     lockfile already resolves.
 32. **Configuration keys beyond the charter's list**:
-    `QUACK_DATABASE_MAX_CONNECTIONS`, `QUACK_DASHBOARD_DIR`,
-    `QUACK_ENVIRONMENT`, `QUACK_TRUSTED_PROXY_HOPS`.
+    `QUACK_DATABASE_MAX_CONNECTIONS` (sizing), `QUACK_DASHBOARD_DIR` (where
+    the image puts the built files), `QUACK_ENVIRONMENT` (the
+    `deployment.environment.name` resource attribute),
+    `QUACK_TRUSTED_PROXY_HOPS` (client IP behind a proxy, default off), and
+    `QUACK_IMPORT_SOURCE_URL` (the import's source, kept off command lines).
 33. **The `Discord` port's implementation lives in the binary**
     (`DiscordPort`), because `quack-discord` may not depend on
     `quack-engine` where the trait is defined.
@@ -5555,29 +6517,47 @@ this document first.
     service functions, so modules never depend on the API crate.
 35. **Span names** follow OTel semantic conventions for HTTP server, HTTP
     client (Discord), and database spans (`GET /api/…`, `PUT /guilds/…`,
-    `UPDATE cases`) instead of the `http …`, `discord …`, `db …` prefixes.
-36. **Operation-key replays** return the current representation of the
-    original result (the stored reference), with the original status code,
-    rather than a byte copy of the first response.
+    `UPDATE cases`) instead of the charter's `http …`, `discord …`, `db …`
+    prefixes; the telemetry crate changes to match (§18.3).
+36. **Operation-key replays** return the current, authorized
+    representation of the original result (the stored reference), with the
+    original status code, rather than a byte copy of the first response.
 37. **Settings PATCH** requires `expected_version` only when it changes role
     lists.
-38. **Legacy Discord buttons**: old appeal buttons in DMs and old ticket
-    panels keep working; old case buttons open the case card; everything
-    else answers with `interaction.legacy_button`. Old receipts are not
-    re-rendered; appeal posts, ticket panels, and honeypot warnings are.
+38. **Legacy Discord buttons**: old appeal buttons in DMs, old appeal
+    review buttons, and old ticket panel and ticket buttons keep working;
+    old case buttons open the case card; everything else answers with
+    `interaction.legacy_button`. Old receipts are not re-rendered; appeal
+    posts, ticket panels, and honeypot warnings are.
 39. **Dashboard paths** `/audit` → `/mod-log` and `/modules/logging` →
     `/modules/activity-log`, with redirects.
-40. **Job order is FIFO per kind** with no per-server fairness (actions are
-    serialized per member).
+40. **Job order is FIFO per kind** with round-robin permits across kinds and
+    no per-server fairness (actions are serialized per member).
 41. **Server health** (`GET /api/guilds/{guild_id}/health`) replaces the
     per-server ops status and is available to `manage_settings` (was owner
     and Administrator only).
 42. **Members see evidence** on their own case page (text and files, never
-    authors or links), reading the charter's "staff-only unless shown in the
-    appeal view" as the member's case/appeal page.
+    authors, links, or message-link context values), reading the charter's
+    "staff-only unless shown in the appeal view" as the member's case/appeal
+    page.
 43. **Members see the void reason** of their case (kept from Go).
-44. **Receipt visibility kept from Go**: the member command "Add case" posts a
-    public receipt; the message command's receipt is private.
-45. **Ticket transcripts are capped at 8 MiB.**
+44. **Receipts**: the public receipt shows only its fixed fields (member,
+    rule, case number, the action line, the official reason) with one Open
+    case button; a private receipt lives only as the interaction's
+    ephemeral reply for 15 minutes. `/case add` always acknowledges
+    privately and Quack posts the public receipt itself. The member command
+    "Add case" posts a public receipt; the message command's receipt is
+    private (kept from Go).
+45. **Ticket transcripts are capped at 8 MiB** (marked partial when cut).
 46. **Statistics** default to the calendar month before `to` (kept) and are
     computed in one read-only snapshot.
+47. **Leaving a server turns its modules off**, and they stay off after
+    Quack is added again (Go turned only the honeypot off).
+48. **A kick acts only on the membership the case was about**; a member who
+    left and rejoined is not kicked by a retry.
+49. **Context numbers are exact decimals**, strings on the API.
+50. **Setup channel creation adopts its own fresh channel** (same name,
+    under 10 minutes old, with Quack's overwrite) instead of creating a
+    second one.
+51. **The dashboard CSP is the Go server's**, including the visitors.now
+    analytics origins.
