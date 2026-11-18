@@ -21,6 +21,14 @@ function signedOut(error: unknown) {
   void router.navigate({ to: "/login", search: { redirect: here } });
 }
 
+/** toastMessage is the API's message, with the trace of an unexpected failure. */
+function toastMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) return "Quack couldn't do that. Try again in a moment.";
+  return error.unexpected && error.traceId
+    ? `${error.message} (Trace ID ${error.traceId})`
+    : error.message;
+}
+
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: signedOut }),
   mutationCache: new MutationCache({
@@ -28,12 +36,13 @@ const queryClient = new QueryClient({
       signedOut(error);
       // Mutations with their own onError show errors inline instead.
       if (mutation.options.onError) return;
-      toast.error(error instanceof ApiError ? error.message : "That didn't work. Try again.");
+      toast.error(toastMessage(error));
     },
   }),
   defaultOptions: {
     queries: {
       staleTime: 15_000,
+      // Client errors (401, 403, 404, 409, 428, 429…) won't change on retry.
       retry: (count, error) =>
         count < 2 && !(error instanceof ApiError && error.status >= 400 && error.status < 500),
       refetchOnWindowFocus: true,

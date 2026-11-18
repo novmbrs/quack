@@ -4,9 +4,9 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, lazyPlugins } from "vite-plus";
 
-// The Go dashboard server proxies /api to the backend in production. In
-// development Vite does the same, so the browser only ever talks to one
-// origin and the backend's host-only session cookies just work.
+// In production `quack serve` serves the built app and the API from one
+// origin. In development Vite proxies /api (and the health endpoints) to it,
+// so the browser still talks to one origin and the session cookies just work.
 const backend = process.env.QUACK_DASHBOARD_API_URL ?? "http://localhost:8080";
 const src = fileURLToPath(new URL("./src", import.meta.url));
 
@@ -35,13 +35,11 @@ export default defineConfig({
     // The icon set lives in the repo's shared assets directory.
     fs: { allow: [fileURLToPath(new URL("../..", import.meta.url))] },
     proxy: {
-      "/api": {
-        target: backend,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-        // Keep the browser's Host so the backend sees the dashboard origin
-        // in redirects and cookies, as it does behind the Go server.
-        changeOrigin: false,
-      },
+      // Keep the browser's Host so the backend sees the dashboard origin in
+      // redirects, cookies, and the Origin check on writes.
+      "/api": { target: backend, changeOrigin: false },
+      "/livez": { target: backend, changeOrigin: false },
+      "/readyz": { target: backend, changeOrigin: false },
     },
   },
   build: {

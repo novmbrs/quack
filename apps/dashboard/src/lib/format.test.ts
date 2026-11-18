@@ -1,14 +1,33 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { ago, duration, humanize, isSnowflake, levelName, ordinal, plural } from "./format";
+import {
+  actionOutcome,
+  ago,
+  duration,
+  humanize,
+  isSnowflake,
+  last,
+  levelName,
+  levelOutcome,
+  levelSummary,
+  ordinal,
+  plural,
+} from "./format";
 
 describe("duration", () => {
-  it("uses the largest whole unit", () => {
+  it("uses the largest unit and the next one", () => {
     expect(duration(86400)).toBe("1 day");
     expect(duration(3 * 3600)).toBe("3 hours");
-    expect(duration(604800 * 2)).toBe("2 weeks");
-    expect(duration(90)).toBe("90 seconds");
-    expect(duration(0)).toBe("none");
+    expect(duration(5400)).toBe("1 hour 30 minutes");
+    expect(duration(604800)).toBe("7 days");
+    expect(duration(90061)).toBe("1 day 1 hour");
+    expect(duration(45)).toBe("45 seconds");
+    expect(duration(0)).toBe("0 seconds");
+  });
+  it("drops the one after \"the last\"", () => {
+    expect(last(86400)).toBe("day");
+    expect(last(7 * 86400)).toBe("7 days");
+    expect(last(5400)).toBe("1 hour 30 minutes");
   });
 });
 
@@ -26,14 +45,25 @@ describe("ago", () => {
   });
 });
 
-describe("levelName", () => {
-  it("prefers the configured name", () => {
-    expect(levelName({ name: "Final warning", trigger_case_count: 3 })).toBe("Final warning");
+describe("levels", () => {
+  it("names a level by position and start", () => {
+    expect(levelName(2, 3)).toBe("Level 2 (starts at 3 cases)");
+    expect(levelName(1, 1)).toBe("Level 1 (starts at 1 case)");
   });
-  it("falls back to the trigger", () => {
-    expect(levelName({ trigger_case_count: 3 })).toBe("3rd case");
-    expect(levelName({ is_default: true })).toBe("Default");
-    expect(levelName(undefined)).toBe("Default");
+  it("says what a level does", () => {
+    expect(levelOutcome(null)).toBe("warning");
+    expect(levelOutcome({ kind: "timeout", duration_seconds: 3600 })).toBe("timeout for 1 hour");
+    expect(levelOutcome({ kind: "ban", delete_message_seconds: 86400 })).toBe(
+      "ban and delete the last day of messages",
+    );
+    expect(levelOutcome({ kind: "ban", delete_message_seconds: 0 })).toBe("ban");
+    expect(levelSummary({ from_case_count: 3, action: { kind: "kick" } })).toBe("at 3 cases: kick");
+  });
+  it("gives outcome words", () => {
+    expect(actionOutcome({ state: "failed", failure_reason: "unconfirmed" }).label).toBe(
+      "Couldn't confirm",
+    );
+    expect(actionOutcome({ state: "skipped" }).label).toBe("Left in place");
   });
 });
 
@@ -46,8 +76,7 @@ describe("helpers", () => {
     expect(plural(2, "case")).toBe("2 cases");
   });
   it("humanizes keys", () => {
-    expect(humanize("case.create")).toBe("Case create");
-    expect(humanize("appeal_review")).toBe("Appeal review");
+    expect(humanize("message_delete")).toBe("Message delete");
   });
   it("recognizes snowflakes", () => {
     expect(isSnowflake("80351110224678912")).toBe(true);

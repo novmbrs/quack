@@ -128,40 +128,41 @@ export function DataTable<T extends RowData>({
   );
 }
 
-/** Pager pages through an offset-paginated list. */
+/**
+ * Pager pages through a cursor-paginated list (design §14.1). The API sends
+ * no totals, so it shows the page number and moves one page at a time.
+ */
 export function Pager({
-  offset,
-  limit,
-  total,
-  onChange,
+  page,
+  hasPrevious,
+  hasNext,
+  onPrevious,
+  onNext,
 }: {
-  offset: number;
-  limit: number;
-  total: number;
-  onChange: (offset: number) => void;
+  page: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
 }) {
-  if (total <= limit && offset === 0) return null;
-  const first = total === 0 ? 0 : offset + 1;
-  const last = Math.min(offset + limit, total);
+  if (!hasPrevious && !hasNext) return null;
   return (
     <div className={s.pager}>
-      <span className={s.range}>
-        {first.toLocaleString()}–{last.toLocaleString()} of {total.toLocaleString()}
-      </span>
+      <span className={s.range}>Page {page.toLocaleString()}</span>
       <Button
         variant="secondary"
         size="sm"
         aria-label="Previous page"
-        disabled={offset === 0}
-        onClick={() => onChange(Math.max(0, offset - limit))}
+        disabled={!hasPrevious}
+        onClick={onPrevious}
         icon={<ChevronLeft size={16} />}
       />
       <Button
         variant="secondary"
         size="sm"
         aria-label="Next page"
-        disabled={offset + limit >= total}
-        onClick={() => onChange(offset + limit)}
+        disabled={!hasNext}
+        onClick={onNext}
         icon={<ChevronRight size={16} />}
       />
     </div>

@@ -41,29 +41,46 @@ export function Empty({
 }
 
 /**
- * ErrorState shows a failed load with the server's message and a retry. A
+ * errorMessage is the sentence to show for a failure: the API's own message
+ * as is, or a plain fallback for anything that isn't an API error.
+ */
+export function errorMessage(error: unknown): string {
+  return error instanceof ApiError
+    ? error.message
+    : "Quack couldn't load this. Try again in a moment.";
+}
+
+/**
+ * TraceId shows the trace of an unexpected failure (network or server
+ * error) in small print, so a report can be matched to its trace.
+ */
+export function TraceId({ error }: { error: unknown }) {
+  if (!(error instanceof ApiError) || !error.unexpected || !error.traceId) return null;
+  return <span className={s.trace}>Trace ID {error.traceId}</span>;
+}
+
+/**
+ * ErrorState shows a failed load with the API's message and a retry. A
  * server's 2FA requirement gets its own explanation instead.
  */
 export function ErrorState({ error, retry }: { error: unknown; retry?: () => void }) {
   if (error instanceof ApiError && error.code === "mfa_required") return <MfaRequired />;
-  const message =
-    error instanceof ApiError
-      ? error.message
-      : "Something went wrong loading this. Try again in a moment.";
-  const forbidden = error instanceof ApiError && error.status === 403;
+  const status = error instanceof ApiError ? error.status : 0;
+  const forbidden = status === 403;
+  const missing = status === 404;
   return (
     <Empty
-      icon={forbidden ? "lock" : "error"}
-      title={forbidden ? "You can't see this" : "Couldn't load this"}
+      icon={forbidden ? "lock" : missing ? "search" : "error"}
+      title={forbidden ? "You can't open this" : missing ? "Nothing here" : "Quack couldn't load this"}
       action={
-        retry && !forbidden ? (
+        retry && !forbidden && !missing ? (
           <Button variant="secondary" size="sm" onClick={retry}>
             Try again
           </Button>
         ) : null
       }
     >
-      {forbidden ? "Your Discord permissions in this server don't include this page." : message}
+      {errorMessage(error)} <TraceId error={error} />
     </Empty>
   );
 }
@@ -92,17 +109,21 @@ export function MfaRequired() {
         </Button>
       }
     >
-      It requires two-factor authentication for moderation, so Quack does too. Turn on two-factor
-      authentication in Discord, then sign out and back in.
+      This server requires two-factor authentication (2FA) for moderation. In Discord, open User
+      Settings → My Account and turn on two-factor authentication. Then sign in again here.
     </Empty>
   );
 }
 
-/** InlineError is a failed action's message, shown where the action was. */
-export function InlineError({ children }: { children: ReactNode }) {
+/**
+ * InlineError is a failed action's message, shown where the action was.
+ * Pass error to show the API's message (and the trace of an unexpected
+ * failure), or children for a message of the page's own.
+ */
+export function InlineError({ children, error }: { children?: ReactNode; error?: unknown }) {
   return (
     <p role="alert" className={s.inlineError}>
-      {children}
+      {children ?? errorMessage(error)} {error ? <TraceId error={error} /> : null}
     </p>
   );
 }

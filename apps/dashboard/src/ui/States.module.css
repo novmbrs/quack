@@ -78,3 +78,12 @@
   flex-grow: 1;
   gap: 8px;
 }
+
+.trace {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  user-select: all;
+}

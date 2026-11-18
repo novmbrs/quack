@@ -2,41 +2,77 @@ import createClient, { type Middleware } from "openapi-fetch";
 
 import type { components, paths } from "./schema.gen";
 
-/** ApiErrorCode is the machine-readable error code in every error envelope. */
-export type ApiErrorCode = components["schemas"]["ApiErrorCode"];
+/** FieldError is one form field the API refused, with a sentence to show next to it. */
+export type FieldError = components["schemas"]["FieldError"];
+
+/** Problem is one thing to fix before a module can be turned on. */
+export type Problem = components["schemas"]["Problem"];
 
 /**
  * ApiError is a failed API call. The backend wraps every failure in the same
- * envelope, so message is always safe to show to the user.
+ * envelope (design §14.6) and its message is always a sentence meant for the
+ * reader, so pages show it as is.
  */
 export class ApiError extends Error {
   readonly status: number;
-  readonly code: ApiErrorCode | "network_error";
-  readonly requestId?: string;
+  /** The envelope's machine-readable code, or "network_error" when Quack couldn't be reached. */
+  readonly code: string;
+  /** Form fields the API refused, keyed by their path ("levels[1].from_case_count"). */
+  readonly fields: FieldError[];
+  /** Module problems (409 module_not_ready). */
+  readonly problems: Problem[];
+  /** The trace to quote when reporting an unexpected error. */
+  readonly traceId: string | null;
+  /** Seconds to wait after a 429. */
+  readonly retryAfter: number | null;
 
-  constructor(status: number, code: ApiError["code"], message: string, requestId?: string) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    extra: {
+      fields?: FieldError[];
+      problems?: Problem[];
+      traceId?: string | null;
+      retryAfter?: number | null;
+    } = {},
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
-    this.requestId = requestId;
+    this.fields = extra.fields ?? [];
+    this.problems = extra.problems ?? [];
+    this.traceId = extra.traceId ?? null;
+    this.retryAfter = extra.retryAfter ?? null;
   }
 
-  /** Whether the session is gone and the user has to sign in again. */
+  /** Whether the session is gone and the reader has to sign in again. */
   get signedOut(): boolean {
-    return (
-      this.status === 401 ||
-      this.code === "authentication_required" ||
-      this.code === "reauthentication_required"
-    );
+    return this.status === 401;
+  }
+
+  /**
+   * Whether this is a failure the reader didn't cause and can't fix, so the
+   * page should show the trace ID for a report.
+   */
+  get unexpected(): boolean {
+    return this.status === 0 || this.status >= 500;
+  }
+
+  /** field returns the message for one form field, matching its path or any path under it. */
+  field(path: string): string | undefined {
+    return this.fields.find(
+      (f) => f.field === path || f.field.startsWith(`${path}.`) || f.field.startsWith(`${path}[`),
+    )?.message;
   }
 }
 
 let csrfToken = "";
 
 /**
- * setCsrfToken stores the token from GET /auth/me. Cookie-authenticated
- * writes must echo it in X-CSRF-Token.
+ * setCsrfToken stores the token from GET /api/auth/me. Every write must echo
+ * it in X-CSRF-Token (design §14.5).
  */
 export function setCsrfToken(token: string) {
   csrfToken = token;
@@ -48,32 +84,18 @@ const writeHeaders: Middleware = {
   onRequest({ request }) {
     if (!writeMethods.has(request.method)) return request;
     if (csrfToken) request.headers.set("X-CSRF-Token", csrfToken);
-    // Every staff and member write is idempotent on the server. One key per
-    // call protects transport replays; forms must guard separate submits.
+    // write() sets the key so automatic retries reuse it; this only covers
+    // a write that bypassed it.
     if (!request.headers.has("Idempotency-Key")) {
-      request.headers.set("Idempotency-Key", crypto.randomUUID());
+      request.headers.set("Idempotency-Key", newKey());
     }
     return request;
   },
 };
 
-/**
- * Paths is the generated contract with every header parameter optional: the
- * middleware above supplies X-CSRF-Token and Idempotency-Key on every write.
- */
-type Paths = {
-  [P in keyof paths]: {
-    [M in keyof paths[P]]: paths[P][M] extends { parameters: infer Params }
-      ? Omit<paths[P][M], "parameters"> & {
-          parameters: Omit<Params, "header"> & { header?: never };
-        }
-      : paths[P][M];
-  };
-};
-
-/** api is the typed client for the Quack HTTP API, served under /api. */
-export const api = createClient<Paths>({
-  baseUrl: "/api",
+/** api is the typed client for the Quack HTTP API. Paths already start with /api. */
+export const api = createClient<paths>({
+  baseUrl: "",
   credentials: "same-origin",
   headers: { Accept: "application/json" },
 });
@@ -90,32 +112,75 @@ export async function unwrap<T>(pending: Promise<Result<T>>): Promise<T> {
   try {
     result = await pending;
   } catch {
-    throw new ApiError(0, "network_error", "Can't reach Quack right now. Check your connection.");
+    throw new ApiError(0, "network_error", "Quack can't be reached right now. Check your connection and try again.");
   }
   const { data, error, response } = result;
   if (response.ok) return data as T;
-  const detail = (error as { error?: components["schemas"]["ApiErrorDetail"] } | undefined)?.error;
-  throw new ApiError(
+  throw toApiError(response, error);
+}
+
+/** toApiError reads the error envelope of a failed response. */
+export function toApiError(response: Response, body: unknown): ApiError {
+  const detail = (body as { error?: Partial<components["schemas"]["ErrorBody"]> } | undefined)
+    ?.error;
+  const retryHeader = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
+  return new ApiError(
     response.status,
-    detail?.code ?? "internal_error",
-    detail?.message ? sentence(detail.message) : fallbackMessage(response.status),
-    detail?.request_id,
+    detail?.code ?? (response.status >= 500 ? "internal_error" : "unknown"),
+    detail?.message?.trim() || fallbackMessage(response.status),
+    {
+      fields: detail?.fields,
+      problems: detail?.problems,
+      traceId: detail?.trace_id ?? null,
+      retryAfter: detail?.retry_after_seconds ?? (Number.isFinite(retryHeader) ? retryHeader : null),
+    },
   );
 }
 
-function sentence(message: string): string {
-  const trimmed = message.trim();
-  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  return /[.!?]$/.test(capitalized) ? capitalized : `${capitalized}.`;
-}
-
 function fallbackMessage(status: number): string {
-  if (status === 429) return "You're going a little fast. Try again in a moment.";
-  if (status >= 500) return "Quack hit a snag. Try again in a moment.";
-  return "That didn't work.";
+  if (status === 401) return "Your session ended. Sign in again to continue.";
+  if (status === 429) return "That was a lot of requests at once. Wait a moment and try again.";
+  if (status >= 500) return "Quack couldn't finish this. Try again in a moment.";
+  return "Quack couldn't do that. Reload the page and try again.";
 }
 
-/** loginUrl starts Discord sign-in and returns to redirectTo afterwards. */
+/** newKey makes one Idempotency-Key: one per thing the reader asked for. */
+export function newKey(): string {
+  return crypto.randomUUID();
+}
+
+/** WriteInit is what write() passes to the openapi-fetch call it wraps. */
+export type WriteInit = { headers: { "Idempotency-Key": string } };
+
+/** Statuses worth retrying automatically: Quack or Discord was briefly unavailable. */
+const retryable = (e: ApiError) => e.status === 0 || e.status === 502 || e.status === 503;
+
+/**
+ * write sends one write the reader asked for. It makes one Idempotency-Key
+ * and reuses it on automatic retries (network errors, 502, 503), so a retry
+ * never applies a change twice. Each call is a new intent with a new key.
+ */
+export async function write<T>(
+  call: (init: WriteInit) => Promise<Result<T>>,
+  options: { key?: string; retries?: number; delay?: (attempt: number) => number } = {},
+): Promise<T> {
+  const key = options.key ?? newKey();
+  const retries = options.retries ?? 2;
+  const delay = options.delay ?? ((attempt) => 400 * 2 ** attempt);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await unwrap(call({ headers: { "Idempotency-Key": key } }));
+    } catch (error) {
+      if (!(error instanceof ApiError) || !retryable(error) || attempt >= retries) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delay(attempt)));
+    }
+  }
+}
+
+/**
+ * loginUrl starts Discord sign-in and comes back to redirectTo afterwards.
+ * The backend keeps only the path of redirectTo, so it can't leave the site.
+ */
 export function loginUrl(redirectTo = "/guilds"): string {
-  return `/api/auth/discord/login?${new URLSearchParams({ redirect_to: redirectTo })}`;
+  return `/api/auth/login?${new URLSearchParams({ redirect_to: redirectTo })}`;
 }

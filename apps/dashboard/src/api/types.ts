@@ -2,68 +2,84 @@ import type { components } from "./schema.gen";
 
 type S = components["schemas"];
 
-export type AuthMe = S["ApiAuthMeResponse"];
-export type SessionUser = S["ApiSessionUserResponse"];
-export type UserGuild = S["QuackUserGuildListItem"];
-export type GuildMe = S["ApiGuildMeResponse"];
-export type GuildOps = S["ApiGuildOpsResponse"];
-export type Settings = S["QuackGuildSettingsResponse"];
-export type SettingsInput = S["QuackGuildSettingsInput"];
+// Names for the wire types (design §14.3), so pages don't spell out the
+// generated paths.
 
-export type Template = S["QuackTemplateResponse"];
-export type TemplateInput = S["QuackTemplateInput"];
-export type TemplateLevel = S["QuackTemplateLevelResponse"];
-export type TemplateLevelInput = S["QuackTemplateLevelInput"];
-export type TemplateAction = S["QuackTemplateActionResponse"];
-export type TemplateActionInput = S["QuackTemplateActionInput"];
-export type ContextField = S["QuackTemplateContextFieldResponse"];
-export type ContextFieldInput = S["QuackTemplateContextFieldInput"];
-export type ContextFieldType = S["QuackContextFieldType"];
-export type TemplatePolicy = S["QuackTemplatePolicy"];
+export type Me = S["Me"];
+export type Capabilities = S["Capabilities"];
+export type GuildSummary = S["GuildSummary"];
+export type GuildMe = S["GuildMe"];
+export type Health = S["Health"];
+export type Permission = S["Permission"];
+export type Statistics = S["Statistics"];
+export type Bucket = S["Bucket"];
 
-export type Case = S["QuackCaseResponse"];
-export type CaseDetail = S["QuackCaseDetailResponse"];
-export type CaseList = S["QuackCaseListResponse"];
-export type CaseProfile = S["QuackCaseProfileResponse"];
-export type CaseAction = S["QuackCaseActionResponse"];
-export type CaseActionDetail = S["QuackCaseActionDetailResponse"];
-export type CaseEvent = S["QuackCaseEventResponse"];
-export type CaseEvidence = S["QuackCaseEvidenceResponse"];
-export type ContextValue = S["QuackCaseContextValueResponse"];
-export type ContextValueInput = S["QuackCaseContextValueInput"];
-export type SelectedLevel = S["QuackCaseSelectedLevel"];
-export type CaseCreateInput = S["ApiCaseCreateRequest"];
-export type Validity = S["QuackCaseValidity"];
-export type CaseSource = S["QuackCaseSource"];
+export type DirectoryMember = S["DirectoryMember"];
+export type DirectoryChannel = S["DirectoryChannel"];
+export type DirectoryRole = S["DirectoryRole"];
+export type ChannelKind = S["ChannelKind"];
 
-export type ActionType = S["QuackActionType"];
-export type ExecutionStatus = S["QuackActionExecutionStatus"];
-export type FailedAction = S["ApiFailedActionResponse"];
+export type Rule = S["Rule"];
+export type RuleSummary = S["RuleSummary"];
+export type RuleDefinition = S["RuleDefinition"];
+export type RuleVersion = S["RuleVersion"];
+export type RuleFile = S["RuleFile"];
+export type Level = S["Level"];
+export type LevelAction = S["LevelAction"];
+export type Field = S["Field"];
+export type FieldKind = S["FieldKind"];
 
-export type Appeal = S["QuackAppealResponse"];
-export type AppealStatus = S["QuackAppealStatus"];
-export type AppealEvent = S["QuackAppealEventResponse"];
-export type AppealEventType = S["QuackAppealEventType"];
+export type CaseSummary = S["CaseSummary"];
+export type Case = S["Case"];
+export type CasePreview = S["CasePreview"];
+export type CaseSource = S["CaseSource"];
+export type CaseLogEntry = S["CaseLogEntry"];
+export type ContextInput = S["ContextInput"];
+export type ContextValue = S["ContextValue"];
+export type Action = S["Action"];
+export type ActionListItem = S["ActionListItem"];
+export type ActionKind = S["ActionKind"];
+export type ActionState = S["ActionState"];
+export type Dm = S["Dm"];
+export type DmState = S["DmState"];
+export type Evidence = S["Evidence"];
+export type EvidenceFile = S["EvidenceFile"];
 
-export type MemberCase = S["QuackMemberCaseDetail"];
-export type MemberCaseSummary = S["QuackMemberCaseSummary"];
+export type AppealSummary = S["AppealSummary"];
+export type Appeal = S["Appeal"];
+export type AppealState = S["AppealState"];
+export type AppealEvent = S["AppealEvent"];
+export type AppealEventKind = S["AppealEventKind"];
+export type Decision = S["Decision"];
 
-export type AuditEntry = S["QuackAuditEntryResponse"];
-export type AuditResult = S["QuackAuditResult"];
-export type AuditSource = S["QuackAuditSource"];
-export type Statistics = S["QuackStaffStatistics"];
-export type StatBucket = S["QuackStatisticBucket"];
+export type MemberCaseSummary = S["MemberCaseSummary"];
+export type MemberCase = S["MemberCase"];
+export type MemberSummary = S["MemberSummary"];
 
-export type TicketSettings = S["TicketsSettings"];
-export type TicketStatus = S["TicketsModuleStatus"];
-export type Ticket = S["TicketsTicket"];
-export type TicketEvent = S["TicketsEvent"];
-export type LoggingSettings = S["LoggingSettings"];
-export type LoggingSettingsResponse = S["LoggingSettingsResponse"];
+export type ModLogEntry = S["ModLogEntry"];
+export type ModLogKind = S["ModLogKind"];
+export type ModLogResult = S["ModLogResult"];
+export type ModLogSource = S["ModLogSource"];
+
+export type Settings = S["Settings"];
+export type SettingsChange = S["SettingsChange"];
+export type ModuleState = S["ModuleState"];
+
+export type TicketSettings = S["TicketSettings"];
+export type TicketsModule = S["TicketsModule"];
+export type Ticket = S["Ticket"];
+export type TicketState = S["TicketState"];
+export type ActivityLogSettings = S["ActivityLogSettings"];
+export type ActivityLogModule = S["ActivityLogModule"];
 export type HoneypotSettings = S["HoneypotSettings"];
-export type HoneypotSettingsResponse = S["HoneypotSettingsResponse"];
+export type HoneypotModule = S["HoneypotModule"];
 
-export type DirectoryUser = S["ApiDirectoryUser"];
-export type DirectoryChannel = S["ApiDirectoryChannel"];
-export type DirectoryRole = S["ApiDirectoryRole"];
-export type ChannelType = S["ApiChannelType"];
+/** ModuleName is a module as it appears in JSON; its URL segment uses a hyphen. */
+export type ModuleName = "tickets" | "activity_log" | "honeypot";
+
+/** moduleSegment is a module's segment in API and dashboard URLs. */
+export const moduleSegment = {
+  tickets: "tickets",
+  activity_log: "activity-log",
+  honeypot: "honeypot",
+} as const satisfies Record<ModuleName, string>;
