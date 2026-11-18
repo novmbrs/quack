@@ -175,3 +175,151 @@ proptest! {
         prop_assert!(outcomes.len() <= MAX_ATTEMPTS as usize);
     }
 }
+
+/// A member's ban cases on one server, as Discord and the database see
+/// them: which cases are valid, which ban actions are done, and the
+/// marker on Discord's ban (`None`: no ban).
+struct BanWorld {
+    valid: Vec<bool>,
+    done: Vec<bool>,
+    ban: Option<u64>,
+}
+
+impl BanWorld {
+    fn number(i: usize) -> u64 {
+        u64::try_from(i).unwrap() + 1
+    }
+
+    fn case_id(i: usize) -> crate::ids::CaseId {
+        crate::ids::CaseId::from_uuid(uuid::Uuid::from_u128(u128::try_from(i).unwrap() + 1))
+    }
+
+    /// The SQL guard for case `own`'s undo.
+    fn guard(&self, own: usize) -> Option<StillApplies> {
+        (0..self.valid.len())
+            .rev()
+            .find(|&j| j != own && self.valid[j] && self.done[j])
+            .map(|j| StillApplies {
+                case_id: Self::case_id(j),
+                case_number: Self::number(j),
+            })
+    }
+
+    /// Case `i`'s ban action runs once: it bans, or finds a ban.
+    fn apply(&mut self, i: usize) -> AttemptOutcome {
+        let t = ActionTarget {
+            case_number: Self::number(i),
+            ..target(ActionKind::Ban)
+        };
+        let ban = self.ban.map(|n| BanFacts {
+            reason: Some(case_marker(n, "Spam")),
+        });
+        let result = match plan_from_ban(&t, ban.as_ref()).unwrap() {
+            Plan::Call => {
+                self.ban = Some(Self::number(i));
+                AttemptResult::Done
+            }
+            Plan::Finish(r) => r,
+            Plan::CheckMarker(_) => unreachable!("a ban never checks a marker"),
+        };
+        self.done[i] = true;
+        result.outcome()
+    }
+
+    /// Runs case `i`'s unban to its end, as the engine does.
+    fn unban(&mut self, i: usize) {
+        let facts = StartFacts {
+            still_applies: self.guard(i),
+            ..super::facts(ActionKind::Unban, ActionState::Pending)
+        };
+        if start(&facts) != StartDecision::Open {
+            return;
+        }
+        let t = ActionTarget {
+            case_number: Self::number(i),
+            ..target(ActionKind::Unban)
+        };
+        let ban = self.ban.map(|n| BanFacts {
+            reason: Some(case_marker(n, "Spam")),
+        });
+        let plan = match plan_from_ban(&t, ban.as_ref()).unwrap() {
+            Plan::CheckMarker(n) => {
+                let j = usize::try_from(n - 1).unwrap();
+                plan_after_marker(!self.valid[j] && self.done[j])
+            }
+            other => other,
+        };
+        if plan == Plan::Call {
+            self.ban = None;
+        }
+    }
+}
+
+proptest! {
+    /// However many ban cases a member gets and in whatever order they are
+    /// voided, Discord keeps a ban exactly while some valid case's ban is
+    /// done, so voiding them all never leaves a Quack ban behind.
+    #[test]
+    fn voided_ban_cases_hand_the_ban_over(
+        cases in 1_usize..6,
+        order in Just(()).prop_perturb(|(), mut rng| rng.random::<u64>()),
+    ) {
+        let mut w = BanWorld { valid: vec![true; cases], done: vec![false; cases], ban: None };
+        let outcomes: Vec<AttemptOutcome> = (0..cases).map(|i| w.apply(i)).collect();
+        let mut voids: Vec<usize> = (0..cases).collect();
+        let len = voids.len();
+        for k in 0..len {
+            let pick = usize::try_from(order.rotate_left(u32::try_from(k).unwrap() * 7) % u64::try_from(len - k).unwrap()).unwrap();
+            voids.swap(k, k + pick);
+        }
+        for &i in &voids {
+            w.valid[i] = false;
+            let effect = on_void(&VoidFacts {
+                kind: ActionKind::Ban,
+                state: ActionState::Done,
+                has_undo: false,
+                attempts: &[Some(outcomes[i])],
+                timeout_ends_at: None,
+                now: NOW,
+            });
+            if effect.queue_undo == Some(ActionKind::Unban) {
+                w.unban(i);
+            }
+            let any_valid = w.valid.iter().zip(&w.done).any(|(v, d)| *v && *d);
+            prop_assert_eq!(w.ban.is_some(), any_valid, "after voiding case {}", i + 1);
+        }
+    }
+
+    /// Undo is offered exactly when the undo would run and remove the ban:
+    /// `controls` and the guard plus provenance agree.
+    #[test]
+    fn an_offered_undo_removes_the_ban(
+        cases in 1_usize..6,
+        voided in prop::collection::vec(any::<bool>(), 6),
+        pick in 0_usize..6,
+    ) {
+        let mut w = BanWorld { valid: vec![true; cases], done: vec![false; cases], ban: None };
+        for i in 0..cases {
+            w.apply(i);
+        }
+        for i in 0..cases {
+            w.valid[i] = !voided[i];
+        }
+        let i = pick % cases;
+        prop_assume!(w.valid[i]);
+        let view = ActionView {
+            kind: ActionKind::Ban,
+            state: ActionState::Done,
+            dismissed: false,
+            failure: None,
+            timeout_ends_at: None,
+            has_undo: false,
+            undo_guard: w.guard(i),
+        };
+        let offered = controls(&view, true, NOW).undo.is_ok();
+        let before = w.ban;
+        w.unban(i);
+        prop_assert_eq!(offered, before.is_some() && w.ban.is_none(),
+            "offered {} but the ban went from {:?} to {:?}", offered, before, w.ban);
+    }
+}

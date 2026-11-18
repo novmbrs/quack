@@ -156,6 +156,28 @@ mod tests {
     }
 
     proptest! {
+        /// Any imported version that passes validation picks a level, for
+        /// every case count, whose position fits the stored `smallint`.
+        #[test]
+        fn a_validated_version_always_picks_a_storable_level(
+            gaps in prop::collection::vec(1_u32..4, 0..600),
+            count in any::<u32>(),
+        ) {
+            let mut froms = vec![1_u32];
+            for gap in gaps {
+                let next = froms.last().copied().unwrap_or(1).saturating_add(gap);
+                froms.push(next);
+            }
+            froms.dedup();
+            let def = rule_with(&froms);
+            prop_assume!(def.validate(crate::rule::Strictness::Imported { reconstructed: false }).is_ok());
+            let choice = select_level(&def, count);
+            prop_assert!(choice.is_some());
+            let index = choice.map_or(0, |c| c.index);
+            prop_assert!(i16::try_from(index).is_ok());
+            prop_assert!(usize::from(index) <= def.levels.len());
+        }
+
         #[test]
         fn monotonic_in_case_count(froms in levels(), a in 1_u32..2_000_000, b in 1_u32..2_000_000) {
             let def = rule_with(&froms);

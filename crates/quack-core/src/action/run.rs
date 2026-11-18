@@ -7,7 +7,7 @@ use time::{Duration, OffsetDateTime};
 use super::controls::StillApplies;
 use super::{
     ActionEvent, ActionFailure, ActionKind, ActionSkipReason, ActionState, AttemptOutcome, Failure,
-    may_have_applied, transition,
+    transition,
 };
 use crate::InvalidTransition;
 use crate::dm::ACTION_WAIT;
@@ -507,14 +507,13 @@ pub fn settle(
     let failure = match (state, result) {
         (ActionState::Failed, AttemptResult::Refused { failure, .. }) => Some(failure),
         (ActionState::Failed, _) => {
-            let round: Vec<Option<AttemptOutcome>> = facts
-                .earlier
-                .iter()
-                .copied()
-                .chain([outcome])
-                .map(Some)
-                .collect();
-            Some(Failure::new(if may_have_applied(&round) {
+            let round_applied = outcome.may_have_applied()
+                || facts
+                    .earlier
+                    .iter()
+                    .copied()
+                    .any(AttemptOutcome::may_have_applied);
+            Some(Failure::new(if round_applied {
                 ActionFailure::Unconfirmed
             } else {
                 ActionFailure::RetriesExhausted
