@@ -122,6 +122,8 @@ pub enum Admission {
 
 /// Adds a message to a case's evidence, under the case lock (§7.1).
 /// The caller enqueues `capture_evidence` for `Added` and `Recapture`.
+/// [`DbError::NotFound`] when the case is not in `guild`; another server's
+/// item is never read or changed.
 pub async fn admit(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -136,9 +138,9 @@ pub async fn admit(
         "evidence",
         sqlx::query!(
             r#"INSERT INTO evidence (id, guild_id, case_id, channel_id, message_id, added_by)
-               VALUES ($1, $2, $3, $4, $5, $6)
+               SELECT $1, c.guild_id, c.id, $4, $5, $6 FROM cases c WHERE c.guild_id = $2 AND c.id = $3
                ON CONFLICT (case_id, message_id) DO UPDATE SET state = 'saving', failure = NULL
-                 WHERE evidence.state = 'failed'
+                 WHERE evidence.state = 'failed' AND evidence.guild_id = EXCLUDED.guild_id
                RETURNING id, (old.id IS NULL) AS "inserted!""#,
             new_id.get(),
             i64::from(guild),
@@ -162,13 +164,15 @@ pub async fn admit(
         Select,
         "evidence",
         sqlx::query!(
-            "SELECT id, state FROM evidence WHERE case_id = $1 AND message_id = $2",
+            "SELECT id, state FROM evidence WHERE guild_id = $1 AND case_id = $2 AND message_id = $3",
+            i64::from(guild),
             case.get(),
             i64::from(message)
         )
-        .fetch_one(conn),
+        .fetch_optional(conn),
     )
-    .await?;
+    .await?
+    .ok_or(DbError::NotFound)?;
     Ok(Admission::Already(
         EvidenceId::from_uuid(existing.id),
         existing.state.0,

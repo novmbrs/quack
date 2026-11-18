@@ -4,9 +4,9 @@ use quack_core::ids::{AccountId, ChannelId, GuildId};
 use quack_core::modules::{ActivityEvent, ModuleDisabledReason};
 use sqlx::PgConnection;
 
-use crate::DbError;
 use crate::obs::{self, Delete, Insert, Select, Update};
 use crate::pg::{Pg, count, id, int};
+use crate::{DbError, Tx};
 
 /// `activity_log_settings` plus its routes.
 #[allow(
@@ -174,14 +174,22 @@ pub async fn update_settings(
 }
 
 /// Channel reconciliation (§13.1.5): removes the routes to `channel`; when
-/// none remain the module is turned off (`channel_deleted`). Returns
-/// `(routes removed, turned off)`.
+/// none remain the module is turned off (`channel_deleted`). Any removal
+/// advances the settings version, so an edit made against the old routes
+/// can't restore a deleted one. Returns `(routes removed, turned off)`.
+///
+/// Locks the settings row before touching routes, the same order a staff
+/// edit uses ([`settings`] with `lock`, then [`update_settings`]), so the
+/// two never deadlock.
 pub async fn remove_channel(
-    conn: &mut PgConnection,
+    tx: &mut Tx,
     guild: GuildId,
     channel: ChannelId,
 ) -> Result<(u64, bool), DbError> {
     let g = i64::from(guild);
+    if settings(tx, guild, true).await?.is_none() {
+        return Ok((0, false));
+    }
     let removed = obs::run(
         Delete,
         "activity_log_routes",
@@ -190,7 +198,7 @@ pub async fn remove_channel(
             g,
             i64::from(channel)
         )
-        .execute(&mut *conn),
+        .execute(&mut **tx),
     )
     .await?
     .rows_affected();
@@ -200,16 +208,20 @@ pub async fn remove_channel(
     let off = obs::run(
         Update,
         "activity_log_settings",
-        sqlx::query!(
-            "UPDATE activity_log_settings SET enabled = false, disabled_reason = 'channel_deleted',
-                                              version = version + 1, updated_at = now(), updated_by = NULL
-             WHERE guild_id = $1 AND enabled
-               AND NOT EXISTS (SELECT 1 FROM activity_log_routes WHERE guild_id = $1)",
+        sqlx::query_scalar!(
+            r#"WITH remaining AS (SELECT EXISTS (SELECT 1 FROM activity_log_routes WHERE guild_id = $1) AS any)
+               UPDATE activity_log_settings s
+               SET enabled = s.enabled AND remaining.any,
+                   disabled_reason = CASE WHEN s.enabled AND NOT remaining.any THEN 'channel_deleted'
+                                          ELSE s.disabled_reason END,
+                   version = s.version + 1, updated_at = now(), updated_by = NULL
+               FROM remaining
+               WHERE s.guild_id = $1
+               RETURNING (old.enabled AND NOT new.enabled) AS "off!""#,
             g
         )
-        .execute(conn),
+        .fetch_one(&mut **tx),
     )
-    .await?
-    .rows_affected();
-    Ok((removed, off == 1))
+    .await?;
+    Ok((removed, off))
 }

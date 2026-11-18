@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, state FROM evidence WHERE case_id = $1 AND message_id = $2",
+  "query": "SELECT id, state FROM evidence WHERE guild_id = $1 AND case_id = $2 AND message_id = $3",
   "describe": {
     "columns": [
       {
@@ -39,6 +39,7 @@
     ],
     "parameters": {
       "Left": [
+        "Int8",
         "Uuid",
         "Int8"
       ]
@@ -48,5 +49,5 @@
       false
     ]
   },
-  "hash": "8381c5dfd0dc01999fa49e93657c1d513a860b75e775f345c48c336b825fd92f"
+  "hash": "6377e7525d3d798c0aa0a40bf5ffa98e7410fe78997bfc4e7da4537dc2f92baa"
 }

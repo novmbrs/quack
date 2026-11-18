@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets SET transcript_saved_at = now(), updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'closing' AND frozen_at IS NOT NULL\n               AND transcript_saved_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6d468c619b17d7bb9b8999ea6fb1cf0fabaae958b1a652c8f9b1e07bb2a4c66"
+}

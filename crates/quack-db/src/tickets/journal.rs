@@ -40,6 +40,10 @@ pub struct JournalMessage {
 
 /// Journals a message of a live, not yet frozen ticket (`ON CONFLICT DO
 /// NOTHING`). Returns whether it was stored.
+///
+/// The ticket row is read `FOR SHARE`: a concurrent freeze either waits
+/// for this insert to commit (so the transcript sees it) or wins, and then
+/// the recheck finds the ticket frozen and nothing is stored.
 pub async fn add_journal_message(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -53,6 +57,7 @@ pub async fn add_journal_message(
             "INSERT INTO ticket_messages (guild_id, ticket_id, message_id, author_id, author_name, text, files, sent_at)
              SELECT $1, $2, $3, $4, $5, $6, $7, $8 FROM tickets
              WHERE guild_id = $1 AND id = $2 AND state IN ('opening', 'open', 'closing') AND frozen_at IS NULL
+             FOR SHARE
              ON CONFLICT DO NOTHING",
             i64::from(guild),
             ticket.get(),
@@ -136,7 +141,10 @@ pub struct Transcript {
 }
 
 /// Saves a ticket's transcript once (close step 2) and records
-/// `transcript_saved_at`. Returns whether it saved.
+/// `transcript_saved_at`, both in the caller's transaction. Only a frozen,
+/// `closing` ticket whose transcript was never saved gets one, so a
+/// transcript deleted by retention is never recreated. The ticket row is
+/// locked first (parent before child). Returns whether it saved.
 pub async fn save_transcript(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -145,6 +153,22 @@ pub async fn save_transcript(
     partial: Option<TranscriptPartial>,
     retention_days: u16,
 ) -> Result<bool, DbError> {
+    let marked = obs::run(
+        Update,
+        "tickets",
+        sqlx::query!(
+            "UPDATE tickets SET transcript_saved_at = now(), updated_at = now()
+             WHERE guild_id = $1 AND id = $2 AND state = 'closing' AND frozen_at IS NOT NULL
+               AND transcript_saved_at IS NULL",
+            i64::from(guild),
+            ticket.get(),
+        )
+        .execute(&mut *conn),
+    )
+    .await?;
+    if marked.rows_affected() == 0 {
+        return Ok(false);
+    }
     let done = obs::run(
         Insert,
         "ticket_transcripts",
@@ -159,24 +183,10 @@ pub async fn save_transcript(
             partial.map(Pg) as _,
             i32::from(retention_days),
         )
-        .execute(&mut *conn),
-    )
-    .await?;
-    if done.rows_affected() == 0 {
-        return Ok(false);
-    }
-    obs::run(
-        Update,
-        "tickets",
-        sqlx::query!(
-            "UPDATE tickets SET transcript_saved_at = now(), updated_at = now() WHERE guild_id = $1 AND id = $2",
-            i64::from(guild),
-            ticket.get(),
-        )
         .execute(conn),
     )
     .await?;
-    Ok(true)
+    Ok(done.rows_affected() == 1)
 }
 
 /// A ticket's unexpired transcript.

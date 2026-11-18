@@ -208,6 +208,7 @@ pub async fn mark_closed(
 }
 
 /// Close step 4: the thread was deleted, or Discord refused (`failed`).
+/// Never recorded for a ticket that is still opening or open.
 pub async fn mark_thread_deleted(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -220,7 +221,8 @@ pub async fn mark_thread_deleted(
         sqlx::query!(
             "UPDATE tickets SET thread_deleted_at = CASE WHEN $3 THEN thread_deleted_at ELSE now() END,
                                 thread_delete_failed = $3, updated_at = now()
-             WHERE guild_id = $1 AND id = $2 AND thread_deleted_at IS NULL",
+             WHERE guild_id = $1 AND id = $2 AND thread_deleted_at IS NULL
+               AND state NOT IN ('opening', 'open')",
             i64::from(guild),
             ticket.get(),
             failed,

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH remaining AS (SELECT EXISTS (SELECT 1 FROM activity_log_routes WHERE guild_id = $1) AS any)\n               UPDATE activity_log_settings s\n               SET enabled = s.enabled AND remaining.any,\n                   disabled_reason = CASE WHEN s.enabled AND NOT remaining.any THEN 'channel_deleted'\n                                          ELSE s.disabled_reason END,\n                   version = s.version + 1, updated_at = now(), updated_by = NULL\n               FROM remaining\n               WHERE s.guild_id = $1\n               RETURNING (old.enabled AND NOT new.enabled) AS \"off!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "off!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5fd3c959bcc679717edd340a1b551cb9db30224ca0d6345135bd43ed4c04ecc4"
+}
