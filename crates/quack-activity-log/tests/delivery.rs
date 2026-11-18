@@ -280,3 +280,29 @@ async fn other_servers_are_separate() -> Result<()> {
     assert_eq!(w.log.cached(), 0);
     Ok(())
 }
+
+/// Shutdown waits for a post a sender has taken off the queue and is still
+/// delivering, not only for the queue to empty (the drain dropped it).
+#[tokio::test]
+async fn shutdown_waits_for_a_post_in_flight() -> Result<()> {
+    let w = world().await?;
+    let gate = w.h.fake.hold(quack_testkit::fake::Call::Send);
+    let tasks = w.log.spawn();
+    w.log.on_server_changed(w.h.guild);
+    gate.reached().await;
+    assert_eq!(w.log.queued(), 0, "the post is in flight");
+    let log = w.log.clone();
+    let drain = tokio::spawn(async move { log.shutdown(Duration::from_secs(5)).await });
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(
+        !drain.is_finished(),
+        "shutdown waits for the post in flight"
+    );
+    gate.release();
+    drain.await?;
+    for task in tasks {
+        task.abort();
+    }
+    assert_eq!(w.posted().len(), 1);
+    Ok(())
+}

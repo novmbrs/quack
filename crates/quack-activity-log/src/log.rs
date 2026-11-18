@@ -110,6 +110,9 @@ pub(crate) struct Inner {
     /// Per server: posts delivered and posts dropped since start (the
     /// module page's counters; one entry per server that posted).
     counts: Mutex<HashMap<GuildId, (u64, u64)>>,
+    /// Posts accepted into the queue whose delivery hasn't finished: still
+    /// queued, or taken by a sender and in flight.
+    unfinished: std::sync::atomic::AtomicUsize,
 }
 
 /// Locks a mutex, recovering from a poisoned one.
@@ -142,6 +145,7 @@ impl ActivityLog {
             destinations: Mutex::new(HashMap::new()),
             next_nonce: AtomicU64::new(0),
             counts: Mutex::new(HashMap::new()),
+            unfinished: std::sync::atomic::AtomicUsize::new(0),
         });
         let weak = Arc::downgrade(&inner);
         metrics().caches.observe_size(cache::NAME, move || {
@@ -204,11 +208,12 @@ impl ActivityLog {
     }
 
     /// Graceful shutdown (§17.5): posts every open delete batch, then waits
-    /// until the queue is empty or `deadline` passes.
+    /// until every accepted post is delivered (the queue is empty and no
+    /// sender is mid-post) or `deadline` passes.
     pub async fn shutdown(&self, deadline: Duration) {
         self.flush_batches(true);
         let _ = tokio::time::timeout(deadline, async {
-            while self.queued() > 0 {
+            while self.inner.unfinished.load(Ordering::Acquire) > 0 {
                 tokio::time::sleep(Duration::from_millis(50)).await;
             }
         })
@@ -237,7 +242,9 @@ impl ActivityLog {
             post,
             nonce,
         };
+        self.inner.unfinished.fetch_add(1, Ordering::AcqRel);
         if self.inner.tx.try_send(post).is_err() {
+            self.inner.unfinished.fetch_sub(1, Ordering::AcqRel);
             self.count(guild, false);
             metrics().activity_log.event(label, ActivityStage::Dropped);
             metrics().queues.dropped(QUEUE, 1);
@@ -275,6 +282,12 @@ impl ActivityLog {
     }
 
     async fn deliver(&self, post: Post) -> Delivered {
+        let delivered = self.deliver_counted(post).await;
+        self.inner.unfinished.fetch_sub(1, Ordering::AcqRel);
+        delivered
+    }
+
+    async fn deliver_counted(&self, post: Post) -> Delivered {
         let label = event_label(post.event);
         let delivered =
             crate::obs::span("activity_post", post.guild, self.try_deliver(&post)).await;
