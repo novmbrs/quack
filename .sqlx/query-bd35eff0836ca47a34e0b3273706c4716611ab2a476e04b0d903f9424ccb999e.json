@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs SET updated_at = now() WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bd35eff0836ca47a34e0b3273706c4716611ab2a476e04b0d903f9424ccb999e"
+}

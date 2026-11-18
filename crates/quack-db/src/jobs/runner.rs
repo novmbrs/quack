@@ -3,22 +3,33 @@
 //!
 //! The engine supplies one [`Handler`] callback for every kind. The runner
 //! never interprets payloads; it claims, times, and settles.
+//!
+//! An idle dispatcher costs one query per pass (sweep plus next due time)
+//! and sleeps until a notification, a freed permit, the next due job, or
+//! the poll. Nothing it does on its own wakes it again.
 
-use std::collections::{HashMap, VecDeque};
+mod admit;
+mod run;
+
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-use tokio::sync::{Notify, OwnedSemaphorePermit, Semaphore};
+use tokio::sync::{Notify, Semaphore};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
-use tracing::Instrument as _;
 
-use super::{ClaimedJob, JobKind, JobResult, RunAt, claim, next_due_in, settle, sweep_leases};
+use super::{
+    ClaimedJob, JobKind, JobResult, RunAt, claim, next_due_in, settle, sweep_and_next_due,
+};
 use crate::notify::Notification;
-use crate::obs::{self, RunOutcome};
+use crate::obs;
 use crate::{Db, DbError};
+use admit::{Arbiter, Permit};
+
+pub use run::FINALIZE_TRIES;
 
 /// Which entry point of the kind the runner is calling.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,7 +57,10 @@ pub type HandlerFuture = Pin<Box<dyn Future<Output = Result<Handled, DbError>> +
 
 /// The engine's job entry point, called for every claimed job of every
 /// kind. [`DbError::Stale`] means the lease was lost (nothing is settled);
-/// any other error is retried with the kind's backoff.
+/// any other error, or a panic, is retried with the kind's backoff. In
+/// [`Phase::Finalize`] a failure is retried at most [`FINALIZE_TRIES`]
+/// times in all (once for an unreadable or unstorable value) before the
+/// job is kept as dead.
 pub type Handler = Arc<dyn Fn(ClaimedJob, Phase) -> HandlerFuture + Send + Sync>;
 
 /// Runner settings.
@@ -74,8 +88,11 @@ impl RunnerConfig {
     }
 }
 
+/// How long a dispatcher waits before claiming again when a due job was
+/// skipped because another transaction holds its row lock.
+const LOCKED_ROW_RETRY: Duration = Duration::from_millis(250);
+
 struct KindSlot {
-    wake: Notify,
     permits: Arc<Semaphore>,
     heartbeat: Mutex<Option<Instant>>,
 }
@@ -84,11 +101,12 @@ struct Shared {
     db: Db,
     handler: Handler,
     config: RunnerConfig,
-    global: Arc<Semaphore>,
+    arbiter: Arc<Arbiter>,
     slots: HashMap<JobKind, KindSlot>,
-    /// Kinds that found every global permit taken, woken in order as
-    /// permits free up, so one busy kind can't starve the others.
-    waiting: Mutex<VecDeque<JobKind>>,
+    wakes: Arc<HashMap<JobKind, Arc<Notify>>>,
+    /// Whether claimed jobs may still start; cleared by shutdown under the
+    /// same lock that guards every start.
+    admitting: Mutex<bool>,
     stop_claiming: CancellationToken,
     hard_stop: CancellationToken,
     tracker: TaskTracker,
@@ -109,28 +127,36 @@ impl std::fmt::Debug for Runner {
 }
 
 impl Runner {
-    /// Builds a runner; nothing runs until [`Runner::start`].
-    pub fn new(db: Db, config: RunnerConfig, handler: Handler) -> Self {
+    /// Builds a runner; nothing runs until [`Runner::start`]. A zero
+    /// `claim_batch` is treated as 1.
+    pub fn new(db: Db, mut config: RunnerConfig, handler: Handler) -> Self {
+        config.claim_batch = config.claim_batch.max(1);
+        config.concurrency = config.concurrency.max(1);
         let slots = config
             .kinds
             .iter()
             .map(|kind| {
                 let slot = KindSlot {
-                    wake: Notify::new(),
                     permits: Arc::new(Semaphore::new(kind.policy().concurrency)),
                     heartbeat: Mutex::new(None),
                 };
                 (*kind, slot)
             })
             .collect();
+        let wakes = config
+            .kinds
+            .iter()
+            .map(|kind| (*kind, Arc::new(Notify::new())))
+            .collect();
         Self {
             shared: Arc::new(Shared {
                 db,
                 handler,
-                global: Arc::new(Semaphore::new(config.concurrency)),
+                arbiter: Arc::new(Arbiter::new(config.concurrency)),
                 config,
                 slots,
-                waiting: Mutex::new(VecDeque::new()),
+                wakes: Arc::new(wakes),
+                admitting: Mutex::new(true),
                 stop_claiming: CancellationToken::new(),
                 hard_stop: CancellationToken::new(),
                 tracker: TaskTracker::new(),
@@ -151,15 +177,15 @@ impl Runner {
 
     /// Wakes the dispatcher of `kind` (a `quack_jobs` notification).
     pub fn wake(&self, kind: JobKind) {
-        if let Some(slot) = self.shared.slots.get(&kind) {
-            slot.wake.notify_one();
+        if let Some(wake) = self.shared.wakes.get(&kind) {
+            wake.notify_one();
         }
     }
 
     /// Wakes every dispatcher (after the listener reconnects).
     pub fn wake_all(&self) {
-        for slot in self.shared.slots.values() {
-            slot.wake.notify_one();
+        for wake in self.shared.wakes.values() {
+            wake.notify_one();
         }
     }
 
@@ -185,10 +211,16 @@ impl Runner {
         })
     }
 
-    /// Stops claiming at once, lets running handlers finish for up to
-    /// `drain`, then drops the rest without settling (their leases expire
-    /// and the next process resolves them, §16.7).
+    /// Stops claiming and starting jobs at once, lets running handlers (and
+    /// a claim already sent, whose jobs are handed back unstarted) finish
+    /// for up to `drain`, then drops the rest without settling (their
+    /// leases expire and the next process resolves them, §16.7).
     pub async fn shutdown(&self, drain: Duration) {
+        *self
+            .shared
+            .admitting
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = false;
         self.shared.stop_claiming.cancel();
         self.shared.tracker.close();
         if tokio::time::timeout(drain, self.shared.tracker.wait())
@@ -201,19 +233,36 @@ impl Runner {
     }
 }
 
+/// What a dispatcher waits for after a pass.
+enum Wait {
+    /// A wake-up, or this long (capped by the poll).
+    For(Duration),
+    /// No permit is free: a finishing job (or a handed-over global permit)
+    /// wakes the kind; the poll is the fallback.
+    Permits,
+}
+
 /// One kind's loop: pass, heartbeat, then wait for a wake-up, the poll, or
 /// the next due job, whichever comes first.
 async fn dispatch(shared: Arc<Shared>, kind: JobKind) {
-    let Some(slot) = shared.slots.get(&kind) else {
+    let (Some(slot), Some(wake)) = (shared.slots.get(&kind), shared.wakes.get(&kind)) else {
         return;
     };
+    let wake = Arc::clone(wake);
     while !shared.stop_claiming.is_cancelled() {
-        let wait = match pass(&shared, kind).await {
-            Ok(next) => {
+        let passed = tokio::select! {
+            result = pass(&shared, kind) => result,
+            () = shared.hard_stop.cancelled() => return,
+        };
+        let wait = match passed {
+            Ok(wait) => {
                 if let Ok(mut beat) = slot.heartbeat.lock() {
                     *beat = Some(Instant::now());
                 }
-                next.map_or(shared.config.poll, |due| due.min(shared.config.poll))
+                match wait {
+                    Wait::For(due) => due.min(shared.config.poll),
+                    Wait::Permits => shared.config.poll,
+                }
             }
             Err(error) => {
                 tracing::warn!(job_kind = %kind, error = %error, "job dispatch pass failed");
@@ -221,156 +270,154 @@ async fn dispatch(shared: Arc<Shared>, kind: JobKind) {
             }
         };
         tokio::select! {
-            () = slot.wake.notified() => {}
+            () = wake.notified() => {}
             () = tokio::time::sleep(wait) => {}
             () = shared.stop_claiming.cancelled() => break,
         }
     }
 }
 
-/// Sweeps expired leases, then claims and starts as many jobs as permits
-/// allow. Returns when the next job is due, if known.
-async fn pass(shared: &Arc<Shared>, kind: JobKind) -> Result<Option<Duration>, DbError> {
+/// Sweeps expired leases and reads when the next job is due; when one is
+/// due now, claims and starts as many as permits allow.
+async fn pass(shared: &Arc<Shared>, kind: JobKind) -> Result<Wait, DbError> {
     let Some(slot) = shared.slots.get(&kind) else {
-        return Ok(None);
+        return Ok(Wait::For(shared.config.poll));
     };
-    let mut conn = shared.db.conn().await?;
-    let expired = sweep_leases(&mut conn, kind).await?;
+    // Connecting and sweeping change nothing a later pass can't redo, so
+    // shutdown may abandon them; a claim, once sent, is seen through.
+    let ready = tokio::select! {
+        ready = async {
+            let mut conn = shared.db.conn().await?;
+            let (expired, next) = sweep_and_next_due(&mut conn, kind).await?;
+            Ok::<_, DbError>((conn, expired, next))
+        } => ready?,
+        () = shared.stop_claiming.cancelled() => return Ok(Wait::For(shared.config.poll)),
+    };
+    let (mut conn, expired, next) = ready;
     if expired > 0 {
         obs::lease_expired(kind, expired);
     }
+    match next {
+        None => {
+            forfeit(shared, kind);
+            return Ok(Wait::For(shared.config.poll));
+        }
+        Some(due) if !due.is_zero() => {
+            forfeit(shared, kind);
+            return Ok(Wait::For(due));
+        }
+        Some(_) => {}
+    }
     loop {
         if shared.stop_claiming.is_cancelled() {
-            return Ok(None);
+            return Ok(Wait::For(shared.config.poll));
         }
-        let mut permits = Vec::new();
-        while permits.len() < shared.config.claim_batch {
-            let Ok(own) = Arc::clone(&slot.permits).try_acquire_owned() else {
+        let mut own = Vec::new();
+        while own.len() < shared.config.claim_batch {
+            let Ok(permit) = Arc::clone(&slot.permits).try_acquire_owned() else {
                 break;
             };
-            let Ok(global) = Arc::clone(&shared.global).try_acquire_owned() else {
-                if let Ok(mut waiting) = shared.waiting.lock()
-                    && !waiting.contains(&kind)
-                {
-                    waiting.push_back(kind);
-                }
-                drop(own);
-                break;
-            };
-            permits.push(Permit {
-                kind,
-                shared: Arc::clone(shared),
-                held: Some((own, global)),
-            });
+            own.push(permit);
         }
-        if permits.is_empty() {
-            // Busy: a finishing job wakes this kind.
-            return Ok(None);
+        if own.is_empty() {
+            forfeit(shared, kind);
+            return Ok(Wait::Permits);
         }
-        let asked = permits.len();
-        let jobs = claim(&mut conn, kind, asked).await?;
+        let global = shared.arbiter.take(kind, own.len());
+        own.truncate(global);
+        if global == 0 {
+            return Ok(Wait::Permits);
+        }
+        let jobs = match claim(&mut conn, kind, global).await {
+            Ok(jobs) => jobs,
+            Err(error) => {
+                give_back(shared, global);
+                return Err(error);
+            }
+        };
         let claimed = jobs.len();
-        for (job, permit) in jobs.into_iter().zip(permits) {
-            let shared = Arc::clone(shared);
-            shared.tracker.clone().spawn(run_job(shared, job, permit));
+        let (refused, started) = start(shared, jobs, &mut own);
+        give_back(shared, global - started);
+        for job in refused {
+            // Shutdown began while the claim ran: hand the job back with
+            // its run uncounted. If that fails the lease expires instead.
+            if let Err(error) = settle(&mut conn, &job, &JobResult::Defer { at: RunAt::Now }).await
+            {
+                tracing::warn!(job_kind = %kind, error = %error, "handing back an unstarted job failed");
+            }
         }
-        if claimed < asked {
+        if claimed < global {
             break;
         }
     }
-    next_due_in(&mut conn, kind).await
+    Ok(match next_due_in(&mut conn, kind).await? {
+        // A due job was skipped by `SKIP LOCKED`: its row is locked by
+        // another transaction, so try again shortly rather than at once.
+        Some(due) if due.is_zero() => Wait::For(LOCKED_ROW_RETRY),
+        Some(due) => Wait::For(due),
+        None => Wait::For(shared.config.poll),
+    })
 }
 
-/// A kind permit plus a global permit; releasing them wakes this kind and
-/// the next kind waiting for a global permit.
-struct Permit {
-    kind: JobKind,
-    shared: Arc<Shared>,
-    held: Option<(OwnedSemaphorePermit, OwnedSemaphorePermit)>,
-}
-
-impl Drop for Permit {
-    fn drop(&mut self) {
-        drop(self.held.take());
-        if let Some(slot) = self.shared.slots.get(&self.kind) {
-            slot.wake.notify_one();
+/// Starts each claimed job with one kind permit from `own`. Returns the
+/// jobs to hand back because shutdown began, and how many started. A claim
+/// whose deadline already passed is not started either: its lease expires
+/// and the sweep recovers it.
+fn start(
+    shared: &Arc<Shared>,
+    jobs: Vec<ClaimedJob>,
+    own: &mut Vec<tokio::sync::OwnedSemaphorePermit>,
+) -> (Vec<ClaimedJob>, usize) {
+    let admitting = shared
+        .admitting
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    let mut refused = Vec::new();
+    let mut started = 0;
+    for job in jobs {
+        if !*admitting {
+            refused.push(job);
+            continue;
         }
-        let next = self
-            .shared
-            .waiting
-            .lock()
-            .ok()
-            .and_then(|mut w| w.pop_front());
-        if let Some(next) = next.and_then(|kind| self.shared.slots.get(&kind)) {
-            next.wake.notify_one();
+        if job.time_left().is_zero() {
+            tracing::warn!(job_kind = %job.kind, job_id = %job.id, "a claim arrived with no time left; not starting it");
+            obs::job_finished(
+                &obs::job_span(&job),
+                job.kind,
+                obs::RunOutcome::TimedOut,
+                Duration::ZERO,
+            );
+            continue;
         }
-    }
-}
-
-/// Runs one claimed job under its deadline and records how it ended.
-async fn run_job(shared: Arc<Shared>, job: ClaimedJob, permit: Permit) {
-    let kind = job.kind;
-    let span = obs::job_span(&job);
-    let started = Instant::now();
-    obs::job_started(kind, job.queue_wait());
-    let deadline = kind.policy().deadline();
-    let outcome = async {
-        tokio::select! {
-            result = tokio::time::timeout(deadline, run_phases(&shared, &job)) => {
-                result.unwrap_or(RunOutcome::TimedOut)
-            }
-            () = shared.hard_stop.cancelled() => RunOutcome::TimedOut,
-        }
-    }
-    .instrument(span.clone())
-    .await;
-    obs::job_finished(&span, kind, outcome, started.elapsed());
-    drop(permit);
-}
-
-/// Calls the handler (or finalize), then settles when asked to.
-async fn run_phases(shared: &Shared, job: &ClaimedJob) -> RunOutcome {
-    {
-        let mut phase = if job.budget_spent() {
-            Phase::Finalize
-        } else {
-            Phase::Run
+        let permit = Permit {
+            kind: job.kind,
+            own: own.pop(),
+            arbiter: Arc::clone(&shared.arbiter),
+            wakes: Arc::clone(&shared.wakes),
         };
-        loop {
-            let handled = (shared.handler)(job.clone(), phase).await;
-            let result = match handled {
-                Ok(Handled::Settled(result)) => return RunOutcome::of(&result, phase),
-                Err(DbError::Stale) => return RunOutcome::LostLease,
-                Ok(Handled::Settle(result)) => result,
-                Err(error) => {
-                    tracing::warn!(job_kind = %job.kind, error = %error, "job handler failed");
-                    JobResult::Retry {
-                        at: RunAt::In(job.kind.policy().backoff(job.attempt)),
-                        error: format!("db_{}", obs::error_class(&error)),
-                    }
-                }
-            };
-            if phase == Phase::Run
-                && matches!(result, JobResult::Retry { .. })
-                && job.is_last_attempt()
-            {
-                phase = Phase::Finalize;
-                continue;
-            }
-            return match settle_alone(&shared.db, job, &result).await {
-                Ok(()) => RunOutcome::of(&result, phase),
-                Err(DbError::Stale) => RunOutcome::LostLease,
-                Err(error) => {
-                    tracing::warn!(job_kind = %job.kind, error = %error, "settling a job failed");
-                    RunOutcome::Failed
-                }
-            };
+        shared
+            .tracker
+            .spawn(run::run_job(Arc::clone(shared), job, permit));
+        started += 1;
+    }
+    (refused, started)
+}
+
+/// Gives up `kind`'s place in line and any turn it was handed.
+fn forfeit(shared: &Shared, kind: JobKind) {
+    for next in shared.arbiter.forfeit(kind) {
+        if let Some(wake) = shared.wakes.get(&next) {
+            wake.notify_one();
         }
     }
 }
 
-async fn settle_alone(db: &Db, job: &ClaimedJob, result: &JobResult) -> Result<(), DbError> {
-    let mut tx = db.begin().await?;
-    settle(&mut tx, job, result).await?;
-    tx.commit().await
+/// Returns reserved global permits a pass didn't use, waking any kind they
+/// were handed to (never the returning kind itself).
+fn give_back(shared: &Shared, count: usize) {
+    for kind in shared.arbiter.give_back(count) {
+        if let Some(wake) = shared.wakes.get(&kind) {
+            wake.notify_one();
+        }
+    }
 }

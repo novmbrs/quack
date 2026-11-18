@@ -207,6 +207,7 @@ async fn expired_leases_are_reclaimed_but_never_beyond_the_budget(
     enqueue(&db, &NewJob::send_dm(g, DmId::from_uuid(Uuid::now_v7()))).await?;
     let max = JobKind::SendDm.policy().max_attempts;
     let mut handler_runs = 0;
+    let mut finalized = 0;
     let mut previous: Option<ClaimedJob> = None;
     for _ in 0..10 {
         let mut conn = db.conn().await?;
@@ -233,6 +234,7 @@ async fn expired_leases_are_reclaimed_but_never_beyond_the_budget(
         }
         if job.budget_spent() {
             // The runner finalizes (database only) and finishes the job.
+            finalized += 1;
             settle(&db, &job, JobResult::Done).await?;
             break;
         }
@@ -242,7 +244,12 @@ async fn expired_leases_are_reclaimed_but_never_beyond_the_budget(
         expire_leases(&db).await?;
     }
     assert_eq!(handler_runs, max);
-    assert!(claim_one(&db, JobKind::SendDm).await?.is_none());
+    assert_eq!(finalized, 1);
+    let mut conn = db.conn().await?;
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM jobs")
+        .fetch_one(&mut *conn)
+        .await?;
+    assert_eq!(left, 0, "the finalized job is gone, not leased or delayed");
     Ok(())
 }
 

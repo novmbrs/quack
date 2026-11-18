@@ -14,7 +14,7 @@ mod queue;
 mod runner;
 
 use std::fmt;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use quack_core::ids::{
     ActionId, DmId, EvidenceId, GuildId, JobId, MemberId, MessageId, MessageRowId, ModLogId,
@@ -29,9 +29,9 @@ use crate::DbError;
 pub use kind::{DEADLINE_MARGIN, JobKind, JobPolicy};
 pub use queue::{
     JobBacklog, backlog, claim, enqueue, ensure_housekeeping, fence, next_due_in, settle,
-    sweep_leases, wake,
+    sweep_and_next_due, sweep_leases, wake,
 };
-pub use runner::{Handled, Handler, HandlerFuture, Phase, Runner, RunnerConfig};
+pub use runner::{FINALIZE_TRIES, Handled, Handler, HandlerFuture, Phase, Runner, RunnerConfig};
 
 /// A job's key: `<kind>:<owner ids>`. One key always means the same
 /// payload, so coalescing two enqueues never loses work.
@@ -259,6 +259,10 @@ pub struct ClaimedJob {
     pub run_at: OffsetDateTime,
     /// When the job was first enqueued.
     pub created_at: OffsetDateTime,
+    /// The run's hard deadline on this process's monotonic clock: the
+    /// lease left at claim, counted from when the claim was sent, minus
+    /// [`DEADLINE_MARGIN`]. The runner drops the run when it passes.
+    pub deadline: Instant,
 }
 
 impl ClaimedJob {
@@ -277,6 +281,12 @@ impl ClaimedJob {
     /// Whether this is the last run the budget allows.
     pub fn is_last_attempt(&self) -> bool {
         self.attempt >= self.max_attempts
+    }
+
+    /// How long the run has until its [`ClaimedJob::deadline`] (zero once
+    /// it passed). Check it before each Discord call (§16.1).
+    pub fn time_left(&self) -> Duration {
+        self.deadline.saturating_duration_since(Instant::now())
     }
 
     /// How long the job waited between becoming due and this claim.

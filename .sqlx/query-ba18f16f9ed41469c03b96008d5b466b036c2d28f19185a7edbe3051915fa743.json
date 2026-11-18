@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM jobs WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp() AND rerun_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ba18f16f9ed41469c03b96008d5b466b036c2d28f19185a7edbe3051915fa743"
+}

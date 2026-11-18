@@ -1,11 +1,11 @@
 //! The queue's SQL: enqueue, claim, fence, settle, lease sweep, gauges.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use quack_core::ids::JobId;
 use sqlx::PgConnection;
 
-use super::{ClaimedJob, JobKind, JobResult, NewJob, RunAt, short_error};
+use super::{ClaimedJob, DEADLINE_MARGIN, JobKind, JobResult, NewJob, RunAt, short_error};
 use crate::obs::{self, AfterCommit, Delete, Insert, Select, Update};
 use crate::pg::{Pg, count, opt_id};
 use crate::{DbError, Tx};
@@ -84,12 +84,18 @@ pub async fn ensure_housekeeping(conn: &mut PgConnection) -> Result<(), DbError>
 
 /// Claims up to `limit` due jobs of `kind` (§16.2): a fresh claim token, a
 /// lease of the kind's length, and `attempts + 1`, all from PostgreSQL.
+///
+/// Each job's [`ClaimedJob::deadline`] is anchored at the moment the claim
+/// was sent, so it can only be early: the lease PostgreSQL reports as left
+/// (never more than the kind's lease) minus the 15-second margin.
 pub async fn claim(
     conn: &mut PgConnection,
     kind: JobKind,
     limit: usize,
 ) -> Result<Vec<ClaimedJob>, DbError> {
-    let lease = kind.policy().lease.as_secs_f64();
+    let policy = kind.policy();
+    let lease = policy.lease.as_secs_f64();
+    let sent = Instant::now();
     let limit = i64::try_from(limit).unwrap_or(i64::MAX);
     let rows = obs::run(
         Update,
@@ -111,7 +117,8 @@ pub async fn claim(
                WHERE j.id = picked.id
                RETURNING j.id, j.key, j.guild_id, j.payload, j.attempts, j.max_attempts,
                          j.claim_token AS "claim_token!", j.locked_until AS "locked_until!",
-                         j.trace_context, j.run_at, j.created_at"#,
+                         j.trace_context, j.run_at, j.created_at,
+                         EXTRACT(EPOCH FROM j.locked_until - clock_timestamp())::float8 AS "left!""#,
             Pg(kind),
             limit,
             lease,
@@ -121,6 +128,12 @@ pub async fn claim(
     .await?;
     rows.into_iter()
         .map(|r| {
+            let left = Duration::try_from_secs_f64(r.left.max(0.0))
+                .unwrap_or(Duration::ZERO)
+                .min(policy.lease);
+            let deadline = sent
+                .checked_add(left.saturating_sub(DEADLINE_MARGIN))
+                .unwrap_or(sent);
             Ok(ClaimedJob {
                 id: JobId::from_uuid(r.id),
                 kind,
@@ -134,6 +147,7 @@ pub async fn claim(
                 trace_context: r.trace_context,
                 run_at: r.run_at,
                 created_at: r.created_at,
+                deadline,
             })
         })
         .collect()
@@ -156,6 +170,41 @@ pub async fn sweep_leases(conn: &mut PgConnection, kind: JobKind) -> Result<u64,
     Ok(done.rows_affected())
 }
 
+/// [`sweep_leases`] and [`next_due_in`] in one statement: an idle
+/// dispatcher's whole pass. Returns how many leases were swept and how long
+/// until the earliest unclaimed job (swept ones included) is due.
+pub async fn sweep_and_next_due(
+    conn: &mut PgConnection,
+    kind: JobKind,
+) -> Result<(u64, Option<Duration>), DbError> {
+    let row = obs::run(
+        Update,
+        "jobs",
+        sqlx::query!(
+            r#"WITH swept AS (
+                 UPDATE jobs SET claim_token = NULL, locked_until = NULL, updated_at = now()
+                 WHERE locked_until < now() AND dead_at IS NULL AND kind = $1
+                 RETURNING run_at
+               )
+               SELECT (SELECT count(*) FROM swept) AS "swept!",
+                      EXTRACT(EPOCH FROM LEAST(
+                        (SELECT min(run_at) FROM swept),
+                        (SELECT min(run_at) FROM jobs
+                         WHERE kind = $1 AND dead_at IS NULL AND locked_until IS NULL)
+                      ) - now())::float8 AS "secs""#,
+            Pg(kind),
+        )
+        .fetch_one(conn),
+    )
+    .await?;
+    let swept = u64::try_from(row.swept).unwrap_or(0);
+    Ok((swept, row.secs.map(due_in)))
+}
+
+fn due_in(secs: f64) -> Duration {
+    Duration::try_from_secs_f64(secs.max(0.0)).unwrap_or(Duration::ZERO)
+}
+
 /// The fence: proves this claim still holds. Run it as the last statement
 /// of every handler transaction; [`DbError::Stale`] means the lease was
 /// lost and the transaction must roll back.
@@ -164,7 +213,7 @@ pub async fn fence(conn: &mut PgConnection, job: &ClaimedJob) -> Result<(), DbEr
         Update,
         "jobs",
         sqlx::query!(
-            "UPDATE jobs SET updated_at = now() WHERE id = $1 AND claim_token = $2 AND locked_until > now()",
+            "UPDATE jobs SET updated_at = now() WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp()",
             job.id.get(),
             job.claim_token,
         )
@@ -193,7 +242,7 @@ pub async fn settle(
                 Delete,
                 "jobs",
                 sqlx::query!(
-                    "DELETE FROM jobs WHERE id = $1 AND claim_token = $2 AND locked_until > now() AND rerun_at IS NULL",
+                    "DELETE FROM jobs WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp() AND rerun_at IS NULL",
                     id,
                     token
                 )
@@ -207,7 +256,7 @@ pub async fn settle(
                     sqlx::query!(
                         "UPDATE jobs SET claim_token = NULL, locked_until = NULL, attempts = 0, run_at = rerun_at,
                                          rerun_at = NULL, last_error = NULL, updated_at = now()
-                         WHERE id = $1 AND claim_token = $2 AND locked_until > now() AND rerun_at IS NOT NULL",
+                         WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp() AND rerun_at IS NOT NULL",
                         id,
                         token
                     )
@@ -230,7 +279,7 @@ pub async fn settle(
                 sqlx::query!(
                     "UPDATE jobs SET dead_at = now(), claim_token = NULL, locked_until = NULL, rerun_at = NULL,
                                      last_error = $3, updated_at = now()
-                     WHERE id = $1 AND claim_token = $2 AND locked_until > now()",
+                     WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp()",
                     id,
                     token,
                     error
@@ -251,7 +300,7 @@ pub async fn settle(
                                      run_at = LEAST(COALESCE($3, now() + make_interval(secs => $4)),
                                                     COALESCE(rerun_at, 'infinity')),
                                      rerun_at = NULL, updated_at = now()
-                     WHERE id = $1 AND claim_token = $2 AND locked_until > now()",
+                     WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp()",
                     id,
                     token,
                     at,
@@ -269,6 +318,8 @@ pub async fn settle(
 
 /// Retry, Defer, and Continue: unclaim and run again at `at` (or earlier,
 /// when the job was enqueued again meanwhile). `uncount` gives the run back.
+/// A counted run that spent the budget is due at once instead, so its
+/// database-only finalize is not delayed by a backoff.
 async fn unclaim(
     conn: &mut PgConnection,
     job: &ClaimedJob,
@@ -282,13 +333,14 @@ async fn unclaim(
         "jobs",
         sqlx::query!(
             "UPDATE jobs SET claim_token = NULL, locked_until = NULL,
-                             run_at = LEAST(COALESCE($3, now() + make_interval(secs => $4)),
-                                            COALESCE(rerun_at, 'infinity')),
+                             run_at = CASE WHEN NOT $5 AND attempts >= max_attempts THEN now()
+                                           ELSE LEAST(COALESCE($3, now() + make_interval(secs => $4)),
+                                                      COALESCE(rerun_at, 'infinity')) END,
                              rerun_at = NULL,
                              attempts = CASE WHEN $5 THEN GREATEST(attempts - 1, 0) ELSE attempts END,
                              last_error = COALESCE($6, last_error),
                              updated_at = now()
-             WHERE id = $1 AND claim_token = $2 AND locked_until > now()",
+             WHERE id = $1 AND claim_token = $2 AND locked_until > clock_timestamp()",
             job.id.get(),
             job.claim_token,
             at,
@@ -340,7 +392,7 @@ pub async fn next_due_in(
         .fetch_one(conn),
     )
     .await?;
-    Ok(secs.map(|s| Duration::try_from_secs_f64(s.max(0.0)).unwrap_or(Duration::ZERO)))
+    Ok(secs.map(due_in))
 }
 
 /// The ready backlog and dead jobs of one kind, for the gauges (§16.6).

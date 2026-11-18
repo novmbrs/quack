@@ -70,11 +70,23 @@ async fn polling_picks_up_a_job_whose_notification_was_lost(
         counter.fetch_add(1, Ordering::SeqCst);
         Box::pin(async { Ok(Handled::Settle(JobResult::Done)) })
     });
-    let runner = Runner::new(db.clone(), config(), handler);
+    let poll = Duration::from_millis(1500);
+    let runner = Runner::new(db.clone(), RunnerConfig { poll, ..config() }, handler);
     runner.start();
     tokio::time::sleep(Duration::from_millis(300)).await;
     insert_silently(&db, g).await?;
+    let inserted = std::time::Instant::now();
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert_eq!(
+        runs.load(Ordering::SeqCst),
+        0,
+        "the dispatcher sleeps until its poll"
+    );
     assert!(eventually(async || Ok(remaining(&db).await? == 0)).await?);
+    assert!(
+        inserted.elapsed() <= poll + Duration::from_millis(500),
+        "the poll picked the job up"
+    );
     assert_eq!(runs.load(Ordering::SeqCst), 1);
     assert!(runner.heartbeats_fresh(Duration::from_secs(5)));
     runner.shutdown(Duration::from_secs(5)).await;
