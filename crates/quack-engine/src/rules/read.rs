@@ -83,11 +83,15 @@ pub struct VersionView {
 async fn require_reader(engine: &Engine, principal: &Principal) -> Result<(), RuleError> {
     let mut conn = engine.db().conn().await?;
     let caps: Capabilities = principal.current_capabilities(&mut conn).await?;
-    match caps.check(Capability::Moderate) {
-        Ok(()) => Ok(()),
-        Err(_) => caps
-            .check(Capability::ManageRules)
-            .map_err(|r| RuleError::Refused(r.into())),
+    if !caps.holds(Capability::Moderate) && !caps.holds(Capability::ManageRules) {
+        return Err(RuleError::Refused(DomainError::MissingCapability(
+            Capability::Moderate,
+        )));
+    }
+    if caps.mfa_ok {
+        Ok(())
+    } else {
+        Err(RuleError::Refused(DomainError::MfaRequired))
     }
 }
 
