@@ -8053,3 +8053,10 @@ folds these into the sections (or changes the code) and removes them here.
     `saved` (a burst's later posts have no evidence row and are deleted
     as before); a capture that `failed`, or is still `saving` after 10
     minutes, records `cleanup_failed_at` and keeps the post.
+51. §19.10–19.12 (application review MAJOR 13) → a server whose checks
+    don't all hold is rolled back before its `import_guilds` marker
+    (reported `Failed` with the failing checks and their example keys), so
+    nothing of it is runnable and a repaired rerun imports it. A case whose
+    moderator ID is not a snowflake is written without its moderator and
+    reported under `derived` as `case_moderator_invalid` (it was counted as
+    a skipped case, which failed `every_case_accounted_for`).

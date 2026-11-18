@@ -129,8 +129,10 @@ fn case_row(
         return Ok(Ok(None));
     };
     let moderator = match c.snowflake("moderator_discord_user_id")? {
+        // The case is written without its moderator: a repaired value,
+        // not a skipped case.
         Snowflake::Invalid => {
-            cx.f.skip("cases", "invalid_snowflake", format!("{key}:moderator"));
+            cx.f.derived("case_moderator_invalid", &key);
             None
         }
         s => s.id(),

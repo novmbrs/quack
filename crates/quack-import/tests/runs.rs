@@ -293,3 +293,19 @@ async fn rows_new_limits_refuse_are_quarantined_or_stop_their_server() -> Result
     );
     s.drop().await
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_case_with_an_invalid_moderator_is_written_without_failing_its_server() -> Result<()> {
+    let Some(s) = v5().await? else { return Ok(()) };
+    s.mysql(&format!(
+        "UPDATE cases SET moderator_discord_user_id = 'not-a-snowflake' WHERE id = '{}'",
+        ulid("CS", 21)
+    ))
+    .await?;
+    let report = s.import(false).await?;
+    assert!(report.ok, "{}", report.summary());
+    assert_eq!(report.guilds[B], GuildOutcome::Imported);
+    assert_eq!(report.derived["case_moderator_invalid"].count, 1);
+    assert!(report.checks["every_case_accounted_for"].ok);
+    s.drop().await
+}

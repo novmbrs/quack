@@ -158,6 +158,19 @@ async fn import_in(
     steps(&mut cx).await?;
     checks::run(&mut cx).await?;
     let Ctx { mut tx, f, g, .. } = cx;
+    // A failed check (an invariant that didn't hold) rolls the server back
+    // before its marker, so nothing of it is runnable and a repaired rerun
+    // imports it.
+    let failed: Vec<String> = f
+        .checks
+        .iter()
+        .filter(|(_, c)| !c.ok)
+        .map(|(name, c)| format!("check {name} failed: {}", c.failing.examples.join(", ")))
+        .collect();
+    if !failed.is_empty() {
+        tx.rollback().await?;
+        return Err(ImportError::Server(failed));
+    }
     let guild = GuildId::try_from(g.id).map_err(|_| ImportError::server("invalid server ID"))?;
     match finish {
         Finish::Commit => {
