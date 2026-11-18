@@ -113,16 +113,17 @@ impl Db {
     /// [`CONTENTION_RETRIES`] times) after a serialization failure or
     /// deadlock. `work` must only touch the database, since it may run more
     /// than once. An `Err` from `work` rolls back and is returned.
-    pub async fn transaction<T, E, F>(&self, mut work: F) -> Result<T, E>
+    pub async fn transaction<T, F>(&self, mut work: F) -> Result<T, DbError>
     where
-        E: TxError,
-        F: for<'t> FnMut(&'t mut Tx) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 't>>,
+        F: for<'t> FnMut(
+            &'t mut Tx,
+        ) -> Pin<Box<dyn Future<Output = Result<T, DbError>> + Send + 't>>,
     {
         let mut retries = 0;
         loop {
             let mut tx = self.begin().await?;
             let result = match work(&mut tx).await {
-                Ok(value) => tx.commit().await.map(|()| value).map_err(E::from),
+                Ok(value) => tx.commit().await.map(|()| value),
                 Err(error) => {
                     // A failed rollback leaves nothing to undo: the
                     // connection is discarded and the server aborts it.
@@ -131,13 +132,10 @@ impl Db {
                 }
             };
             match result {
-                Err(error) if retries < CONTENTION_RETRIES => match error.db_error() {
-                    Some(db) if db.is_contention() => {
-                        obs::transaction_retry(db.class());
-                        retries += 1;
-                    }
-                    _ => return Err(error),
-                },
+                Err(error) if retries < CONTENTION_RETRIES && error.is_contention() => {
+                    obs::transaction_retry(error.class());
+                    retries += 1;
+                }
                 other => return other,
             }
         }
@@ -151,19 +149,6 @@ impl Db {
 
 fn millis(duration: Duration) -> String {
     format!("{}ms", duration.as_millis())
-}
-
-/// An error a transaction body may return: it can carry a [`DbError`],
-/// which [`Db::transaction`] inspects to decide whether to run again.
-pub trait TxError: From<DbError> {
-    /// The database error inside, if this is one.
-    fn db_error(&self) -> Option<&DbError>;
-}
-
-impl TxError for DbError {
-    fn db_error(&self) -> Option<&DbError> {
-        Some(self)
-    }
 }
 
 /// An open transaction. Derefs to the connection, so every query function

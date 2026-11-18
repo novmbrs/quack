@@ -148,21 +148,6 @@ pub async fn lock_shared(
     row.map(GuildSettings::try_from).transpose()
 }
 
-/// Settings of these servers, for the config cache.
-pub async fn for_guilds(
-    conn: &mut PgConnection,
-    guilds: &[GuildId],
-) -> Result<Vec<GuildSettings>, DbError> {
-    let ids: Vec<i64> = guilds.iter().copied().map(i64::from).collect();
-    let rows = obs::run(
-        Select,
-        "guild_settings",
-        query_settings!("WHERE guild_id = ANY($1)", &ids).fetch_all(conn),
-    )
-    .await?;
-    rows.into_iter().map(GuildSettings::try_from).collect()
-}
-
 /// The fields a settings update writes; `None` leaves a field alone and
 /// `Some(None)` clears it.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

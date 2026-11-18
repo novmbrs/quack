@@ -44,7 +44,6 @@ pub mod tickets;
 
 pub use db::{
     ACQUIRE_TIMEOUT, CONTENTION_RETRIES, Db, IDLE_IN_TRANSACTION_TIMEOUT, STATEMENT_TIMEOUT, Tx,
-    TxError,
 };
 pub use error::{Applied, Conflict, DbError, Violation};
 pub use fence::{FENCE_CHECK_INTERVAL, FENCE_CHECK_TIMEOUT, FENCE_KEY, Fence};
