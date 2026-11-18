@@ -175,3 +175,15 @@ fn secrets_never_print() {
     }
     assert!(shown.contains("[redacted]"));
 }
+
+#[test]
+fn a_malformed_file_never_echoes_its_content() {
+    let dir = dashboard();
+    let bad = dir.join("malformed.toml");
+    std::fs::write(&bad, "discord_token = \"SENTINEL-TOKEN-1234\n").unwrap();
+    let problems = values(Some(&bad), Vec::new()).unwrap_err().0;
+    let shown = problems.join("\n");
+    assert!(!shown.contains("SENTINEL"), "{shown}");
+    assert!(shown.contains("malformed.toml"), "{shown}");
+    assert!(shown.contains("line 1"), "{shown}");
+}

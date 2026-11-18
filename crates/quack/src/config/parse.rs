@@ -224,6 +224,33 @@ pub(super) fn base64_len(text: &str) -> Option<usize> {
     Some(body.len() * 3 / 4)
 }
 
+/// Why the config file couldn't be read, without its content: a parse
+/// error's own message quotes the offending line, which may hold a secret.
+fn unreadable(path: &Path, error: &config::ConfigError) -> String {
+    let file = path.display();
+    match error {
+        config::ConfigError::FileParse { cause, .. } => {
+            let at = location(&cause.to_string()).map_or_else(String::new, |(line, column)| {
+                format!(" at line {line}, column {column}")
+            });
+            format!("The config file {file} isn't valid TOML{at}.")
+        }
+        config::ConfigError::NotFound(_) => format!("The config file {file} doesn't exist."),
+        _ => format!("Couldn't read the config file {file}."),
+    }
+}
+
+/// The line and column from the first line of a TOML parse error
+/// (`TOML parse error at line 1, column 17`); nothing else of it is kept.
+fn location(message: &str) -> Option<(u32, u32)> {
+    let rest = message
+        .lines()
+        .next()?
+        .strip_prefix("TOML parse error at line ")?;
+    let (line, column) = rest.split_once(", column ")?;
+    Some((line.trim().parse().ok()?, column.trim().parse().ok()?))
+}
+
 /// Reads a TOML file with the configuration keys (lowercase, no prefix).
 /// Unknown keys are an error.
 pub(super) fn file(path: &Path) -> Result<BTreeMap<String, String>, ConfigErrors> {
@@ -235,12 +262,7 @@ pub(super) fn file(path: &Path) -> Result<BTreeMap<String, String>, ConfigErrors
         )
         .build()
         .and_then(config::Config::try_deserialize::<BTreeMap<String, config::Value>>)
-        .map_err(|e| {
-            ConfigErrors(vec![format!(
-                "Couldn't read the config file {}: {e}",
-                path.display()
-            )])
-        })?;
+        .map_err(|e| ConfigErrors(vec![unreadable(path, &e)]))?;
     let mut out = BTreeMap::new();
     let mut problems = Vec::new();
     for (key, value) in read {

@@ -8024,3 +8024,7 @@ folds these into the sections (or changes the code) and removes them here.
     outside 1 second to 28 days has no safe end: the case's creation is
     used and `timeout_without_duration` is reported (the importer never
     panics on it).
+47. §17.7 (application review MAJOR 17) → a config file that isn't valid
+    TOML is reported by its path and the parser's line and column only;
+    the parser's own message (which quotes the offending line, possibly a
+    token) is never printed.
