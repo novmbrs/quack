@@ -12,6 +12,8 @@ use opentelemetry::KeyValue;
 pub trait Attribute: Copy {
     /// The attribute key every value of this type is exported under.
     const KEY: &'static str;
+    /// Every allowed value; empty for static names chosen in code.
+    const VALUES: &'static [&'static str] = &[];
 
     /// The exported value.
     fn as_str(self) -> &'static str;
@@ -39,12 +41,11 @@ macro_rules! label_enum {
         impl $name {
             /// Every value, in declaration order.
             pub const ALL: &'static [Self] = &[$(Self::$variant,)+];
-            /// Every exported value, in declaration order.
-            pub const VALUES: &'static [&'static str] = &[$($value,)+];
         }
 
         impl Attribute for $name {
             const KEY: &'static str = $key;
+            const VALUES: &'static [&'static str] = &[$($value,)+];
 
             fn as_str(self) -> &'static str {
                 match self {
