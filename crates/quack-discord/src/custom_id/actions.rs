@@ -66,10 +66,15 @@ impl From<&ModalAction> for CustomId {
     }
 }
 
-/// The custom id of a modal input: `f:<field key>`, or a fixed name.
+/// The custom id of a modal input: `f:<field key>`, or a fixed name. A
+/// key that isn't a valid field key (a configured key always is) can't
+/// make an id past Discord's 100 characters: it is cut to fit.
 pub fn encode_input_id(id: &InputId) -> String {
     match id {
-        InputId::Field(key) => format!("f:{}", key.as_str()),
+        InputId::Field(key) => {
+            let id = format!("f:{}", key.as_str());
+            id.chars().take(super::MAX_LEN).collect()
+        }
         InputId::Reason => "reason".to_owned(),
         InputId::Links => "links".to_owned(),
         InputId::Statement => "statement".to_owned(),

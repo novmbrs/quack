@@ -289,3 +289,16 @@ fn input_ids_and_select_values() {
     let case = CaseId::from_uuid(Uuid::from_u128(9));
     assert_eq!(encode_select_value(SelectValue::Case(case)), case.to_u22());
 }
+
+/// Discord review MINOR 19: an overlong `1:` id is answered as an expired
+/// button, and an input id never passes 100 characters.
+#[test]
+fn boundary_ids_follow_the_contract() {
+    let long = format!("1:{}", "x".repeat(MAX_LEN * 4));
+    assert_eq!(decode(&long), ComponentId::Expired);
+    let other = "y".repeat(MAX_LEN * 4 + 1);
+    assert_eq!(decode(&other), ComponentId::Unrecognized);
+    let key = quack_core::rule::FieldKey("k".repeat(200));
+    let id = encode_input_id(&quack_text::actions::InputId::Field(key));
+    assert!(id.chars().count() <= MAX_LEN, "{}", id.len());
+}

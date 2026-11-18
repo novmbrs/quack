@@ -179,7 +179,13 @@ impl CustomId {
 /// Reads a received custom id. Never panics.
 pub fn decode(raw: &str) -> ComponentId {
     if raw.len() > MAX_LEN * 4 {
-        return ComponentId::Unrecognized;
+        // Too long to be anything Quack wrote; a `1:` id still gets the
+        // expired-button answer (§11.5), like any other malformed one.
+        return if raw.starts_with("1:") {
+            ComponentId::Expired
+        } else {
+            ComponentId::Unrecognized
+        };
     }
     match raw.strip_prefix("1:") {
         Some(rest) => parse::decode(rest).map_or(ComponentId::Expired, ComponentId::Current),
