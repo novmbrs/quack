@@ -29,5 +29,6 @@ uuid = { workspace = true }
 [dev-dependencies]
 quack-testkit = { workspace = true }
 anyhow = { workspace = true }
+sqlx = { workspace = true }
 proptest = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }

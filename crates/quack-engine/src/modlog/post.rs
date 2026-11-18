@@ -173,6 +173,10 @@ async fn failed_once(
     reason: LogChannelFailure,
     code: Option<u32>,
 ) -> Result<(), DbError> {
+    // Serialized on the settings row, as the success that stamps
+    // `log_channel_posted_at` is: two failures of one outage can't both
+    // read "no failure yet" (§9.4).
+    settings::lock(tx, guild).await?;
     let failed = db::last_log_channel_failure(tx, guild).await?;
     let posted = settings::log_channel_posted_at(tx, guild).await?;
     if !failure_is_new_outage(failed, posted) {

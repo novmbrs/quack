@@ -212,3 +212,38 @@ async fn the_member_view_carries_no_staff_only_field() -> Result<()> {
     ));
     Ok(())
 }
+
+/// Engine review MAJOR 18: two posts refused at the same time in one
+/// outage record `log_channel_failed` once. Both runs are held right at
+/// their entry insert (the test holds a table lock), after reading "no
+/// failure yet"; serialized on the settings row, the second reads the
+/// first's entry.
+#[tokio::test]
+async fn two_failures_at_once_are_one_outage() -> Result<()> {
+    let h = Harness::new().await?;
+    set_log_channel(&h, false).await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    h.apply(MEMBER, rule).await?;
+    h.apply(MEMBER_2, rule).await?;
+    let mut hold = h.db.db.begin().await?;
+    sqlx::query("LOCK TABLE mod_log IN SHARE MODE")
+        .execute(&mut *hold)
+        .await?;
+    let a = h.spawn_one(quack_db::jobs::JobKind::PostModLog).await?;
+    let b = h.spawn_one(quack_db::jobs::JobKind::PostModLog).await?;
+    let waiting = "SELECT count(*) FROM pg_stat_activity
+                   WHERE datname = current_database() AND wait_event_type = 'Lock'";
+    let both = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while h.db.count(waiting).await? < 2 {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        anyhow::Ok(())
+    })
+    .await;
+    assert!(both.is_ok(), "both runs reach their writes");
+    hold.rollback().await?;
+    a.await?;
+    b.await?;
+    assert_eq!(logged(&h, ModLogKind::LogChannelFailed).await?, 1);
+    Ok(())
+}
