@@ -110,6 +110,8 @@ struct Shared {
     stop_claiming: CancellationToken,
     hard_stop: CancellationToken,
     tracker: TaskTracker,
+    /// Dispatch passes run so far, across kinds.
+    passes: std::sync::atomic::AtomicU64,
 }
 
 /// Runs claimed jobs through the [`Handler`]. Cheap to clone.
@@ -160,6 +162,7 @@ impl Runner {
                 stop_claiming: CancellationToken::new(),
                 hard_stop: CancellationToken::new(),
                 tracker: TaskTracker::new(),
+                passes: std::sync::atomic::AtomicU64::new(0),
             }),
         }
     }
@@ -197,6 +200,14 @@ impl Runner {
             Notification::Reconnected => self.wake_all(),
             Notification::Rules(_) | Notification::Settings(_) => {}
         }
+    }
+
+    /// How many dispatch passes have run, across kinds. An idle pass is one
+    /// query, so this bounds what an idle runner asks of the database.
+    pub fn passes(&self) -> u64 {
+        self.shared
+            .passes
+            .load(std::sync::atomic::Ordering::Relaxed)
     }
 
     /// Whether every dispatcher finished a pass within `max_age` (readiness,
@@ -250,6 +261,9 @@ async fn dispatch(shared: Arc<Shared>, kind: JobKind) {
     };
     let wake = Arc::clone(wake);
     while !shared.stop_claiming.is_cancelled() {
+        shared
+            .passes
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let passed = tokio::select! {
             result = pass(&shared, kind) => result,
             () = shared.hard_stop.cancelled() => return,

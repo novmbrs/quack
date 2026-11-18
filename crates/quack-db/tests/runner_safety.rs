@@ -350,14 +350,6 @@ async fn waiting_kind_keeps_its_place(_: PgPoolOptions, options: PgConnectOption
     Ok(())
 }
 
-async fn commits(conn: &mut sqlx::PgConnection) -> Result<i64> {
-    Ok(sqlx::query_scalar(
-        "SELECT xact_commit FROM pg_stat_database WHERE datname = current_database()",
-    )
-    .fetch_one(conn)
-    .await?)
-}
-
 #[sqlx::test(migrator = "quack_db::MIGRATOR")]
 async fn an_idle_runner_issues_a_handful_of_queries_per_second(
     _: PgPoolOptions,
@@ -365,25 +357,27 @@ async fn an_idle_runner_issues_a_handful_of_queries_per_second(
 ) -> Result<()> {
     let db = Db::connect_with(options, 8).await?;
     let handler: Handler = Arc::new(|_, _| panic!("no jobs"));
-    let runner = Runner::new(db.clone(), RunnerConfig::new(16), handler);
+    let config = RunnerConfig::new(16);
+    let kinds = u64::try_from(config.kinds.len())?;
+    let runner = Runner::new(db.clone(), config, handler);
     runner.start();
-    // Past the first passes, which also prepare each statement on each new
-    // pool connection.
-    tokio::time::sleep(Duration::from_secs(3)).await;
-    let mut conn = db.conn().await?;
-    let before = commits(&mut conn).await?;
+    // Counted by the runner itself, not the server's statistics, which
+    // flush late and lump a busy start into a later window. An idle pass
+    // is one query (`sweep_and_next_due`), so passes bound the queries.
+    let started = std::time::Instant::now();
     tokio::time::sleep(Duration::from_secs(4)).await;
-    let after = commits(&mut conn).await?;
+    let passes = runner.passes();
+    let elapsed = started.elapsed().as_secs();
     runner.shutdown(WAIT).await;
-    // Ten kinds, one query per pass, one pass per 2-second poll: about
-    // five a second (the statistics view lags a little either way). The
+    // One pass per kind at start, then one per 2-second poll: about five a
+    // second for ten kinds. A slower machine only makes fewer. The
     // spinning runner this guards against made thousands.
-    let per_second = (after - before) / 4;
+    let most = kinds * (1 + elapsed / 2 + 1);
     assert!(
-        per_second <= 10,
-        "an idle runner committed {} transactions in 4 seconds",
-        after - before
+        passes <= most,
+        "an idle runner made {passes} passes in {elapsed} s (at most {most})"
     );
+    assert!(passes >= kinds, "every kind ran a pass ({passes})");
     Ok(())
 }
 

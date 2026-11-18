@@ -164,14 +164,30 @@ async fn an_interrupted_run_leaves_nothing_half_done() -> Result<()> {
     }
     task.abort();
     let _ = task.await;
-    // Whatever committed is whole: every imported server has its rows, no
-    // other server has any.
-    let imported = s.count("SELECT count(*) FROM import_guilds").await?;
-    let with_cases = s
-        .count("SELECT count(DISTINCT guild_id) FROM cases")
+    // A statement the aborted run already sent (a COMMIT, say) still runs
+    // to its end on the server: wait until no other session of this
+    // database is busy, so nothing lands while the checks below read.
+    let busy = "SELECT count(*) FROM pg_stat_activity
+                WHERE datname = current_database() AND pid <> pg_backend_pid()
+                  AND state <> 'idle'";
+    let quiet = tokio::time::timeout(std::time::Duration::from_secs(60), async {
+        while s.count(busy).await? > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        anyhow::Ok(())
+    })
+    .await;
+    assert!(quiet.is_ok(), "the aborted run's session never went idle");
+    // Whatever committed is whole: every server with rows has its
+    // import_guilds row. One statement, so one snapshot.
+    let partial = s
+        .count(
+            "SELECT count(*) FROM (SELECT DISTINCT guild_id FROM cases) c
+             WHERE NOT EXISTS (SELECT 1 FROM import_guilds g WHERE g.guild_id = c.guild_id)",
+        )
         .await?;
-    assert!(
-        with_cases <= imported,
+    assert_eq!(
+        partial, 0,
         "a server has rows without its import_guilds row"
     );
     let report = s.import(false).await?;
