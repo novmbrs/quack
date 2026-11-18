@@ -20,7 +20,11 @@ pub mod escalation;
 pub mod evidence;
 pub mod ids;
 pub mod limits;
+pub mod messages;
+pub mod modlog;
+pub mod modules;
 pub mod permissions;
 pub mod rule;
+pub mod settings;
 
 pub use error::{DomainError, InvalidTransition, UnknownValue};
