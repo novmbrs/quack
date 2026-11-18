@@ -22,6 +22,7 @@ pub mod dms;
 pub mod drafts;
 mod engine;
 pub mod evidence;
+pub mod gauges;
 pub mod guilds;
 pub mod jobs;
 pub mod messages;
