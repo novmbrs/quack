@@ -117,6 +117,15 @@ async fn rest_reads_bypass_the_cache_and_absent_is_never_cached() {
                 .json_body(json!({"code": 10007, "message": "Unknown Member"}));
         })
         .await;
+    let search = server
+        .mock_async(|when, then| {
+            when.method("GET")
+                .path("/api/v10/guilds/1/members/search")
+                .query_param("query", "mem");
+            then.status(200)
+                .json_body(json!([fixtures::member(11, &[20])]));
+        })
+        .await;
     let caches = loaded();
     let members = caches.1.clone();
     let facts = facts(&server.base_url(), caches);
@@ -135,6 +144,20 @@ async fn rest_reads_bypass_the_cache_and_absent_is_never_cached() {
     }
     assert_eq!(absent.calls_async().await, 2);
     assert!(members.get(g(), MemberId::new(9).unwrap(), true).is_none());
+    let found = facts.search_members(g(), "mem", 5).await.done().unwrap();
+    assert_eq!(
+        found
+            .iter()
+            .map(|m| (m.id.get(), m.highest_role_position))
+            .collect::<Vec<_>>(),
+        vec![(11, 5)]
+    );
+    assert!(
+        members
+            .get(g(), MemberId::new(11).unwrap(), false)
+            .is_some()
+    );
+    search.assert_async().await;
 }
 
 #[tokio::test]

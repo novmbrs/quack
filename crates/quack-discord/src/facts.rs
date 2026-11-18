@@ -119,6 +119,35 @@ impl Facts {
         })
     }
 
+    /// Members whose username or nickname starts with `query` (at most
+    /// `limit`), with permissions computed from the server's facts. Always
+    /// REST; the answers refresh the member cache.
+    pub async fn search_members(
+        &self,
+        guild: GuildId,
+        query: &str,
+        limit: u16,
+    ) -> Outcome<Vec<MemberFacts>> {
+        let facts = match self.guild_facts(guild).await.into_result() {
+            Ok(facts) => facts,
+            Err(failure) => return failure,
+        };
+        let now = OffsetDateTime::now_utc();
+        self.client
+            .search_members(guild, query, limit)
+            .await
+            .map(|found| {
+                found
+                    .into_iter()
+                    .map(|m| {
+                        let present = member_facts(&facts, &m, now);
+                        self.members.put_rest(guild, m);
+                        present
+                    })
+                    .collect()
+            })
+    }
+
     /// One channel or thread of a server with Quack's permissions in it;
     /// `None` when Discord says it doesn't exist (404 Unknown Channel) or it
     /// belongs to another server.
