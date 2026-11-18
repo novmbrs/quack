@@ -7,7 +7,7 @@ use quack_core::ids::CaseId;
 use quack_core::permissions::Capability;
 use quack_discord::interaction::{FieldValue, Source};
 use quack_engine::CaseRef;
-use quack_engine::cases::{CaseView, get, void_case};
+use quack_engine::cases::{CaseView, VoidEffects, get, void_case};
 use quack_text::actions::InputId;
 use quack_text::case::{VoidResult, void_done, void_modal};
 use quack_text::error::ErrorFacts;
@@ -72,24 +72,52 @@ async fn void(a: &Acked<'_>, case: CaseRef, reason: &str) -> Result<Msg, Failure
                 },
             )
         })?;
-    let view = get(engine, &principal, CaseRef::Id(voided.case))
-        .await
-        .map_err(|e| errors::case(&e, &ErrorFacts::default()))?;
-    let member = Person::unnamed(view.member_id.account());
-    let appeal_closed = view
-        .appeal
-        .as_ref()
-        .is_some_and(|ap| ap.state == AppealState::Closed);
+    let member = Person::unnamed(voided.member.account());
+    let (results, appeal_closed) = if let Some(effects) = &voided.effects {
+        (from_effects(effects), effects.closed_appeal.is_some())
+    } else {
+        // A replay: what the first void did, read back from the case.
+        let view = get(engine, &principal, CaseRef::Id(voided.case))
+            .await
+            .map_err(|e| errors::case(&e, &ErrorFacts::default()))?;
+        let closed = view
+            .appeal
+            .as_ref()
+            .is_some_and(|ap| ap.state == AppealState::Closed);
+        (results(&view), closed)
+    };
     Ok(Msg::text(
         Tone::Success,
         void_done(
-            view.number,
-            &view.rule_name,
+            voided.number,
+            &voided.rule_name,
             &member,
-            &results(&view),
+            &results,
             appeal_closed,
         ),
     ))
+}
+
+/// What the void did to the case's action, from the engine's answer.
+fn from_effects(effects: &VoidEffects) -> Vec<VoidResult> {
+    let mut out = Vec::new();
+    if let Some(kind) = effects.cancelled_kind {
+        out.push(VoidResult::Cancelled(kind));
+    } else if let Some((kind, state)) = effects.original {
+        match (kind, state) {
+            (ActionKind::Kick, ActionState::Running) => out.push(VoidResult::RunningKick),
+            (ActionKind::Kick, ActionState::Done) => out.push(VoidResult::DoneKick),
+            (kind, ActionState::Running) => out.push(VoidResult::Running(kind)),
+            _ => {}
+        }
+    }
+    for kind in &effects.undo_kinds {
+        out.push(match kind {
+            ActionKind::Unban => VoidResult::Unbanning,
+            _ => VoidResult::RemovingTimeout,
+        });
+    }
+    out
 }
 
 /// What the void did to the case's action, read back from the case.

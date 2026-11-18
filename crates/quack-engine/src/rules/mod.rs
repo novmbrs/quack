@@ -91,14 +91,21 @@ fn validated(def: RuleDefinition) -> Result<RuleDefinition, RuleError> {
     Ok(def)
 }
 
-/// Opens the keyed transaction of a rule write, with the capability
-/// checked again inside it.
+/// Opens the keyed transaction of a rule write. The capability is checked
+/// before the operation key is looked up, so a replay is never served to
+/// someone who lost access, and again inside the transaction.
 async fn begin(
     engine: &Engine,
     principal: &Principal,
     op_key: &OpKey,
     request: &Request<'_>,
 ) -> Result<Result<Tx, RuleWritten>, RuleError> {
+    {
+        let mut conn = engine.db().conn().await?;
+        principal
+            .require(&mut conn, Capability::ManageRules)
+            .await??;
+    }
     let key = op_key.scoped(Some(principal.guild), Some(principal.account));
     match begin_keyed(engine.db(), &key, &request_hash(request)).await? {
         Keyed::Replay(response) => Ok(Err(RuleWritten {
@@ -200,11 +207,6 @@ async fn insert(
     } else {
         Request::Create(&def)
     };
-    let mut conn = engine.db().conn().await?;
-    principal
-        .require(&mut conn, Capability::ManageRules)
-        .await??;
-    drop(conn);
     let mut tx = match begin(engine, principal, op_key, &request).await? {
         Ok(tx) => tx,
         Err(replayed) => return Ok(replayed),

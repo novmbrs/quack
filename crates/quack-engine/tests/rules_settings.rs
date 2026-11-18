@@ -52,6 +52,30 @@ async fn edits_make_versions_and_cases_keep_theirs() -> Result<()> {
 }
 
 #[tokio::test]
+async fn a_replayed_rule_write_is_refused_after_losing_access() -> Result<()> {
+    let h = Harness::new().await?;
+    let p = admin(&h);
+    let made = create(&h.engine, &p, warning("Spam"), &h.key("POST rules")).await?;
+    let key = h.key("PUT rule");
+    let def = warning("Spam and ads");
+    edit(&h.engine, &p, made.rule, 1, def.clone(), &key).await?;
+    // The same person, the same request, but no longer an administrator.
+    let mut demoted = p.clone();
+    demoted.actor.permissions = quack_core::permissions::Permissions::NONE;
+    let replay = edit(&h.engine, &demoted, made.rule, 1, def, &key).await;
+    assert!(
+        matches!(
+            replay,
+            Err(RuleError::Refused(DomainError::MissingCapability(
+                Capability::ManageRules
+            )))
+        ),
+        "{replay:?}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn an_archived_rule_cannot_be_applied_even_mid_flight() -> Result<()> {
     let h = Harness::new().await?;
     let p = admin(&h);
@@ -427,6 +451,13 @@ async fn a_two_page_draft() -> Result<()> {
         again,
         PageSaved::Applied(Applied::Replayed(created.case.id))
     );
+    // So does submitting the last page again, without a new draft.
+    let resubmitted = save_page(&h.engine, &p, &page(2, 5..7), None).await?;
+    assert_eq!(
+        resubmitted,
+        PageSaved::Applied(Applied::Replayed(created.case.id))
+    );
+    assert_eq!(h.db.count("SELECT count(*) FROM case_drafts").await?, 0);
     assert_eq!(h.db.count("SELECT count(*) FROM cases").await?, 1);
     let _ = ContextInput::Text(String::new());
     Ok(())

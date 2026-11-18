@@ -99,6 +99,12 @@ pub async fn save_page(
                 .ok_or(DomainError::RuleNotFound)?
                 .definition
         };
+        // A resubmitted last page after the case committed (the case
+        // transaction deleted the draft): answer with that case instead of
+        // starting the draft again.
+        if let Some(case) = applied_case(engine, principal, submit.draft).await? {
+            return Ok(PageSaved::Applied(Applied::Replayed(case)));
+        }
         let mut tx = engine.db().begin().await?;
         drafts::create(
             &mut tx,
@@ -190,6 +196,28 @@ async fn save(
     Ok(None)
 }
 
+/// The operation key of a draft's case.
+fn draft_key(draft: uuid::Uuid) -> OpKey {
+    OpKey::new("case_add", format!("draft:{draft}"))
+}
+
+/// The case a draft already became, found by its operation key.
+async fn applied_case(
+    engine: &Engine,
+    principal: &Principal,
+    draft: uuid::Uuid,
+) -> Result<Option<quack_core::ids::CaseId>, DbError> {
+    let scoped = draft_key(draft)
+        .scoped(Some(principal.guild), Some(principal.account))
+        .case_scoped();
+    let mut conn = engine.db().conn().await?;
+    Ok(
+        quack_db::cases::find_by_operation_key(&mut conn, principal.guild, &scoped)
+            .await?
+            .map(|(case, _)| case),
+    )
+}
+
 /// Applies a completed draft ("Try again" after a failed save, §11.6 step
 /// 6): the operation key `draft:<id>` makes a repeat safe even if the
 /// first try committed.
@@ -204,20 +232,14 @@ pub async fn apply(
         let mut conn = engine.db().conn().await?;
         drafts::lock(&mut conn, guild, principal.account, draft).await?
     };
-    let key = OpKey::new("case_add", format!("draft:{draft}"));
+    let key = draft_key(draft);
     let Some(found) = found else {
         // The case transaction deletes its draft: a repeat after it
         // committed finds the case by its operation key (§4.3).
-        let scoped = key
-            .scoped(Some(guild), Some(principal.account))
-            .case_scoped();
-        let mut conn = engine.db().conn().await?;
-        return Ok(
-            match quack_db::cases::find_by_operation_key(&mut conn, guild, &scoped).await? {
-                Some((case, _)) => PageSaved::Applied(Applied::Replayed(case)),
-                None => PageSaved::Expired,
-            },
-        );
+        return Ok(match applied_case(engine, principal, draft).await? {
+            Some(case) => PageSaved::Applied(Applied::Replayed(case)),
+            None => PageSaved::Expired,
+        });
     };
     let Some((rule, version)) = found.rule else {
         return Ok(PageSaved::Expired);

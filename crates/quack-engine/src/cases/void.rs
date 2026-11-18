@@ -58,6 +58,13 @@ pub struct VoidEffects {
     pub closed_appeal: Option<AppealId>,
     /// The kind of the cancelled original.
     pub cancelled_kind: Option<quack_core::action::ActionKind>,
+    /// The original action's kind and its state when the void found it.
+    pub original: Option<(
+        quack_core::action::ActionKind,
+        quack_core::action::ActionState,
+    )>,
+    /// The kinds of the undo actions queued.
+    pub undo_kinds: Vec<quack_core::action::ActionKind>,
 }
 
 /// The result of [`void_case`].
@@ -67,8 +74,28 @@ pub struct Voided {
     pub case: CaseId,
     /// Its number.
     pub number: u64,
+    /// Its member.
+    pub member: quack_core::ids::MemberId,
+    /// The name of the rule version it used (`word::IMPORTED` for an
+    /// imported case without one).
+    pub rule_name: String,
     /// The same request already voided it.
     pub replayed: bool,
+    /// What this void changed; `None` for a replay (read the case then).
+    pub effects: Option<VoidEffects>,
+}
+
+/// The name of the rule version a case used.
+async fn rule_name(conn: &mut quack_db::PgConnection, case: &Case) -> Result<String, DbError> {
+    Ok(match case.rule {
+        Some((rule, version)) => quack_db::rules::version(conn, case.guild, rule, version)
+            .await?
+            .map_or_else(
+                || quack_text::word::IMPORTED.to_owned(),
+                |v| v.definition.name,
+            ),
+        None => quack_text::word::IMPORTED.to_owned(),
+    })
 }
 
 #[derive(Serialize)]
@@ -107,10 +134,14 @@ pub async fn void_case(
         let mut tx = match begin_keyed(engine.db(), &key, &hash).await? {
             Keyed::Replay(response) => {
                 let id: CaseId = stored_id(&response, "case_id")?;
+                let mut conn = engine.db().conn().await?;
                 return Ok(Voided {
                     case: id,
                     number: found.number,
+                    member: found.member,
+                    rule_name: rule_name(&mut conn, &found).await?,
                     replayed: true,
+                    effects: None,
                 });
             }
             Keyed::Fresh(tx) => tx,
@@ -130,6 +161,7 @@ pub async fn void_case(
             accepted_appeal: None,
         };
         let effects = void_in_tx(&mut tx, &locked, by).await?;
+        let rule_name = rule_name(&mut tx, &locked).await?;
         complete(
             &mut tx,
             &key,
@@ -142,7 +174,10 @@ pub async fn void_case(
         Ok(Voided {
             case: locked.id,
             number: locked.number,
+            member: locked.member,
+            rule_name,
             replayed: false,
+            effects: Some(effects),
         })
     })
     .await
@@ -227,6 +262,7 @@ async fn void_actions(
         return Ok(());
     };
     let has_undo = actions::undo_of(tx, guild, original.id).await?.is_some();
+    effects.original = Some((original.kind, original.state));
     // `on_void` queues a done ban's unban even when it was `no_change`, so
     // the case that now owns what Discord shows removes it (§5.6).
     let attempts: Vec<Option<AttemptOutcome>> = actions::attempts(tx, original.id)
@@ -268,6 +304,7 @@ async fn void_actions(
         .await?;
         jobs::enqueue(tx, &NewJob::run_action(guild, undo)).await?;
         effects.undos.push(undo);
+        effects.undo_kinds.push(kind);
     }
     Ok(())
 }
