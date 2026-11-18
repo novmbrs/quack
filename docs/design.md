@@ -7867,8 +7867,12 @@ folds these into the sections (or changes the code) and removes them here.
     per server, in process.
 25. §14.3 (routes 47–50) → a ticket's `transcript` summary comes from its
     saved transcript row; once housekeeping deletes an expired transcript
-    it is `null` rather than `expired`. A replay of the same person's close
-    answers `200` with the ticket instead of `409 ticket_not_open`.
+    it is `null` rather than `expired`. Closing takes the operation key
+    (the `Idempotency-Key`, or the button's interaction), scoped to the
+    server and account and hashed with the ticket: a replay answers `200`
+    with the ticket, another key for the same ticket is
+    `409 ticket_not_open`, and the key reused for another ticket is
+    `idempotency_key_reused` (application review MAJOR 5).
 26. §14.8 → the 10-second request deadline applies to `GET` and `HEAD`
     only; the header-read and keep-alive timeouts are axum's defaults
     (`axum::serve` doesn't expose them).

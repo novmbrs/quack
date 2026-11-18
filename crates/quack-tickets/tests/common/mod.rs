@@ -156,7 +156,13 @@ impl World {
     }
 
     pub async fn close_as(&self, t: &Ticket, who: u64) -> Result<()> {
-        quack_tickets::close(&self.h.engine, &self.member_principal(who), t.id).await?;
+        quack_tickets::close(
+            &self.h.engine,
+            &self.member_principal(who),
+            t.id,
+            &self.h.key("close"),
+        )
+        .await?;
         Ok(())
     }
 

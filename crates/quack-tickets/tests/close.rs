@@ -53,7 +53,13 @@ async fn the_member_closes_and_gets_the_transcript() -> Result<()> {
 async fn who_may_close() -> Result<()> {
     let w = world().await?;
     let t = w.opened(M).await?;
-    let refused = quack_tickets::close(&w.h.engine, &w.member_principal(MEMBER_2), t.id).await;
+    let refused = quack_tickets::close(
+        &w.h.engine,
+        &w.member_principal(MEMBER_2),
+        t.id,
+        &w.h.key("close"),
+    )
+    .await;
     assert!(
         matches!(refused, Err(TicketError::NotAllowed)),
         "{refused:?}"
@@ -61,13 +67,44 @@ async fn who_may_close() -> Result<()> {
     let text = refused.err().and_then(|e| e.text());
     assert!(text.is_some(), "ticket.close.not_allowed");
     w.close_as(&t, MODERATOR).await?;
-    let again = quack_tickets::close(&w.h.engine, &w.member_principal(M), t.id).await;
+    let again =
+        quack_tickets::close(&w.h.engine, &w.member_principal(M), t.id, &w.h.key("close")).await;
     assert!(
         matches!(again, Err(TicketError::Refused(DomainError::TicketNotOpen))),
         "{again:?}"
     );
     w.h.settle().await?;
     assert_eq!(w.ticket(t.id).await?.closed_by, Some(sf(MODERATOR)));
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_close_replays_by_its_key_and_only_by_it() -> Result<()> {
+    let w = world().await?;
+    let t = w.opened(M).await?;
+    let other = w.opened(MEMBER_2).await?;
+    let moderator = w.member_principal(MODERATOR);
+    let key = w.h.key("close");
+    quack_tickets::close(&w.h.engine, &moderator, t.id, &key).await?;
+    // The same request again answers like the first time.
+    let replay = quack_tickets::close(&w.h.engine, &moderator, t.id, &key).await;
+    assert!(replay.is_ok(), "{replay:?}");
+    // Another request for the same ticket is a second close.
+    let second = quack_tickets::close(&w.h.engine, &moderator, t.id, &w.h.key("close")).await;
+    assert!(
+        matches!(
+            second,
+            Err(TicketError::Refused(DomainError::TicketNotOpen))
+        ),
+        "{second:?}"
+    );
+    // The key reused for another ticket is refused, and that ticket stays open.
+    let reused = quack_tickets::close(&w.h.engine, &moderator, other.id, &key).await;
+    assert!(
+        matches!(reused, Err(TicketError::OperationKeyReused)),
+        "{reused:?}"
+    );
+    assert_eq!(w.ticket(other.id).await?.state, TicketState::Open);
     Ok(())
 }
 

@@ -10,6 +10,7 @@ use quack_core::modules::ModuleName;
 use quack_discord::custom_id::CustomId;
 use quack_discord::gateway::Event;
 use quack_discord::model::Message;
+use quack_engine::opkey::OpKey;
 use quack_engine::{BoxFuture, Engine};
 use quack_telemetry::labels::Reason;
 use quack_text::error::ErrorFacts;
@@ -116,7 +117,10 @@ fn failure(error: &TicketError) -> Failure {
     }
     match error {
         TicketError::Refused(d) => errors::domain(*d, &ErrorFacts::default()),
-        TicketError::NotFound | TicketError::NotAllowed | TicketError::TranscriptUnavailable => {
+        TicketError::NotFound
+        | TicketError::NotAllowed
+        | TicketError::TranscriptUnavailable
+        | TicketError::OperationKeyReused => {
             Failure::refused(quack_text::error::expired_button(), Reason::Invalid)
         }
         TicketError::DiscordUnavailable => errors::discord_unavailable(),
@@ -138,7 +142,8 @@ impl Tickets {
             }
             CustomId::CloseTicket(ticket) => {
                 let principal = call.principal.ok_or_else(errors::discord_unavailable)?;
-                let answer = quack_tickets::close(engine, &principal, ticket)
+                let key = OpKey::new("ticket_close", call.interaction_id.to_string());
+                let answer = quack_tickets::close(engine, &principal, ticket, &key)
                     .await
                     .map_err(|e| failure(&e))?;
                 Ok(Msg::text(Tone::Neutral, answer.text()))

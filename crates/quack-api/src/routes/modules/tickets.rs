@@ -35,6 +35,7 @@ fn mapped(error: TicketError) -> ApiError {
             },
         ),
         TicketError::DiscordUnavailable => ApiError::api(ApiCode::DiscordUnavailable),
+        TicketError::OperationKeyReused => ApiError::api(ApiCode::IdempotencyKeyReused),
         TicketError::Db(e) => e.into(),
     }
 }
@@ -201,21 +202,16 @@ pub(super) async fn ticket_transcript(
 pub(super) async fn close_ticket(
     State(state): State<ApiState>,
     session: SessionAccount,
-    _key: IdempotencyKey,
+    key: IdempotencyKey,
     Path(path): Path<(String, String)>,
 ) -> ApiResult<Json<Ticket>> {
     let (principal, staff, ticket) = viewer(&state, &session, &path).await?;
-    let closed = quack_tickets::close(state.engine(), &principal, ticket).await;
+    // A replay of the same key answers like the first time.
+    quack_tickets::close(state.engine(), &principal, ticket, &key.0)
+        .await
+        .map_err(mapped)?;
     let view = quack_tickets::get(state.engine(), &principal, ticket)
         .await
         .map_err(mapped)?;
-    match closed {
-        Ok(_) => {}
-        // A replay of this person's own close answers like the first time.
-        Err(TicketError::Refused(quack_core::DomainError::TicketNotOpen))
-            if view.closed_by == Some(session.account)
-                && matches!(view.state, TicketState::Closing | TicketState::Closed) => {}
-        Err(e) => return Err(mapped(e)),
-    }
     Ok(Json(wire(&view, staff, session.account)))
 }

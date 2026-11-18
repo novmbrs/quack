@@ -24,6 +24,9 @@ pub enum TicketError {
     /// Discord didn't answer; nothing changed.
     #[error("Discord unavailable")]
     DiscordUnavailable,
+    /// The operation key was used for a different request.
+    #[error("operation key reused")]
+    OperationKeyReused,
     /// The database failed.
     #[error(transparent)]
     Db(#[from] DbError),

@@ -152,7 +152,7 @@ async fn other_servers_see_nothing() -> Result<()> {
     let (other, moderator) = second_guild(&w.h).await?;
     let got = quack_tickets::get(&w.h.engine, &moderator, t.id).await;
     assert!(matches!(got, Err(TicketError::NotFound)), "{got:?}");
-    let closed = quack_tickets::close(&w.h.engine, &moderator, t.id).await;
+    let closed = quack_tickets::close(&w.h.engine, &moderator, t.id, &w.h.key("close")).await;
     assert!(matches!(closed, Err(TicketError::NotFound)), "{closed:?}");
     let fixed = quack_tickets::fix_access(&w.h.engine, &moderator, t.id).await;
     assert!(matches!(fixed, Err(TicketError::NotFound)), "{fixed:?}");
