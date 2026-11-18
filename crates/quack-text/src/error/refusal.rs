@@ -107,7 +107,14 @@ pub(crate) fn refusal_in(
     }
 }
 
-/// `refusal.*`: why no case was added.
+/// `refusal.*`: why no case was added. When an administrator can fix it,
+/// it ends with the step after the fix.
 pub fn refusal(r: MemberRefusal, member: Option<&Person>, kind: Option<ActionKind>) -> Text {
-    Text::fixed("No case was added.").sentence(refusal_reason(r, member, kind))
+    let t = Text::fixed("No case was added.").sentence(refusal_reason(r, member, kind));
+    match r {
+        MemberRefusal::QuackRoleTooLow | MemberRefusal::QuackMissingPermission(_) => {
+            t.s(" Then run ").command(Command::CaseAdd).s(" again.")
+        }
+        _ => t,
+    }
 }

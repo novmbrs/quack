@@ -46,17 +46,20 @@ tone: Danger
 <@222>
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't ban <@222>.
+-# Staff: select Open case to see the outcome privately.
 buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Case #12 · Spam
 Sam
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't ban Sam.
+Staff: select Open case to see the outcome privately.
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
 Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+Subtext [Fixed("Staff: select Open case to see the outcome privately.")]
 
 ## voided ban, unban retrying, appeal closed
 tone: Neutral
@@ -170,14 +173,17 @@ tone: Danger
 <@222>
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't confirm whether Discord banned <@222>.
+-# Staff: select Open case to see the outcome privately.
 buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Case #12 · Spam
 Sam
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't confirm whether Discord banned Sam.
+Staff: select Open case to see the outcome privately.
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
 Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+Subtext [Fixed("Staff: select Open case to see the outcome privately.")]

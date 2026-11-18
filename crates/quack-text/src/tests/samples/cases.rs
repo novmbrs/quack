@@ -59,6 +59,7 @@ const RECEIPT_IDS: &[&str] = &[
     "case.receipt.member",
     "case.receipt.reason",
     "case.receipt.action",
+    "case.receipt.staff_hint",
 ];
 
 fn form_fields() -> Vec<FormField> {

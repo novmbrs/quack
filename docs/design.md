@@ -2348,12 +2348,12 @@ dashboard renders API fields that carry these texts (`message`, `text`,
 
 | Placeholder | Renders as (Discord) | Renders as (dashboard / API text) |
 | --- | --- | --- |
-| `{member}`, `{actor}`, `{author}` | Mention `<@id>` (never pings) | Display name (server nickname, else global name, else username), else the ID |
+| `{member}`, `{actor}`, `{author}` | Mention `<@id>` (never pings) | Display name (server nickname, else global name, else username), else "a member (ID {id})" (capitalized at the start of a sentence) |
 | `{actor}` when NULL | "Quack" | "Quack" |
 | `{case}` | `**[case #N](<dashboard case URL>)**` in log posts; `case #N` elsewhere | "case #N" |
 | `{rule}` | Rule name in bold | Rule name |
-| `{channel}`, `{thread}` | Channel mention `<#id>` | `#name`, else `#` and the ID |
-| `{role}` | Role mention `<@&id>` | `@name`, else `@` and the ID |
+| `{channel}`, `{thread}` | Channel mention `<#id>` | `#name`, else "an unknown channel (ID {id})" |
+| `{role}` | Role mention `<@&id>` | `@name`, else "an unnamed role (ID {id})" |
 | `{server}` | Server name in bold | Server name |
 | `/command` | Clickable command mention `</case view:id>` when the command's ID is known, else `/case view` in code | "/case view" |
 | `{ends_at}` | `<t:unix:f> (<t:unix:R>)` | "17 Nov 2026 at 14:05 UTC" |
@@ -2547,8 +2547,8 @@ always "No case was added."):
 | `refusal.member_is_bot` | No case was added. {member} is a bot, and cases are only for people. |
 | `refusal.member_is_owner` | No case was added. {member} owns this server. Quack doesn't add cases about the server owner. |
 | `refusal.member_role_too_high` | No case was added. `access.your_role_too_low` |
-| `refusal.quack_role_too_low` | No case was added. `access.quack_role_too_low` |
-| `refusal.quack_missing_permission` | No case was added. This rule calls for a {timeout / kick / ban}. `access.quack_role_needs` (staff) |
+| `refusal.quack_role_too_low` | No case was added. `access.quack_role_too_low` Then run /case add again. |
+| `refusal.quack_missing_permission` | No case was added. This rule calls for a {timeout / kick / ban}. `access.quack_role_needs` (staff) Then run /case add again. |
 | `refusal.member_is_administrator` | No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator. |
 
 The action named is the level's, else the one the missing permission is
@@ -2624,7 +2624,8 @@ The public receipt (§11.7) uses only:
 | `case.receipt.heading_voided` | ### Case #{number} · {rule} · Voided | voided |
 | `case.receipt.member` | {member} | always |
 | `case.receipt.reason` | > {reason} | always |
-| `case.receipt.action` | **Action:** {action sentence, §12.6, without `{reason}`, `{retry}`, or the dismissed suffix} | always |
+| `case.receipt.action` | **Action:** {action sentence, §12.6, without `{reason}`, the check, the retry time, or the dismissed suffix} | always |
+| `case.receipt.staff_hint` | -# Staff: select Open case to see the outcome privately. | the action failed or couldn't be confirmed |
 
 For an unconfirmed action the receipt shows only the first sentence of
 `action.unconfirmed` ("Quack couldn't confirm whether Discord banned

@@ -49,6 +49,35 @@ const SETTING_IDS: &[&str] = &[
 
 pub fn samples() -> Vec<Sample> {
     let mut v = Vec::new();
+    // The level's action reaches the missing-permission refusal (a kick
+    // needs Kick Members, not the Ban Members default).
+    let kick = LogFacts {
+        action: Some(ActionKind::Kick),
+        ..facts()
+    };
+    for (id, e) in [
+        (
+            "log.honeypot_case_failed",
+            ModLogEntry::HoneypotCaseFailed(quack_core::modlog::HoneypotCaseFailedDetail {
+                refusal: quack_core::modules::HoneypotRefusal::Member(
+                    quack_core::permissions::MemberRefusalCode::QuackMissingPermission,
+                ),
+            }),
+        ),
+        (
+            "log.case_create_refused.quack_missing_permission",
+            ModLogEntry::CaseCreateRefused(quack_core::modlog::CaseCreateRefusedDetail {
+                refusal: quack_core::permissions::MemberRefusalCode::QuackMissingPermission,
+                permission: None,
+            }),
+        ),
+    ] {
+        v.push(sample(
+            id,
+            "kick level, permission not recorded",
+            Out::Text(log::text(&e, &kick)),
+        ));
+    }
     for (id, name, e) in super::log_entries::entries() {
         let covers: &'static [&'static str] = if matches!(
             e,

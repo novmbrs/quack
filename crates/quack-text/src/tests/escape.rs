@@ -64,9 +64,14 @@ fn names_never_render_as_text_on_discord() {
     let t = Text::new().person(&p);
     assert_eq!(render::markdown(&t, &commands()), "<@222>");
     assert_eq!(t.plain(), "@everyone # Sam");
+    // An unknown name reads as words, with the ID as a labelled detail.
     assert_eq!(
         Text::new().person(&Person::unnamed(account(5))).plain(),
-        "5"
+        "A member (ID 5)"
+    );
+    assert_eq!(
+        Text::fixed("Ask ").person(&Person::unnamed(account(5))).plain(),
+        "Ask a member (ID 5)"
     );
 }
 

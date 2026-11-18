@@ -37,11 +37,31 @@ pub enum Surface<'a> {
     Plain,
 }
 
+/// What plain text says for someone or something Quack can't name; the ID
+/// stays as a labelled detail for staff.
+const FALLBACKS: [&str; 3] = [
+    "a member (ID ",
+    "an unnamed role (ID ",
+    "an unknown channel (ID ",
+];
+
 /// Renders text for a surface.
 pub fn text(t: &Text, surface: Surface<'_>) -> String {
     let mut out = String::new();
     for inline in &t.0 {
         inline_to(&mut out, inline, surface);
+    }
+    if matches!(surface, Surface::Plain) {
+        // A fallback that starts a sentence starts with a capital.
+        for f in FALLBACKS {
+            let upper = fmt::upper_first(f);
+            if out.starts_with(f) {
+                out.replace_range(..f.len(), &upper);
+            }
+            for sep in [". ", "\n", ": "] {
+                out = out.replace(&format!("{sep}{f}"), &format!("{sep}{upper}"));
+            }
+        }
     }
     out
 }
@@ -98,28 +118,34 @@ fn inline_to(out: &mut String, inline: &Inline, surface: Surface<'_>) {
         }
         Inline::Person(p) => match &p.name {
             Some(name) => out.push_str(&fmt::one_line(name)),
-            None => out.push_str(&p.id.to_string()),
+            None => {
+                let _ = write!(out, "{}{})", FALLBACKS[0], p.id);
+            }
         },
         Inline::Channel(c) if discord => {
             let _ = write!(out, "<#{}>", c.id);
         }
-        Inline::Channel(c) => {
-            out.push('#');
-            match &c.name {
-                Some(name) => out.push_str(&fmt::one_line(name)),
-                None => out.push_str(&c.id.to_string()),
+        Inline::Channel(c) => match &c.name {
+            Some(name) => {
+                out.push('#');
+                out.push_str(&fmt::one_line(name));
             }
-        }
+            None => {
+                let _ = write!(out, "{}{})", FALLBACKS[2], c.id);
+            }
+        },
         Inline::Role(r) if discord => {
             let _ = write!(out, "<@&{}>", r.id);
         }
-        Inline::Role(r) => {
-            out.push('@');
-            match &r.name {
-                Some(name) => out.push_str(&fmt::one_line(name)),
-                None => out.push_str(&r.id.to_string()),
+        Inline::Role(r) => match &r.name {
+            Some(name) => {
+                out.push('@');
+                out.push_str(&fmt::one_line(name));
             }
-        }
+            None => {
+                let _ = write!(out, "{}{})", FALLBACKS[1], r.id);
+            }
+        },
         Inline::Command(c) => match surface {
             Surface::Discord(ids) => match ids.get(*c) {
                 Some(id) => {

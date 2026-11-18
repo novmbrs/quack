@@ -38,5 +38,5 @@ model:   [Fixed("This channel no longer exists. Choose another channel.")]
 
 ## role and member without names
 discord: <@&666> can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
-plain:   @666 can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+plain:   An unnamed role (ID 666) can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
 model:   [Role(RoleRef { id: RoleId(666), name: None }), Fixed(" can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.")]

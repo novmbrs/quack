@@ -2,11 +2,11 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## QuackRoleTooLow
-discord: No case was added. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
-plain:   No case was added. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
-model:   [Fixed("No case was added. Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+discord: No case was added. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. Then run </case add:1001> again.
+plain:   No case was added. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. Then run /case add again.
+model:   [Fixed("No case was added. Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. Then run "), Command(CaseAdd), Fixed(" again.")]
 
 ## QuackRoleTooLow, no member known
-discord: No case was added. Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
-plain:   No case was added. Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
-model:   [Fixed("No case was added. Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+discord: No case was added. Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. Then run </case add:1001> again.
+plain:   No case was added. Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. Then run /case add again.
+model:   [Fixed("No case was added. Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. Then run "), Command(CaseAdd), Fixed(" again.")]

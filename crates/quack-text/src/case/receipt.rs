@@ -5,7 +5,7 @@ use quack_core::ids::CaseId;
 use super::card::{CaseCard, field, heading, tone};
 use crate::action::{self, ActionView, Detail};
 use crate::model::{Block, Msg, Person, Text};
-use crate::word;
+use crate::word::{self, Outcome};
 
 /// The public receipt's fixed fields (§11.7): nothing staff-only.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -47,12 +47,23 @@ pub fn receipt(r: &ReceiptView) -> Msg {
     let sentence = r.action.as_ref().map_or_else(action::none, |a| {
         action::sentence(a, &r.member, Detail::Receipt)
     });
-    Msg::new(tone(r.action.as_ref(), r.voided))
+    let mut msg = Msg::new(tone(r.action.as_ref(), r.voided))
         .block(heading(r.number, &r.rule, r.voided))
         .para(Text::new().person(&r.member))
         .block(Block::Quote(Text::new().user(&r.reason)))
-        .block(field("Action", sentence))
-        .buttons(vec![word::open_case_button(r.case)])
+        .block(field("Action", sentence));
+    // What went wrong and what to do is staff-only; point at the card.
+    if r.action.as_ref().is_some_and(|a| {
+        matches!(
+            action::outcome(a),
+            Outcome::Failed | Outcome::CouldntConfirm
+        )
+    }) {
+        msg = msg.block(Block::Subtext(Text::fixed(
+            "Staff: select Open case to see the outcome privately.",
+        )));
+    }
+    msg.buttons(vec![word::open_case_button(r.case)])
 }
 
 /// `case.receipt.posted`.
