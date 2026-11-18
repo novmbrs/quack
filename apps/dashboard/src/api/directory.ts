@@ -70,7 +70,7 @@ function batcher(guildId: string): Batcher {
 
 export const userQuery = (guildId: string, userId: string) =>
   queryOptions({
-    queryKey: [...keys.guild(guildId), "user", userId],
+    queryKey: [...keys.guild(guildId), "member", userId],
     queryFn: () => batcher(guildId).load(userId),
     staleTime: 10 * 60_000,
     gcTime: 30 * 60_000,
