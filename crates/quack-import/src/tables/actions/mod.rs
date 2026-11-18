@@ -2,6 +2,7 @@
 //! `action_attempts` (§19.7, §19.9). Originals first, then undos, so an
 //! undo's original exists; each batch's attempts are read with it.
 
+mod attempts;
 mod state;
 
 use std::collections::{HashMap, HashSet};
@@ -10,27 +11,18 @@ use quack_core::action::{ActionKind, AttemptOutcome};
 use quack_core::ids::ActionId;
 use quack_db::jobs::NewJob;
 use serde_json::Value;
-use sqlx::mysql::MySqlRow;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use self::attempts::{Attempt, attempts_of, write_attempts};
 use self::state::{Facts, State};
 use crate::ImportError;
 use crate::guild::{ActionInfo, CaseInfo, Ctx};
 use crate::source::{BATCH, Cols};
-use crate::target::{self, guarded, strict};
+use crate::target::{self, strict};
 
 const SELECT: &str = "SELECT e.* FROM case_action_executions e JOIN cases c ON c.id = e.case_id
                       WHERE c.guild_id = ? AND e.reversal_of_execution_id IS {} NULL AND e.id > ? ORDER BY e.id";
-
-/// One attempt as read.
-struct Attempt {
-    number: i32,
-    outcome: AttemptOutcome,
-    started_at: OffsetDateTime,
-    finished_at: OffsetDateTime,
-    response: Value,
-}
 
 /// Imports the server's actions and their attempts.
 pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
@@ -117,60 +109,6 @@ async fn duplicates(cx: &mut Ctx<'_>) -> Result<HashSet<String>, ImportError> {
         losers.extend(ids);
     }
     Ok(losers)
-}
-
-async fn attempts_of(
-    cx: &mut Ctx<'_>,
-    rows: &[MySqlRow],
-) -> Result<HashMap<String, Vec<Attempt>>, ImportError> {
-    let ids: Vec<String> = rows
-        .iter()
-        .map(|r| {
-            Cols::new(r, "case_action_executions", "id")
-                .key()
-                .to_owned()
-        })
-        .collect();
-    let placeholders = vec!["?"; ids.len()].join(", ");
-    let sql = format!(
-        "SELECT * FROM case_action_attempts WHERE execution_id IN ({placeholders}) ORDER BY execution_id, attempt_number"
-    );
-    let binds: Vec<&str> = ids.iter().map(String::as_str).collect();
-    let found = cx.src.rows(&sql, &binds).await?;
-    let mut out: HashMap<String, Vec<Attempt>> = HashMap::new();
-    for row in &found {
-        let c = Cols::new(row, "case_action_attempts", "id");
-        let key = cx.key(c.key());
-        let number = i32::from(u8::try_from(c.unsigned("attempt_number")?).unwrap_or(0));
-        if number < 1 {
-            cx.f.skip("case_action_attempts", "invalid_attempt_number", &key);
-            continue;
-        }
-        let status = c.text("status")?;
-        let response = c.json("response_payload_json")?;
-        let outcome = state::attempt_outcome(&status, &c.text("error_code")?, &response);
-        let started_at = c.time("started_at")?;
-        let finished_at = match c.opt_time("finished_at")? {
-            Some(at) if at < started_at => {
-                cx.f.normalized("action_attempts.finished_at", &key);
-                started_at
-            }
-            Some(at) => at,
-            None => {
-                cx.f.in_flight("open_attempt_interrupted", &key);
-                started_at
-            }
-        };
-        let execution = c.text("execution_id")?;
-        out.entry(execution).or_default().push(Attempt {
-            number,
-            outcome,
-            started_at,
-            finished_at,
-            response,
-        });
-    }
-    Ok(out)
 }
 
 /// Where an execution goes: its action ID, kind, case, and original.
@@ -381,35 +319,6 @@ async fn execution(
     if state == State::Pending {
         let job = NewJob::run_action(target::guild(cx.g.id)?, ActionId::from_uuid(id));
         target::job(&mut cx.tx, &mut cx.f, job).await?;
-    }
-    Ok(())
-}
-
-async fn write_attempts(
-    cx: &mut Ctx<'_>,
-    id: Uuid,
-    key: &str,
-    attempts: &[Attempt],
-) -> Result<(), ImportError> {
-    for a in attempts {
-        let q = sqlx::query(
-            "INSERT INTO action_attempts (guild_id, action_id, number, started_at, finished_at, outcome)
-             VALUES ($1, $2, $3, $4, $5, $6::attempt_outcome)",
-        )
-        .bind(cx.g.id)
-        .bind(id)
-        .bind(a.number)
-        .bind(a.started_at)
-        .bind(a.finished_at)
-        .bind(a.outcome.as_str());
-        guarded(
-            &mut cx.tx,
-            &mut cx.f,
-            "action_attempts",
-            &format!("{key}:{}", a.number),
-            q,
-        )
-        .await?;
     }
     Ok(())
 }

@@ -215,3 +215,25 @@ pub const TABLES: &[&str] = &[
     "honeypot_hits",
     "import_guilds",
 ];
+
+/// Server A of the fixture.
+pub const A: &str = "100000000000000001";
+/// Server B of the fixture.
+pub const B: &str = "100000000000000002";
+
+/// A fixture ULID (as `gen_fixture.py` writes them).
+pub fn ulid(kind: &str, n: u32) -> String {
+    format!("01JA{kind}{n:04}0000000000000000")
+}
+
+/// The UUID a fixture ULID becomes.
+pub fn id(kind: &str, n: u32) -> String {
+    quack_core::ids::ulid_to_uuid(&ulid(kind, n))
+        .unwrap_or_else(|_| unreachable!("fixture IDs are ULIDs"))
+        .to_string()
+}
+
+/// The Go schema at ledger version 5 with the fixture data.
+pub async fn v5() -> Result<Option<Scratch>> {
+    Scratch::new(&[SCHEMA_V3, DATA, LEDGER_V3, UPGRADE_V5]).await
+}
