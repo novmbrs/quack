@@ -164,11 +164,14 @@ pub(crate) async fn facts(
             f.case_url = Some(links.case(guild, case.number));
         }
     }
-    f.rule = match entry.links.rule_id {
-        Some(rule) => rules::get(conn, guild, rule)
+    // An entry about a case names the rule as the case's version had it
+    // (a later rename doesn't rewrite history); only an entry about a rule
+    // itself uses the rule's current name.
+    f.rule = match (&case, entry.links.rule_id) {
+        (Some(_), _) | (None, None) => case_rule_name(conn, case.as_ref()).await?,
+        (None, Some(rule)) => rules::get(conn, guild, rule)
             .await?
             .map(|r| r.definition.name),
-        None => case_rule_name(conn, case.as_ref()).await?,
     };
     if let Some(action) = entry.links.action_id {
         let found = actions::get(conn, guild, action).await?;

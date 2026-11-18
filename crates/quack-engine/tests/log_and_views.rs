@@ -247,3 +247,38 @@ async fn two_failures_at_once_are_one_outage() -> Result<()> {
     assert_eq!(logged(&h, ModLogKind::LogChannelFailed).await?, 1);
     Ok(())
 }
+
+/// Engine review MINOR 25: a case's log sentence names the rule as the
+/// case's version had it, even after the rule is renamed.
+#[tokio::test]
+async fn a_case_sentence_keeps_the_rule_name_it_was_added_under() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    h.apply(MEMBER, rule).await?;
+    let admin = h.principal(quack_testkit::ADMIN, quack_engine::Origin::Dashboard);
+    quack_engine::rules::edit(
+        &h.engine,
+        &admin,
+        rule,
+        1,
+        levels("Harassment", &[None], false),
+        &h.key("PUT rules"),
+    )
+    .await?;
+    let page = quack_engine::modlog::list(
+        &h.engine,
+        &h.moderator(),
+        &quack_db::modlog::ModLogFilter::default(),
+        None,
+        50,
+    )
+    .await??;
+    let created = page
+        .entries
+        .iter()
+        .find(|e| e.kind == ModLogKind::CaseCreated)
+        .context("case_created")?;
+    assert!(created.text.contains("Spam"), "{}", created.text);
+    assert!(!created.text.contains("Harassment"), "{}", created.text);
+    Ok(())
+}
