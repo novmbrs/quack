@@ -215,9 +215,10 @@ impl Gateway {
                     });
                 }
                 Some(Err(error)) => {
-                    match recover(&error) {
-                        Some(event) => hand_off(&dispatcher, event, &on_dropped),
-                        None => tracing::warn!(%error, "couldn't read a gateway event"),
+                    if let Some(event) = recover(&error) {
+                        hand_off(&dispatcher, event, &on_dropped);
+                    } else {
+                        tracing::warn!(%error, "couldn't read a gateway event");
                     }
                     continue;
                 }

@@ -51,8 +51,8 @@ fn case_add_carries_the_invoker_member_rule_and_privacy() {
     );
     assert_eq!(i.id, 1_310_000_000_000_000_000);
     assert_eq!(i.token.expose(), "interaction-token");
-    assert_eq!(i.guild_id.map(|g| g.get()), Some(1));
-    assert_eq!(i.channel_id.map(|c| c.get()), Some(5));
+    assert_eq!(i.guild_id.map(quack_core::ids::GuildId::get), Some(1));
+    assert_eq!(i.channel_id.map(ChannelId::get), Some(5));
     assert_eq!(i.app_permissions, Some(Permissions(1024)));
     assert!(i.ephemeral_allowed());
     let invoker = i.invoker.clone().unwrap();
