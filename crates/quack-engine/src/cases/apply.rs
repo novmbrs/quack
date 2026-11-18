@@ -98,8 +98,12 @@ async fn apply(
     source: CaseSource,
 ) -> Result<Applied, ApplyError> {
     let guild = request.guild;
-    // 1. Authorize.
+    // 1. Authorize. Staff act only in their own server: a principal of
+    //    another server holds no capability here, whatever it holds there.
     let (account, presence) = match &request.actor {
+        Actor::Staff(principal) if principal.guild != guild => {
+            return Err(DomainError::MissingCapability(Capability::Moderate).into());
+        }
         Actor::Staff(principal) => {
             let mut conn = engine.db().conn().await?;
             principal.require(&mut conn, Capability::Moderate).await??;

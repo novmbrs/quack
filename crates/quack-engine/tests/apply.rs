@@ -239,3 +239,53 @@ async fn quack_caused_refusals_are_logged_and_others_are_not() -> Result<()> {
     let _ = (ActionKind::Ban, LevelAction::Kick);
     Ok(())
 }
+
+/// Engine review BLOCKER 3: a principal of server A can't create (or
+/// replay) a case in server B through the library, whatever A grants.
+#[tokio::test]
+async fn a_principal_of_one_server_cant_create_a_case_in_another() -> Result<()> {
+    let h = Harness::new().await?;
+    let other: quack_core::ids::GuildId = sf(GUILD + 1);
+    h.fake.world(|w| {
+        w.add_guild(&quack_testkit::fake::GuildSetup {
+            id: other,
+            owner: sf(OWNER),
+            quack_position: 50,
+            quack_permissions: quack_testkit::quack_permissions(),
+            mfa_required: false,
+        });
+        w.add_member(other, &quack_testkit::fake::MemberSetup::new(sf(MEMBER), 5));
+    });
+    h.install(other).await?;
+    let rule = quack_core::ids::RuleId::from_uuid(uuid::Uuid::now_v7());
+    let mut tx = h.db.db.begin().await?;
+    quack_db::rules::create(
+        &mut tx,
+        &quack_db::rules::NewRule {
+            id: rule,
+            guild: other,
+            definition: warning("Spam"),
+            created_by: None,
+            reconstructed: false,
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    h.engine.rules_cache().reload(&h.db.db, other).await?;
+    let mut request = h.request(MEMBER, rule);
+    request.guild = other;
+    let refused = apply_rule(&h.engine, request).await;
+    assert!(
+        matches!(
+            refused,
+            Err(ApplyError::Refused(DomainError::MissingCapability(_)))
+        ),
+        "{refused:?}"
+    );
+    let cases = h
+        .db
+        .count(&format!("SELECT count(*) FROM cases WHERE guild_id = {}", GUILD + 1))
+        .await?;
+    assert_eq!(cases, 0);
+    Ok(())
+}
