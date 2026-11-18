@@ -5863,11 +5863,9 @@ string enum (`str_enum!`) has `ALL`, `as_str()`, `FromStr` (→
   - Types: `EvidenceState::{Saving, Saved, Failed}`,
     `EvidenceFailure::{MessageDeleted, ModeratorNoAccess, QuackNoAccess,
     OtherServer, DiscordError}`, `FileCopyState::{Pending, Copied, LinkOnly,
-    TooLarge, UnsupportedType, CopyFailed}`, `EvidenceEvent::{Saved,
-    Failed(EvidenceFailure), CaptureAgain}`, `AddAgain::{AlreadySaved,
-    CaptureAgain}`.
-  - `fn transition(state, event) -> Result<EvidenceState, InvalidTransition>`,
-    `const fn add_again(state) -> AddAgain`,
+    TooLarge, UnsupportedType, CopyFailed}`, `AddAgain::{AlreadySaved,
+    CaptureAgain}`. Capture and retry move the state in SQL.
+  - `const fn add_again(state) -> AddAgain`,
     `fn copy_eligibility(size_bytes: u64, content_type: Option<&str>) -> Result<(), FileCopyState>`,
     `fn check_room(existing_items: u32, new_items: usize, links_in_call: usize) -> Result<(), DomainError>`,
     `fn files_within_caps(case_files: u32, files: u32) -> u32`.

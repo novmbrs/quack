@@ -1,6 +1,6 @@
 //! Evidence (§7): saved message snapshots and their files.
 
-use crate::{DomainError, InvalidTransition, limits};
+use crate::{DomainError, limits};
 
 str_enum! {
     /// An evidence item's stored state (`evidence_state`).
@@ -45,47 +45,6 @@ str_enum! {
         UnsupportedType = "unsupported_type",
         /// Download or upload failed, or the channel is not staff-only.
         CopyFailed = "copy_failed",
-    }
-}
-
-/// An event on an evidence item.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EvidenceEvent {
-    /// The snapshot was saved.
-    Saved,
-    /// Capture failed.
-    Failed(EvidenceFailure),
-    /// Staff added the message again after its capture failed: capture it
-    /// again (§7.1).
-    CaptureAgain,
-}
-
-impl EvidenceEvent {
-    /// The event's name, for errors and logs.
-    pub const fn name(self) -> &'static str {
-        match self {
-            Self::Saved => "saved",
-            Self::Failed(_) => "failed",
-            Self::CaptureAgain => "capture_again",
-        }
-    }
-}
-
-/// Moves an item: `saving` settles to `saved` or `failed`, and a `failed`
-/// item added again goes back to `saving` with a new job.
-pub fn transition(
-    state: EvidenceState,
-    event: EvidenceEvent,
-) -> Result<EvidenceState, InvalidTransition> {
-    match (state, event) {
-        (EvidenceState::Saving, EvidenceEvent::Saved) => Ok(EvidenceState::Saved),
-        (EvidenceState::Saving, EvidenceEvent::Failed(_)) => Ok(EvidenceState::Failed),
-        (EvidenceState::Failed, EvidenceEvent::CaptureAgain) => Ok(EvidenceState::Saving),
-        (_, event) => Err(InvalidTransition {
-            machine: "evidence",
-            from: state.as_str(),
-            event: event.name(),
-        }),
     }
 }
 
@@ -173,25 +132,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_pair_matches_the_table() {
-        use EvidenceEvent as E;
+    fn a_failed_capture_is_captured_again() {
         use EvidenceState as S;
-        let events = [
-            E::Saved,
-            E::Failed(EvidenceFailure::MessageDeleted),
-            E::CaptureAgain,
-        ];
-        for &state in S::ALL {
-            for event in events {
-                let want = match (state, event) {
-                    (S::Saving, E::Saved) => Some(S::Saved),
-                    (S::Saving, E::Failed(_)) => Some(S::Failed),
-                    (S::Failed, E::CaptureAgain) => Some(S::Saving),
-                    _ => None,
-                };
-                assert_eq!(transition(state, event).ok(), want, "{state:?} {event:?}");
-            }
-        }
         assert_eq!(add_again(S::Failed), AddAgain::CaptureAgain);
         assert_eq!(add_again(S::Saving), AddAgain::AlreadySaved);
         assert_eq!(add_again(S::Saved), AddAgain::AlreadySaved);
