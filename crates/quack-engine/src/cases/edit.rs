@@ -75,10 +75,7 @@ pub async fn edit_context(
         let key = op_key.scoped(Some(guild), Some(principal.account));
         let hash = request_hash(&EditRequest {
             case: found.id,
-            context: context
-                .iter()
-                .map(|(k, v)| (k.as_str(), format!("{v:?}")))
-                .collect(),
+            context: super::apply::context_for_hash(context),
             expected_revision,
         });
         let mut tx = match begin_keyed(engine.db(), &key, &hash).await? {

@@ -41,11 +41,24 @@ struct RequestForHash<'a> {
     source: &'static str,
 }
 
-fn input_text(input: &ContextInput) -> String {
-    match input {
-        ContextInput::Json(v) => v.to_string(),
-        ContextInput::JsonNumber(s) | ContextInput::Text(s) => s.clone(),
-    }
+/// The context as a request hash sees it: sorted by field key (JSON
+/// object order is immaterial), each answer tagged with its kind so a
+/// number and the same digits as text differ. Answers to one key keep
+/// their order, so a duplicate is still a different request.
+pub(super) fn context_for_hash(context: &[(String, ContextInput)]) -> Vec<(&str, String)> {
+    let mut pairs: Vec<(&str, String)> = context
+        .iter()
+        .map(|(k, v)| {
+            let text = match v {
+                ContextInput::Json(v) => format!("json:{v}"),
+                ContextInput::JsonNumber(n) => format!("number:{n}"),
+                ContextInput::Text(t) => format!("text:{t}"),
+            };
+            (k.as_str(), text)
+        })
+        .collect();
+    pairs.sort_by(|a, b| a.0.cmp(b.0));
+    pairs
 }
 
 /// What the steps before the transaction settled.
@@ -174,11 +187,7 @@ fn hash_request(request: &ApplyRule, source: CaseSource) -> [u8; 32] {
         member: request.member,
         rule: request.rule,
         pinned_version: request.pinned_version,
-        context: request
-            .context
-            .iter()
-            .map(|(k, v)| (k.as_str(), input_text(v)))
-            .collect(),
+        context: context_for_hash(&request.context),
         evidence_links: &request.evidence_links,
         source_message: request.source_message.map(|l| l.to_url()),
         private: matches!(request.receipt, Some(Receipt::Private { .. })),

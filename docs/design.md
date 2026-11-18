@@ -8100,3 +8100,8 @@ folds these into the sections (or changes the code) and removes them here.
     one transaction (post again where it belongs, wait for a channel, or
     `gone`) and its sync is queued; the gateway handler does one indexed
     lookup per delete.
+58. §4.2 step 2, §4.3 (engine review MAJOR 20) → the request hash of a
+    case creation or context edit takes the context sorted by field key,
+    each answer tagged with its kind (JSON, number, text), so the same
+    request with its fields in another order replays, and `5` and `"5"`
+    are different requests.

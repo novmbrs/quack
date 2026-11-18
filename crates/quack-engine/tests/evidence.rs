@@ -484,3 +484,50 @@ async fn a_rate_limited_upload_waits_and_keeps_its_tries() -> Result<()> {
     assert_eq!(files(&h, case).await?[0].copy_state, FileCopyState::Copied);
     Ok(())
 }
+
+/// Engine review MAJOR 20: the same request with its context fields in
+/// another order is the same request.
+#[tokio::test]
+async fn a_replay_with_reordered_fields_is_the_same_request() -> Result<()> {
+    let h = Harness::new().await?;
+    let mut def = warning("Spam");
+    let field = |key: &str, kind: FieldKind| Field {
+        key: FieldKey(key.to_owned()),
+        label: key.to_owned(),
+        kind,
+        required: false,
+    };
+    def.fields = vec![
+        field("what", FieldKind::LongText),
+        field("where", FieldKind::ShortText),
+    ];
+    let rule = h.rule(def).await?;
+    let case = h.apply(MEMBER, rule).await?.case;
+    let what = ("what".to_owned(), ContextInput::Text("Spam.".to_owned()));
+    let place = (
+        "where".to_owned(),
+        ContextInput::Text("#general".to_owned()),
+    );
+    let key = h.key("cem");
+    let first = edit_context(
+        &h.engine,
+        &h.moderator(),
+        CaseRef::Id(case.id),
+        &[what.clone(), place.clone()],
+        1,
+        &key,
+    )
+    .await?;
+    let again = edit_context(
+        &h.engine,
+        &h.moderator(),
+        CaseRef::Id(case.id),
+        &[place, what],
+        1,
+        &key,
+    )
+    .await?;
+    assert!(again.replayed);
+    assert_eq!(again.case, first.case);
+    Ok(())
+}
