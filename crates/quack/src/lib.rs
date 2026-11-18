@@ -7,6 +7,7 @@
 
 pub mod app;
 pub mod cli;
+pub mod compose;
 pub mod config;
 pub mod port;
 pub mod serve;

@@ -100,11 +100,101 @@ pub async fn run_claimed_with(engine: &Engine, modules: &[ModuleJobs], job: Clai
     }
 }
 
+/// Runs one raw statement on the engine's database (test time travel).
+async fn execute(engine: &Engine, sql: &'static str) -> Result<()> {
+    let mut conn = engine.db().conn().await?;
+    sqlx::query(sql).execute(&mut *conn).await?;
+    Ok(())
+}
+
+/// Claims the next due job of `kind`, if any.
+pub async fn claim_with(engine: &Engine, kind: JobKind) -> Result<Option<ClaimedJob>> {
+    let mut conn = engine.db().conn().await?;
+    Ok(jobs::claim(&mut conn, kind, 1).await?.into_iter().next())
+}
+
+/// Runs due jobs of the engine's kinds and the modules' kinds, one at a
+/// time, until none is due. Returns what ran.
+pub async fn run_jobs_with(engine: &Engine, modules: &[ModuleJobs]) -> Result<Vec<Ran>> {
+    let mut ran = Vec::new();
+    let mut kinds = ENGINE_KINDS.to_vec();
+    for m in modules {
+        kinds.extend_from_slice(m.kinds);
+    }
+    for _ in 0..10_000 {
+        let mut any = false;
+        for kind in &kinds {
+            if let Some(job) = claim_with(engine, *kind).await? {
+                ran.push(run_claimed_with(engine, modules, job).await);
+                any = true;
+            }
+        }
+        if !any {
+            return Ok(ran);
+        }
+    }
+    bail!("the job queue did not settle")
+}
+
+/// Jobs that are neither dead nor claimed (housekeeping aside).
+pub async fn waiting_jobs_with(engine: &Engine) -> Result<i64> {
+    let mut conn = engine.db().conn().await?;
+    Ok(sqlx::query_scalar(
+        "SELECT count(*) FROM jobs WHERE dead_at IS NULL AND locked_until IS NULL AND kind <> 'housekeeping'",
+    )
+    .fetch_one(&mut *conn)
+    .await?)
+}
+
+/// "Time passes": every waiting job becomes due now, and every pending
+/// action's next attempt is due now.
+pub async fn fast_forward_with(engine: &Engine) -> Result<()> {
+    execute(
+        engine,
+        "UPDATE jobs SET run_at = now() WHERE run_at > now() AND locked_until IS NULL AND dead_at IS NULL",
+    )
+    .await?;
+    execute(
+        engine,
+        "UPDATE actions SET next_attempt_at = now() - interval '1 millisecond' WHERE state = 'pending' AND next_attempt_at > now()",
+    )
+    .await
+}
+
+/// Runs the queue to quiescence for any engine and modules: runs due jobs,
+/// then moves every waiting job and pending action retry to now, until no
+/// job is left (or only dead ones). Returns what ran.
+pub async fn settle_with(engine: &Engine, modules: &[ModuleJobs]) -> Result<Vec<Ran>> {
+    let mut ran = Vec::new();
+    for _ in 0..200 {
+        ran.extend(run_jobs_with(engine, modules).await?);
+        if waiting_jobs_with(engine).await? == 0 {
+            return Ok(ran);
+        }
+        fast_forward_with(engine).await?;
+    }
+    bail!("the job queue never became quiet")
+}
+
+/// A crash: every claimed job's lease ends now, so the next claim of its
+/// kind sweeps it and runs it again.
+pub async fn expire_leases_with(engine: &Engine) -> Result<()> {
+    execute(
+        engine,
+        "UPDATE jobs SET locked_until = now() - interval '1 second' WHERE locked_until IS NOT NULL",
+    )
+    .await?;
+    let mut conn = engine.db().conn().await?;
+    for kind in JobKind::ALL {
+        jobs::sweep_leases(&mut conn, *kind).await?;
+    }
+    Ok(())
+}
+
 impl Harness {
     /// Claims the next due job of `kind`, if any.
     pub async fn claim(&self, kind: JobKind) -> Result<Option<ClaimedJob>> {
-        let mut conn = self.db.db.conn().await?;
-        Ok(jobs::claim(&mut conn, kind, 1).await?.into_iter().next())
+        claim_with(&self.engine, kind).await
     }
 
     /// Runs the next due job of `kind` to its end.
@@ -118,71 +208,27 @@ impl Harness {
 
     /// Runs due jobs, one at a time, until none is due. Returns what ran.
     pub async fn run_jobs(&self) -> Result<Vec<Ran>> {
-        let mut ran = Vec::new();
-        let mut kinds = ENGINE_KINDS.to_vec();
-        for m in self.modules() {
-            kinds.extend_from_slice(m.kinds);
-        }
-        for _ in 0..10_000 {
-            let mut any = false;
-            for kind in &kinds {
-                if let Some(r) = self.run_one(*kind).await? {
-                    ran.push(r);
-                    any = true;
-                }
-            }
-            if !any {
-                return Ok(ran);
-            }
-        }
-        bail!("the job queue did not settle")
+        run_jobs_with(&self.engine, &self.modules()).await
     }
 
-    /// Runs the queue to quiescence: runs due jobs, then moves every
-    /// waiting job and pending action retry to now, until no job is left
-    /// (or only dead ones). Returns what ran.
+    /// Runs the queue to quiescence (see [`settle_with`]).
     pub async fn settle(&self) -> Result<Vec<Ran>> {
-        let mut ran = Vec::new();
-        for _ in 0..200 {
-            ran.extend(self.run_jobs().await?);
-            if self.waiting_jobs().await? == 0 {
-                return Ok(ran);
-            }
-            self.fast_forward().await?;
-        }
-        bail!("the job queue never became quiet")
+        settle_with(&self.engine, &self.modules()).await
     }
 
     /// Jobs that are neither dead nor claimed.
     pub async fn waiting_jobs(&self) -> Result<i64> {
-        self.db
-            .count("SELECT count(*) FROM jobs WHERE dead_at IS NULL AND locked_until IS NULL AND kind <> 'housekeeping'")
-            .await
+        waiting_jobs_with(&self.engine).await
     }
 
-    /// "Time passes": every waiting job becomes due now, and every
-    /// pending action's next attempt is due now.
+    /// "Time passes" (see [`fast_forward_with`]).
     pub async fn fast_forward(&self) -> Result<()> {
-        self.db
-            .execute("UPDATE jobs SET run_at = now() WHERE run_at > now() AND locked_until IS NULL AND dead_at IS NULL")
-            .await?;
-        self.db
-            .execute("UPDATE actions SET next_attempt_at = now() - interval '1 millisecond' WHERE state = 'pending' AND next_attempt_at > now()")
-            .await?;
-        Ok(())
+        fast_forward_with(&self.engine).await
     }
 
-    /// A crash: every claimed job's lease ends now, so the next claim of
-    /// its kind sweeps it and runs it again.
+    /// A crash (see [`expire_leases_with`]).
     pub async fn expire_leases(&self) -> Result<()> {
-        self.db
-            .execute("UPDATE jobs SET locked_until = now() - interval '1 second' WHERE locked_until IS NOT NULL")
-            .await?;
-        let mut conn = self.db.db.conn().await?;
-        for kind in JobKind::ALL {
-            jobs::sweep_leases(&mut conn, *kind).await?;
-        }
-        Ok(())
+        expire_leases_with(&self.engine).await
     }
 
     /// Starts the next due job of `kind` in a task (to race it against
