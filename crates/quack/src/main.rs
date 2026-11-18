@@ -1,10 +1,14 @@
-//! The `quack` binary: config, CLI, wiring, and graceful shutdown.
-//!
-//! One process per Discord application runs the gateway, interactions, the
-//! HTTP API, the dashboard files, and the job workers (`quack serve`), and
-//! also hosts the operator commands (`migrate`, `import-mysql`,
-//! `commands sync`).
+//! `quack`: see the library's documentation for what each command does.
 
-fn main() {
-    println!("quack {}", env!("CARGO_PKG_VERSION"));
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match quack::cli::parse(&args) {
+        Ok(cli) => quack::app::run(cli),
+        Err(problem) => {
+            eprintln!("quack: {problem}\n\n{}", quack::cli::USAGE);
+            ExitCode::from(2)
+        }
+    }
 }
