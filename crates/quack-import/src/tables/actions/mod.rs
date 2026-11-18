@@ -80,17 +80,18 @@ async fn duplicates(cx: &mut Ctx<'_>) -> Result<HashSet<String>, ImportError> {
     let rows = cx
         .src
         .rows(
-            "SELECT e.id, COALESCE(e.reversal_of_execution_id, e.case_id) AS slot,
-                    CAST(e.reversal_of_execution_id IS NOT NULL AS SIGNED) AS is_undo
-             FROM case_action_executions e JOIN cases c ON c.id = e.case_id
-             WHERE c.guild_id = ? AND e.action_type <> 'send_dm'
-               AND COALESCE(e.reversal_of_execution_id, e.case_id) IN (
-                 SELECT COALESCE(x.reversal_of_execution_id, x.case_id) FROM case_action_executions x
-                 JOIN cases y ON y.id = x.case_id
-                 WHERE y.guild_id = ? AND x.action_type <> 'send_dm'
-                 GROUP BY COALESCE(x.reversal_of_execution_id, x.case_id), x.reversal_of_execution_id IS NULL
-                 HAVING COUNT(*) > 1)
-             ORDER BY slot, e.created_at, e.id",
+            "SELECT d.id, d.slot, d.is_undo FROM (
+               SELECT e.id, e.created_at, COALESCE(e.reversal_of_execution_id, e.case_id) AS slot,
+                      CAST(e.reversal_of_execution_id IS NOT NULL AS SIGNED) AS is_undo
+               FROM case_action_executions e JOIN cases c ON c.id = e.case_id
+               WHERE c.guild_id = ? AND e.action_type <> 'send_dm') d
+             JOIN (
+               SELECT COALESCE(x.reversal_of_execution_id, x.case_id) AS slot,
+                      CAST(x.reversal_of_execution_id IS NOT NULL AS SIGNED) AS is_undo
+               FROM case_action_executions x JOIN cases y ON y.id = x.case_id
+               WHERE y.guild_id = ? AND x.action_type <> 'send_dm'
+               GROUP BY 1, 2 HAVING COUNT(*) > 1) dup ON dup.slot = d.slot AND dup.is_undo = d.is_undo
+             ORDER BY d.slot, d.created_at, d.id",
             &[&g, &g],
         )
         .await?;

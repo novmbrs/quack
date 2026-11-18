@@ -17,6 +17,10 @@ pub enum ImportError {
     /// The source does not match the manifest; nothing was read.
     #[error("the MySQL source has an unknown shape: {}", .0.join("; "))]
     Shape(Vec<String>),
+    /// Two ULIDs of one table map to the same UUID (§19.3); nothing was
+    /// written.
+    #[error("these source keys map to the same UUID as an earlier key of their table: {}", .0.join(", "))]
+    Collision(Vec<String>),
     /// Another Quack process holds the singleton fence.
     #[error("another Quack process is running against this database; stop it first")]
     Fenced,

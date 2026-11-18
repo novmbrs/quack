@@ -347,13 +347,14 @@ async fn scan_snapshots(
                        FROM cases c LEFT JOIN case_templates t ON t.id = c.template_id AND t.guild_id = c.guild_id
                        WHERE c.guild_id = ? AND c.source <> 'v4_import'
                          AND (t.id IS NULL OR c.template_version <> t.version)
-                         AND (c.created_at > ? OR (c.created_at = ? AND c.id > ?))
+                         AND (? IS NULL OR c.created_at > ? OR (c.created_at = ? AND c.id > ?))
                        ORDER BY c.created_at, c.id";
     let mut rebuilds: BTreeMap<(Uuid, u32), Rebuild> = BTreeMap::new();
-    let mut after = (PrimitiveDateTime::MIN, String::new());
+    let mut after: (Option<PrimitiveDateTime>, String) = (None, String::new());
     loop {
         let rows: Vec<MySqlRow> = sqlx::query(sqlx::AssertSqlSafe(format!("{SQL} LIMIT {BATCH}")))
             .bind(&cx.g.ulid)
+            .bind(after.0)
             .bind(after.0)
             .bind(after.0)
             .bind(&after.1)
@@ -362,7 +363,7 @@ async fn scan_snapshots(
             .map_err(ImportError::source)?;
         let Some(last) = rows.last() else { break };
         after = (
-            last.try_get("created_at").map_err(ImportError::source)?,
+            Some(last.try_get("created_at").map_err(ImportError::source)?),
             last.try_get("id").map_err(ImportError::source)?,
         );
         for row in &rows {

@@ -4,7 +4,7 @@
 //! NULL marked) and the hashes are folded in primary-key order, so any
 //! changed, added, or removed row changes the fingerprint.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use aws_lc_rs::digest::{Context, SHA256};
 use tracing::Instrument as _;
@@ -20,14 +20,18 @@ use crate::{ImportError, TRANSFORM_VERSION};
 /// Rows per digest page.
 const DIGEST_PAGE: usize = 5_000;
 
-/// Counts and digests every present source table.
+/// Counts and digests every present source table, and refuses a source
+/// where two ULID keys of one table map to the same UUID (§19.3).
 pub(crate) async fn tables(
     source: &mut Source,
 ) -> Result<BTreeMap<String, TableDigest>, ImportError> {
     let mut out = BTreeMap::new();
+    let mut collisions = Vec::new();
     for table in manifest::present_tables(&source.shape) {
         let span = tracing::info_span!("import digest", import.table = table);
-        let digest = table_digest(source, table).instrument(span).await?;
+        let digest = table_digest(source, table, &mut collisions)
+            .instrument(span)
+            .await?;
         tracing::info!(
             import.table = table,
             import.rows = digest.rows,
@@ -35,10 +39,18 @@ pub(crate) async fn tables(
         );
         out.insert(table.to_owned(), digest);
     }
-    Ok(out)
+    if collisions.is_empty() {
+        Ok(out)
+    } else {
+        Err(ImportError::Collision(collisions))
+    }
 }
 
-async fn table_digest(source: &mut Source, table: &str) -> Result<TableDigest, ImportError> {
+async fn table_digest(
+    source: &mut Source,
+    table: &str,
+    collisions: &mut Vec<String>,
+) -> Result<TableDigest, ImportError> {
     let columns: Vec<String> = source
         .shape
         .columns
@@ -60,6 +72,9 @@ async fn table_digest(source: &mut Source, table: &str) -> Result<TableDigest, I
         "SELECT {key} AS k, SHA2(CONCAT_WS(',', {}), 256) AS h FROM `{table}`",
         parts.join(", ")
     );
+    // Tables keyed by one ULID column: every key must map to its own UUID.
+    let ulid_keyed = matches!(keys.as_slice(), [k] if k == "id" || k == "ticket_id");
+    let mut mapped: HashSet<uuid::Uuid> = HashSet::new();
     let mut ctx = Context::new(&SHA256);
     let mut count = 0u64;
     let mut after: Option<Vec<u8>> = None;
@@ -88,6 +103,15 @@ async fn table_digest(source: &mut Source, table: &str) -> Result<TableDigest, I
                 .map_err(ImportError::source)?,
         );
         for row in &rows {
+            if ulid_keyed {
+                let k: Vec<u8> = row.try_get("k").map_err(ImportError::source)?;
+                let k = String::from_utf8_lossy(&k);
+                if let Some(id) = crate::convert::uuid(&k)
+                    && !mapped.insert(id)
+                {
+                    collisions.push(format!("{table}.{k}"));
+                }
+            }
             let h: String = row.try_get("h").map_err(ImportError::source)?;
             ctx.update(h.as_bytes());
             count += 1;

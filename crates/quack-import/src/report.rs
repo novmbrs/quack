@@ -421,6 +421,8 @@ fn short(s: &str) -> &str {
 fn examples(e: &Examples) -> String {
     if e.count == 0 {
         String::new()
+    } else if e.examples.is_empty() {
+        e.count.to_string()
     } else {
         format!(
             "{} (e.g. {})",
