@@ -28,7 +28,14 @@ pub(crate) struct Shared {
     pub(crate) dedupe: Arc<Dedupe>,
     /// One channel creation per server at a time (§13.1.4).
     pub(crate) creating: tokio::sync::Mutex<()>,
+    /// Bounds the work after acknowledgements ([`MAX_WORK`] at once), so a
+    /// slow handler never holds up another interaction's acknowledgement.
+    pub(crate) work: Arc<tokio::sync::Semaphore>,
 }
+
+/// Most interactions doing their work (after the acknowledgement) at once;
+/// more wait, already acknowledged.
+pub const MAX_WORK: usize = 64;
 
 /// Turns Discord interactions and gateway events into engine calls and
 /// replies (§11). Cheap to clone.
@@ -63,6 +70,7 @@ impl Bot {
                 modules,
                 dedupe,
                 creating: tokio::sync::Mutex::new(()),
+                work: Arc::new(tokio::sync::Semaphore::new(MAX_WORK)),
             }),
         }
     }

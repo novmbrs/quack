@@ -8028,3 +8028,11 @@ folds these into the sections (or changes the code) and removes them here.
     TOML is reported by its path and the parser's line and column only;
     the parser's own message (which quotes the offending line, possibly a
     token) is never printed.
+48. §11.9, §11.3 (application review MAJOR 1, Discord review MAJOR 9) →
+    the interaction pool runs up to **256** handlers at once, and the bot
+    lets at most **64** of them past their acknowledgement
+    (`quack_bot::MAX_WORK`): a handler acknowledges first, then waits for
+    a work slot. So slow work holds up other interactions' work, never
+    their acknowledgement, until 256 are in flight. Quack doesn't drop an
+    interaction by its snowflake's age (a skewed clock would drop every
+    one); a late acknowledgement is still logged.

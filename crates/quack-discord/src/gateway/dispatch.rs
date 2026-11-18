@@ -1,7 +1,8 @@
 //! Bounded hand-off from the shard loop to handlers (§11.9).
 //!
-//! Interactions go to their own queue, drained into at most 64 concurrent
-//! handler tasks. Other events go to 4 queues of 1,024 chosen by server id,
+//! Interactions go to their own queue, drained into at most 256 concurrent
+//! handler tasks (the bot bounds the work after each acknowledgement on
+//! its own, so a slow handler never holds up another's acknowledgement). Other events go to 4 queues of 1,024 chosen by server id,
 //! each handled in order, so one server's events stay ordered. The shard
 //! loop never waits: a full queue drops the event and counts
 //! `quack.queue.dropped`.
@@ -25,8 +26,9 @@ pub const EVENT_QUEUES: usize = 4;
 pub const EVENT_QUEUE_LEN: usize = 1_024;
 /// The interaction queue's bound.
 pub const INTERACTION_QUEUE_LEN: usize = 256;
-/// Most interaction handlers running at once.
-pub const MAX_INTERACTION_HANDLERS: usize = 64;
+/// Most interaction handlers in flight at once, acknowledgement and work
+/// together; the bot runs at most 64 of them past their acknowledgement.
+pub const MAX_INTERACTION_HANDLERS: usize = 256;
 
 const EVENTS: QueueName = QueueName::new("gateway.events");
 const INTERACTIONS: QueueName = QueueName::new("gateway.interactions");

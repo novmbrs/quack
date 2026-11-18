@@ -27,6 +27,6 @@ mod respond;
 mod router;
 
 pub use ack::Failure;
-pub use bot::Bot;
+pub use bot::{Bot, MAX_WORK};
 pub use modules::{ComponentCall, Module};
 pub use respond::{CommandMentions, DiscordResponder, Responder};

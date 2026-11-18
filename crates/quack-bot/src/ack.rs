@@ -202,7 +202,7 @@ impl<'a> Pending<'a> {
             .defer(&reference, self.ephemeral())
             .await;
         self.acked(&outcome, "defer")?;
-        Ok(self.into_acked())
+        self.into_acked().await
     }
 
     /// Defers an update of the ephemeral message a component is on
@@ -211,7 +211,7 @@ impl<'a> Pending<'a> {
         let reference = self.ix.reference();
         let outcome = self.shared.responder.defer_update(&reference).await;
         self.acked(&outcome, "defer_update")?;
-        Ok(self.into_acked())
+        self.into_acked().await
     }
 
     /// Defers the way §11.3 asks for a component or modal from `source`:
@@ -289,11 +289,17 @@ impl<'a> Pending<'a> {
         }
     }
 
-    fn into_acked(self) -> Acked<'a> {
-        Acked {
+    /// Waits, already acknowledged, for a work slot ([`crate::MAX_WORK`]).
+    async fn into_acked(self) -> Result<Acked<'a>, Finish> {
+        let permit = Arc::clone(&self.shared.work)
+            .acquire_owned()
+            .await
+            .map_err(|_| Finish::Failed(Reason::Discord))?;
+        Ok(Acked {
             ix: self.ix,
             shared: self.shared,
-        }
+            _work: permit,
+        })
     }
 }
 
@@ -303,6 +309,7 @@ pub(crate) struct Acked<'a> {
     /// The interaction.
     pub(crate) ix: &'a Interaction,
     shared: &'a Shared,
+    _work: tokio::sync::OwnedSemaphorePermit,
 }
 
 impl<'a> Acked<'a> {

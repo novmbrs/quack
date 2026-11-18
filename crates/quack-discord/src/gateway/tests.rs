@@ -314,6 +314,40 @@ async fn a_full_queue_drops_without_waiting() {
 }
 
 #[tokio::test]
+async fn slow_handlers_never_hold_back_a_later_interaction_past_64() {
+    // 100 handlers still busy after their acknowledgement: a later one
+    // still starts (and so acknowledges) at once.
+    let running = Arc::new(Semaphore::new(0));
+    let gate = Arc::new(Semaphore::new(0));
+    let (started, held) = (running.clone(), gate.clone());
+    let dispatcher = Dispatcher::start(Arc::new(move |_event: Event| {
+        let (started, held) = (started.clone(), held.clone());
+        async move {
+            started.add_permits(1);
+            let _ = held.acquire().await;
+        }
+    }));
+    let interaction = crate::interaction::decode_json(
+        &fixtures::interaction(2, &json!({"id": "101", "name": "help", "type": 1})).to_string(),
+    )
+    .unwrap();
+    for _ in 0..101 {
+        assert!(
+            dispatcher
+                .dispatch(Event::Interaction(Box::new(interaction.clone())))
+                .is_none()
+        );
+    }
+    let reached = tokio::time::timeout(Duration::from_secs(5), running.acquire_many(101)).await;
+    assert!(
+        reached.is_ok(),
+        "an interaction waited behind slow handlers"
+    );
+    gate.close();
+    dispatcher.stop().await;
+}
+
+#[tokio::test]
 async fn interactions_run_concurrently_up_to_the_limit() {
     let running = Arc::new(Semaphore::new(0));
     let gate = Arc::new(Semaphore::new(0));
@@ -330,11 +364,12 @@ async fn interactions_run_concurrently_up_to_the_limit() {
     )
     .unwrap();
     for _ in 0..(MAX_INTERACTION_HANDLERS + 5) {
-        assert!(
-            dispatcher
-                .dispatch(Event::Interaction(Box::new(interaction.clone())))
-                .is_none()
-        );
+        let mut event = Event::Interaction(Box::new(interaction.clone()));
+        // The queue holds 256: let the pool take some when it is full.
+        while let Some(back) = dispatcher.dispatch(event) {
+            event = back;
+            tokio::task::yield_now().await;
+        }
     }
     let all = u32::try_from(MAX_INTERACTION_HANDLERS).unwrap();
     let reached = tokio::time::timeout(Duration::from_secs(5), running.acquire_many(all)).await;
