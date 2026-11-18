@@ -5,10 +5,13 @@ use std::path::PathBuf;
 /// What to run.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Command {
-    /// `quack serve [--migrate]`.
+    /// `quack serve [--migrate] [--discord-offline <url>]`.
     Serve {
         /// Apply pending migrations first.
         migrate: bool,
+        /// Tests and smoke runs only: no gateway and no startup calls to
+        /// Discord; REST calls go to this base URL instead.
+        discord_offline: Option<String>,
     },
     /// `quack migrate`.
     Migrate,
@@ -39,20 +42,24 @@ pub struct Cli {
 /// The usage text.
 pub const USAGE: &str = "\
 Usage:
-  quack serve [--config <file>] [--migrate]
+  quack serve [--config <file>] [--migrate] [--discord-offline <url>]
   quack migrate [--config <file>]
   quack import-mysql [--dry-run] [--report <file>] [--config <file>]
   quack commands sync [--config <file>]
   quack --version
 
 Configuration comes from QUACK_* environment variables and the optional
-TOML file (the same names in lowercase, without the prefix).";
+TOML file (the same names in lowercase, without the prefix).
+
+--discord-offline <url> is for tests and smoke runs: serve starts without
+the gateway or any startup call to Discord and sends REST calls to <url>.";
 
 /// Parses the arguments after the program name.
 pub fn parse(args: &[String]) -> Result<Cli, String> {
     let mut words = Vec::new();
     let mut config = None;
     let mut migrate = false;
+    let mut discord_offline = None;
     let mut dry_run = false;
     let mut report = None;
     let mut it = args.iter();
@@ -72,6 +79,9 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
             }
             "--config" => config = Some(PathBuf::from(it.next().ok_or("--config needs a file")?)),
             "--migrate" => migrate = true,
+            "--discord-offline" => {
+                discord_offline = Some(it.next().ok_or("--discord-offline needs a URL")?.clone());
+            }
             "--dry-run" => dry_run = true,
             "--report" => report = Some(PathBuf::from(it.next().ok_or("--report needs a file")?)),
             flag if flag.starts_with('-') => return Err(format!("unknown option {flag}")),
@@ -80,14 +90,18 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
     }
     let import_flags = dry_run || report.is_some();
     let command = match words.as_slice() {
-        ["serve"] => Command::Serve { migrate },
+        ["serve"] => Command::Serve {
+            migrate,
+            discord_offline: discord_offline.clone(),
+        },
         ["migrate"] => Command::Migrate,
         ["import-mysql"] => Command::ImportMysql { dry_run, report },
         ["commands", "sync"] => Command::CommandsSync,
         [] => return Err("no command given".to_owned()),
         other => return Err(format!("unknown command `{}`", other.join(" "))),
     };
-    let misplaced = (migrate && !matches!(command, Command::Serve { .. }))
+    let misplaced = ((migrate || discord_offline.is_some())
+        && !matches!(command, Command::Serve { .. }))
         || (import_flags && !matches!(command, Command::ImportMysql { .. }));
     if misplaced {
         return Err("an option was given to a command that doesn't take it".to_owned());
@@ -107,7 +121,19 @@ mod tests {
     fn reads_every_command() {
         assert_eq!(
             parse(&args("serve --migrate")).unwrap().command,
-            Command::Serve { migrate: true }
+            Command::Serve {
+                migrate: true,
+                discord_offline: None
+            }
+        );
+        assert_eq!(
+            parse(&args("serve --discord-offline http://127.0.0.1:9"))
+                .unwrap()
+                .command,
+            Command::Serve {
+                migrate: false,
+                discord_offline: Some("http://127.0.0.1:9".to_owned())
+            }
         );
         assert_eq!(
             parse(&args("migrate --config q.toml")).unwrap(),

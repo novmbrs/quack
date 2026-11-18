@@ -90,10 +90,22 @@ fn telemetry(config: &Config) -> Result<TelemetryGuard, quack_telemetry::Telemet
 
 async fn command(command: &Command, config: &Config) -> anyhow::Result<()> {
     match command {
-        Command::Serve { migrate } => {
+        Command::Serve {
+            migrate,
+            discord_offline,
+        } => {
+            let discord = match discord_offline {
+                Some(api_base) => {
+                    tracing::warn!(%api_base, "serving without Discord (--discord-offline)");
+                    DiscordMode::Off {
+                        api_base: api_base.clone(),
+                    }
+                }
+                None => DiscordMode::Connect,
+            };
             let options = Options {
                 migrate: *migrate,
-                discord: DiscordMode::Connect,
+                discord,
             };
             serve::run(
                 config,

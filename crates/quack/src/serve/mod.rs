@@ -40,9 +40,9 @@ pub enum DiscordMode {
     /// Validate the token, check sharding, sync commands, connect the
     /// gateway.
     Connect,
-    /// An internal test seam: no gateway and no startup calls; REST goes
-    /// to `api_base` (a local fake). Readiness treats the gateway as
-    /// connected.
+    /// The test seam (`quack serve --discord-offline <url>`, and the
+    /// tests): no gateway and no startup calls; REST goes to `api_base`
+    /// (a local fake). Readiness treats the gateway as connected.
     Off {
         /// The REST base URL.
         api_base: String,
