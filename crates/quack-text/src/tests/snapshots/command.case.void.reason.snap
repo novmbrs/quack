@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-reason — Why the case is wrong. The member can see this reason.
+reason — Why you're voiding the case. The member can see this reason.
 
 ## description
-Why the case is wrong. The member can see this reason.
+Why you're voiding the case. The member can see this reason.

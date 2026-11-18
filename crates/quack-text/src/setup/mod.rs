@@ -176,7 +176,7 @@ pub fn home(s: &SetupState, result: Option<Text>) -> Msg {
         .iter()
         .map(|(area, label)| button(label, *area, SetupOp::Open))
         .collect();
-    buttons.push(Button::link("Open settings", &s.settings_url));
+    buttons.push(Button::link("Open server settings", &s.settings_url));
     msg.buttons(buttons)
 }
 

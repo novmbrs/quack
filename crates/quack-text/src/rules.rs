@@ -34,7 +34,7 @@ pub fn list(rows: &[RuleRow], archived: u64, page: u32, pages: u32) -> Msg {
                 .s(" · ")
                 .s(word::levels_summary(&r.levels))
                 .s(" · ")
-                .link("Open", &r.url),
+                .link("Open rule", &r.url),
         );
     }
     let mut footer = Text::fixed("Rules are edited on the dashboard.");
@@ -62,12 +62,14 @@ pub fn problem(code: RuleProblemCode) -> Text {
         }
         RuleProblemCode::TooManyFields => "A rule can have at most 10 context fields.",
         RuleProblemCode::FieldKey => {
-            "Use 2 to 64 lowercase letters, digits, dashes, or underscores for the key, starting with a letter or digit."
+            "Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit."
         }
-        RuleProblemCode::FieldKeyDuplicate => "Another field of this rule already uses this key.",
+        RuleProblemCode::FieldKeyDuplicate => {
+            "Another field of this rule already uses this field name."
+        }
         RuleProblemCode::FieldLabelLength => "Give the field a label of 1 to 100 characters.",
         RuleProblemCode::LevelCount => "A rule needs 1 to 10 levels.",
-        RuleProblemCode::FirstLevelNotOne => "The first level must start at case 1.",
+        RuleProblemCode::FirstLevelNotOne => "The first level must start at a case count of 1.",
         RuleProblemCode::LevelCaseCount => {
             "Start each later level at a case count from 2 to 1,000,000."
         }

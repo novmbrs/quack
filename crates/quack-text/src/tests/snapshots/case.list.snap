@@ -93,13 +93,13 @@ Subtext [Fixed("Page 2 of 3")]
 tone: Neutral
 --- discord ---
 ### Recent cases
-No cases match.
+No cases match these filters. Try choosing a different member or rule.
 --- plain ---
 Recent cases
-No cases match.
+No cases match these filters. Try choosing a different member or rule.
 --- model ---
 Heading [Fixed("Recent cases")]
-Text [Fixed("No cases match.")]
+Text [Fixed("No cases match these filters. Try choosing a different member or rule.")]
 
 ## maximal
 tone: Neutral

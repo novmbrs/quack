@@ -5,13 +5,13 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 <@333> added 1 evidence item to **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Ana added 1 evidence item to case #12.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" added 1 evidence item to "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## one · dashboard text
 discord: <@333> added 1 evidence item to case #12.
@@ -22,13 +22,13 @@ model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" adde
 tone: Neutral
 --- discord ---
 <@333> added 4 evidence items to **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Ana added 4 evidence items to case #12.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" added 4 evidence items to "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## other · dashboard text
 discord: <@333> added 4 evidence items to case #12.

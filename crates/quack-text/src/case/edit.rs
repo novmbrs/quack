@@ -7,7 +7,6 @@ use crate::actions::ModalAction;
 use crate::budget;
 use crate::fmt;
 use crate::model::{Modal, Msg, Text, Tone};
-use crate::word;
 
 /// `case.context.modal.title` with the case's fields (at most 5; more go
 /// to the dashboard, see [`context_too_many_fields`]).
@@ -48,5 +47,8 @@ pub fn context_too_many_fields(number: u64, dashboard_url: &str) -> Msg {
             "Case #{number} has more context fields than fit in a Discord form. Edit it on the dashboard."
         )),
     )
-    .buttons(vec![word::dashboard_button(dashboard_url)])
+    .buttons(vec![crate::model::Button::link(
+        "Edit case on dashboard",
+        dashboard_url,
+    )])
 }

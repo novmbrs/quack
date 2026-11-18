@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-void — Void a case so it stops counting.
+void — Keep a case in the history and stop it from counting.
 
 ## description
-Void a case so it stops counting.
+Keep a case in the history and stop it from counting.

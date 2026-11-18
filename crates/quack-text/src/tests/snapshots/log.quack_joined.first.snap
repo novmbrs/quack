@@ -5,13 +5,13 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 Quack joined the server and created the starter rule **Spam**. Review it on the dashboard.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Quack joined the server and created the starter rule Spam. Review it on the dashboard.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Fixed("Quack joined the server and created the starter rule "), Bold([User("Spam")]), Fixed(". Review it on the dashboard.")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ##  · dashboard text
 discord: Quack joined the server and created the starter rule **Spam**. Review it on the dashboard.

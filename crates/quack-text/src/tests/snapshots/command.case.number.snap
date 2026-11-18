@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-number — The case number.
+number — The case number shown on its receipt.
 
 ## description
-The case number.
+The case number shown on its receipt.

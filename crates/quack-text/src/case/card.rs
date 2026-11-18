@@ -242,7 +242,7 @@ fn buttons(c: &CaseCard) -> Vec<Button> {
         ));
     }
     b.push(Button::new(
-        "History",
+        "Member's case history",
         ButtonStyle::Secondary,
         ButtonAction::History {
             member: c.member_id,
@@ -275,7 +275,7 @@ fn buttons(c: &CaseCard) -> Vec<Button> {
     if c.action.iter().chain(c.undo.iter()).any(needs_decision) {
         b.push(word::failed_actions_button(&c.failures_url));
     }
-    b.push(word::dashboard_button(&c.dashboard_url));
+    b.push(Button::link("Open case on dashboard", &c.dashboard_url));
     b
 }
 

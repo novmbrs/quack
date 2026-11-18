@@ -4,11 +4,11 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 ### Appeals
-A member can appeal each case once, from Quack's DM or from the dashboard, even after a ban. Choose the appeal channel with </setup:1004>. Moderators accept or reject appeals there, with </appeals:1002>, or on the dashboard, and Quack tries to send the member a DM with the decision. Accepting an appeal voids the case, and Quack removes the timeout or ban it placed when Discord still shows it.
+Members can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use </setup:1004> to choose where new appeals appear. Moderators can also use </appeals:1002> or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed.
 buttons: [Open the dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Appeals
-A member can appeal each case once, from Quack's DM or from the dashboard, even after a ban. Choose the appeal channel with /setup. Moderators accept or reject appeals there, with /appeals, or on the dashboard, and Quack tries to send the member a DM with the decision. Accepting an appeal voids the case, and Quack removes the timeout or ban it placed when Discord still shows it.
+Members can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use /setup to choose where new appeals appear. Moderators can also use /appeals or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed.
 --- model ---
 Heading [Fixed("Appeals")]
-Text [Fixed("A member can appeal each case once, from Quack's DM or from the dashboard, even after a ban. Choose the appeal channel with "), Command(Setup), Fixed(". Moderators accept or reject appeals there, with "), Command(Appeals), Fixed(", or on the dashboard, and Quack tries to send the member a DM with the decision. Accepting an appeal voids the case, and Quack removes the timeout or ban it placed when Discord still shows it.")]
+Text [Fixed("Members can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use "), Command(Setup), Fixed(" to choose where new appeals appear. Moderators can also use "), Command(Appeals), Fixed(" or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed.")]

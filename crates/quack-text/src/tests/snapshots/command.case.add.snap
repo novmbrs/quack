@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-add — Apply a rule to a member.
+add — Add a case by applying a rule to a member.
 
 ## description
-Apply a rule to a member.
+Add a case by applying a rule to a member.

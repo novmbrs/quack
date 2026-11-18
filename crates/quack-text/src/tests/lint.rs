@@ -178,16 +178,12 @@ const BANNED: &[&str] = &[
     "disabled",
 ];
 
-/// Legitimate uses: Discord's own permission and UI names (where staff
-/// check a kick), and two fixed
-/// phrases (a DM's "for your records", the starter rule notice setting).
+/// Legitimate uses: Discord's own permission and UI names (the View Audit
+/// Log permission, where staff check a kick, and where members turn on 2FA).
 const ALLOWED: &[&str] = &[
     "View Audit Log",
     "Server Settings → Audit Log",
     "User Settings → My Account",
-    "Deny View Channel",
-    "for your records",
-    "starter rule notice",
 ];
 
 fn words_of(s: &str) -> String {

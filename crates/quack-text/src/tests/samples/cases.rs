@@ -45,6 +45,7 @@ const CARD_IDS: &[&str] = &[
     "case.button.add_evidence",
     "case.button.view_evidence",
     "case.button.history",
+    "case.button.dashboard",
     "case.button.void",
     "case.button.retry",
     "case.button.dismiss",

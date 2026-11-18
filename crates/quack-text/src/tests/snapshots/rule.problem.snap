@@ -27,14 +27,14 @@ plain:   A rule can have at most 10 context fields.
 model:   [Fixed("A rule can have at most 10 context fields.")]
 
 ## field_key
-discord: Use 2 to 64 lowercase letters, digits, dashes, or underscores for the key, starting with a letter or digit.
-plain:   Use 2 to 64 lowercase letters, digits, dashes, or underscores for the key, starting with a letter or digit.
-model:   [Fixed("Use 2 to 64 lowercase letters, digits, dashes, or underscores for the key, starting with a letter or digit.")]
+discord: Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit.
+plain:   Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit.
+model:   [Fixed("Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit.")]
 
 ## field_key_duplicate
-discord: Another field of this rule already uses this key.
-plain:   Another field of this rule already uses this key.
-model:   [Fixed("Another field of this rule already uses this key.")]
+discord: Another field of this rule already uses this field name.
+plain:   Another field of this rule already uses this field name.
+model:   [Fixed("Another field of this rule already uses this field name.")]
 
 ## field_label_length
 discord: Give the field a label of 1 to 100 characters.
@@ -47,9 +47,9 @@ plain:   A rule needs 1 to 10 levels.
 model:   [Fixed("A rule needs 1 to 10 levels.")]
 
 ## first_level_not_one
-discord: The first level must start at case 1.
-plain:   The first level must start at case 1.
-model:   [Fixed("The first level must start at case 1.")]
+discord: The first level must start at a case count of 1.
+plain:   The first level must start at a case count of 1.
+model:   [Fixed("The first level must start at a case count of 1.")]
 
 ## level_case_count
 discord: Start each later level at a case count from 2 to 1,000,000.

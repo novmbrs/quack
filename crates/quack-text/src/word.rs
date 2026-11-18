@@ -125,14 +125,15 @@ pub fn open_case_button(case: CaseId) -> Button {
     )
 }
 
-/// `button.open_in_dashboard`.
+/// `button.open_in_dashboard`: a generic dashboard link. Messages about one
+/// thing name it instead ("Open case on dashboard").
 pub fn dashboard_button(url: impl Into<String>) -> Button {
-    Button::link("Open in dashboard", url)
+    Button::link("Open on dashboard", url)
 }
 
 /// `button.failed_actions`: the dashboard's failed actions page.
 pub fn failed_actions_button(url: impl Into<String>) -> Button {
-    Button::link("Failed actions", url)
+    Button::link("View failed actions", url)
 }
 
 /// One row of an "Open a case" select.
@@ -195,9 +196,14 @@ pub fn level_outcome(action: Option<LevelAction>) -> String {
     }
 }
 
-/// `level.summary.item`: "from case 3: timeout for 1 hour".
+/// `level.summary.item`: "at 3 cases: timeout for 1 hour" ("from case 3"
+/// would read as case #3).
 pub fn level_summary_item(from_case_count: u32, action: Option<LevelAction>) -> String {
-    format!("from case {from_case_count}: {}", level_outcome(action))
+    format!(
+        "at {}: {}",
+        fmt::plural(u64::from(from_case_count), "case", "cases"),
+        level_outcome(action)
+    )
 }
 
 /// Every level of a rule as `level.summary.item`s joined with " · " (the

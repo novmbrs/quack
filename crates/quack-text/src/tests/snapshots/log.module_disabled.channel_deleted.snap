@@ -5,13 +5,13 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 Quack turned off tickets because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Quack turned off tickets because its channel was deleted. Choose a new channel in /setup, then turn it on.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Fixed("Quack turned off tickets because its channel was deleted. Choose a new channel in "), Command(Setup), Fixed(", then turn it on.")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## Tickets · dashboard text
 discord: Quack turned off tickets because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
@@ -22,13 +22,13 @@ model:   [Fixed("Quack turned off tickets because its channel was deleted. Choos
 tone: Neutral
 --- discord ---
 Quack turned off the server activity log because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Quack turned off the server activity log because its channel was deleted. Choose a new channel in /setup, then turn it on.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Fixed("Quack turned off the server activity log because its channel was deleted. Choose a new channel in "), Command(Setup), Fixed(", then turn it on.")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## ActivityLog · dashboard text
 discord: Quack turned off the server activity log because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
@@ -39,13 +39,13 @@ model:   [Fixed("Quack turned off the server activity log because its channel wa
 tone: Neutral
 --- discord ---
 Quack turned off the honeypot because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Quack turned off the honeypot because its channel was deleted. Choose a new channel in /setup, then turn it on.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Fixed("Quack turned off the honeypot because its channel was deleted. Choose a new channel in "), Command(Setup), Fixed(", then turn it on.")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## Honeypot · dashboard text
 discord: Quack turned off the honeypot because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.

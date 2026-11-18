@@ -2193,16 +2193,16 @@ re-checked when clicked); at most 3 rows of 5:
 
 | Button | Shown when |
 | --- | --- |
+| Retry {action} | `controls(action).retry`, per action (§5.8); first, so a failure's controls are easy to find |
+| Dismiss failed {action} | `controls(action).dismiss`, per action |
 | Edit context | always |
 | Add evidence | always |
 | View evidence | the case has evidence |
-| History | always |
+| Member's case history | always |
 | Void case | case valid |
-| Retry {action} | `controls(action).retry`, per action (§5.8) |
-| Dismiss {action} | `controls(action).dismiss`, per action |
 | Remove timeout / Unban | `controls(original).undo` |
-| Failed actions (link to `/guilds/{guild_id}/failures`) | an action of the case is failed and not dismissed |
-| Open in dashboard | always (link) |
+| View failed actions (link to `/guilds/{guild_id}/failures`) | an action of the case is failed and not dismissed |
+| Open case on dashboard | always (link) |
 
 The card does not page: long context and evidence lists are cut (§11.11)
 and continue on the dashboard.
@@ -2216,8 +2216,8 @@ Every click re-checks `manage_settings` + 2FA.
 
 | Area (`su` area code) | State shown | Controls (`su` operation) |
 | --- | --- | --- |
-| Home (`home`) | One line per area below. | One button per area; "Open settings" dashboard link. |
-| Log channel (`log`) | Channel or "Not set". | Channel select (text channels) `ch`; "Create #moderation-log" `new`; "Stop posting" `clr`. |
+| Home (`home`) | One line per area below. | One button per area; "Open server settings" dashboard link. |
+| Log channel (`log`) | Channel or "Not set". | Channel select (text channels) `ch`; "Create #moderation-log" `new`; "Stop posting log entries" `clr`. |
 | Appeals (`ap`) | Appeal channel; rejoin invite set or not. | Channel select `ch`; "Create #appeals" `new`; "Stop posting appeals" `clr`; "Set rejoin invite" `inv` (modal `invm`, exception read); "Remove invite" `clrinv`. |
 | Evidence copies (`ev`) | Channel or "Off". | Channel select `ch`; "Create #evidence" `new`; "Stop copying files" `clr`. |
 | Tickets (`tk`) | On/off; entry and queue channels. | Entry channel select `entry`; queue channel select `queue`; "Create channels" `new` (creates `#support` and `#ticket-log`); "Turn on" `on`; "Turn off" `off`. |
@@ -2383,22 +2383,22 @@ renders as `**Label?**` with its value on the next line.
 
 | Id | Text |
 | --- | --- |
-| `command.case` | Add, view, and void cases. |
-| `command.case.add` | Apply a rule to a member. |
+| `command.case` | Add, find, and void moderation cases. |
+| `command.case.add` | Add a case by applying a rule to a member. |
 | `command.case.add.member` | The member this case is about. |
 | `command.case.add.rule` | The rule to apply. |
 | `command.case.add.private` | Show the receipt only to you. |
-| `command.case.view` | Show a case. |
-| `command.case.number` | The case number. |
+| `command.case.view` | Open a case by number and see its action and DM outcomes. |
+| `command.case.number` | The case number shown on its receipt. |
 | `command.case.list` | List recent cases. |
 | `command.case.list.member` | Only show cases about this member. |
 | `command.case.list.rule` | Only show cases under this rule. |
-| `command.case.void` | Void a case so it stops counting. |
-| `command.case.void.reason` | Why the case is wrong. The member can see this reason. |
+| `command.case.void` | Keep a case in the history and stop it from counting. |
+| `command.case.void.reason` | Why you're voiding the case. The member can see this reason. |
 | `command.case.history` | Show a member's case history. |
 | `command.case.history.member` | The member whose cases to show. |
 | `command.appeals` | Review appeals waiting for a decision. |
-| `command.rules` | List this server's rules. |
+| `command.rules` | List active rules and open them on the dashboard. |
 | `command.setup` | Set up Quack for this server. |
 | `command.help` | Learn how Quack works. |
 | `command.help.topic` | What you want to know about. |
@@ -2432,24 +2432,23 @@ renders as `**Label?**` with its value on the next line.
 | `button.previous` | Previous |
 | `button.next` | Next |
 | `button.open_case` | Open case |
-| `button.open_in_dashboard` | Open in dashboard |
-| `button.failed_actions` | Failed actions |
+| `button.open_in_dashboard` | Open on dashboard (generic; messages about one thing name it, such as `case.button.dashboard`) |
+| `button.failed_actions` | View failed actions |
 | `select.open_case` | Open a case (placeholder; each option is "#{number} · {rule name}", at most 25) |
 | `render.trimmed` | Quack shortened this message to fit in Discord. |
-| `level.summary.item` | from case {from}: {outcome} |
+| `level.summary.item` | at {from} {case / cases}: {outcome} ("at 3 cases: timeout for 1 hour"; "from case 3" would read as case #3) |
 | `level.outcome.warning` | warning |
 | `level.outcome.timeout` | timeout for {duration} |
 | `level.outcome.kick` | kick |
 | `level.outcome.ban` | ban |
 | `level.outcome.ban_delete` | ban and delete the last {last} of messages |
 
-`{action}` inside a sentence is `word.action.*`, except that "remove
-timeout" reads "remove timeout action" where the action is a noun ("the
-failed remove timeout action", "This remove timeout action can't be
-retried"). Button labels ("Retry {action}", "Dismiss {action}",
-`quack_text::word::retry_label` and `dismiss_label`) use the plain word,
-except that a remove timeout is "timeout removal" ("Retry timeout
-removal").
+`{action}` inside a sentence is `word.action.*`; sentences about an undo
+name what it does instead ("removing the timeout", "the failed attempt to
+unban the member", §12.6). Button labels
+(`quack_text::word::retry_label` and `dismiss_label`) are "Retry
+{action}" and "Dismiss failed {action}", except that a remove timeout is
+"Retry removing timeout" and "Dismiss failed timeout removal".
 
 ### 12.3 Errors and refusals
 
@@ -2638,10 +2637,10 @@ removal"; "Dismiss ban" alone would read as removing the ban), per action
 that allows them; `case.button.edit_context` "Edit context",
 `case.button.add_evidence` "Add evidence", `case.button.view_evidence`
 "View evidence" (when the case has evidence), `case.button.history`
-"History", `case.button.void` "Void case" (when not voided),
+"Member's case history", `case.button.void` "Void case" (when not voided),
 `case.button.remove_timeout` "Remove timeout", `case.button.unban`
 "Unban", `button.failed_actions` (when an action needs a decision),
-`button.open_in_dashboard`. The public receipt's only button
+`case.button.dashboard` "Open case on dashboard". The public receipt's only button
 is `button.open_case`.
 
 | Id | Text |
@@ -2847,7 +2846,7 @@ Context and evidence:
 | `case.context.modal.title` | Edit context · case #{number} |
 | `case.context.saved` | Case context saved for case #{number}. |
 | `case.context.saved_new_evidence` | Case context saved for case #{number}. one: Quack is saving 1 new message as evidence. / other: Quack is saving {count} new messages as evidence. |
-| `case.context.too_many_fields` | Case #{number} has more context fields than fit in a Discord form. Edit it on the dashboard. (button `button.open_in_dashboard`) |
+| `case.context.too_many_fields` | Case #{number} has more context fields than fit in a Discord form. Edit it on the dashboard. (link button "Edit case on dashboard") |
 | `case.context.details_label` | Details |
 | `evidence.modal.title` | Add evidence · case #{number} |
 | `evidence.modal.label` | Message links |
@@ -3065,7 +3064,7 @@ like the member view.
 ### 12.10 Log channel entries
 
 Each post is: the lead sentence below, an optional quote (the void reason
-of a staff void), and the subtext `-# {datetime} · [Open in dashboard](<link>)`
+of a staff void), and the subtext `-# {datetime} · [Open moderation log](<link>)`
 (the link left out when unknown); failed and refused entries have the
 danger accent. The dashboard's `text` is the lead sentence, then the quote
 on a new line as `> {quote}`. In entries, `{member}` reads "a member" ("A
@@ -3128,16 +3127,16 @@ Discord unbanned {member}").
 | `log.appeal_closed.case_voided` | `appeal_closed` ok, by Quack | Quack closed {member}'s appeal for {case} because the case was voided. |
 | `log.appeal_reopened` | `appeal_reopened` ok | {actor} reopened {member}'s appeal for {case} and asked for more information. |
 | `log.rule_created` | `rule_created` ok | {actor} created the rule {rule}. |
-| `log.rule_edited` | `rule_edited` ok | {actor} edited the rule {rule}. New cases use version {version}. |
+| `log.rule_edited` | `rule_edited` ok | {actor} edited the rule {rule}. New cases use the updated rule (version {version}). |
 | `log.rule_archived` | `rule_archived` ok | {actor} archived the rule {rule}. It can't be applied until someone restores it. |
 | `log.rule_restored` | `rule_restored` ok | {actor} restored the rule {rule}. |
 | `log.rule_imported` | `rule_imported` ok | {actor} imported the rule {rule}. |
-| `log.settings_changed` | `settings_changed` ok | {actor} changed Quack's settings: {fields}. |
+| `log.settings_changed` | `settings_changed` ok | {actor} changed Quack's settings: {fields}. (no nameable field: "{actor} changed Quack's settings. Open the settings on the dashboard to review them.") |
 | `log.module_enabled` | `module_enabled` ok | {actor} turned on {module}. |
 | `log.module_disabled` | `module_disabled` ok, by staff | {actor} turned off {module}. |
 | `log.module_disabled.channel_deleted` | `module_disabled` ok, by Quack | Quack turned off {module} because its channel was deleted. Choose a new channel in /setup, then turn it on. |
 | `log.module_disabled.quack_left` | `module_disabled` ok, by Quack (not posted) | Quack turned off {module} because Quack left the server. |
-| `log.module_settings_changed` | `module_settings_changed` ok | {actor} changed the {module settings name} settings: {fields}. |
+| `log.module_settings_changed` | `module_settings_changed` ok | {actor} changed the {module settings name} settings: {fields}. (no nameable field: "… settings. Open the settings on the dashboard to review them.") |
 | `log.quack_joined.first` | `quack_joined` ok | Quack joined the server and created the starter rule {rule}. Review it on the dashboard. |
 | `log.quack_joined.again` | `quack_joined` ok | Quack rejoined the server. |
 | `log.quack_left` | `quack_left` ok (not posted) | Quack left the server. |
@@ -3153,7 +3152,7 @@ Discord unbanned {member}").
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed, `rule_unavailable` | Quack didn't add a honeypot case for {member}. The honeypot rule is archived or no longer exists. Choose a rule in /setup or on the dashboard. |
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed, `policy_changed` | Quack didn't add a honeypot case for {member}. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed. |
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed, `discord_unavailable` | Quack didn't add a honeypot case for {member}. Quack couldn't reach Discord in time. Review the post and use /case add if a case is needed. |
-| `log.legacy` | `legacy` (imported, not posted) | Imported from the previous version of Quack: {legacy action}. |
+| `log.legacy` | `legacy` (imported, not posted) | Imported from an earlier version of Quack: {legacy action}. (no action name: "This entry was imported from an earlier version of Quack.") |
 
 `{refusal}` reuses the §12.3 refusal texts without their first sentence
 ("No case was added."), with the first letter lowercased unless the text
@@ -3188,7 +3187,7 @@ Server settings (`log.settings_changed`), by setting key or API field:
 | `setting.dm_footer` | dm_footer | DM footer |
 | `setting.moderator_roles` | moderator_roles, moderator_role_ids | moderator roles |
 | `setting.rules_manager_roles` | rules_manager_roles, rules_manager_role_ids | rules manager roles |
-| `setting.starter_notice` | starter_notice, starter_notice_acknowledged_at | starter rule notice |
+| `setting.starter_notice` | starter_notice, starter_notice_acknowledged_at | starter rule reminder |
 | (any other key) | | another setting |
 
 Module settings (`log.module_settings_changed`), by key or API field within
@@ -3226,7 +3225,7 @@ server activity channel.
 | `setup.home.tickets` | **Tickets:** On/Off{" · members open tickets in {entry} · new tickets go to {queue}" when both are set} |
 | `setup.home.honeypot` | **Honeypot:** On/Off{" · {channel} · rule {rule}" when both are set} |
 | `setup.home.activity_log` | **Server activity log:** On/Off{" · {channel}" or " · several channels"} |
-| `setup.home` (link button) | Open settings (the dashboard's settings page; after the six area buttons) |
+| `setup.home` (link button) | Open server settings (the dashboard's settings page; after the six area buttons) |
 | `setup.button.log` | Log channel |
 | `setup.button.appeals` | Appeals |
 | `setup.button.evidence` | Evidence copies |
@@ -3344,14 +3343,14 @@ Created channels (name, topic, first message):
 
 | Id | Text |
 | --- | --- |
-| `help.overview` | ### Quack\nQuack keeps track of moderation cases. Rules managers set up rules on the dashboard, moderators apply them, and Quack picks the outcome and carries it out.\n**Moderators:** /case add, /case view, /case list, /case history, /case void, /appeals\n**Rules:** /rules (rules are edited on the dashboard)\n**Setup:** /setup (needs Manage Server)\nUse /help with a topic for more. |
-| `help.cases` | ### Cases\nUse /case add, or right-click a message or member and choose **Apps → Add case**. Choose the rule, and Quack counts the member's earlier cases under it, picks the level, and carries out its action. Set private to True to keep the receipt to yourself.\nWhen you add a case from a message, Quack saves that message as evidence. Add more with **Add evidence** on the case. The member can see the case context, but not who added the case or who wrote the evidence.\nMade a mistake? Use /case void or **Void case**. The case stays in the history but stops counting. Open the case afterwards to check whether Quack removed its timeout or ban; a kick can't be undone.\nIf Quack couldn't carry out an action, the case shows **Retry** and **Dismiss**, and the dashboard's failed actions page lists every one. |
-| `help.rules` | ### Rules\nA rule is one kind of problem, like spam. Each rule has levels that start at a case count: for example a warning for the first case, a 1-hour timeout from the third, and a ban from the fifth. Counts are per member and per rule, and voided cases don't count. A rule can count only recent cases, like the last 30 days.\nRules are edited on the dashboard, and editing a rule never changes old cases. Use /rules to see this server's rules. |
-| `help.appeals` | ### Appeals\nA member can appeal each case once, from Quack's DM or from the dashboard, even after a ban. Choose the appeal channel with /setup. Moderators accept or reject appeals there, with /appeals, or on the dashboard, and Quack tries to send the member a DM with the decision. Accepting an appeal voids the case, and Quack removes the timeout or ban it placed when Discord still shows it. |
-| `help.setup` | ### Setup\nRun /setup to choose the log channel, the appeal channel, and the evidence channel, and to turn on tickets, the honeypot, and the server activity log. Quack can create each channel for you with staff-only permissions. Everything in /setup is also in the dashboard settings. |
+| `help.overview` | ### Quack\nQuack keeps track of moderation cases. Rules managers define the rules on the dashboard, moderators apply them, and Quack carries out the rule's action.\n**Moderators:** /case add, /case view, /case list, /case history, /case void, /appeals\n**Rules:** /rules (rules are edited on the dashboard)\n**Setup:** /setup (needs Manage Server)\nUse /help with a topic for more. |
+| `help.cases` | ### Cases\nUse /case add, or right-click a message or member and choose **Apps → Add case**. Choose a rule. Quack counts the member's valid cases under that rule, including the new case, and uses that count to pick the level and carry out its action. Set private to True to show the receipt only to you.\nWhen you add a case from a message, Quack saves that message as evidence. Add more with **Add evidence** on the case. Members can see the case context and evidence on their case page; Quack hides staff names and message authors there.\nMade a mistake? Use /case void or **Void case**. The case stays in the history but stops counting. Open the case afterwards to check whether Quack removed its timeout or ban; a kick can't be undone.\nIf an action fails, open the case to see which actions you can retry or dismiss. Open Failed actions on the dashboard to review every outstanding failure. |
+| `help.rules` | ### Rules\nA rule is one kind of problem, like spam. Each rule has levels that start at a case count, for example: at 1 case, a warning; at 3 cases, a 1-hour timeout; at 5 cases, a ban. Quack counts each member's valid cases under the rule, including the new one; voided cases don't count. A rule can count only recent cases, like the last 30 days.\nRules are edited on the dashboard, and editing a rule never changes old cases. Use /rules to see this server's rules. |
+| `help.appeals` | ### Appeals\nMembers can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use /setup to choose where new appeals appear. Moderators can also use /appeals or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed. |
+| `help.setup` | ### Setup\nUse /setup to pick channels or let Quack create them, and to turn on tickets, the honeypot, and the server activity log. Keep the log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members need access to the ticket entry and honeypot channels. You can also change these settings on the dashboard. |
 | `help.dashboard_link` | Open the dashboard |
 | `rules.heading` | ### Rules |
-| `rules.row` | **{name}** · {levels, `level.summary.item` joined with " · "} · [Open]({url}) |
+| `rules.row` | **{name}** · {levels, `level.summary.item` joined with " · "} · [Open rule]({url}) |
 | `rules.footer` | -# Rules are edited on the dashboard.{" 1 archived rule is there too." / " {count} archived rules are there too." when any}{" Page {page} of {pages}." when more than one page} |
 | `rules.empty` | This server has no active rules. Create one on the dashboard. |
 | `case.list.heading` | ### Recent cases |
@@ -3359,7 +3358,7 @@ Created channels (name, topic, first message):
 | `case.list.heading_rule` | ### Recent cases under {rule} |
 | `case.list.heading_both` | ### Recent cases about {member} under {rule} |
 | `case.list.row` | **#{number}** · {member} · {rule name, not bold} · {date}{" · Voided"}{" · Imported"} |
-| `case.list.empty` | No cases match. |
+| `case.list.empty` | No cases match these filters. Try choosing a different member or rule. |
 | `case.history.heading` | ### Case history for {member} |
 | `case.history.totals` | one: 1 case · {valid} valid · {voided} voided / other: {total} cases · {valid} valid · {voided} voided |
 | `case.history.empty` | {member} has no cases in this server. |
@@ -3381,11 +3380,11 @@ dashboard's rule editor):
 | `reason_length` | Give the rule a reason of 1 to 1,000 characters. |
 | `counting_window` | Count cases from the last 1 to 36,500 days, or count every case. |
 | `too_many_fields` | A rule can have at most 10 context fields. |
-| `field_key` | Use 2 to 64 lowercase letters, digits, dashes, or underscores for the key, starting with a letter or digit. |
-| `field_key_duplicate` | Another field of this rule already uses this key. |
+| `field_key` | Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit. |
+| `field_key_duplicate` | Another field of this rule already uses this field name. |
 | `field_label_length` | Give the field a label of 1 to 100 characters. |
 | `level_count` | A rule needs 1 to 10 levels. |
-| `first_level_not_one` | The first level must start at case 1. |
+| `first_level_not_one` | The first level must start at a case count of 1. |
 | `level_case_count` | Start each later level at a case count from 2 to 1,000,000. |
 | `level_order` | Start each level at a higher case count than the level before it. |
 | `timeout_duration` | A timeout lasts from 1 second to 28 days. |

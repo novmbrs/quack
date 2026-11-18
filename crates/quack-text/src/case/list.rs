@@ -103,7 +103,9 @@ pub fn list(filter: &ListFilter, page: &ListPage) -> Msg {
     };
     let mut msg = Msg::new(Tone::Neutral).block(Block::Heading(heading));
     if page.rows.is_empty() {
-        msg = msg.para(Text::fixed("No cases match."));
+        msg = msg.para(Text::fixed(
+            "No cases match these filters. Try choosing a different member or rule.",
+        ));
     }
     let member = filter.member.as_ref().map(|(id, _)| *id);
     let rule = filter.rule.as_ref().map(|(id, _)| *id);

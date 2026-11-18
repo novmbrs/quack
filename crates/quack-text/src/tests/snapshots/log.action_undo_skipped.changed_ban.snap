@@ -5,13 +5,13 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 Quack left <@222>'s ban in place because it may not have come from **[case #12](<https://quack.example/guilds/111/cases/12>)**. Check Server Settings → Bans in Discord.
--# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
 Quack left Sam's ban in place because it may not have come from case #12. Check Server Settings → Bans in Discord.
-17 Nov 2026 at 14:05 UTC · Open in dashboard
+17 Nov 2026 at 14:05 UTC · Open moderation log
 --- model ---
 Text [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ban in place because it may not have come from "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Check Server Settings → Bans in Discord.")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## ChangedOutsideCase None · dashboard text
 discord: Quack left <@222>'s ban in place because it may not have come from case #12. Check Server Settings → Bans in Discord.

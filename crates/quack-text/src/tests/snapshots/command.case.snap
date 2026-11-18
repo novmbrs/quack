@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-case — Add, view, and void cases.
+case — Add, find, and void moderation cases.
 
 ## description
-Add, view, and void cases.
+Add, find, and void moderation cases.

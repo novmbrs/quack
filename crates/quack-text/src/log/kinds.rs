@@ -186,7 +186,10 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::RuleEdited(d) => actor()
             .s(" edited the rule ")
             .bold_user(&d.name)
-            .s(format!(". New cases use version {}.", d.version)),
+            .s(format!(
+                ". New cases use the updated rule (version {}).",
+                d.version
+            )),
         ModLogEntry::RuleArchived(d) => actor()
             .s(" archived the rule ")
             .bold_user(&d.name)
@@ -195,10 +198,7 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::RuleImported(d) => actor().s(" imported the rule ").bold_user(&d.name).s("."),
         ModLogEntry::SettingsChanged(d) => {
             let names = d.fields.iter().map(|k| super::setting_name(k));
-            actor().s(format!(
-                " changed Quack's settings: {}.",
-                super::fields(names)
-            ))
+            changed(actor().s(" changed Quack's settings"), names)
         }
         ModLogEntry::ModuleEnabled(d) => {
             actor().s(format!(" turned on {}.", module_name(d.module)))
@@ -226,10 +226,7 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
                 ModuleName::ActivityLog => "server activity log",
                 ModuleName::Honeypot => "honeypot",
             };
-            actor().s(format!(
-                " changed the {module} settings: {}.",
-                super::fields(names)
-            ))
+            changed(actor().s(format!(" changed the {module} settings")), names)
         }
         ModLogEntry::QuackJoined(d) if d.first_join => f
             .rule(Text::fixed(
@@ -309,9 +306,25 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
                 .s(".")
                 .sentence(why)
         }
-        ModLogEntry::Legacy(d) => Text::fixed("Imported from the previous version of Quack: ")
-            .user(legacy_action(&d.action))
-            .s("."),
+        ModLogEntry::Legacy(d) => match legacy_action(&d.action) {
+            name if name.is_empty() => {
+                Text::fixed("This entry was imported from an earlier version of Quack.")
+            }
+            name => Text::fixed("Imported from an earlier version of Quack: ")
+                .user(name)
+                .s("."),
+        },
+    }
+}
+
+/// "… changed Quack's settings: the log channel." The names Quack can't
+/// name are left out; with none left, the sentence ends at "settings".
+fn changed(lead: Text, names: impl Iterator<Item = &'static str>) -> Text {
+    let known: Vec<&'static str> = names.filter(|n| *n != "another setting").collect();
+    if known.is_empty() {
+        lead.s(". Open the settings on the dashboard to review them.")
+    } else {
+        lead.s(format!(": {}.", super::fields(known)))
     }
 }
 

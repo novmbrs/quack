@@ -22,12 +22,12 @@ pub struct Choice {
 /// `command.case`.
 pub const CASE: Named = Named {
     name: "case",
-    description: "Add, view, and void cases.",
+    description: "Add, find, and void moderation cases.",
 };
 /// `command.case.add`.
 pub const CASE_ADD: Named = Named {
     name: "add",
-    description: "Apply a rule to a member.",
+    description: "Add a case by applying a rule to a member.",
 };
 /// `command.case.add.member`.
 pub const CASE_ADD_MEMBER: Named = Named {
@@ -47,12 +47,12 @@ pub const CASE_ADD_PRIVATE: Named = Named {
 /// `command.case.view`.
 pub const CASE_VIEW: Named = Named {
     name: "view",
-    description: "Show a case.",
+    description: "Open a case by number and see its action and DM outcomes.",
 };
 /// `command.case.number` (`/case view` and `/case void`).
 pub const CASE_NUMBER: Named = Named {
     name: "number",
-    description: "The case number.",
+    description: "The case number shown on its receipt.",
 };
 /// `command.case.list`.
 pub const CASE_LIST: Named = Named {
@@ -72,12 +72,12 @@ pub const CASE_LIST_RULE: Named = Named {
 /// `command.case.void`.
 pub const CASE_VOID: Named = Named {
     name: "void",
-    description: "Void a case so it stops counting.",
+    description: "Keep a case in the history and stop it from counting.",
 };
 /// `command.case.void.reason`.
 pub const CASE_VOID_REASON: Named = Named {
     name: "reason",
-    description: "Why the case is wrong. The member can see this reason.",
+    description: "Why you're voiding the case. The member can see this reason.",
 };
 /// `command.case.history`.
 pub const CASE_HISTORY: Named = Named {
@@ -97,7 +97,7 @@ pub const APPEALS: Named = Named {
 /// `command.rules`.
 pub const RULES: Named = Named {
     name: "rules",
-    description: "List this server's rules.",
+    description: "List active rules and open them on the dashboard.",
 };
 /// `command.setup`.
 pub const SETUP: Named = Named {

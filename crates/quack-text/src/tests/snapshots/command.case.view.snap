@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-view — Show a case.
+view — Open a case by number and see its action and DM outcomes.
 
 ## description
-Show a case.
+Open a case by number and see its action and DM outcomes.

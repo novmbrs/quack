@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-rules — List this server's rules.
+rules — List active rules and open them on the dashboard.
 
 ## description
-List this server's rules.
+List active rules and open them on the dashboard.

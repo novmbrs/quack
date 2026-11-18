@@ -111,7 +111,7 @@ pub fn text(entry: &ModLogEntry, f: &LogFacts) -> Text {
 }
 
 /// The log channel post: the lead sentence, an optional quote, and
-/// `-# {time} · [Open in dashboard](<link>)`; a **Retry** button on a
+/// `-# {time} · [Open moderation log](<link>)`; a **Retry** button on a
 /// retryable failed action.
 pub fn post(entry: &ModLogEntry, f: &LogFacts) -> Msg {
     let tone = match entry.result() {
@@ -124,7 +124,7 @@ pub fn post(entry: &ModLogEntry, f: &LogFacts) -> Msg {
     }
     let mut sub = Text::new().time(f.at, TimeStyle::Full);
     if let Some(url) = &f.dashboard_url {
-        sub = sub.s(" · ").link("Open in dashboard", url);
+        sub = sub.s(" · ").link("Open moderation log", url);
     }
     msg = msg.block(Block::Subtext(sub));
     if let (ModLogEntry::ActionFailed(d), Some(id)) = (entry, f.retry_action) {
@@ -150,7 +150,7 @@ pub fn setting_name(key: &str) -> &'static str {
         "dm_footer" => "DM footer",
         "moderator_roles" | "moderator_role_ids" => "moderator roles",
         "rules_manager_roles" | "rules_manager_role_ids" => "rules manager roles",
-        "starter_notice" | "starter_notice_acknowledged_at" => "starter rule notice",
+        "starter_notice" | "starter_notice_acknowledged_at" => "starter rule reminder",
         _ => "another setting",
     }
 }

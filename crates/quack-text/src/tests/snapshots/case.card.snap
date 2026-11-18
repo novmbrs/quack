@@ -10,7 +10,7 @@ tone: Neutral
 **Action:** This case is a warning.
 **DM:** Quack sent <@222> a DM about case #12.
 -# Added by <@333> <t:1794924309:R>
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 1 (from a case count of 1) · case count 1
@@ -45,8 +45,8 @@ Yes
 **Links posted:** 2.5
 **Message link:** [https\://discord.com/channels/1/2/3](<https://discord.com/channels/1/2/3>)
 -# Added by <@333> <t:1794924309:R>
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
-buttons: [Remove timeout · Danger] UndoAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Remove timeout · Danger] UndoAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 2 (from a case count of 3) · case count 3
@@ -91,7 +91,7 @@ To try again, select Retry ban. To take it off the failed actions list, select D
 **Evidence:** Quack saved 2 evidence items. It couldn't save 1. Select View evidence to see why.
 -# Added by <@333> <t:1794924309:R>
 buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Dismiss failed ban · Secondary] DismissAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 }
-buttons: [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Failed actions](https://quack.example/guilds/111/failures) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 1 (from a case count of 1) · case count 1
@@ -128,7 +128,7 @@ Replaces case #9.
 **Appeal:** Closed.
 **Evidence:** Saving evidence…
 -# Added by <@333> <t:1794924309:R>
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [History · Secondary] History { member: MemberId(222), page: 1 } | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam · Voided
 Sam · level 1 (from a case count of 1) · case count 1
@@ -165,7 +165,7 @@ tone: Success
 **Action:** Quack removed <@222> from the server.
 **DM:** This level doesn't send a DM.
 -# Added by Quack <t:1794924309:R> after a post in the honeypot channel
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 1 (from a case count of 1) · case count 1
@@ -189,7 +189,7 @@ tone: Neutral
 > Posting spam or unsolicited advertising.
 -# The original Quack v4 action was ban. Quack took no action for this case.
 -# Imported <t:1794924309:R>. Original moderator: Oldtimer\#0001
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · imported from Quack v4
@@ -227,7 +227,7 @@ Replaced by case #9007199254740990.
 **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 4:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
 Open this case on the dashboard for the full details.
 buttons: [Retry removing timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Dismiss failed timeout removal · Secondary] DismissAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 }
-buttons: [History · Secondary] History { member: MemberId(222), page: 1 } | [Failed actions](https://quack.example/guilds/111/failures) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · Voided
 Sam · level 1 (from a case count of 1) · case count 1
@@ -302,7 +302,7 @@ tone: Neutral
 1\. one
 hidden
 -# Added by <@333> <t:1794924309:R>
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden
 @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden · level 1 (from a case count of 1) · case count 1
@@ -341,8 +341,8 @@ tone: Danger
 **Action:** Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord.
 **DM:** Quack sent <@222> a DM about case #12.
 -# Added by <@333> <t:1794924309:R>
-buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Failed actions](https://quack.example/guilds/111/failures)
-buttons: [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [View failed actions](https://quack.example/guilds/111/failures)
+buttons: [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 1 (from a case count of 1) · case count 1
@@ -368,8 +368,8 @@ tone: Danger
 To try again, select Retry ban.
 **DM:** Quack sent <@222> a DM about case #12.
 -# Added by <@333> <t:1794924309:R>
-buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
-buttons: [Failed actions](https://quack.example/guilds/111/failures) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 1 (from a case count of 1) · case count 1
@@ -397,8 +397,8 @@ tone: Danger
 To take this failure off the failed actions list, select Dismiss failed ban. The case keeps its history.
 **DM:** Quack sent <@222> a DM about case #12.
 -# Added by <@333> <t:1794924309:R>
-buttons: [Dismiss failed ban · Secondary] DismissAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
-buttons: [Failed actions](https://quack.example/guilds/111/failures) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
+buttons: [Dismiss failed ban · Secondary] DismissAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
 Sam · level 1 (from a case count of 1) · case count 1
