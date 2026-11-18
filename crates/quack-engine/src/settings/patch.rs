@@ -273,6 +273,14 @@ pub async fn acknowledge_starter_notice(
 ) -> Result<SettingsView, SettingsError> {
     let guild = principal.guild;
     obs::use_case("acknowledge_starter_notice", Some(guild), async {
+        {
+            // The capability comes before the key: a replay is never served
+            // to someone who lost it.
+            let mut conn = engine.db().conn().await?;
+            principal
+                .require(&mut conn, Capability::ManageSettings)
+                .await??;
+        }
         let key = op_key.scoped(Some(guild), Some(principal.account));
         let hash = request_hash(&"acknowledge_starter_notice");
         if let Keyed::Fresh(mut tx) = begin_keyed(engine.db(), &key, &hash).await? {
