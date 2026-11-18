@@ -207,3 +207,52 @@ pub(crate) fn channel_with(
             .collect::<Vec<_>>()
     })
 }
+
+/// An interaction of `kind` (2 command, 3 component, 4 autocomplete, 5
+/// modal) in server 1, channel 5, by member 7 with role 20 and
+/// Administrator in the channel.
+pub(crate) fn interaction(kind: u8, data: &Value) -> Value {
+    json!({
+        "id": "1310000000000000000",
+        "application_id": "42",
+        "type": kind,
+        "token": "interaction-token",
+        "version": 1,
+        "guild_id": "1",
+        "channel": {"id": "5", "type": 0},
+        "channel_id": "5",
+        "member": {
+            "user": user(7, "moderator"),
+            "roles": ["20"],
+            "joined_at": "2024-01-02T03:04:05.000000+00:00",
+            "deaf": false,
+            "mute": false,
+            "flags": 0,
+            "pending": false,
+            "permissions": "8",
+            "nick": "Mod",
+            "communication_disabled_until": null
+        },
+        "app_permissions": "1024",
+        "locale": "en-US",
+        "guild_locale": "en-US",
+        "entitlements": [],
+        "authorizing_integration_owners": {"0": "1"},
+        "context": 0,
+        "attachment_size_limit": 10_485_760,
+        "data": data
+    })
+}
+
+/// A `resolved` member entry (no `user`, no `deaf`/`mute`).
+pub(crate) fn resolved_member(roles: &[u64]) -> Value {
+    json!({
+        "roles": roles.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        "joined_at": "2024-01-02T03:04:05.000000+00:00",
+        "permissions": "0",
+        "nick": null,
+        "flags": 0,
+        "pending": false,
+        "communication_disabled_until": null
+    })
+}

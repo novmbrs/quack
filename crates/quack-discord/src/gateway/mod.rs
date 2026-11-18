@@ -23,6 +23,8 @@ use twilight_gateway::{
     CloseFrame, Config, Event as Raw, EventTypeFlags, Intents, Shard, ShardId, StreamExt as _,
 };
 
+use twilight_gateway::error::ReceiveMessageErrorType;
+
 use crate::cache::{GuildCache, MemberCache, feed_members};
 
 pub use dispatch::{
@@ -74,6 +76,28 @@ pub(crate) fn wanted() -> EventTypeFlags {
         | EventTypeFlags::MESSAGE_DELETE_BULK
         | EventTypeFlags::GUILD_AUDIT_LOG_ENTRY_CREATE
         | EventTypeFlags::INTERACTION_CREATE
+}
+
+/// An interaction from a frame Twilight couldn't deserialize (see
+/// [`crate::interaction::recover_dispatch`]).
+fn recover(error: &twilight_gateway::error::ReceiveMessageError) -> Option<Event> {
+    match error.kind() {
+        ReceiveMessageErrorType::Deserializing { event } => {
+            crate::interaction::recover_dispatch(event).map(|i| Event::Interaction(Box::new(i)))
+        }
+        _ => None,
+    }
+}
+
+/// Queues an event; a full queue drops it and tells `on_dropped`.
+fn hand_off(dispatcher: &dispatch::Dispatcher, event: Event, on_dropped: &impl Fn(&Event)) {
+    if let Some(dropped) = dispatcher.dispatch(event) {
+        tracing::warn!(
+            event = dropped.name(),
+            "dropped a gateway event: queue full"
+        );
+        on_dropped(&dropped);
+    }
 }
 
 /// Why the gateway stopped for good.
@@ -191,7 +215,10 @@ impl Gateway {
                     });
                 }
                 Some(Err(error)) => {
-                    tracing::warn!(%error, "couldn't read a gateway event");
+                    match recover(&error) {
+                        Some(event) => hand_off(&dispatcher, event, &on_dropped),
+                        None => tracing::warn!(%error, "couldn't read a gateway event"),
+                    }
                     continue;
                 }
                 Some(Ok(raw)) => raw,
@@ -204,13 +231,7 @@ impl Gateway {
                 if matches!(event, Event::Ready { .. }) {
                     sessions += 1;
                 }
-                if let Some(dropped) = dispatcher.dispatch(event) {
-                    tracing::warn!(
-                        event = dropped.name(),
-                        "dropped a gateway event: queue full"
-                    );
-                    on_dropped(&dropped);
-                }
+                hand_off(&dispatcher, event, &on_dropped);
             }
         };
         if result.is_ok() {

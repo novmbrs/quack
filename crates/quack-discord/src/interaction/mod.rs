@@ -8,6 +8,7 @@
 
 mod command;
 mod component;
+mod json;
 
 #[cfg(test)]
 mod tests;
@@ -25,6 +26,8 @@ use twilight_model::application::interaction::{
 use crate::convert;
 use crate::custom_id::ComponentId;
 use crate::model::{InteractionRef, InteractionToken};
+
+pub use json::{decode_json, recover_dispatch};
 
 /// A member as an interaction payload describes them.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -356,11 +359,11 @@ pub fn decode(raw: &RawInteraction) -> Interaction {
     }
 }
 
-/// Decodes an `INTERACTION_CREATE` payload's JSON (the `d` object). A
-/// payload Twilight can't read gives `None`; nothing can be acknowledged
-/// without its id and token.
-pub fn decode_json(json: &str) -> Option<Interaction> {
-    serde_json::from_str::<RawInteraction>(json)
-        .ok()
-        .map(|raw| decode(&raw))
+/// Whether a response may carry the ephemeral flag: Discord rejects it in
+/// DMs (§11.3).
+impl Interaction {
+    /// `true` in a server, `false` in DMs.
+    pub const fn ephemeral_allowed(&self) -> bool {
+        self.guild_id.is_some()
+    }
 }
