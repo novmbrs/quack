@@ -3,7 +3,8 @@
 use std::time::{Duration, Instant};
 
 use quack_core::dm::{
-    DmEvent, DmFailure, DmKind, DmState, UNKNOWN_REPEAT_DELAY, failure_for, in_window, wait_fits,
+    CreateResult, DmEvent, DmFailure, DmKind, DmState, SendHistory, UNKNOWN_REPEAT_DELAY,
+    failure_for, in_window, transition, wait_fits,
 };
 use quack_core::ids::{ChannelId, GuildId};
 use quack_db::dms::{self, Dm};
@@ -36,6 +37,9 @@ pub async fn send(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError>
             return Ok(Handled::Settle(JobResult::Done));
         }
         let started = Instant::now();
+        // A run that finds the DM `sending` resumes one that may have
+        // crashed after Discord accepted a create.
+        let history = SendHistory::at_start(dm.state);
         let (channel, first) = match (dm.state, dm.channel, dm.first_attempt_at) {
             (DmState::Sending, Some(channel), Some(first)) => (channel, first),
             _ => match start(engine, job, &dm, started).await? {
@@ -49,7 +53,7 @@ pub async fn send(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError>
             first_attempt_at: Some(first),
             ..dm
         };
-        deliver(engine, job, &dm, guild, channel, first, started).await
+        deliver(engine, job, &dm, (guild, channel, first), history, started).await
     })
     .await
 }
@@ -70,8 +74,8 @@ async fn start(
     let channel = match engine.discord().open_dm(dm.member.account()).await {
         Outcome::Done(channel) => channel,
         Outcome::Refused(r) => {
-            let failure =
-                failure_for(DmEvent::OpenRefused, r.code).unwrap_or(DmFailure::DiscordRefused);
+            let failure = failure_for(DmState::Failed, DmEvent::OpenRefused, r.code)
+                .unwrap_or(DmFailure::DiscordRefused);
             let change = Change::Failed(failure, r.code);
             let handled =
                 settle_dm(engine, job, dm, change, JobResult::Done, Some(started)).await?;
@@ -107,14 +111,14 @@ async fn start(
 }
 
 /// Steps 3–6: create the message with the DM's nonce while the window
-/// lasts, and settle.
+/// lasts, and settle. Once `history` says a create may have reached
+/// Discord, the DM ends only `sent` or `unknown`.
 async fn deliver(
     engine: &Engine,
     job: &ClaimedJob,
     dm: &Dm,
-    guild: GuildId,
-    channel: ChannelId,
-    first: OffsetDateTime,
+    (guild, channel, first): (GuildId, ChannelId, OffsetDateTime),
+    mut history: SendHistory,
     started: Instant,
 ) -> Result<Handled, DbError> {
     let done = |change| settle_dm(engine, job, dm, change, JobResult::Done, Some(started));
@@ -126,7 +130,6 @@ async fn deliver(
         return Ok(dead("dm_records_missing"));
     };
     let nonce = Nonce::new(dm.id.to_u22());
-    let mut any_unknown = false;
     loop {
         let outcome = engine
             .discord()
@@ -134,23 +137,24 @@ async fn deliver(
             .await;
         let wait = match outcome {
             Outcome::Done(sent) => return done(Change::Sent(sent.message_id)).await,
-            Outcome::Refused(_) if any_unknown => return done(Change::Unknown).await,
             Outcome::Refused(r) => {
-                let failure = failure_for(
-                    DmEvent::CreateRefused {
-                        after_unknown: false,
-                    },
-                    r.code,
-                )
-                .unwrap_or(DmFailure::DiscordRefused);
-                return done(Change::Failed(failure, r.code)).await;
+                let event = history.refused();
+                return done(settled(dm.kind, event, r.code)).await;
             }
             Outcome::Unknown(_) => {
-                any_unknown = true;
+                history = history.after(CreateResult::Unknown);
                 to_std(UNKNOWN_REPEAT_DELAY)
             }
-            Outcome::RetryAfter(d) => d,
-            Outcome::NotSent(_) => to_std(UNKNOWN_REPEAT_DELAY),
+            Outcome::RetryAfter(d) => {
+                history = history.after(CreateResult::RetryAfter);
+                d
+            }
+            // Nothing reached Discord: repeat, without counting it as a
+            // possible send.
+            Outcome::NotSent(_) => {
+                history = history.after(CreateResult::NotSent);
+                to_std(UNKNOWN_REPEAT_DELAY)
+            }
         };
         let fits = time::Duration::try_from(wait)
             .is_ok_and(|w| wait_fits(first, OffsetDateTime::now_utc(), w));
@@ -158,12 +162,24 @@ async fn deliver(
             tokio::time::sleep(wait).await;
             continue;
         }
-        if any_unknown {
+        if history.maybe_sent() {
             return done(Change::Unknown).await;
         }
         // Nothing was sent: back to pending, and the job tries again later.
         let result = retry_after(job, wait);
         return settle_dm(engine, job, dm, Change::BackToPending, result, None).await;
+    }
+}
+
+/// The settled change for a refused create, through the DM table: `failed`
+/// with its reason when nothing may have been sent, else `unknown`.
+fn settled(kind: DmKind, event: DmEvent, code: Option<u32>) -> Change {
+    match transition(kind, DmState::Sending, event) {
+        Ok(DmState::Failed) => Change::Failed(
+            failure_for(DmState::Failed, event, code).unwrap_or(DmFailure::DiscordRefused),
+            code,
+        ),
+        _ => Change::Unknown,
     }
 }
 
@@ -196,7 +212,7 @@ pub async fn finalize(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbEr
         };
         let change = match dm.state {
             DmState::Pending => {
-                let failure = failure_for(DmEvent::BudgetSpent, None)
+                let failure = failure_for(DmState::Failed, DmEvent::BudgetSpent, None)
                     .unwrap_or(DmFailure::DiscordUnavailable);
                 Change::Failed(failure, None)
             }

@@ -88,14 +88,83 @@ pub const UNKNOWN_REPEAT_DELAY: Duration = Duration::seconds(2);
 pub const ACTION_WAIT: Duration = Duration::seconds(120);
 
 /// Whether a create may still be repeated with the same nonce: less than
-/// [`NONCE_WINDOW`] has passed since `first_attempt_at` (§10.4).
+/// [`NONCE_WINDOW`] has passed since `first_attempt_at` (§10.4). Compares
+/// elapsed time, so no stored timestamp can overflow it.
 pub fn in_window(first_attempt_at: OffsetDateTime, now: OffsetDateTime) -> bool {
-    now < first_attempt_at + NONCE_WINDOW
+    now - first_attempt_at < NONCE_WINDOW
 }
 
-/// Whether waiting `wait` from `now` still ends inside the window.
+/// Whether waiting `wait` from `now` still ends inside the window. A wait
+/// too long to add is never inside it.
 pub fn wait_fits(first_attempt_at: OffsetDateTime, now: OffsetDateTime, wait: Duration) -> bool {
-    in_window(first_attempt_at, now + wait)
+    (now - first_attempt_at)
+        .checked_add(wait)
+        .is_some_and(|elapsed| elapsed < NONCE_WINDOW)
+}
+
+/// How one create call of a DM ended, as far as the DM's history cares.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CreateResult {
+    /// Discord returned the message.
+    Sent,
+    /// Discord definitely refused it.
+    Refused,
+    /// Rate limited before anything was sent.
+    RetryAfter,
+    /// Never sent (a connection refused, shutting down).
+    NotSent,
+    /// May or may not have reached Discord.
+    Unknown,
+}
+
+/// What a `send_dm` run knows about this DM's earlier creates (§6.4).
+///
+/// The rule it carries: once any create may have reached Discord, the DM
+/// can only end `sent` or `unknown`, never `failed` or back to `pending`,
+/// so it is never sent twice. A run that found the DM already `sending`
+/// resumes one that may have crashed after a create Discord accepted, so
+/// it starts as "maybe sent"; only a run that committed `pending` →
+/// `sending` itself starts clean. A `not_sent` or rate-limited create
+/// reached nothing and changes nothing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SendHistory {
+    maybe_sent: bool,
+}
+
+impl SendHistory {
+    /// The history at the start of a run, from the state the run loaded.
+    pub const fn at_start(loaded: DmState) -> Self {
+        Self {
+            maybe_sent: !matches!(loaded, DmState::Pending),
+        }
+    }
+
+    /// The history after one more create.
+    #[must_use]
+    pub const fn after(self, create: CreateResult) -> Self {
+        Self {
+            maybe_sent: self.maybe_sent || matches!(create, CreateResult::Unknown),
+        }
+    }
+
+    /// Whether some create of this DM may have reached Discord.
+    pub const fn maybe_sent(self) -> bool {
+        self.maybe_sent
+    }
+
+    /// The event for a create Discord refused.
+    pub const fn refused(self) -> DmEvent {
+        DmEvent::CreateRefused {
+            after_unknown: self.maybe_sent,
+        }
+    }
+
+    /// The event for a rate limit whose wait does not fit in the window.
+    pub const fn retry_after_beyond_window(self) -> DmEvent {
+        DmEvent::RetryAfterBeyondWindow {
+            after_unknown: self.maybe_sent,
+        }
+    }
 }
 
 /// An event in the DM transition table (§6.2).
@@ -111,12 +180,14 @@ pub enum DmEvent {
     Created,
     /// Discord refused a create.
     CreateRefused {
-        /// Whether an earlier create of this DM had an unknown result.
+        /// Whether an earlier create may have reached Discord
+        /// ([`SendHistory::maybe_sent`]; a resumed `sending` DM counts).
         after_unknown: bool,
     },
     /// A rate limit's wait does not fit in the window.
     RetryAfterBeyondWindow {
-        /// Whether an earlier create of this DM had an unknown result.
+        /// Whether an earlier create may have reached Discord
+        /// ([`SendHistory::maybe_sent`]; a resumed `sending` DM counts).
         after_unknown: bool,
     },
     /// The window ended after a create with an unknown result, or a run
@@ -189,9 +260,17 @@ pub fn transition(
     }
 }
 
-/// The failure a transition to `failed` records: the refusal's reason, or
-/// `discord_unavailable` when the budget ran out before anything was sent.
-pub const fn failure_for(event: DmEvent, refusal_code: Option<u32>) -> Option<DmFailure> {
+/// The failure a transition records: for `to == failed`, the refusal's
+/// reason, or `discord_unavailable` when the budget ran out before anything
+/// was sent; `None` for every other state (only `failed` has a failure).
+pub const fn failure_for(
+    to: DmState,
+    event: DmEvent,
+    refusal_code: Option<u32>,
+) -> Option<DmFailure> {
+    if !matches!(to, DmState::Failed) {
+        return None;
+    }
     match event {
         DmEvent::OpenRefused
         | DmEvent::CreateRefused {
@@ -310,16 +389,18 @@ mod tests {
             DmFailure::DiscordRefused
         );
         assert_eq!(DmFailure::from_refusal(None), DmFailure::DiscordRefused);
+        let failed = DmState::Failed;
         assert_eq!(
-            failure_for(DmEvent::OpenRefused, Some(50_007)),
+            failure_for(failed, DmEvent::OpenRefused, Some(50_007)),
             Some(DmFailure::DmsClosed)
         );
         assert_eq!(
-            failure_for(DmEvent::BudgetSpent, None),
+            failure_for(failed, DmEvent::BudgetSpent, None),
             Some(DmFailure::DiscordUnavailable)
         );
         assert_eq!(
             failure_for(
+                DmState::Unknown,
                 DmEvent::CreateRefused {
                     after_unknown: true
                 },
@@ -327,6 +408,12 @@ mod tests {
             ),
             None
         );
+        // The budget spent while `sending` settles `unknown`: no failure.
+        for from in [DmState::Pending, DmState::Sending] {
+            let to = transition(DmKind::Case, from, DmEvent::BudgetSpent).unwrap();
+            let failure = failure_for(to, DmEvent::BudgetSpent, None);
+            assert_eq!(failure.is_some(), to == DmState::Failed, "{from:?}");
+        }
         let names: Vec<&str> = DmFailure::ALL.iter().map(|f| f.as_str()).collect();
         assert_eq!(
             names,
@@ -356,6 +443,37 @@ mod tests {
             Duration::seconds(10)
         ));
         assert_eq!(ACTION_WAIT, Duration::seconds(120));
+        // Stored extremes never panic.
+        let max = OffsetDateTime::new_utc(time::Date::MAX, time::Time::MAX);
+        let min = OffsetDateTime::new_utc(time::Date::MIN, time::Time::MIDNIGHT);
+        assert!(in_window(max, max));
+        assert!(!in_window(min, max));
+        assert!(!wait_fits(start, start, Duration::MAX));
+        assert!(!wait_fits(min, max, Duration::MAX));
+        assert!(wait_fits(max, max, Duration::ZERO));
+    }
+
+    #[test]
+    fn a_resumed_sending_dm_counts_as_maybe_sent() {
+        // A worker crashed after a create Discord may have accepted. The
+        // next run finds `sending`; a rate limit past the window must not
+        // put it back to `pending`, and a refusal must not fail it.
+        let resumed = SendHistory::at_start(DmState::Sending);
+        assert!(resumed.maybe_sent());
+        for event in [resumed.retry_after_beyond_window(), resumed.refused()] {
+            assert_eq!(
+                transition(DmKind::Case, DmState::Sending, event),
+                Ok(DmState::Unknown)
+            );
+        }
+        let fresh = SendHistory::at_start(DmState::Pending);
+        assert!(!fresh.after(CreateResult::NotSent).maybe_sent());
+        assert!(!fresh.after(CreateResult::RetryAfter).maybe_sent());
+        assert!(fresh.after(CreateResult::Unknown).maybe_sent());
+        assert_eq!(
+            transition(DmKind::Case, DmState::Sending, fresh.refused()),
+            Ok(DmState::Failed)
+        );
     }
 
     #[test]
@@ -371,7 +489,93 @@ mod tests {
         }
     }
 
+    /// One step of a simulated `send_dm` job, across runs and crashes.
+    #[derive(Clone, Copy, Debug)]
+    enum Step {
+        Create(CreateResult),
+        /// Discord accepted the create, then the worker crashed before
+        /// settling: the row stays `sending`.
+        SentThenCrash,
+        /// The worker crashed between creates.
+        Crash,
+        /// A rate limit whose wait doesn't fit in the window.
+        RetryBeyondWindow,
+        WindowEnded,
+        BudgetSpent,
+    }
+
+    fn steps() -> impl Strategy<Value = Step> {
+        prop_oneof![
+            prop::sample::select(vec![
+                CreateResult::Sent,
+                CreateResult::Refused,
+                CreateResult::NotSent,
+                CreateResult::Unknown,
+            ])
+            .prop_map(Step::Create),
+            Just(Step::SentThenCrash),
+            Just(Step::Crash),
+            Just(Step::RetryBeyondWindow),
+            Just(Step::WindowEnded),
+            Just(Step::BudgetSpent),
+        ]
+    }
+
     proptest! {
+        /// Runs a DM through runs that crash at any point. Whatever the
+        /// order, once a create may have reached Discord the DM ends only
+        /// `sent` or `unknown`, and a settled DM never leaves its state.
+        #[test]
+        fn a_maybe_sent_dm_survives_crashes(
+            kind in prop::sample::select(DmKind::ALL),
+            steps in prop::collection::vec(steps(), 0..40),
+        ) {
+            let mut state = DmState::Pending;
+            let mut reached_discord = false;
+            let mut history = SendHistory::at_start(state);
+            for step in steps {
+                if state.is_terminal() {
+                    break;
+                }
+                if state == DmState::Pending {
+                    // A fresh run commits the start itself.
+                    history = SendHistory::at_start(DmState::Pending);
+                    state = transition(kind, state, DmEvent::Started).unwrap();
+                }
+                let event = match step {
+                    Step::Create(CreateResult::Sent) => Some(DmEvent::Created),
+                    Step::Create(CreateResult::Refused) => Some(history.refused()),
+                    Step::Create(other) => {
+                        reached_discord |= other == CreateResult::Unknown;
+                        history = history.after(other);
+                        None
+                    }
+                    Step::SentThenCrash | Step::Crash => {
+                        reached_discord |= matches!(step, Step::SentThenCrash);
+                        // The next run loads the row, still `sending`.
+                        history = SendHistory::at_start(state);
+                        None
+                    }
+                    Step::RetryBeyondWindow => Some(history.retry_after_beyond_window()),
+                    Step::WindowEnded => Some(DmEvent::WindowEnded),
+                    Step::BudgetSpent => Some(DmEvent::BudgetSpent),
+                };
+                let Some(event) = event else { continue };
+                let next = transition(kind, state, event).unwrap();
+                if reached_discord {
+                    prop_assert!(
+                        matches!(next, DmState::Sent | DmState::Unknown),
+                        "{state:?} -> {next:?} via {event:?} after a possible send"
+                    );
+                }
+                if next == DmState::Pending {
+                    // A fresh run starts again; first_attempt_at resets.
+                    history = SendHistory::at_start(DmState::Pending);
+                }
+                state = next;
+            }
+        }
+
         #[test]
         fn a_dm_that_may_have_been_sent_is_never_sent_again(
             kind in prop::sample::select(DmKind::ALL),

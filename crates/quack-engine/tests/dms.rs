@@ -114,6 +114,59 @@ async fn a_dm_found_sending_after_the_window_is_unknown_and_never_resent() -> Re
 }
 
 #[tokio::test]
+async fn a_resumed_dm_rate_limited_past_the_window_is_unknown() -> Result<()> {
+    let h = Harness::new().await?;
+    let id = warned(&h).await?;
+    // The first create reaches Discord, then the worker crashes.
+    let gate = h.fake.hold_after(Call::Send);
+    h.crash_at(JobKind::SendDm, &gate).await?;
+    let first = dm(&h, id).await?.first_attempt_at;
+    // The resumed run is rate limited beyond the window: going back to
+    // `pending` would lose track of the possible send and allow a second.
+    h.fake
+        .script(Call::Send, Script::RetryAfter(Duration::from_secs(120)));
+    h.settle().await?;
+    let d = dm(&h, id).await?;
+    assert_eq!((d.state, d.failure), (DmState::Unknown, None));
+    assert_eq!(d.first_attempt_at, first, "the window's start is kept");
+    assert_eq!(dms_to_member(&h), 1);
+    assert_eq!(h.fake.count(Call::Send), 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_resumed_dm_refused_is_unknown_not_failed() -> Result<()> {
+    let h = Harness::new().await?;
+    let id = warned(&h).await?;
+    let gate = h.fake.hold_after(Call::Send);
+    h.crash_at(JobKind::SendDm, &gate).await?;
+    h.fake
+        .script(Call::Send, Script::refuse(RefusalKind::CannotDm));
+    h.settle().await?;
+    let d = dm(&h, id).await?;
+    assert_eq!((d.state, d.failure), (DmState::Unknown, None));
+    Ok(())
+}
+
+#[tokio::test]
+async fn not_sent_creates_never_make_a_dm_unknown() -> Result<()> {
+    let h = Harness::new().await?;
+    let id = warned(&h).await?;
+    // Nothing reaches Discord, then Discord refuses: that is a definite
+    // failure, not "couldn't confirm".
+    h.fake.script(Call::Send, Script::NotSent);
+    h.fake
+        .script(Call::Send, Script::refuse(RefusalKind::CannotDm));
+    h.settle().await?;
+    let d = dm(&h, id).await?;
+    assert_eq!(
+        (d.state, d.failure),
+        (DmState::Failed, Some(DmFailure::DmsClosed))
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn a_refusal_after_an_unknown_create_is_unknown() -> Result<()> {
     let h = Harness::new().await?;
     let id = warned(&h).await?;
