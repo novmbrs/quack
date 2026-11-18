@@ -252,7 +252,8 @@ impl ActivityLog {
 
     async fn deliver(&self, post: Post) -> Delivered {
         let label = event_label(post.event);
-        let delivered = self.try_deliver(&post).await;
+        let delivered =
+            crate::obs::span("activity_post", post.guild, self.try_deliver(&post)).await;
         let stage = match delivered {
             Delivered::Posted => ActivityStage::Posted,
             Delivered::Dropped => ActivityStage::Dropped,
