@@ -40,6 +40,8 @@ tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
 quack-testkit = { workspace = true }
+base64 = { version = "=0.22.1" }
+tower = { workspace = true }
 httpmock = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 uuid = { workspace = true }
