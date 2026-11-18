@@ -4,9 +4,12 @@
 //! (bumping its panel or warning).
 
 use quack_core::ids::GuildId;
-use quack_core::modlog::{ModLogEntry, ModLogLinks, ModuleDetail, ModuleDisabledDetail};
+use quack_core::modlog::{
+    ModLogEntry, ModLogLinks, ModuleDetail, ModuleDisabledDetail, ModuleSettingsChangedDetail,
+};
 use quack_core::modules::{ModuleName, ModuleProblem};
 use quack_core::permissions::{Capability, ChannelFacts, GuildFacts};
+use quack_db::operation_keys::OperationKey;
 use quack_db::settings::set_module_enabled;
 use quack_db::{DbError, Tx, notify};
 
@@ -72,18 +75,12 @@ pub async fn set_enabled(
         } else {
             None
         };
-        let key = op_key.scoped(Some(guild), Some(principal.account));
         let hash = request_hash(&(hooks.name.as_str(), enabled));
-        let mut tx = match begin_keyed(engine.db(), &key, &hash).await? {
-            Keyed::Replay(_) => {
-                let mut conn = engine.db().conn().await?;
-                return Ok(module_state(&mut conn, guild, hooks.name).await?);
-            }
-            Keyed::Fresh(tx) => tx,
+        let Some((mut tx, key)) = begin_module_write(engine, principal, op_key, &hash).await?
+        else {
+            let mut conn = engine.db().conn().await?;
+            return Ok(module_state(&mut conn, guild, hooks.name).await?);
         };
-        principal
-            .require(&mut tx, Capability::ManageSettings)
-            .await??;
         if let Some(facts) = &facts {
             let problems = (hooks.enable_problems)(&mut tx, guild, facts).await?;
             if !problems.is_empty() {
@@ -144,4 +141,44 @@ async fn facts(engine: &Engine, guild: GuildId) -> Result<ModuleFacts, SettingsE
         guild: guild_facts,
         channels,
     })
+}
+
+/// Starts a module settings update (§13.1.2): reserves the operation key
+/// and rechecks `manage_settings` inside the transaction. `None` is a
+/// replay; the caller answers with the current settings.
+pub async fn begin_module_write(
+    engine: &Engine,
+    principal: &Principal,
+    op_key: &OpKey,
+    hash: &[u8; 32],
+) -> Result<Option<(Tx, OperationKey)>, SettingsError> {
+    let key = op_key.scoped(Some(principal.guild), Some(principal.account));
+    let Keyed::Fresh(mut tx) = begin_keyed(engine.db(), &key, hash).await? else {
+        return Ok(None);
+    };
+    principal
+        .require(&mut tx, Capability::ManageSettings)
+        .await??;
+    Ok(Some((tx, key)))
+}
+
+/// Ends a module settings update before its commit: logs the changed
+/// fields, notifies the config caches, and records the operation key.
+pub async fn finish_module_write(
+    tx: &mut Tx,
+    principal: &Principal,
+    key: &OperationKey,
+    module: ModuleName,
+    fields: Vec<String>,
+) -> Result<(), DbError> {
+    let guild = principal.guild;
+    let by = By {
+        actor: Some(principal.account),
+        source: principal.origin.mod_log_source(),
+    };
+    let entry = ModLogEntry::ModuleSettingsChanged(ModuleSettingsChangedDetail { module, fields });
+    modlog::write(tx, guild, entry, by, ModLogLinks::default()).await?;
+    notify::settings_changed(tx, guild).await?;
+    let response = serde_json::json!({ "module": module.as_str() });
+    complete(tx, key, 200, response).await
 }

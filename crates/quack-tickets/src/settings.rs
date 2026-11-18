@@ -4,7 +4,6 @@
 use quack_core::DomainError;
 use quack_core::ids::{ChannelId, GuildId, MessageRowId};
 use quack_core::messages::{MessageKind, MessageState};
-use quack_core::modlog::{ModLogEntry, ModLogLinks, ModuleSettingsChangedDetail};
 use quack_core::modules::{ModuleDisabledReason, ModuleName, ModuleProblem};
 use quack_core::permissions::{
     Capability, ChannelFacts, ChannelProblem, Permission, Permissions, TEXT_CHANNEL,
@@ -12,12 +11,13 @@ use quack_core::permissions::{
 use quack_core::settings::check_retention_days;
 use quack_db::messages::{self, NewTrackedMessage, Owner};
 use quack_db::tickets::{self, TicketSettings};
-use quack_db::{DbError, PgConnection, Tx, notify};
+use quack_db::{DbError, PgConnection, Tx};
 use quack_engine::channels::{self, ChannelCheck, Gathered};
-use quack_engine::modlog::{self, By};
-use quack_engine::opkey::{Keyed, begin_keyed, complete, request_hash};
+use quack_engine::opkey::request_hash;
 use quack_engine::port::{BoxFuture, Outcome};
-use quack_engine::settings::{FieldProblem, ModuleFacts, ModuleHooks, SettingsError};
+use quack_engine::settings::{
+    FieldProblem, ModuleFacts, ModuleHooks, SettingsError, begin_module_write, finish_module_write,
+};
 use quack_engine::{Engine, OpKey, Principal};
 use serde::{Deserialize, Serialize};
 
@@ -131,17 +131,12 @@ pub async fn update_settings(
             },
             None => None,
         };
-        let key = op_key.scoped(Some(guild), Some(principal.account));
-        let mut tx = match begin_keyed(engine.db(), &key, &request_hash(input)).await? {
-            Keyed::Replay(_) => {
-                let mut conn = engine.db().conn().await?;
-                return Ok(view(&mut conn, guild).await?);
-            }
-            Keyed::Fresh(tx) => tx,
+        let Some((mut tx, key)) =
+            begin_module_write(engine, principal, op_key, &request_hash(input)).await?
+        else {
+            let mut conn = engine.db().conn().await?;
+            return Ok(view(&mut conn, guild).await?);
         };
-        principal
-            .require(&mut tx, Capability::ManageSettings)
-            .await??;
         let current = tickets::lock_settings(&mut tx, guild)
             .await?
             .ok_or(DbError::NotFound)?;
@@ -155,7 +150,7 @@ pub async fn update_settings(
         if !problems.is_empty() {
             return Err(SettingsError::Invalid(problems));
         }
-        let saved = tickets::update_settings(
+        tickets::update_settings(
             &mut tx,
             guild,
             input.entry_channel_id,
@@ -164,38 +159,15 @@ pub async fn update_settings(
             input.expected_version,
             principal.account,
         )
-        .await?;
-        if saved.is_none() {
-            return Err(DomainError::SettingsChanged.into());
-        }
+        .await?
+        .ok_or(DomainError::SettingsChanged)?;
         if let Some(entry) = input.entry_channel_id
             && current.entry_channel != Some(entry)
         {
             place_panel(&mut tx, guild, entry).await?;
         }
         let fields = changed_fields(&current, input);
-        modlog::write(
-            &mut tx,
-            guild,
-            ModLogEntry::ModuleSettingsChanged(ModuleSettingsChangedDetail {
-                module: ModuleName::Tickets,
-                fields,
-            }),
-            By {
-                actor: Some(principal.account),
-                source: principal.origin.mod_log_source(),
-            },
-            ModLogLinks::default(),
-        )
-        .await?;
-        notify::settings_changed(&mut tx, guild).await?;
-        complete(
-            &mut tx,
-            &key,
-            200,
-            serde_json::json!({ "module": "tickets" }),
-        )
-        .await?;
+        finish_module_write(&mut tx, principal, &key, ModuleName::Tickets, fields).await?;
         let out = view(&mut tx, guild).await?;
         tx.commit().await?;
         Ok(out)

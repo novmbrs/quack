@@ -19,9 +19,11 @@ use quack_db::honeypot::{self, HoneypotSettings};
 use quack_db::messages::{self, NewTrackedMessage, Owner};
 use quack_db::{Conflict, DbError, PgConnection, Tx, notify, rules};
 use quack_engine::modlog::{self, By};
-use quack_engine::opkey::{Keyed, begin_keyed, complete, request_hash};
+use quack_engine::opkey::request_hash;
 use quack_engine::port::{BoxFuture, Outcome};
-use quack_engine::settings::{FieldProblem, ModuleFacts, ModuleHooks, SettingsError};
+use quack_engine::settings::{
+    FieldProblem, ModuleFacts, ModuleHooks, SettingsError, begin_module_write, finish_module_write,
+};
 use quack_engine::{Engine, OpKey, Principal};
 use serde::{Deserialize, Serialize};
 
@@ -128,17 +130,12 @@ pub async fn update_settings(
             },
             None => None,
         };
-        let key = op_key.scoped(Some(guild), Some(principal.account));
-        let mut tx = match begin_keyed(engine.db(), &key, &request_hash(input)).await? {
-            Keyed::Replay(_) => {
-                let mut conn = engine.db().conn().await?;
-                return Ok(view(&mut conn, guild).await?);
-            }
-            Keyed::Fresh(tx) => tx,
+        let Some((mut tx, key)) =
+            begin_module_write(engine, principal, op_key, &request_hash(input)).await?
+        else {
+            let mut conn = engine.db().conn().await?;
+            return Ok(view(&mut conn, guild).await?);
         };
-        principal
-            .require(&mut tx, Capability::ManageSettings)
-            .await??;
         let current = honeypot::lock_settings(&mut tx, guild, true)
             .await?
             .ok_or(DbError::NotFound)?;
@@ -146,7 +143,7 @@ pub async fn update_settings(
             return Err(DomainError::SettingsChanged.into());
         }
         let warning = validate(&mut tx, guild, &current, input, channel.as_ref()).await?;
-        let saved = honeypot::update_settings(
+        honeypot::update_settings(
             &mut tx,
             guild,
             input.channel_id,
@@ -155,21 +152,11 @@ pub async fn update_settings(
             input.expected_version,
             principal.account,
         )
-        .await?;
-        if saved.is_none() {
-            return Err(DomainError::SettingsChanged.into());
-        }
+        .await?
+        .ok_or(DomainError::SettingsChanged)?;
         place_warning(&mut tx, guild, input.channel_id).await?;
         let fields = changed_fields(&current, input, warning.as_deref());
-        log_changed(&mut tx, principal, fields).await?;
-        notify::settings_changed(&mut tx, guild).await?;
-        complete(
-            &mut tx,
-            &key,
-            200,
-            serde_json::json!({ "module": "honeypot" }),
-        )
-        .await?;
+        finish_module_write(&mut tx, principal, &key, ModuleName::Honeypot, fields).await?;
         let out = view(&mut tx, guild).await?;
         tx.commit().await?;
         engine.config_cache().reload(engine.db(), guild).await?;
@@ -269,28 +256,6 @@ fn changed_fields(
     .filter(|(_, changed)| *changed)
     .map(|(name, _)| name.to_owned())
     .collect()
-}
-
-async fn log_changed(
-    tx: &mut Tx,
-    principal: &Principal,
-    fields: Vec<String>,
-) -> Result<(), DbError> {
-    modlog::write(
-        tx,
-        principal.guild,
-        ModLogEntry::ModuleSettingsChanged(ModuleSettingsChangedDetail {
-            module: ModuleName::Honeypot,
-            fields,
-        }),
-        By {
-            actor: Some(principal.account),
-            source: principal.origin.mod_log_source(),
-        },
-        ModLogLinks::default(),
-    )
-    .await?;
-    Ok(())
 }
 
 /// Puts the warning in `channel` (first post, a move, or back from
@@ -408,7 +373,11 @@ pub async fn use_default_rule(
         };
         let entry = ModLogEntry::RuleCreated(RuleVersionDetail { name, version: 1 });
         modlog::write(&mut tx, guild, entry, by, links).await?;
-        log_changed(&mut tx, principal, vec!["rule_id".to_owned()]).await?;
+        let entry = ModLogEntry::ModuleSettingsChanged(ModuleSettingsChangedDetail {
+            module: ModuleName::Honeypot,
+            fields: vec!["rule_id".to_owned()],
+        });
+        modlog::write(&mut tx, guild, entry, by, ModLogLinks::default()).await?;
         messages::bump(&mut tx, guild, Owner::Server(MessageKind::HoneypotWarning)).await?;
         notify::rules_changed(&mut tx, guild).await?;
         notify::settings_changed(&mut tx, guild).await?;

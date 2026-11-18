@@ -19,7 +19,10 @@ use crate::opkey::KeyError;
 use crate::{Engine, Principal, obs};
 
 pub use health::{ChannelHealth, Health, health};
-pub use modules::{EnableCheck, EnabledChanged, ModuleFacts, ModuleHooks, set_enabled};
+pub use modules::{
+    EnableCheck, EnabledChanged, ModuleFacts, ModuleHooks, begin_module_write, finish_module_write,
+    set_enabled,
+};
 pub use patch::{SettingsPatch, acknowledge_starter_notice, patch};
 
 /// Why a settings change was refused.

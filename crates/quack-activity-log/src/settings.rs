@@ -6,16 +6,16 @@ use std::collections::BTreeMap;
 
 use quack_core::DomainError;
 use quack_core::ids::{ChannelId, GuildId, RoleId};
-use quack_core::modlog::{ModLogEntry, ModLogLinks, ModuleSettingsChangedDetail};
 use quack_core::modules::{ActivityEvent, ModuleDisabledReason, ModuleName, ModuleProblem};
 use quack_core::permissions::{Capability, ChannelProblem, Permission, Permissions};
 use quack_db::activity_log::{self, ActivityFlags, ActivityLogSettings};
-use quack_db::{DbError, PgConnection, Tx, notify};
+use quack_db::{DbError, PgConnection, Tx};
 use quack_engine::channels::{self, ChannelCheck, Gathered};
-use quack_engine::modlog::{self, By};
-use quack_engine::opkey::{Keyed, begin_keyed, complete, request_hash};
+use quack_engine::opkey::request_hash;
 use quack_engine::port::{BoxFuture, Outcome};
-use quack_engine::settings::{FieldProblem, ModuleFacts, ModuleHooks, SettingsError};
+use quack_engine::settings::{
+    FieldProblem, ModuleFacts, ModuleHooks, SettingsError, begin_module_write, finish_module_write,
+};
 use quack_engine::{Engine, OpKey, Principal};
 use serde::{Deserialize, Serialize};
 
@@ -140,17 +140,12 @@ pub async fn update_settings(
                 gathered.insert(*channel, g);
             }
         }
-        let key = op_key.scoped(Some(guild), Some(principal.account));
-        let mut tx = match begin_keyed(engine.db(), &key, &request_hash(input)).await? {
-            Keyed::Replay(_) => {
-                let mut conn = engine.db().conn().await?;
-                return Ok(view(load(&mut conn, guild).await?, false));
-            }
-            Keyed::Fresh(tx) => tx,
+        let Some((mut tx, key)) =
+            begin_module_write(engine, principal, op_key, &request_hash(input)).await?
+        else {
+            let mut conn = engine.db().conn().await?;
+            return Ok(view(load(&mut conn, guild).await?, false));
         };
-        principal
-            .require(&mut tx, Capability::ManageSettings)
-            .await??;
         let current = activity_log::settings(&mut tx, guild, true)
             .await?
             .ok_or(DbError::NotFound)?;
@@ -169,14 +164,8 @@ pub async fn update_settings(
         if !problems.is_empty() {
             return Err(SettingsError::Invalid(problems));
         }
-        write(&mut tx, principal, &current, input).await?;
-        complete(
-            &mut tx,
-            &key,
-            200,
-            serde_json::json!({ "module": "activity_log" }),
-        )
-        .await?;
+        let fields = write(&mut tx, principal, &current, input).await?;
+        finish_module_write(&mut tx, principal, &key, ModuleName::ActivityLog, fields).await?;
         let out = view(load(&mut tx, guild).await?, false);
         tx.commit().await?;
         engine.config_cache().reload(engine.db(), guild).await?;
@@ -206,12 +195,13 @@ fn validate(
     Ok(problems)
 }
 
+/// Saves the settings; returns the changed field names.
 async fn write(
     tx: &mut Tx,
     principal: &Principal,
     current: &ActivityLogSettings,
     input: &ActivitySettingsInput,
-) -> Result<(), SettingsError> {
+) -> Result<Vec<String>, SettingsError> {
     let guild = principal.guild;
     let routes: Vec<(ActivityEvent, ChannelId)> =
         input.routes.iter().map(|(e, c)| (*e, *c)).collect();
@@ -230,7 +220,7 @@ async fn write(
     )
     .await?
     .ok_or(DomainError::SettingsChanged)?;
-    let fields: Vec<String> = [
+    let fields = [
         (
             "include_message_content",
             current.include_message_content != input.include_message_content,
@@ -249,22 +239,7 @@ async fn write(
     .filter(|(_, changed)| *changed)
     .map(|(name, _)| name.to_owned())
     .collect();
-    modlog::write(
-        tx,
-        guild,
-        ModLogEntry::ModuleSettingsChanged(ModuleSettingsChangedDetail {
-            module: ModuleName::ActivityLog,
-            fields,
-        }),
-        By {
-            actor: Some(principal.account),
-            source: principal.origin.mod_log_source(),
-        },
-        ModLogLinks::default(),
-    )
-    .await?;
-    notify::settings_changed(tx, guild).await?;
-    Ok(())
+    Ok(fields)
 }
 
 /// `/setup`'s channel select: routes all nine events to `channel`, keeping
