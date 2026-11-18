@@ -5,18 +5,15 @@ use std::sync::Arc;
 
 use quack_core::modules::ModuleName;
 use quack_core::permissions::{ActorFacts, Permissions};
-use quack_discord::custom_id::CustomId;
 use quack_discord::gateway::Event;
 use quack_discord::model::{Member, Message};
 use quack_discord::permissions::member_facts;
 use quack_engine::port::Outcome;
 use quack_engine::{BoxFuture, Engine};
 use quack_honeypot::PostFacts;
-use quack_text::Msg;
 use time::OffsetDateTime;
 
-use super::{ComponentCall, Module};
-use crate::ack::Failure;
+use super::Module;
 
 struct Honeypot;
 
@@ -101,20 +98,8 @@ impl Module for Honeypot {
         ModuleName::Honeypot
     }
 
-    fn owns(&self, _id: &CustomId) -> bool {
-        false
-    }
-
     fn wants(&self, event: &Event) -> bool {
         matches!(event, Event::MessageCreate(m) if m.guild_id.is_some())
-    }
-
-    fn on_component<'a>(
-        &'a self,
-        _engine: &'a Engine,
-        _call: ComponentCall<'a>,
-    ) -> BoxFuture<'a, Result<Msg, Failure>> {
-        Box::pin(async { Err(crate::router::expired()) })
     }
 
     fn on_event<'a>(&'a self, engine: &'a Engine, event: &'a Event) -> BoxFuture<'a, ()> {

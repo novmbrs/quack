@@ -62,17 +62,22 @@ pub struct ComponentCall<'a> {
 pub trait Module: Send + Sync + 'static {
     /// The module.
     fn name(&self) -> ModuleName;
-    /// Whether this custom id is one of its components.
-    fn owns(&self, id: &CustomId) -> bool;
+    /// Whether this custom id is one of its components (only tickets has
+    /// any).
+    fn owns(&self, _id: &CustomId) -> bool {
+        false
+    }
     /// Whether it wants this gateway event.
     fn wants(&self, event: &Event) -> bool;
     /// Handles a component or modal after the ack and returns the answer
     /// or the refusal. The module authorizes the clicker itself (§2).
     fn on_component<'a>(
         &'a self,
-        engine: &'a Engine,
-        call: ComponentCall<'a>,
-    ) -> BoxFuture<'a, Result<Msg, Failure>>;
+        _engine: &'a Engine,
+        _call: ComponentCall<'a>,
+    ) -> BoxFuture<'a, Result<Msg, Failure>> {
+        Box::pin(async { Err(crate::router::expired()) })
+    }
     /// Handles one gateway event it wants, after the core handling.
     fn on_event<'a>(&'a self, engine: &'a Engine, event: &'a Event) -> BoxFuture<'a, ()>;
 }

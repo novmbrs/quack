@@ -11,17 +11,14 @@ use quack_activity_log::{
 };
 use quack_core::ids::{AccountId, GuildId};
 use quack_core::modules::ModuleName;
-use quack_discord::custom_id::CustomId;
 use quack_discord::gateway::{self, Event};
 use quack_discord::model::{Channel, Message};
 use quack_engine::port::Outcome;
 use quack_engine::{BoxFuture, Engine};
-use quack_text::Msg;
 use quack_text::model::{ChannelRef, Person};
 use time::OffsetDateTime;
 
-use super::{ComponentCall, Module};
-use crate::ack::Failure;
+use super::Module;
 
 /// Discord's epoch (2015-01-01) in Unix milliseconds.
 const DISCORD_EPOCH_MS: i64 = 1_420_070_400_000;
@@ -219,10 +216,6 @@ impl Module for Activity {
         ModuleName::ActivityLog
     }
 
-    fn owns(&self, _id: &CustomId) -> bool {
-        false
-    }
-
     fn wants(&self, event: &Event) -> bool {
         matches!(
             event,
@@ -240,14 +233,6 @@ impl Module for Activity {
                 | Event::ChannelDelete(_)
                 | Event::GuildDelete { .. }
         )
-    }
-
-    fn on_component<'a>(
-        &'a self,
-        _engine: &'a Engine,
-        _call: ComponentCall<'a>,
-    ) -> BoxFuture<'a, Result<Msg, Failure>> {
-        Box::pin(async { Err(crate::router::expired()) })
     }
 
     fn on_event<'a>(&'a self, engine: &'a Engine, event: &'a Event) -> BoxFuture<'a, ()> {
