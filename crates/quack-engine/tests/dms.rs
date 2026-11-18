@@ -339,3 +339,28 @@ async fn a_repeat_never_starts_after_the_window_even_when_the_wait_ends_late() -
     assert_eq!(dms_to_member(&h), 1);
     Ok(())
 }
+
+/// Engine review MAJOR 11: the case is voided while its DM is `sending`;
+/// a rate limit then proves nothing was sent. The DM is no longer needed,
+/// instead of going back to waiting and later failing.
+#[tokio::test]
+async fn a_dm_voided_while_sending_and_rate_limited_is_not_needed() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(warning("Spam")).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    let id = created.dm.context("a DM")?;
+    let gate = h
+        .fake
+        .hold_then(Call::Send, Script::RetryAfter(Duration::from_secs(600)));
+    let task = h.spawn_one(JobKind::SendDm).await?;
+    gate.reached().await;
+    void(&h, created.case.id).await?;
+    gate.release();
+    task.await?;
+    let d = dm(&h, id).await?;
+    assert_eq!(d.state, DmState::NotNeeded);
+    h.settle().await?;
+    assert_eq!(dm(&h, id).await?.state, DmState::NotNeeded);
+    assert_eq!(dms_to_member(&h), 0);
+    Ok(())
+}

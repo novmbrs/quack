@@ -127,6 +127,9 @@ pub enum Script {
     /// [`Script::HoldAfter`] for the first call of its kind in this
     /// channel; calls in other channels pass it by.
     HoldAfterIn(Gate, ChannelId),
+    /// The call waits at the gate, then goes as the inner script says (a
+    /// refusal or rate limit that comes after something else happened).
+    HoldThen(Gate, Box<Script>),
 }
 
 impl Script {
@@ -317,6 +320,14 @@ impl FakeDiscord {
     /// makes a new message (what happens once the window has passed).
     pub fn expire_nonces(&self) {
         self.world(World::forget_nonces);
+    }
+
+    /// Holds the next call of `call` before it is answered, then answers
+    /// it as `then` says.
+    pub fn hold_then(&self, call: Call, then: Script) -> Gate {
+        let gate = Gate::new();
+        self.script(call, Script::HoldThen(gate.clone(), Box::new(then)));
+        gate
     }
 
     /// Holds the next call of `call` in `channel` after it takes effect;

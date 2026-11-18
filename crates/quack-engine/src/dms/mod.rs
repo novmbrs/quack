@@ -70,19 +70,34 @@ async fn settle_dm(
 ) -> Result<Handled, DbError> {
     let guild = dm.guild;
     let mut tx = engine.db().begin().await?;
-    if let Some(case) = dm.case {
-        cases::lock(&mut tx, guild, case).await?;
-    }
+    let case_voided = match dm.case {
+        Some(case) => !cases::lock(&mut tx, guild, case)
+            .await?
+            .is_some_and(|c| c.is_valid()),
+        None => false,
+    };
     let locked = dms::lock(&mut tx, guild, dm.id)
         .await?
         .ok_or(DbError::NotFound)?;
+    // Nothing was sent and the case was voided meanwhile: the case DM is
+    // no longer needed, so it doesn't go back to waiting (§6.2).
+    let (change, result) =
+        if matches!(change, Change::BackToPending) && dm.kind == DmKind::Case && case_voided {
+            (Change::NotNeeded, JobResult::Done)
+        } else {
+            (change, result)
+        };
     let applied = match change {
         Change::Sent(message) => dms::mark_sent(&mut tx, guild, dm.id, message).await?,
         Change::Failed(failure, code) => {
             dms::mark_failed(&mut tx, guild, dm.id, locked.state, failure, code).await?
         }
         Change::Unknown => dms::mark_unknown(&mut tx, guild, dm.id).await?,
-        Change::NotNeeded => dms::mark_not_needed(&mut tx, guild, dm.id).await?,
+        Change::NotNeeded => {
+            (locked.state != DmState::Sending
+                || dms::back_to_pending(&mut tx, guild, dm.id).await?)
+                && dms::mark_not_needed(&mut tx, guild, dm.id).await?
+        }
         Change::BackToPending => dms::back_to_pending(&mut tx, guild, dm.id).await?,
     };
     if !applied {

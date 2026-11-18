@@ -15,11 +15,16 @@ impl FakeDiscord {
         mut recorded: Recorded,
         effect: impl FnOnce(&mut World) -> Outcome<T> + Send,
     ) -> Outcome<T> {
-        let script = self.next_script(&recorded);
+        let mut script = self.next_script(&recorded);
         recorded.scripted = script.as_ref().map(|s| format!("{s:?}"));
         self.record(recorded);
+        if let Some(Script::HoldThen(gate, then)) = script {
+            gate.hold().await;
+            script = Some(*then);
+        }
         match script {
-            None | Some(Script::Pass) => self.world(effect),
+            // A nested hold isn't scripted; the call simply goes on.
+            None | Some(Script::Pass | Script::HoldThen(_, _)) => self.world(effect),
             Some(Script::Refuse(r)) => Outcome::Refused(r),
             Some(Script::RetryAfter(d)) => Outcome::RetryAfter(d),
             Some(Script::NotSent) => Outcome::NotSent(NotSentCause::Connection),
