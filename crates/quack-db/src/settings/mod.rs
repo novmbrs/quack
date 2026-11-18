@@ -336,17 +336,22 @@ pub use modules::{disable_modules_on_leave, set_module_enabled};
 
 /// Records that the log channel accepted a post (§9.4): sets
 /// `log_channel_posted_at` in the `post_mod_log` job's settle transaction.
-/// Not part of `version` and sends no notification.
+/// Not part of `version` and sends no notification. Only while `channel`
+/// is still the log channel: a post in a replaced channel says nothing
+/// about the new one's outage.
 pub async fn mark_log_channel_posted(
     conn: &mut PgConnection,
     guild: GuildId,
+    channel: ChannelId,
 ) -> Result<(), DbError> {
     obs::run(
         Update,
         "guild_settings",
         sqlx::query!(
-            "UPDATE guild_settings SET log_channel_posted_at = now() WHERE guild_id = $1",
-            i64::from(guild)
+            "UPDATE guild_settings SET log_channel_posted_at = now()
+             WHERE guild_id = $1 AND log_channel_id = $2",
+            i64::from(guild),
+            i64::from(channel)
         )
         .execute(conn),
     )

@@ -71,6 +71,20 @@ pub async fn post(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError>
             let f = facts(engine, &mut conn, &entry, true).await?;
             quack_text::log::post(&entry.entry, &f)
         };
+        // The destination checked again right before the create: a switch
+        // made while this job read facts and rendered sends nothing to the
+        // old channel. (One committing after this read can still race the
+        // request itself.)
+        let still = {
+            let mut conn = engine.db().conn().await?;
+            settings::get(&mut conn, guild)
+                .await?
+                .and_then(|s| s.log_channel)
+        };
+        if still != Some(payload.channel_id) {
+            metrics().modlog.posted(Label::Skipped);
+            return Ok(Handled::Settle(JobResult::Done));
+        }
         let nonce = Nonce::new(entry.id.to_u22());
         match engine
             .discord()
@@ -79,7 +93,7 @@ pub async fn post(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError>
         {
             Outcome::Done(_) => {
                 let mut tx = engine.db().begin().await?;
-                settings::mark_log_channel_posted(&mut tx, guild).await?;
+                settings::mark_log_channel_posted(&mut tx, guild, payload.channel_id).await?;
                 settle_job(&mut tx, job, &JobResult::Done).await?;
                 tx.commit().await?;
                 metrics().modlog.posted(Label::Done);

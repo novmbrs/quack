@@ -282,3 +282,24 @@ async fn a_case_sentence_keeps_the_rule_name_it_was_added_under() -> Result<()> 
     assert!(!created.text.contains("Harassment"), "{}", created.text);
     Ok(())
 }
+
+/// Engine review MAJOR 19: a post that lands in the old log channel after
+/// staff switched to a new one says nothing about the new one's outage.
+#[tokio::test]
+async fn a_post_in_a_replaced_log_channel_does_not_stamp_the_new_one() -> Result<()> {
+    let h = Harness::new().await?;
+    set_log_channel(&h, true).await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    h.apply(MEMBER, rule).await?;
+    let send = h.fake.hold(Call::Send);
+    let job = h.spawn_one(quack_db::jobs::JobKind::PostModLog).await?;
+    send.reached().await;
+    set_log_channel(&h, true).await?;
+    send.release();
+    job.await?;
+    let stamped =
+        h.db.count("SELECT count(*) FROM guild_settings WHERE log_channel_posted_at IS NOT NULL")
+            .await?;
+    assert_eq!(stamped, 0);
+    Ok(())
+}

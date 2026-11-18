@@ -8105,3 +8105,8 @@ folds these into the sections (or changes the code) and removes them here.
     each answer tagged with its kind (JSON, number, text), so the same
     request with its fields in another order replays, and `5` and `"5"`
     are different requests.
+59. §9.4 (engine review MAJOR 19) → a `post_mod_log` job reads the log
+    channel again right before the create, after its staff-only check and
+    render, and posts nothing when it changed; `log_channel_posted_at` is
+    stamped only while the pinned channel is still the log channel. A
+    switch committing after that read can still race the request itself.
