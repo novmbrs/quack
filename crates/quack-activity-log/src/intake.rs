@@ -250,6 +250,45 @@ impl ActivityLog {
     }
 }
 
+/// The post with only what the privacy flags show now: a flag turned off
+/// while the post waited hides its text, file names, or embed types.
+pub(crate) fn private(post: &ActivityPost, s: &ActivityLogSettings) -> ActivityPost {
+    let mut post = post.clone();
+    let hide = |c: &mut Content| {
+        if !s.include_message_content {
+            *c = Content::Hidden;
+        }
+    };
+    let facts = |m: &mut MessageFacts| {
+        if !s.include_file_names {
+            m.files.clear();
+        }
+        if !s.include_embed_types {
+            m.embeds.clear();
+        }
+    };
+    match &mut post {
+        ActivityPost::MessageEdited {
+            message,
+            before,
+            after,
+        } => {
+            facts(message);
+            hide(before);
+            hide(after);
+        }
+        ActivityPost::MessageDeleted { message, content } => {
+            facts(message);
+            hide(content);
+        }
+        ActivityPost::MessagesBulkDeleted { known, .. } => {
+            known.iter_mut().for_each(|(_, c)| hide(c));
+        }
+        _ => {}
+    }
+    post
+}
+
 fn redact(text: &str) -> String {
     redact_secrets(text).into_owned()
 }

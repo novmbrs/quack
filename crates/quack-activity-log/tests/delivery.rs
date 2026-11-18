@@ -106,6 +106,30 @@ async fn a_destination_that_is_no_longer_staff_only_gets_nothing() -> Result<()>
 }
 
 #[tokio::test]
+async fn a_destination_opened_after_a_post_gets_nothing_more() -> Result<()> {
+    let w = world().await?;
+    w.log.on_server_changed(w.h.guild);
+    assert_eq!(w.drain().await, [Delivered::Posted]);
+    w.h.fake.world(|world| {
+        if let Some(c) = world
+            .guilds
+            .get_mut(&w.h.guild)
+            .and_then(|g| g.channels.get_mut(&w.route))
+        {
+            c.overwrites.clear();
+        }
+    });
+    w.log.on_server_changed(w.h.guild);
+    assert_eq!(
+        w.drain().await,
+        [Delivered::Failed],
+        "checked at every send"
+    );
+    assert_eq!(w.posted().len(), 1);
+    Ok(())
+}
+
+#[tokio::test]
 async fn lost_answers_retry_without_duplicates() -> Result<()> {
     let w = world().await?;
     w.h.fake.script(Call::Send, Script::LoseResponse);

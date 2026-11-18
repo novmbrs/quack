@@ -186,6 +186,43 @@ async fn hidden_text_is_neither_cached_nor_posted() -> Result<()> {
 }
 
 #[tokio::test]
+async fn a_queued_post_follows_privacy_flags_turned_off_while_it_waited() -> Result<()> {
+    let w = world().await?;
+    let mut created = w.created(1, "a private thought");
+    created.files = vec![FileFacts {
+        name: "secret-plan.png".to_owned(),
+        url: "https://cdn.discordapp.com/attachments/1/2/secret-plan.png".to_owned(),
+        size: 10,
+    }];
+    w.log.on_message_created(&created);
+    w.log.on_message_deleted(w.h.guild, w.general, w.msg(1));
+    assert_eq!(w.log.queued(), 1);
+    let admin =
+        w.h.principal(quack_testkit::ADMIN, quack_engine::Origin::Dashboard);
+    let current = quack_activity_log::settings(&w.h.engine, &admin).await?;
+    quack_activity_log::update_settings(
+        &w.h.engine,
+        &admin,
+        &quack_activity_log::ActivitySettingsInput {
+            expected_version: current.version,
+            include_message_content: false,
+            include_file_names: false,
+            include_embed_types: false,
+            routes: current.routes.clone(),
+        },
+        &w.h.key("PUT"),
+    )
+    .await?;
+    w.reload().await?;
+    assert_eq!(w.drain().await, [Delivered::Posted]);
+    let post = &w.posted()[0];
+    assert!(post.contains("hides message text"), "{post}");
+    assert!(!post.contains("a private thought"), "{post}");
+    assert!(!post.contains("secret-plan"), "{post}");
+    Ok(())
+}
+
+#[tokio::test]
 async fn the_cache_bound_turns_old_messages_into_unknown_ones() -> Result<()> {
     let w = common::world_with(Limits {
         cache_entries: 2,

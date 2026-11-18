@@ -7993,3 +7993,12 @@ folds these into the sections (or changes the code) and removes them here.
     route permit, waits when the end is within the rate-limit budget, and
     otherwise answers `RetryAfter` without sending. Interaction callbacks
     and webhooks are not held.
+44. §13.3.2 (application review BLOCKER 1, MAJOR 7, MINOR 2) → the
+    activity log keeps no destination cache: before **every** try of a
+    post (the first and each retry) it reads the route and privacy flags
+    from the config cache and checks the destination is staff-only from
+    current facts, failing closed when the facts are unavailable. The post
+    is rendered with the flags as they are then, so a flag turned off
+    while a post waited hides its text, file names, or embed types.
+    Leaving a server also retires its posted/dropped counters. A
+    permission change can still race the REST call itself.

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use quack_core::ids::{ChannelId, GuildId};
 use quack_core::modules::ActivityEvent;
@@ -33,8 +33,6 @@ pub const SENDERS: usize = 2;
 const TRIES: u32 = 3;
 /// The longest a sender waits before trying a post again.
 const MAX_WAIT: Duration = Duration::from_secs(5);
-/// How long a destination's staff-only check is reused.
-const DESTINATION_TTL: Duration = Duration::from_secs(60);
 /// How often the batch ticker looks for closed batches.
 const TICK: Duration = Duration::from_secs(1);
 
@@ -105,7 +103,6 @@ pub(crate) struct Inner {
     pub batches: Mutex<Batches>,
     tx: mpsc::Sender<Post>,
     rx: tokio::sync::Mutex<mpsc::Receiver<Post>>,
-    destinations: Mutex<HashMap<ChannelId, (Instant, bool)>>,
     next_nonce: AtomicU64,
     /// Per server: posts delivered and posts dropped since start (the
     /// module page's counters; one entry per server that posted).
@@ -142,7 +139,6 @@ impl ActivityLog {
             batches: Mutex::new(Batches::default()),
             tx,
             rx: tokio::sync::Mutex::new(rx),
-            destinations: Mutex::new(HashMap::new()),
             next_nonce: AtomicU64::new(0),
             counts: Mutex::new(HashMap::new()),
             unfinished: std::sync::atomic::AtomicUsize::new(0),
@@ -306,19 +302,22 @@ impl ActivityLog {
     }
 
     async fn try_deliver(&self, post: &Post) -> Delivered {
-        // The route as it is now: a changed route goes to the new channel.
-        let channel = self.enabled(post.guild).and_then(|s| route(&s, post.event));
-        let Some(channel) = channel else {
-            return Delivered::Dropped;
-        };
-        match self.destination(post.guild, channel).await {
-            Some(true) => {}
-            // Not staff-only, gone, or Discord didn't answer.
-            Some(false) | None => return Delivered::Failed,
-        }
-        let msg = quack_text::activity::post(&post.post);
         let discord = self.inner.engine.discord();
         for _ in 0..TRIES {
+            // The route and privacy flags as they are now, and the
+            // destination checked again before every try: a changed route
+            // goes to the new channel, and a channel that stopped being
+            // staff-only gets nothing.
+            let Some(settings) = self.enabled(post.guild) else {
+                return Delivered::Dropped;
+            };
+            let Some(channel) = route(&settings, post.event) else {
+                return Delivered::Dropped;
+            };
+            if !self.staff_only(post.guild, channel).await {
+                return Delivered::Failed;
+            }
+            let msg = quack_text::activity::post(&crate::intake::private(&post.post, &settings));
             match discord.send(channel, &msg, &[], &post.nonce).await {
                 Outcome::Done(_) => return Delivered::Posted,
                 Outcome::Refused(r) => {
@@ -336,27 +335,18 @@ impl ActivityLog {
         Delivered::Failed
     }
 
-    /// The staff-only check of a destination (§13.1.3), reused for 60
-    /// seconds. `None` when Discord didn't answer.
-    async fn destination(&self, guild: GuildId, channel: ChannelId) -> Option<bool> {
-        let now = Instant::now();
-        if let Some((at, ok)) = lock(&self.inner.destinations).get(&channel).copied()
-            && now.duration_since(at) < DESTINATION_TTL
-        {
-            return Some(ok);
-        }
+    /// The staff-only check of a destination (§13.1.3) from current facts;
+    /// false when it fails or Discord didn't answer.
+    async fn staff_only(&self, guild: GuildId, channel: ChannelId) -> bool {
         let needs = Permission::ViewChannel | Permission::SendMessages;
-        let ok = match channels::staff_channel(&self.inner.engine, guild, channel, needs).await {
+        match channels::staff_channel(&self.inner.engine, guild, channel, needs).await {
             ChannelCheck::Ok => true,
-            ChannelCheck::Problems(_) => false,
+            ChannelCheck::Problems(_) | ChannelCheck::Unavailable => false,
             ChannelCheck::Missing => {
                 self.channel_gone(guild, channel).await;
                 false
             }
-            ChannelCheck::Unavailable => return None,
-        };
-        lock(&self.inner.destinations).insert(channel, (now, ok));
-        Some(ok)
+        }
     }
 
     /// The route's channel is gone: reconcile it like `CHANNEL_DELETE`
@@ -372,9 +362,16 @@ impl ActivityLog {
         }
     }
 
+    /// Quack left the server: empties its batches and cache and retires
+    /// its counters (a rejoin starts them again).
+    pub fn forget_guild(&self, guild: GuildId) {
+        self.empty(guild);
+        lock(&self.inner.counts).remove(&guild);
+    }
+
     /// Disabling the module or Quack leaving empties its batches and
     /// cache for that server.
-    pub fn forget_guild(&self, guild: GuildId) {
+    fn empty(&self, guild: GuildId) {
         let removed = lock(&self.inner.cache).forget_guild(guild);
         lock(&self.inner.batches).forget_guild(guild);
         if removed > 0 {
@@ -384,7 +381,7 @@ impl ActivityLog {
 
     fn forget_if_held(&self, guild: GuildId) {
         if lock(&self.inner.cache).has_guild(guild) {
-            self.forget_guild(guild);
+            self.empty(guild);
         }
     }
 }
