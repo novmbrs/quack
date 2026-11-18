@@ -1,8 +1,10 @@
 //! The bot: one value the binary builds and the gateway feeds.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
+use quack_core::ids::GuildId;
 use quack_discord::gateway::Event;
 use quack_discord::interaction::Interaction;
 use quack_engine::Engine;
@@ -27,7 +29,7 @@ pub(crate) struct Shared {
     /// Interaction ids seen in the last 15 minutes.
     pub(crate) dedupe: Arc<Dedupe>,
     /// One channel creation per server at a time (§13.1.4).
-    pub(crate) creating: tokio::sync::Mutex<()>,
+    pub(crate) creating: ChannelLocks,
     /// Bounds the work after acknowledgements ([`MAX_WORK`] at once), so a
     /// slow handler never holds up another interaction's acknowledgement.
     pub(crate) work: Arc<tokio::sync::Semaphore>,
@@ -69,7 +71,7 @@ impl Bot {
                 responder,
                 modules,
                 dedupe,
-                creating: tokio::sync::Mutex::new(()),
+                creating: ChannelLocks::default(),
                 work: Arc::new(tokio::sync::Semaphore::new(MAX_WORK)),
             }),
         }
@@ -126,5 +128,39 @@ impl Bot {
         metrics()
             .interactions
             .finished(kind, command, outcome, received.elapsed());
+    }
+}
+
+/// A lock per server, so one server's slow channel creation never holds up
+/// another's (§13.1.4).
+#[derive(Debug, Default)]
+pub(crate) struct ChannelLocks(Mutex<HashMap<GuildId, Arc<tokio::sync::Mutex<()>>>>);
+
+impl ChannelLocks {
+    /// Waits for `guild`'s lock; channel creation there holds it.
+    pub(crate) async fn lock(&self, guild: GuildId) -> tokio::sync::OwnedMutexGuard<()> {
+        let lock = {
+            let mut locks = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+            Arc::clone(locks.entry(guild).or_default())
+        };
+        lock.lock_owned().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn one_server_creating_a_channel_does_not_hold_up_another() {
+        let locks = ChannelLocks::default();
+        let (a, b) = (GuildId::new(1).unwrap(), GuildId::new(2).unwrap());
+        let _slow = locks.lock(a).await;
+        let other = tokio::time::timeout(Duration::from_millis(100), locks.lock(b)).await;
+        assert!(other.is_ok(), "another server goes ahead");
+        let same = tokio::time::timeout(Duration::from_millis(100), locks.lock(a)).await;
+        assert!(same.is_err(), "the same server waits");
     }
 }

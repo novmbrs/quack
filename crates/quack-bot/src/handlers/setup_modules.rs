@@ -119,7 +119,7 @@ pub(crate) async fn make(
         .await
         .map_err(|e| errors::settings(&e))?;
     let made = {
-        let _one_at_a_time = a.shared().creating.lock().await;
+        let _one_at_a_time = a.shared().creating.lock(principal.guild).await;
         setup_channels::create(engine, principal.guild, kind, &view.moderator_role_ids).await?
     };
     Ok(match made {

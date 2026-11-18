@@ -1618,7 +1618,7 @@ It protects new posts only; staff role changes never edit overwrites
 #### 13.1.4 Creating channels
 
 "Create …" in `/setup` (`quack-bot` `handlers::setup_channels`, one at a
-time under a process-wide lock):
+time per server under that server's lock):
 
 1. **Find first.** A text channel with the catalog name, an ID under 10
    minutes old, and a member overwrite for Quack is adopted
