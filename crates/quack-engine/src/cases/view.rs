@@ -173,7 +173,7 @@ pub async fn get(
         let (member_timeline, timeline_truncated) = member_timeline(&records, &entries);
         for entry in &entries {
             timeline.push(TimelineItem {
-                kind: entry.entry.kind(),
+                kind: entry.kind,
                 result: entry.result,
                 actor_id: entry.actor,
                 text: modlog::entry_text(engine, &mut conn, entry).await?,

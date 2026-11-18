@@ -107,7 +107,7 @@ async fn entry_view(
     let facts = facts(engine, conn, entry, false).await?;
     Ok(EntryView {
         id: entry.id,
-        kind: entry.entry.kind(),
+        kind: entry.kind,
         result: entry.result,
         actor_id: entry.actor,
         source: entry.source,
@@ -226,7 +226,7 @@ fn dashboard_url(engine: &Engine, entry: &StoredEntry, case_number: Option<u64>)
     if let Some(rule) = entry.links.rule_id {
         return links.rule(guild, rule);
     }
-    match entry.entry.kind() {
+    match entry.kind {
         ModLogKind::SettingsChanged | ModLogKind::ChannelSettingCleared => links.settings(guild),
         _ => links.mod_log(guild),
     }

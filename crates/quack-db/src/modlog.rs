@@ -137,8 +137,14 @@ pub struct StoredEntry {
     pub id: ModLogId,
     /// Its server.
     pub guild: GuildId,
-    /// The typed entry, parsed from `kind` and `detail`.
+    /// The stored kind (always right, even when `detail` can't be read).
+    pub kind: ModLogKind,
+    /// The typed entry, parsed from `kind` and `detail`. When the detail
+    /// can't be read (`detail_readable` is false) it is a `legacy` entry
+    /// naming the kind, so the rest of the page stays visible.
     pub entry: ModLogEntry,
+    /// Whether `detail` matched its kind.
+    pub detail_readable: bool,
     /// Its result.
     pub result: ModLogResult,
     /// Who acted; `None` = Quack.
@@ -175,11 +181,25 @@ impl TryFrom<EntryRow> for StoredEntry {
     type Error = DbError;
 
     fn try_from(r: EntryRow) -> Result<Self, DbError> {
+        let kind = r.kind.0;
+        let (entry, detail_readable) = match ModLogEntry::from_detail(kind, r.detail) {
+            Ok(entry) => (entry, true),
+            Err(error) => {
+                tracing::warn!(
+                    mod_log_id = %r.id,
+                    kind = kind.as_str(),
+                    error = %error,
+                    "a moderation log entry's detail can't be read; it is shown as unavailable"
+                );
+                (unreadable(kind), false)
+            }
+        };
         Ok(Self {
             id: ModLogId::from_uuid(r.id),
             guild: id(r.guild_id)?,
-            entry: ModLogEntry::from_detail(r.kind.0, r.detail)
-                .map_err(|error| DbError::Decode(format!("mod log detail: {error}")))?,
+            kind,
+            entry,
+            detail_readable,
             result: r.result.0,
             actor: opt_id(r.actor_id)?,
             source: r.source.0,
@@ -195,6 +215,16 @@ impl TryFrom<EntryRow> for StoredEntry {
             created_at: r.created_at,
         })
     }
+}
+
+/// The stand-in for an entry whose detail can't be read.
+fn unreadable(kind: ModLogKind) -> ModLogEntry {
+    ModLogEntry::Legacy(quack_core::modlog::LegacyDetail {
+        action: kind.as_str().to_owned(),
+        resource_type: "unreadable_detail".to_owned(),
+        resource_id: None,
+        failure_reason: None,
+    })
 }
 
 macro_rules! query_entry {

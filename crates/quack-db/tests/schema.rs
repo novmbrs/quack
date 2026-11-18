@@ -520,3 +520,29 @@ async fn job_keys_must_start_with_their_kind(
     );
     Ok(())
 }
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn an_unreadable_log_detail_keeps_the_page_readable(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let mut conn = db.conn().await?;
+    sqlx::query(
+        "INSERT INTO mod_log (guild_id, kind, result, source, detail)
+         VALUES ($1, 'settings_changed', 'ok', 'dashboard', '{\"unexpected\": true}'),
+                ($1, 'settings_changed', 'ok', 'dashboard', '{\"fields\": [\"log_channel\"]}')",
+    )
+    .bind(i64::from(g))
+    .execute(&mut *conn)
+    .await?;
+    let page = modlog::list(&mut conn, g, &modlog::ModLogFilter::default(), None, 10).await?;
+    assert_eq!(page.len(), 2, "the bad row doesn't hide its neighbour");
+    assert_eq!(page.iter().filter(|e| !e.detail_readable).count(), 1);
+    assert!(
+        page.iter()
+            .all(|e| e.kind == quack_core::modlog::ModLogKind::SettingsChanged)
+    );
+    Ok(())
+}
