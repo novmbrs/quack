@@ -16,8 +16,9 @@ use quack_engine::port::{Fresh, Membership, Outcome, RefusalKind};
 use quack_telemetry::metrics;
 use time::OffsetDateTime;
 
-use crate::jobs::{Payload, begin, dead, finish, retry};
+use crate::jobs::Payload;
 use crate::transcript::{self, HISTORY_PAGE, HISTORY_PAGES, Header, History};
+use quack_engine::jobs::module::{begin, dead, finish, retry};
 use quack_engine::span;
 
 /// Runs the close steps that are not done yet.

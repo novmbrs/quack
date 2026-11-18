@@ -15,7 +15,7 @@ use quack_telemetry::labels::Outcome as Label;
 use quack_telemetry::metrics;
 use time::OffsetDateTime;
 
-use crate::jobs::{begin, dead, finish, retry};
+use quack_engine::jobs::module::{begin, dead, finish, retry};
 use quack_engine::span;
 
 /// The `honeypot_cleanup` payload.

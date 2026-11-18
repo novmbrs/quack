@@ -14,6 +14,38 @@ use quack_db::jobs::{
 
 use crate::Engine;
 
+/// The settle helpers the module crates' job handlers share.
+pub mod module {
+    use quack_db::jobs::{self, ClaimedJob, Handled, JobResult};
+    use quack_db::{DbError, Tx};
+
+    pub use super::dead;
+    use crate::Engine;
+
+    /// Retry with the kind's backoff after this attempt.
+    pub fn retry(job: &ClaimedJob, error: impl Into<String>) -> Handled {
+        Handled::Settle(super::retry(job, error))
+    }
+
+    /// A fenced transaction for a job's writes: lost leases roll back.
+    pub async fn begin(engine: &Engine, job: &ClaimedJob) -> Result<Tx, DbError> {
+        let mut tx = engine.db().begin().await?;
+        jobs::fence(&mut tx, job).await?;
+        Ok(tx)
+    }
+
+    /// Settles the job with `result` together with `tx`'s writes.
+    pub async fn finish(
+        mut tx: Tx,
+        job: &ClaimedJob,
+        result: JobResult,
+    ) -> Result<Handled, DbError> {
+        jobs::settle(&mut tx, job, &result).await?;
+        tx.commit().await?;
+        Ok(Handled::Settled(result))
+    }
+}
+
 /// A module's job kinds and the handler that runs them (and finalizes
 /// them when their budget is spent, `Phase::Finalize`).
 #[derive(Clone)]
@@ -118,7 +150,7 @@ pub(crate) fn retry(job: &ClaimedJob, error: impl Into<String>) -> JobResult {
 }
 
 /// The job's records are missing or malformed: keep it as dead.
-pub(crate) fn dead(error: &str) -> Handled {
+pub fn dead(error: &str) -> Handled {
     Handled::Settle(JobResult::Dead {
         error: error.to_owned(),
     })

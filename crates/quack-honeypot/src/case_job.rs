@@ -21,7 +21,7 @@ use quack_engine::{Engine, OpKey};
 use quack_telemetry::labels::HoneypotOutcome;
 use quack_telemetry::metrics;
 
-use crate::jobs::{begin, dead, finish, retry};
+use quack_engine::jobs::module::{begin, dead, finish, retry};
 use quack_engine::span;
 
 /// The `honeypot_case` payload (the server is the job's).

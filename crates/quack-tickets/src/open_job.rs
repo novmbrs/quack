@@ -18,7 +18,8 @@ use quack_telemetry::metrics;
 use quack_text::model::Person;
 use time::OffsetDateTime;
 
-use crate::jobs::{Payload, begin, dead, finish, retry};
+use crate::jobs::Payload;
+use quack_engine::jobs::module::{begin, dead, finish, retry};
 use quack_engine::span;
 
 /// How one step ended.
