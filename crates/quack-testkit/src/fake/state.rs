@@ -39,8 +39,11 @@ pub struct FakeMessage {
     pub fetched: FetchedMessage,
     /// The message model, when Quack sent it.
     pub msg: Option<Msg>,
-    /// The nonce it was created with.
+    /// The nonce Discord still remembers it by (cleared once the window
+    /// passes, [`World::forget_nonces`]).
     pub nonce: Option<String>,
+    /// The nonce it was created with, kept for assertions.
+    pub created_with: Option<String>,
 }
 
 /// How to set up a server.
@@ -369,6 +372,7 @@ impl World {
         self.messages.insert(
             id,
             FakeMessage {
+                created_with: None,
                 fetched: FetchedMessage {
                     id,
                     channel_id: channel,
@@ -415,6 +419,14 @@ impl World {
         for m in self.messages.values_mut() {
             m.nonce = None;
         }
+    }
+
+    /// Messages Quack created with this nonce, in any channel.
+    pub fn created_with(&self, nonce: &str) -> usize {
+        self.messages
+            .values()
+            .filter(|m| m.created_with.as_deref() == Some(nonce))
+            .count()
     }
 
     /// Messages Quack sent to a channel, oldest first.

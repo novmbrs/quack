@@ -13,7 +13,10 @@
 //!   held is a crash at exactly that point.
 //! - `Late` (moderation calls): the request reached Discord, the caller
 //!   sees `Unknown`, and the change lands only when the test calls
-//!   [`FakeDiscord::land_late`], after anything else that happens meanwhile.
+//!   [`FakeDiscord::land_late`], after anything else that happens meanwhile,
+//!   except that a later moderation call about the same member lands it
+//!   first (Discord applies a request no later than a later one about the
+//!   same member that it answers).
 
 mod effects;
 mod port;
@@ -225,8 +228,12 @@ impl Recorded {
     }
 }
 
-/// A change Discord accepted but hasn't applied yet ([`Script::Late`]).
-pub(crate) struct LateEffect(pub(crate) Box<dyn FnOnce(&mut World) + Send>);
+/// A change Discord accepted but hasn't applied yet ([`Script::Late`]),
+/// with the member it is about.
+pub(crate) struct LateEffect(
+    pub(crate) Option<(GuildId, MemberId)>,
+    pub(crate) Box<dyn FnOnce(&mut World) + Send>,
+);
 
 impl std::fmt::Debug for LateEffect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -296,7 +303,7 @@ impl FakeDiscord {
         let late = std::mem::take(&mut *lock(&self.late));
         let n = late.len();
         for effect in late {
-            self.world(|w| (effect.0)(w));
+            self.world(|w| (effect.1)(w));
         }
         n
     }
@@ -309,11 +316,7 @@ impl FakeDiscord {
     /// Discord's nonce memory ends: a create repeating an earlier nonce now
     /// makes a new message (what happens once the window has passed).
     pub fn expire_nonces(&self) {
-        self.world(|w| {
-            for m in w.messages.values_mut() {
-                m.nonce = None;
-            }
-        });
+        self.world(World::forget_nonces);
     }
 
     /// Holds the next call of `call` in `channel` after it takes effect;

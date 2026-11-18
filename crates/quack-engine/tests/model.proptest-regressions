@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc f243586de2fe2c0401ebe4e5e6192ab1af66a2e3de6eb09ca38e3fe3fc68195d # shrinks to ops = [Apply { rule: 1, member: 0 }, Apply { rule: 1, member: 0 }, Crash { at: 0 }, Void { case: 0 }, Settle, Void { case: 1 }]
+cc 6a81654be2b9b44ce027fc4c3cb126af75ca4fdabd9ba516b43364e3c72baccb # shrinks to ops = [Apply { rule: 1, member: 0 }, LateThenVoid { case: 0 }]

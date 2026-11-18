@@ -85,6 +85,7 @@ pub(super) fn send(
             },
             msg: Some(msg.clone()),
             nonce: Some(nonce.as_str().to_owned()),
+            created_with: Some(nonce.as_str().to_owned()),
         },
     );
     Outcome::Done(sent)

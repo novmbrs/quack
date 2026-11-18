@@ -62,14 +62,30 @@ impl FakeDiscord {
                 None
             }
         };
+        let about = recorded.guild.zip(recorded.member);
         if late.is_none() {
+            // An earlier request about this member lands before this one.
+            let earlier: Vec<super::LateEffect> = {
+                let mut pending = super::lock(&self.late);
+                let (now, later) = std::mem::take(&mut *pending)
+                    .into_iter()
+                    .partition(|e| about.is_some() && e.0 == about);
+                *pending = later;
+                now
+            };
+            for e in earlier {
+                self.world(|w| (e.1)(w));
+            }
             return self.call(recorded, effect).await;
         }
         recorded.scripted = Some("Late".to_owned());
         self.record(recorded);
-        super::lock(&self.late).push(super::LateEffect(Box::new(move |w| {
-            let _ = effect(w);
-        })));
+        super::lock(&self.late).push(super::LateEffect(
+            about,
+            Box::new(move |w| {
+                let _ = effect(w);
+            }),
+        ));
         Outcome::Unknown(UnknownCause::Timeout)
     }
 }

@@ -1,14 +1,22 @@
 //! A model-based test: random interleavings of applying rules, voiding,
-//! running jobs, crashing mid-run, losing Discord's answers, refusals,
-//! staff retries, and members rejoining. Once the queue is quiet:
+//! running jobs, crashing mid-run (before a call, and after Discord applied
+//! it), losing Discord's answers, requests that land late (after later
+//! reads), a void racing an attempt held mid-call, DM windows that pass
+//! while a run waits, refusals, staff retries, and members rejoining. Once
+//! the queue is quiet:
 //!
 //! - no ban or timeout Quack placed stays in force for a voided case,
 //!   unless its undo is queued and ended where staff see it (`failed`
-//!   after Discord refused, or `skipped`);
+//!   with a recorded reason, or `skipped`);
 //! - every case's case count matched the model's count when it was made;
-//! - a member got a DM message only for a DM that is `sent` or `unknown`,
-//!   and every `sent` DM has its message;
+//! - every DM produced at most one message (counted by its nonce, so one
+//!   case's duplicate can't hide behind another's missing message); a
+//!   `sent` DM has exactly one, and a `failed` or `not_needed` DM none;
+//! - an apply either made a case or was refused for a domain reason;
 //! - nothing is left in progress.
+//!
+//! The fake assumes Discord applies a moderation request no later than a
+//! later request about the same member that it answers.
 
 use std::time::Duration;
 
@@ -21,9 +29,9 @@ use quack_core::rule::RuleDefinition;
 use quack_db::jobs::JobKind;
 use quack_engine::CaseRef;
 use quack_engine::actions::retry;
-use quack_engine::cases::{Applied, apply_rule, void_case};
+use quack_engine::cases::{Applied, ApplyError, apply_rule, void_case};
 use quack_engine::port::RefusalKind;
-use quack_testkit::fake::{Call, MemberSetup, Script};
+use quack_testkit::fake::{Call, Gate, MemberSetup, Script};
 use quack_testkit::rules_for_tests::{BAN, KICK, TIMEOUT, levels};
 use quack_testkit::{ENGINE_KINDS, Harness, MEMBER, MEMBER_2, sf};
 
@@ -39,7 +47,17 @@ enum Op {
     Crash { at: usize },
     Retry { action: usize },
     Rejoin { member: usize },
+    LateLoss { call: usize },
+    Land,
+    CrashAfter { call: usize },
+    RaceVoid { call: usize, case: usize },
+    ExpireDmWindow,
+    Age,
+    LateThenVoid { case: usize },
 }
+
+/// The moderation calls (indexes into `CALLS`).
+const MODERATION: [usize; 5] = [0, 1, 2, 3, 4];
 
 const MEMBERS: [u64; 2] = [MEMBER, MEMBER_2];
 const CALLS: [Call; 6] = [
@@ -63,6 +81,13 @@ fn op() -> impl Strategy<Value = Op> {
         1 => (0..2_usize).prop_map(|at| Op::Crash { at }),
         1 => (0..8_usize).prop_map(|action| Op::Retry { action }),
         1 => (0..2_usize).prop_map(|member| Op::Rejoin { member }),
+        1 => (0..MODERATION.len()).prop_map(|call| Op::LateLoss { call }),
+        1 => Just(Op::Land),
+        1 => (0..MODERATION.len()).prop_map(|call| Op::CrashAfter { call }),
+        1 => (0..2_usize, 0..8_usize).prop_map(|(call, case)| Op::RaceVoid { call, case }),
+        1 => Just(Op::ExpireDmWindow),
+        1 => Just(Op::Age),
+        2 => (0..8_usize).prop_map(|case| Op::LateThenVoid { case }),
     ]
 }
 
@@ -89,20 +114,24 @@ async fn step(h: &Harness, ids: &[RuleId], model: &mut Vec<ModelCase>, op: Op) -
                 .iter()
                 .filter(|c| c.member == member && c.rule == rule && !c.voided)
                 .count();
-            if let Ok(Applied::Created(created)) =
-                apply_rule(&h.engine, h.request(MEMBERS[member], ids[rule])).await
-            {
-                let count = created.case.decision.context("decision")?.case_count;
-                ensure!(
-                    count as usize == expected,
-                    "case count {count}, model {expected}"
-                );
-                model.push(ModelCase {
-                    id: created.case.id,
-                    member,
-                    rule,
-                    voided: false,
-                });
+            match apply_rule(&h.engine, h.request(MEMBERS[member], ids[rule])).await {
+                Ok(Applied::Created(created)) => {
+                    let count = created.case.decision.context("decision")?.case_count;
+                    ensure!(
+                        count as usize == expected,
+                        "case count {count}, model {expected}"
+                    );
+                    model.push(ModelCase {
+                        id: created.case.id,
+                        member,
+                        rule,
+                        voided: false,
+                    });
+                }
+                // A member who left or was banned can't get a case; Discord
+                // may be scripted to refuse the facts read.
+                Err(ApplyError::Refused(_) | ApplyError::DiscordUnavailable) => {}
+                other => anyhow::bail!("unexpected apply result: {other:?}"),
             }
         }
         Op::Void { case } => {
@@ -142,6 +171,22 @@ async fn step(h: &Harness, ids: &[RuleId], model: &mut Vec<ModelCase>, op: Op) -
                 let _ = retry(&h.engine, &h.moderator(), item.action.id, &h.key("ar")).await;
             }
         }
+        Op::LateLoss { call } => h.fake.script(CALLS[MODERATION[call]], Script::Late),
+        Op::Land => {
+            h.fake.land_late();
+        }
+        Op::CrashAfter { call } => crash_after(h, CALLS[MODERATION[call]]).await?,
+        Op::RaceVoid { call, case } => {
+            let id = model.get(case).map(|c| c.id);
+            if race_void(h, if call == 0 { Call::Ban } else { Call::Timeout }, id).await?
+                && let Some(c) = model.get_mut(case)
+            {
+                c.voided = true;
+            }
+        }
+        Op::ExpireDmWindow => expire_dm_window(h).await?,
+        Op::Age => age_all(h).await?,
+        Op::LateThenVoid { case } => late_then_void(h, model, case).await?,
         Op::Rejoin { member } => {
             let id = MEMBERS[member];
             h.fake.world(|w| {
@@ -156,21 +201,127 @@ async fn step(h: &Harness, ids: &[RuleId], model: &mut Vec<ModelCase>, op: Op) -
     Ok(())
 }
 
+type Task = tokio::task::JoinHandle<quack_testkit::Ran>;
+
+/// Waits until the run reaches `gate` (`Some`: it is held there) or ends
+/// without reaching it (`None`).
+async fn held(mut task: Task, gate: &Gate) -> Option<Task> {
+    tokio::select! {
+        () = gate.reached() => Some(task),
+        _ = &mut task => None,
+    }
+}
+
 /// Kills the next action run at its next `call` (if it gets there).
 async fn crash(h: &Harness, call: Call) -> Result<()> {
     let gate = h.fake.hold(call);
-    if let Ok(task) = h.spawn_one(JobKind::RunAction).await {
-        if tokio::time::timeout(Duration::from_secs(2), gate.reached())
-            .await
-            .is_ok()
-        {
-            task.abort();
-        }
+    if let Ok(task) = h.spawn_one(JobKind::RunAction).await
+        && let Some(task) = held(task, &gate).await
+    {
+        task.abort();
         let _ = task.await;
     }
     h.fake.clear_scripts();
     gate.release();
     h.expire_leases().await
+}
+
+/// Kills the next action run right after Discord applied its `call` (the
+/// answer never reached Quack).
+async fn crash_after(h: &Harness, call: Call) -> Result<()> {
+    let gate = h.fake.hold_after(call);
+    if let Ok(task) = h.spawn_one(JobKind::RunAction).await
+        && let Some(task) = held(task, &gate).await
+    {
+        task.abort();
+        let _ = task.await;
+    }
+    h.fake.clear_scripts();
+    gate.release();
+    h.expire_leases().await
+}
+
+/// Holds the next action run inside its `call`, voids `case` while it is
+/// held, then lets the call go on. Returns whether the void went through.
+async fn race_void(h: &Harness, call: Call, case: Option<CaseId>) -> Result<bool> {
+    let gate = h.fake.hold(call);
+    let mut voided = false;
+    if let Ok(task) = h.spawn_one(JobKind::RunAction).await
+        && let Some(task) = held(task, &gate).await
+    {
+        if let Some(id) = case {
+            voided = void_case(
+                &h.engine,
+                &h.moderator(),
+                CaseRef::Id(id),
+                "Model.",
+                &h.key("vdm"),
+            )
+            .await
+            .is_ok();
+        }
+        gate.release();
+        let _ = task.await;
+    }
+    h.fake.clear_scripts();
+    gate.release();
+    Ok(voided)
+}
+
+/// An attempt's request reaches Discord but lands only later; the case is
+/// voided before any retry confirms it.
+async fn late_then_void(h: &Harness, model: &mut [ModelCase], case: usize) -> Result<()> {
+    h.fake.script(Call::Ban, Script::Late);
+    h.fake.script(Call::Timeout, Script::Late);
+    age_all(h).await?;
+    h.run_one(JobKind::RunAction).await?;
+    h.fake.clear_scripts();
+    if let Some(c) = model.get_mut(case)
+        && void_case(
+            &h.engine,
+            &h.moderator(),
+            CaseRef::Id(c.id),
+            "Model.",
+            &h.key("vdm"),
+        )
+        .await
+        .is_ok()
+    {
+        c.voided = true;
+    }
+    Ok(())
+}
+
+/// Every case is two hundred seconds older: a kick or ban no longer waits
+/// for its DM (§6.3).
+async fn age_all(h: &Harness) -> Result<()> {
+    h.db.execute("UPDATE cases SET created_at = created_at - interval '200 seconds'")
+        .await?;
+    Ok(())
+}
+
+/// A DM run loses its first create's answer, then wakes after the window
+/// passed and Discord forgot the nonce.
+async fn expire_dm_window(h: &Harness) -> Result<()> {
+    h.fake.script(Call::Send, Script::LoseResponse);
+    let before = h.fake.count(Call::Send);
+    if let Ok(task) = h.spawn_one(JobKind::SendDm).await {
+        for _ in 0..400 {
+            if h.fake.count(Call::Send) > before || task.is_finished() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        h.db.execute(
+            "UPDATE dms SET first_attempt_at = first_attempt_at - interval '61 seconds' \
+             WHERE state = 'sending'",
+        )
+        .await?;
+        h.fake.expire_nonces();
+        let _ = task.await;
+    }
+    h.fake.clear_scripts();
+    Ok(())
 }
 
 async fn check(h: &Harness, model: &[ModelCase]) -> Result<()> {
@@ -197,6 +348,20 @@ async fn check(h: &Harness, model: &[ModelCase]) -> Result<()> {
                 !matches!(d.state, DmState::Pending | DmState::Sending),
                 "DM still in progress"
             );
+            let nonce = quack_engine::port::Nonce::new(d.id.to_u22());
+            let messages = h.fake.world(|w| w.created_with(nonce.as_str()));
+            ensure!(
+                messages <= 1,
+                "case {}: {messages} messages for one DM",
+                case.number
+            );
+            match d.state {
+                DmState::Sent => ensure!(messages == 1, "a sent DM without its message"),
+                DmState::Failed | DmState::NotNeeded => {
+                    ensure!(messages == 0, "a {:?} DM has a message", d.state);
+                }
+                _ => {}
+            }
         }
         if !c.voided {
             continue;
@@ -247,28 +412,6 @@ async fn check(h: &Harness, model: &[ModelCase]) -> Result<()> {
             );
         }
     }
-    for (i, id) in MEMBERS.iter().enumerate() {
-        let messages = h.fake.world(|w| w.dms_to(sf(*id)).len());
-        let delivered =
-            h.db.count(&format!(
-                "SELECT count(*) FROM dms WHERE member_id = {id} AND state IN ('sent', 'unknown')"
-            ))
-            .await?;
-        let sent =
-            h.db.count(&format!(
-                "SELECT count(*) FROM dms WHERE member_id = {id} AND state = 'sent'"
-            ))
-            .await?;
-        let messages = i64::try_from(messages)?;
-        ensure!(
-            messages <= delivered,
-            "member {i}: {messages} DMs for {delivered} delivered"
-        );
-        ensure!(
-            sent <= messages,
-            "member {i}: {sent} sent DMs but {messages} messages"
-        );
-    }
     Ok(())
 }
 
@@ -283,6 +426,9 @@ async fn run(ops: Vec<Op>) -> Result<()> {
         step(&h, &ids, &mut model, op).await?;
     }
     h.fake.clear_scripts();
+    h.settle().await?;
+    // Whatever was still on its way lands now, after everything settled.
+    h.fake.land_late();
     h.settle().await?;
     check(&h, &model).await
 }
