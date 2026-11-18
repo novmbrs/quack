@@ -13,7 +13,8 @@ use quack_text::render::plain_msg;
 use crate::common::{System, admin, click};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_burst_in_the_honeypot_is_one_case_and_the_posts_are_cleaned_up() -> Result<()> {
+pub(crate) async fn a_burst_in_the_honeypot_is_one_case_and_the_posts_are_cleaned_up() -> Result<()>
+{
     let mut sys = System::boot().await?;
     sys.install().await?;
 

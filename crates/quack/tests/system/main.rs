@@ -13,9 +13,12 @@
 )]
 
 mod activity;
+#[path = "../support/telemetry.rs"]
+mod capture;
 mod common;
 mod dm_failed;
 mod honeypot;
 mod moderation;
 mod shutdown;
+mod telemetry;
 mod tickets;

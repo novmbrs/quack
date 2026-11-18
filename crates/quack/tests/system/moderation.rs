@@ -55,7 +55,7 @@ async fn installed_and_set_up(sys: &System) -> Result<(ChannelId, ChannelId)> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn warning_timeout_ban_appeal_accepted_and_ban_undone() -> Result<()> {
+pub(crate) async fn warning_timeout_ban_appeal_accepted_and_ban_undone() -> Result<()> {
     let mut sys = System::boot().await?;
     let (log, appeals) = installed_and_set_up(&sys).await?;
 

@@ -246,6 +246,8 @@ impl System {
     /// The standard server in the fake (not yet installed in Quack) and the
     /// composed application.
     pub async fn boot() -> Result<Self> {
+        // Before anything records a metric (see `capture`).
+        let _ = crate::capture::capture();
         let db = TestDb::with_connections(24).await?;
         let fake = Arc::new(FakeDiscord::new(sf(QUACK)));
         let guild: GuildId = sf(GUILD);

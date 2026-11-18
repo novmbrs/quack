@@ -27,7 +27,7 @@ fn says_it(surface: &str, text: &str) {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_refused_dm_reads_the_same_everywhere() -> Result<()> {
+pub(crate) async fn a_refused_dm_reads_the_same_everywhere() -> Result<()> {
     let mut sys = System::boot().await?;
     sys.install().await?;
     let log_create = CustomId::Setup(SetupArea::Log, SetupOp::Create).encode();

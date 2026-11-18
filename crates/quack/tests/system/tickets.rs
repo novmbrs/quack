@@ -13,7 +13,7 @@ use quack_text::render::plain_msg;
 use crate::common::{System, admin, click, member};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn a_ticket_opens_journals_closes_and_keeps_its_transcript() -> Result<()> {
+pub(crate) async fn a_ticket_opens_journals_closes_and_keeps_its_transcript() -> Result<()> {
     let mut sys = System::boot().await?;
     sys.install().await?;
 

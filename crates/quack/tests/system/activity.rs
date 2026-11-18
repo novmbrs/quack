@@ -28,7 +28,8 @@ async fn posts(sys: &System, channel: ChannelId, n: usize) -> Vec<String> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn edits_and_deletes_are_posted_and_unknown_deletes_flush_at_shutdown() -> Result<()> {
+pub(crate) async fn edits_and_deletes_are_posted_and_unknown_deletes_flush_at_shutdown()
+-> Result<()> {
     let mut sys = System::boot().await?;
     sys.install().await?;
     let create = CustomId::Setup(SetupArea::ActivityLog, SetupOp::Create).encode();

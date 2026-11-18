@@ -16,7 +16,7 @@ use serde_json::json;
 use crate::common::{System, case_add, ix, moderator};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn shutdown_drains_what_it_can_and_a_restart_resolves_the_rest() -> Result<()> {
+pub(crate) async fn shutdown_drains_what_it_can_and_a_restart_resolves_the_rest() -> Result<()> {
     let mut sys = System::boot().await?;
     sys.install().await?;
     let admin = sys.login(ADMIN).await?;
