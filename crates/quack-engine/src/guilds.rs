@@ -229,7 +229,7 @@ pub async fn channel_deleted(
                 messages::by_owner(&mut tx, guild, Owner::Server(MessageKind::HoneypotWarning))
                     .await?
             {
-                messages::mark_gone(&mut tx, row.id, row.generation).await?;
+                messages::mark_gone(&mut tx, guild, row.id, row.generation).await?;
             }
             if honeypot_off {
                 module_off(

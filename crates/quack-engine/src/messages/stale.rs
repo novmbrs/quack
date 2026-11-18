@@ -73,16 +73,16 @@ pub(super) async fn on_missing(
     }
     match plan {
         MissingPlan::Repost(channel) => {
-            messages::relocate(&mut tx, row.guild, row.id, Some(channel)).await?;
+            messages::relocate(&mut tx, row.guild, row.id, row.generation, Some(channel)).await?;
         }
         MissingPlan::WaitForChannel => {
-            messages::relocate(&mut tx, row.guild, row.id, None).await?;
+            messages::relocate(&mut tx, row.guild, row.id, row.generation, None).await?;
         }
         MissingPlan::MarkGone => {
-            messages::mark_gone(&mut tx, row.id, row.generation).await?;
+            messages::mark_gone(&mut tx, row.guild, row.id, row.generation).await?;
         }
         MissingPlan::BecomePrivate => {
-            messages::make_private(&mut tx, row.id, row.generation).await?;
+            messages::make_private(&mut tx, row.guild, row.id, row.generation).await?;
             fence(&mut tx, job).await?;
             tx.commit().await?;
             return become_private(engine, job, row).await;
@@ -134,7 +134,15 @@ async fn become_private(
         other => return Ok(Handled::Settle(retry(job, other.code()))),
     }
     let mut tx = engine.db().begin().await?;
-    messages::record_posted(&mut tx, row.id, row.generation, row.wanted_revision, None).await?;
+    messages::record_posted(
+        &mut tx,
+        row.guild,
+        row.id,
+        row.generation,
+        row.wanted_revision,
+        None,
+    )
+    .await?;
     let handled = finish(tx, job, JobResult::Done).await?;
     synced(row, Label::Done);
     Ok(handled)
@@ -155,7 +163,7 @@ pub(super) async fn clean_stale(
             other => return Ok(Some(Handled::Settle(retry(job, other.code())))),
         }
         let mut tx = engine.db().begin().await?;
-        messages::remove_stale(&mut tx, row.id, *location).await?;
+        messages::remove_stale(&mut tx, row.guild, row.id, *location).await?;
         fence(&mut tx, job).await?;
         tx.commit().await?;
     }

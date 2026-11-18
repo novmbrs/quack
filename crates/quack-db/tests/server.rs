@@ -266,9 +266,13 @@ async fn draft_pages_are_saved_once(_: PgPoolOptions, options: PgConnectOptions)
     let mut conn = db.conn().await?;
     assert!(drafts::create(&mut conn, &draft).await?);
     assert!(!drafts::create(&mut conn, &draft).await?);
-    assert!(drafts::set_rule(&mut conn, id, account_id(3), spam, 1).await?);
     assert!(
-        !drafts::set_rule(&mut conn, id, account_id(3), spam, 1).await?,
+        !drafts::set_rule(&mut conn, guild_id(99), id, account_id(3), spam, 1).await?,
+        "another server's draft"
+    );
+    assert!(drafts::set_rule(&mut conn, g, id, account_id(3), spam, 1).await?);
+    assert!(
+        !drafts::set_rule(&mut conn, g, id, account_id(3), spam, 1).await?,
         "rule already chosen"
     );
     assert!(
@@ -278,9 +282,9 @@ async fn draft_pages_are_saved_once(_: PgPoolOptions, options: PgConnectOptions)
         "another moderator's draft"
     );
     let values = serde_json::json!({ "where": "general" });
-    assert!(drafts::save_page(&mut conn, id, 1, &values, true).await?);
+    assert!(drafts::save_page(&mut conn, g, account_id(3), id, 1, &values, true).await?);
     assert!(
-        !drafts::save_page(&mut conn, id, 1, &values, true).await?,
+        !drafts::save_page(&mut conn, g, account_id(3), id, 1, &values, true).await?,
         "double click"
     );
     let locked = drafts::lock(&mut conn, g, account_id(3), id)
@@ -290,7 +294,11 @@ async fn draft_pages_are_saved_once(_: PgPoolOptions, options: PgConnectOptions)
         (locked.page, locked.rule, locked.values),
         (2, Some((spam, 1)), values)
     );
-    assert!(drafts::delete(&mut conn, id).await?);
+    assert!(
+        !drafts::delete(&mut conn, g, account_id(4), id).await?,
+        "another moderator's draft is not deleted"
+    );
+    assert!(drafts::delete(&mut conn, g, account_id(3), id).await?);
     Ok(())
 }
 

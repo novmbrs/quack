@@ -110,7 +110,7 @@ async fn read(
         .is_some_and(|g| g.installed);
     if row.state == MessageState::Gone || !installed {
         if row.state == MessageState::Active {
-            messages::mark_gone(&mut tx, row.id, row.generation).await?;
+            messages::mark_gone(&mut tx, row.guild, row.id, row.generation).await?;
         }
         finish(tx, job, JobResult::Done).await?;
         return Ok(None);
@@ -131,7 +131,7 @@ async fn read(
         posted: row.message.is_some(),
     });
     if write && route == SyncRoute::MarkGone {
-        messages::mark_gone(&mut tx, row.id, row.generation).await?;
+        messages::mark_gone(&mut tx, row.guild, row.id, row.generation).await?;
         finish(tx, job, JobResult::Done).await?;
         synced(&row, Label::Skipped);
         return Ok(None);
@@ -144,7 +144,7 @@ async fn read(
         // §10.4: after the window the earlier create's outcome is unknown,
         // so the create is made again with a new start time.
         let restart = row.create_started_at.is_some_and(|s| !in_window(s, now));
-        messages::start_create(&mut tx, row.id, row.generation, restart)
+        messages::start_create(&mut tx, row.guild, row.id, row.generation, restart)
             .await?
             .ok_or(DbError::Stale)?;
     }
@@ -307,6 +307,7 @@ async fn record(
     if wrote {
         let recorded = messages::record_posted(
             &mut tx,
+            row.guild,
             row.id,
             row.generation,
             row.wanted_revision,
@@ -316,6 +317,7 @@ async fn record(
         if !recorded && let (Some(channel), Some(message)) = (row.channel, created) {
             messages::push_stale(
                 &mut tx,
+                row.guild,
                 row.id,
                 Location {
                     channel_id: channel,
@@ -331,7 +333,7 @@ async fn record(
             .map(|(_, id)| *id)
             .filter(|_| matches!(row.owner, quack_db::messages::Owner::Ticket(_)))
         {
-            messages::set_attachment(&mut tx, row.id, row.generation, att).await?;
+            messages::set_attachment(&mut tx, row.guild, row.id, row.generation, att).await?;
         }
     }
     let after = messages::lock(&mut tx, row.guild, row.id)
@@ -350,7 +352,7 @@ pub async fn finalize(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbEr
     };
     let mut tx = engine.db().begin().await?;
     if let Some(row) = messages::lock(&mut tx, guild, payload.message_row_id).await? {
-        messages::set_error(&mut tx, row.id, row.generation, "exhausted").await?;
+        messages::set_error(&mut tx, row.guild, row.id, row.generation, "exhausted").await?;
         synced(&row, Label::Failed);
     }
     finish(tx, job, JobResult::Done).await

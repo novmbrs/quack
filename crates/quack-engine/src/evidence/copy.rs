@@ -56,7 +56,7 @@ pub(super) async fn copy_pending(
 ) -> Result<Copied, DbError> {
     let (pending, channel) = {
         let mut conn = engine.db().conn().await?;
-        let pending = evidence::pending_files(&mut conn, item.id).await?;
+        let pending = evidence::pending_files(&mut conn, item.guild, item.id).await?;
         let channel = settings::get(&mut conn, item.guild)
             .await?
             .and_then(|s| s.evidence_channel);
@@ -100,13 +100,14 @@ pub(super) async fn copy_pending(
         evidence::lock(&mut tx, item.guild, item.id).await?;
         match one {
             One::Copied(c, m, a, size) => {
-                if evidence::mark_copied(&mut tx, file.id, c, m, a).await? {
+                if evidence::mark_copied(&mut tx, item.guild, file.id, c, m, a).await? {
                     files += 1;
                     bytes += size;
                 }
             }
             One::Failed => {
-                evidence::set_file_state(&mut tx, file.id, FileCopyState::CopyFailed).await?;
+                evidence::set_file_state(&mut tx, item.guild, file.id, FileCopyState::CopyFailed)
+                    .await?;
             }
         }
         fence(&mut tx, job).await?;
@@ -125,7 +126,7 @@ async fn start(
     let mut tx = engine.db().begin().await?;
     cases::lock(&mut tx, item.guild, item.case).await?;
     evidence::lock(&mut tx, item.guild, item.id).await?;
-    evidence::start_copy(&mut tx, file.id).await?;
+    evidence::start_copy(&mut tx, item.guild, file.id).await?;
     fence(&mut tx, job).await?;
     tx.commit().await
 }
@@ -179,7 +180,7 @@ async fn fail_all(
     let mut tx = engine.db().begin().await?;
     cases::lock(&mut tx, item.guild, item.case).await?;
     evidence::lock(&mut tx, item.guild, item.id).await?;
-    evidence::fail_pending_files(&mut tx, item.id, not_staff_only).await?;
+    evidence::fail_pending_files(&mut tx, item.guild, item.id, not_staff_only).await?;
     fence(&mut tx, job).await?;
     tx.commit().await
 }

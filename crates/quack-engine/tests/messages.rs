@@ -97,7 +97,7 @@ async fn a_move_during_a_create_cleans_up_the_created_message() -> Result<()> {
     let task = h.spawn_one(JobKind::SyncMessage).await?;
     gate.reached().await;
     let mut tx = h.db.db.begin().await?;
-    messages::relocate(&mut tx, h.guild, id, Some(elsewhere)).await?;
+    assert!(messages::relocate(&mut tx, h.guild, id, 1, Some(elsewhere)).await?);
     tx.commit().await?;
     gate.release();
     task.await?;

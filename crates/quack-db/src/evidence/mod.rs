@@ -180,12 +180,17 @@ pub async fn admit(
 }
 
 /// Evidence items of a case (the per-case cap is counted under its lock).
-pub async fn count_for_case(conn: &mut PgConnection, case: CaseId) -> Result<u32, DbError> {
+pub async fn count_for_case(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    case: CaseId,
+) -> Result<u32, DbError> {
     let n = obs::run(
         Select,
         "evidence",
         sqlx::query_scalar!(
-            r#"SELECT count(*) AS "n!" FROM evidence WHERE case_id = $1"#,
+            r#"SELECT count(*) AS "n!" FROM evidence WHERE guild_id = $1 AND case_id = $2"#,
+            i64::from(guild),
             case.get()
         )
         .fetch_one(conn),
@@ -195,12 +200,17 @@ pub async fn count_for_case(conn: &mut PgConnection, case: CaseId) -> Result<u32
 }
 
 /// Saved files of a case (the 100-file cap).
-pub async fn count_files_for_case(conn: &mut PgConnection, case: CaseId) -> Result<u32, DbError> {
+pub async fn count_files_for_case(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    case: CaseId,
+) -> Result<u32, DbError> {
     let n = obs::run(
         Select,
         "evidence_files",
         sqlx::query_scalar!(
-            r#"SELECT count(*) AS "n!" FROM evidence_files WHERE case_id = $1"#,
+            r#"SELECT count(*) AS "n!" FROM evidence_files WHERE guild_id = $1 AND case_id = $2"#,
+            i64::from(guild),
             case.get()
         )
         .fetch_one(conn),

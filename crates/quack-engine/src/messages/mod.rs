@@ -71,7 +71,7 @@ async fn give_up(
     code: &str,
 ) -> Result<Handled, DbError> {
     let mut tx = engine.db().begin().await?;
-    messages::set_error(&mut tx, row.id, row.generation, code).await?;
+    messages::set_error(&mut tx, row.guild, row.id, row.generation, code).await?;
     let handled = finish(tx, job, JobResult::Done).await?;
     synced(row, Label::Failed);
     Ok(handled)

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET private = true, create_started_at = NULL, updated_at = now()\n             WHERE id = $1 AND generation = $2 AND guild_id = $3 AND state = 'active'\n               AND kind = 'case_receipt' AND NOT private AND message_id IS NULL AND token_expires_at > now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f2a7d2f7f76dd2110267f7c62c156ce55f61e375f553bae79b07c5af6e9356ea"
+}

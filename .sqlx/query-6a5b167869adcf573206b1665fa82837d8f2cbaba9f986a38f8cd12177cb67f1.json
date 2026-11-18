@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence SET copy_skipped_not_staff_only = true\n                 WHERE guild_id = $1 AND id = $2 AND state = 'saving'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6a5b167869adcf573206b1665fa82837d8f2cbaba9f986a38f8cd12177cb67f1"
+}

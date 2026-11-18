@@ -170,8 +170,8 @@ async fn body(
     if let Some(replaced) = request.replaces {
         messages::bump(tx, guild, Owner::Case(replaced)).await?;
     }
-    if let Some(draft) = request.draft {
-        drafts::delete(tx, draft).await?;
+    if let (Some(draft), Some(actor)) = (request.draft, moderator(request)) {
+        drafts::delete(tx, guild, actor, draft).await?;
     }
     opkey::complete(
         tx,

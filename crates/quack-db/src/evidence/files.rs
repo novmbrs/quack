@@ -4,6 +4,7 @@ use quack_core::evidence::{EvidenceFailure, FileCopyState};
 use quack_core::ids::{
     AccountId, AttachmentId, CaseId, ChannelId, EvidenceId, FileId, GuildId, MessageId,
 };
+use quack_core::limits::NONCE_WINDOW;
 use sqlx::PgConnection;
 use sqlx::types::Json;
 use time::OffsetDateTime;
@@ -188,13 +189,15 @@ pub async fn files_for_case(
 /// An item's files still to copy.
 pub async fn pending_files(
     conn: &mut PgConnection,
+    guild: GuildId,
     evidence: EvidenceId,
 ) -> Result<Vec<EvidenceFile>, DbError> {
     let rows = obs::run(
         Select,
         "evidence_files",
         query_file!(
-            "WHERE evidence_id = $1 AND copy_state = 'pending' ORDER BY position",
+            "WHERE guild_id = $1 AND evidence_id = $2 AND copy_state = 'pending' ORDER BY position",
+            i64::from(guild),
             evidence.get()
         )
         .fetch_all(conn),
@@ -230,7 +233,12 @@ pub async fn file(
     let found = obs::run(
         Select,
         "evidence_files",
-        query_file!("WHERE id = $1", file.get()).fetch_one(conn),
+        query_file!(
+            "WHERE guild_id = $1 AND id = $2",
+            i64::from(guild),
+            file.get()
+        )
+        .fetch_one(conn),
     )
     .await?;
     Ok(Some((
@@ -240,19 +248,31 @@ pub async fn file(
     )))
 }
 
-/// Starts (or restarts) a pending file's upload window (§10.4). Returns the
-/// start, or `None` when the file is no longer pending.
+/// Starts a pending file's upload window (§10.4), or keeps the current
+/// one while it is still open, so a retry inside it reuses the nonce's
+/// protection; after [`NONCE_WINDOW`] a new window starts. Only while the
+/// item is `saving`. Returns the start, or `None` when the file is no
+/// longer pending.
 pub async fn start_copy(
     conn: &mut PgConnection,
+    guild: GuildId,
     file: FileId,
 ) -> Result<Option<OffsetDateTime>, DbError> {
     obs::run(
         Update,
         "evidence_files",
         sqlx::query_scalar!(
-            r#"UPDATE evidence_files SET copy_started_at = now() WHERE id = $1 AND copy_state = 'pending'
-               RETURNING copy_started_at AS "started!""#,
-            file.get()
+            r#"UPDATE evidence_files f
+               SET copy_started_at = CASE WHEN f.copy_started_at IS NULL
+                                            OR f.copy_started_at <= now() - make_interval(secs => $3)
+                                          THEN now() ELSE f.copy_started_at END
+               FROM evidence e
+               WHERE f.guild_id = $1 AND f.id = $2 AND f.copy_state = 'pending'
+                 AND e.id = f.evidence_id AND e.state = 'saving'
+               RETURNING f.copy_started_at AS "started!""#,
+            i64::from(guild),
+            file.get(),
+            NONCE_WINDOW.as_seconds_f64(),
         )
         .fetch_optional(conn),
     )
@@ -262,6 +282,7 @@ pub async fn start_copy(
 /// `pending` → `copied` with the copy's location.
 pub async fn mark_copied(
     conn: &mut PgConnection,
+    guild: GuildId,
     file: FileId,
     channel: ChannelId,
     message: MessageId,
@@ -273,11 +294,12 @@ pub async fn mark_copied(
         sqlx::query!(
             "UPDATE evidence_files SET copy_state = 'copied', copy_channel_id = $2, copy_message_id = $3,
                                        copy_attachment_id = $4
-             WHERE id = $1 AND copy_state = 'pending'",
+             WHERE id = $1 AND guild_id = $5 AND copy_state = 'pending'",
             file.get(),
             i64::from(channel),
             i64::from(message),
             i64::from(attachment),
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -288,6 +310,7 @@ pub async fn mark_copied(
 /// `pending` → a state without a copy (`copy_failed`, …).
 pub async fn set_file_state(
     conn: &mut PgConnection,
+    guild: GuildId,
     file: FileId,
     state: FileCopyState,
 ) -> Result<bool, DbError> {
@@ -298,9 +321,11 @@ pub async fn set_file_state(
         Update,
         "evidence_files",
         sqlx::query!(
-            "UPDATE evidence_files SET copy_state = $2 WHERE id = $1 AND copy_state = 'pending'",
+            "UPDATE evidence_files SET copy_state = $2
+             WHERE id = $1 AND guild_id = $3 AND copy_state = 'pending'",
             file.get(),
             Pg(state) as _,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -309,9 +334,11 @@ pub async fn set_file_state(
 }
 
 /// Every pending file of the item → `copy_failed`; `not_staff_only` also
-/// records why on the item. Returns how many files changed.
+/// records why on the item while it is `saving`. Returns how many files
+/// changed.
 pub async fn fail_pending_files(
     conn: &mut PgConnection,
+    guild: GuildId,
     evidence: EvidenceId,
     not_staff_only: bool,
 ) -> Result<u64, DbError> {
@@ -319,7 +346,9 @@ pub async fn fail_pending_files(
         Update,
         "evidence_files",
         sqlx::query!(
-            "UPDATE evidence_files SET copy_state = 'copy_failed' WHERE evidence_id = $1 AND copy_state = 'pending'",
+            "UPDATE evidence_files SET copy_state = 'copy_failed'
+             WHERE guild_id = $1 AND evidence_id = $2 AND copy_state = 'pending'",
+            i64::from(guild),
             evidence.get(),
         )
         .execute(&mut *conn),
@@ -330,7 +359,9 @@ pub async fn fail_pending_files(
             Update,
             "evidence",
             sqlx::query!(
-                "UPDATE evidence SET copy_skipped_not_staff_only = true WHERE id = $1",
+                "UPDATE evidence SET copy_skipped_not_staff_only = true
+                 WHERE guild_id = $1 AND id = $2 AND state = 'saving'",
+                i64::from(guild),
                 evidence.get()
             )
             .execute(conn),

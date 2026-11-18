@@ -97,8 +97,8 @@ async fn trim_long_journals(conn: &mut PgConnection) -> Result<u64, DbError> {
     let tickets = obs::run(
         Delete,
         "ticket_messages",
-        sqlx::query_scalar!(
-            "WITH long AS (
+        sqlx::query!(
+            r#"WITH long AS (
                SELECT t.id, (SELECT m.message_id FROM ticket_messages m WHERE m.ticket_id = t.id
                              ORDER BY m.message_id DESC OFFSET 49999 LIMIT 1) AS keep_from
                FROM tickets t
@@ -108,9 +108,9 @@ async fn trim_long_journals(conn: &mut PgConnection) -> Result<u64, DbError> {
                DELETE FROM ticket_messages WHERE ctid IN (
                  SELECT m.ctid FROM ticket_messages m JOIN long l ON l.id = m.ticket_id
                  WHERE l.keep_from IS NOT NULL AND m.message_id < l.keep_from LIMIT $1)
-               RETURNING ticket_id
+               RETURNING guild_id, ticket_id
              )
-             SELECT ticket_id FROM gone",
+             SELECT guild_id AS "guild_id!", ticket_id AS "ticket_id!" FROM gone"#,
             BATCH
         )
         .fetch_all(&mut *conn),
@@ -120,12 +120,17 @@ async fn trim_long_journals(conn: &mut PgConnection) -> Result<u64, DbError> {
         return Ok(0);
     }
     let removed = u64::try_from(tickets.len()).unwrap_or(u64::MAX);
+    let guilds: Vec<i64> = tickets.iter().map(|t| t.guild_id).collect();
+    let ids: Vec<uuid::Uuid> = tickets.iter().map(|t| t.ticket_id).collect();
     obs::run(
         Update,
         "tickets",
         sqlx::query!(
-            "UPDATE tickets SET journal_gaps = true, updated_at = now() WHERE id = ANY($1) AND NOT journal_gaps",
-            &tickets
+            "UPDATE tickets t SET journal_gaps = true, updated_at = now()
+             FROM unnest($1::bigint[], $2::uuid[]) AS d(guild_id, id)
+             WHERE t.guild_id = d.guild_id AND t.id = d.id AND NOT t.journal_gaps",
+            &guilds,
+            &ids
         )
         .execute(conn),
     )

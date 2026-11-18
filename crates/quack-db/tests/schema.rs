@@ -387,7 +387,7 @@ async fn children_must_match_their_parents_server_case_and_member(
     )
     .await;
     assert!(foreign_key(appeal));
-    // Evidence in another server than its case.
+    // Evidence in another server than its case: refused before any write.
     let channel = ChannelId::new(9).unwrap_or_else(|| unreachable!());
     let message = quack_core::ids::MessageId::new(10).unwrap_or_else(|| unreachable!());
     let admitted = evidence::admit(
@@ -400,7 +400,7 @@ async fn children_must_match_their_parents_server_case_and_member(
         None,
     )
     .await;
-    assert!(foreign_key(admitted.map(|_| ())));
+    assert!(matches!(admitted, Err(DbError::NotFound)), "{admitted:?}");
     // A case under another server's rule.
     let mut tx = db.begin().await?;
     let other = common::insert_case(&mut tx, b, member_id(7), rule_a, None).await;

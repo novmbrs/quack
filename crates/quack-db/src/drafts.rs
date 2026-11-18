@@ -145,6 +145,8 @@ pub async fn lock(
 /// `page`. Returns whether it saved.
 pub async fn save_page(
     conn: &mut PgConnection,
+    guild: GuildId,
+    actor: AccountId,
     draft: uuid::Uuid,
     page: u8,
     values: &serde_json::Value,
@@ -156,11 +158,13 @@ pub async fn save_page(
         sqlx::query!(
             "UPDATE case_drafts SET values = values || $3, page = CASE WHEN $4 THEN page + 1 ELSE page END,
                                     updated_at = now()
-             WHERE id = $1 AND page = $2 AND expires_at > now()",
+             WHERE id = $1 AND page = $2 AND guild_id = $5 AND actor_id = $6 AND expires_at > now()",
             draft,
             i16::from(page),
             values,
             advance,
+            i64::from(guild),
+            i64::from(actor),
         )
         .execute(conn),
     )
@@ -171,6 +175,7 @@ pub async fn save_page(
 /// Sets the rule of a draft that has none (the picker's select).
 pub async fn set_rule(
     conn: &mut PgConnection,
+    guild: GuildId,
     draft: uuid::Uuid,
     actor: AccountId,
     rule: RuleId,
@@ -181,11 +186,12 @@ pub async fn set_rule(
         "case_drafts",
         sqlx::query!(
             "UPDATE case_drafts SET rule_id = $3, rule_version = $4, updated_at = now()
-             WHERE id = $1 AND actor_id = $2 AND rule_id IS NULL AND expires_at > now()",
+             WHERE id = $1 AND actor_id = $2 AND guild_id = $5 AND rule_id IS NULL AND expires_at > now()",
             draft,
             i64::from(actor),
             rule.get(),
             int::<u32, i32>(version)?,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -193,12 +199,24 @@ pub async fn set_rule(
     Ok(done.rows_affected() == 1)
 }
 
-/// Deletes a draft (used by its case, or its rule changed).
-pub async fn delete(conn: &mut PgConnection, draft: uuid::Uuid) -> Result<bool, DbError> {
+/// Deletes this moderator's draft in this server (used by its case, or its
+/// rule changed).
+pub async fn delete(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    actor: AccountId,
+    draft: uuid::Uuid,
+) -> Result<bool, DbError> {
     let done = obs::run(
         Delete,
         "case_drafts",
-        sqlx::query!("DELETE FROM case_drafts WHERE id = $1", draft).execute(conn),
+        sqlx::query!(
+            "DELETE FROM case_drafts WHERE id = $1 AND guild_id = $2 AND actor_id = $3",
+            draft,
+            i64::from(guild),
+            i64::from(actor)
+        )
+        .execute(conn),
     )
     .await?;
     Ok(done.rows_affected() == 1)

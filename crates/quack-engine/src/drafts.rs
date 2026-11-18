@@ -119,7 +119,7 @@ pub async fn save_page(
             return Ok(PageSaved::Expired);
         };
         if draft.rule != Some((submit.rule, submit.version)) {
-            drafts::delete(&mut tx, draft.id).await?;
+            drafts::delete(&mut tx, guild, principal.account, draft.id).await?;
             tx.commit().await?;
             return Ok(PageSaved::RuleChanged);
         }
@@ -158,10 +158,28 @@ async fn save(
             .collect(),
     );
     if let Err(problems) = validate_context(&fields, draft.guild, &inputs) {
-        drafts::save_page(tx, draft.id, submit.page, &values, false).await?;
+        drafts::save_page(
+            tx,
+            draft.guild,
+            draft.actor,
+            draft.id,
+            submit.page,
+            &values,
+            false,
+        )
+        .await?;
         return Ok(Some(PageSaved::Invalid(problems)));
     }
-    drafts::save_page(tx, draft.id, submit.page, &values, true).await?;
+    drafts::save_page(
+        tx,
+        draft.guild,
+        draft.actor,
+        draft.id,
+        submit.page,
+        &values,
+        true,
+    )
+    .await?;
     let total = pages(def);
     if submit.page < total {
         return Ok(Some(PageSaved::Next {
@@ -238,7 +256,7 @@ pub async fn apply(
         Ok(applied) => Ok(PageSaved::Applied(applied)),
         Err(ApplyError::Refused(DomainError::RuleChanged)) => {
             let mut conn = engine.db().conn().await?;
-            drafts::delete(&mut conn, draft).await?;
+            drafts::delete(&mut conn, guild, principal.account, draft).await?;
             Ok(PageSaved::RuleChanged)
         }
         Err(e) => Err(e),
@@ -310,6 +328,7 @@ pub async fn choose_rule(
     };
     drafts::set_rule(
         &mut conn,
+        guild,
         draft,
         principal.account,
         rule,
@@ -344,7 +363,16 @@ pub async fn choose_rule(
             })
             .collect(),
     );
-    drafts::save_page(&mut conn, draft, 1, &values, false).await?;
+    drafts::save_page(
+        &mut conn,
+        guild,
+        principal.account,
+        draft,
+        1,
+        &values,
+        false,
+    )
+    .await?;
     drop(conn);
     Box::pin(apply(engine, principal, draft, receipt)).await
 }

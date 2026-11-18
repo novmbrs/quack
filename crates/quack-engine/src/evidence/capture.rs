@@ -119,7 +119,7 @@ async fn save(
     let channel = settings::get(&mut tx, item.guild)
         .await?
         .and_then(|s| s.evidence_channel);
-    let case_files = evidence::count_files_for_case(&mut tx, item.case).await?;
+    let case_files = evidence::count_files_for_case(&mut tx, item.guild, item.case).await?;
     let total = u32::try_from(message.attachments.len()).unwrap_or(u32::MAX);
     let admitted = files_within_caps(case_files, total);
     let files: Vec<NewFile> = message
@@ -208,7 +208,7 @@ pub async fn finalize(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbEr
         return Ok(dead("evidence_missing"));
     };
     if item.state == EvidenceState::Saving {
-        evidence::fail_pending_files(&mut tx, item.id, false).await?;
+        evidence::fail_pending_files(&mut tx, guild, item.id, false).await?;
         if item.snapshot_stored() {
             evidence::mark_saved(&mut tx, guild, item.id).await?;
         } else {

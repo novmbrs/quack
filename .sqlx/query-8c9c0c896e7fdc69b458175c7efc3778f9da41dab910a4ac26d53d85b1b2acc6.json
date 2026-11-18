@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) AS \"n!\" FROM evidence_files WHERE case_id = $1",
+  "query": "SELECT count(*) AS \"n!\" FROM evidence WHERE guild_id = $1 AND case_id = $2",
   "describe": {
     "columns": [
       {
@@ -12,6 +12,7 @@
     ],
     "parameters": {
       "Left": [
+        "Int8",
         "Uuid"
       ]
     },
@@ -19,5 +20,5 @@
       null
     ]
   },
-  "hash": "7ead0cbd2702ff1df7229fe2ecc193264aac1370a6edd2e43d3eb246ca7a6f20"
+  "hash": "8c9c0c896e7fdc69b458175c7efc3778f9da41dab910a4ac26d53d85b1b2acc6"
 }

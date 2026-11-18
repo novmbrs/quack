@@ -4,7 +4,7 @@
 mod common;
 
 use anyhow::{Context as _, Result};
-use common::{account_id, case, db, db_with, guild, member_id, rule};
+use common::{account_id, case, db, db_with, guild, guild_id, member_id, rule};
 use quack_core::action::{
     ActionFailure, ActionKind, ActionSkipReason, ActionState, AttemptOutcome, Failure,
 };
@@ -441,17 +441,17 @@ async fn tracked_messages_compare_the_generation(
         (2, 0, 1)
     );
     assert!(
-        messages::start_create(&mut conn, row, 1, false)
+        messages::start_create(&mut conn, g, row, 1, false)
             .await?
             .is_some()
     );
     // The message moves while the sync is running.
     let mut tx = db.begin().await?;
-    messages::record_posted(&mut tx, row, 1, 2, Some(message(100))).await?;
-    assert!(messages::relocate(&mut tx, g, row, Some(channel(6))).await?);
+    messages::record_posted(&mut tx, g, row, 1, 2, Some(message(100))).await?;
+    assert!(messages::relocate(&mut tx, g, row, 1, Some(channel(6))).await?);
     tx.commit().await?;
     assert!(
-        !messages::record_posted(&mut conn, row, 1, 3, Some(message(101))).await?,
+        !messages::record_posted(&mut conn, g, row, 1, 3, Some(message(101))).await?,
         "old generation"
     );
     let moved = messages::get(&mut conn, g, row).await?.context("row")?;
@@ -463,12 +463,13 @@ async fn tracked_messages_compare_the_generation(
     };
     assert_eq!(moved.stale, vec![old]);
     assert!(
-        !messages::push_stale(&mut conn, row, old).await?,
+        !messages::push_stale(&mut conn, g, row, old).await?,
         "deduplicated"
     );
     for n in 0..6 {
         messages::push_stale(
             &mut conn,
+            g,
             row,
             Location {
                 channel_id: channel(7),
@@ -486,6 +487,7 @@ async fn tracked_messages_compare_the_generation(
     assert!(
         messages::remove_stale(
             &mut conn,
+            g,
             row,
             Location {
                 channel_id: channel(7),
@@ -494,10 +496,18 @@ async fn tracked_messages_compare_the_generation(
         )
         .await?
     );
-    assert!(messages::record_posted(&mut conn, row, 2, 3, Some(message(300))).await?);
+    assert!(messages::record_posted(&mut conn, g, row, 2, 3, Some(message(300))).await?);
     let found = messages::by_location(&mut conn, channel(6), message(300)).await?;
     assert_eq!(found.map(|m| m.id), Some(row));
-    assert!(messages::mark_gone(&mut conn, row, 2).await?);
+    assert!(
+        !messages::mark_gone(&mut conn, guild_id(99), row, 2).await?,
+        "another server's row"
+    );
+    assert!(messages::mark_gone(&mut conn, g, row, 2).await?);
+    assert!(
+        !messages::record_posted(&mut conn, g, row, 2, 4, None).await?,
+        "a gone row is not written at its generation"
+    );
     let gone = messages::by_owner(&mut conn, g, Owner::Case(c.id))
         .await?
         .context("row")?;
@@ -553,7 +563,7 @@ async fn evidence_is_admitted_once_and_saved_once(
     );
     assert!(evidence::mark_failed(&mut conn, g, id, EvidenceFailure::DiscordError).await?);
     assert_eq!(admit(&mut conn).await?, Admission::Recapture(id));
-    assert_eq!(evidence::count_for_case(&mut conn, c.id).await?, 1);
+    assert_eq!(evidence::count_for_case(&mut conn, g, c.id).await?, 1);
 
     let snapshot = Snapshot {
         author: Some(account_id(7)),
@@ -582,16 +592,52 @@ async fn evidence_is_admitted_once_and_saved_once(
         !evidence::save_snapshot(&mut conn, g, id, &snapshot, &files).await?,
         "stored once"
     );
-    assert_eq!(evidence::count_files_for_case(&mut conn, c.id).await?, 2);
+    assert_eq!(evidence::count_files_for_case(&mut conn, g, c.id).await?, 2);
     assert!(
         !evidence::mark_saved(&mut conn, g, id).await?,
         "a file is still pending"
     );
-    let pending = evidence::pending_files(&mut conn, id).await?;
+    assert_eq!(
+        evidence::pending_files(&mut conn, guild_id(99), id)
+            .await?
+            .len(),
+        0,
+        "another server's files"
+    );
+    let pending = evidence::pending_files(&mut conn, g, id).await?;
     let first = pending.first().context("pending file")?;
-    assert!(evidence::start_copy(&mut conn, first.id).await?.is_some());
+    assert_eq!(
+        evidence::start_copy(&mut conn, guild_id(99), first.id).await?,
+        None
+    );
+    let window = evidence::start_copy(&mut conn, g, first.id).await?;
+    assert!(window.is_some());
+    assert_eq!(
+        evidence::start_copy(&mut conn, g, first.id).await?,
+        window,
+        "a retry inside the window keeps its start"
+    );
     assert!(
-        evidence::mark_copied(&mut conn, first.id, channel(8), message(9), attachment(10)).await?
+        !evidence::mark_copied(
+            &mut conn,
+            guild_id(99),
+            first.id,
+            channel(8),
+            message(9),
+            attachment(10)
+        )
+        .await?
+    );
+    assert!(
+        evidence::mark_copied(
+            &mut conn,
+            g,
+            first.id,
+            channel(8),
+            message(9),
+            attachment(10)
+        )
+        .await?
     );
     assert!(evidence::mark_saved(&mut conn, g, id).await?);
     let saved = evidence::get(&mut conn, g, id).await?.context("evidence")?;

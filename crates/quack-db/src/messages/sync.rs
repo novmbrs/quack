@@ -18,6 +18,7 @@ use crate::{DbError, Tx};
 /// generation changed.
 pub async fn start_create(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     generation: u32,
     restart: bool,
@@ -28,11 +29,12 @@ pub async fn start_create(
         sqlx::query_scalar!(
             r#"UPDATE messages SET create_started_at = CASE WHEN $3 THEN now() ELSE COALESCE(create_started_at, now()) END,
                                    updated_at = now()
-               WHERE id = $1 AND generation = $2
+               WHERE id = $1 AND generation = $2 AND guild_id = $4 AND state = 'active'
                RETURNING create_started_at AS "started!""#,
             row.get(),
             rev(generation)?,
             restart,
+            i64::from(guild),
         )
         .fetch_optional(conn),
     )
@@ -45,6 +47,7 @@ pub async fn start_create(
 /// message it created onto `stale`.
 pub async fn record_posted(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     generation: u32,
     revision: u32,
@@ -57,11 +60,12 @@ pub async fn record_posted(
             "UPDATE messages SET posted_revision = GREATEST(posted_revision, $3),
                                  message_id = COALESCE(message_id, $4), create_started_at = NULL,
                                  last_error = NULL, updated_at = now()
-             WHERE id = $1 AND generation = $2",
+             WHERE id = $1 AND generation = $2 AND guild_id = $5 AND state = 'active'",
             row.get(),
             rev(generation)?,
             rev(revision)?,
             created.map(i64::from),
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -72,6 +76,7 @@ pub async fn record_posted(
 /// Records the file the message carries (the ticket transcript).
 pub async fn set_attachment(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     generation: u32,
     attachment: AttachmentId,
@@ -80,10 +85,12 @@ pub async fn set_attachment(
         Update,
         "messages",
         sqlx::query!(
-            "UPDATE messages SET attachment_id = $3, updated_at = now() WHERE id = $1 AND generation = $2",
+            "UPDATE messages SET attachment_id = $3, updated_at = now()
+             WHERE id = $1 AND generation = $2 AND guild_id = $4 AND state = 'active'",
             row.get(),
             rev(generation)?,
             i64::from(attachment),
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -95,6 +102,7 @@ pub async fn set_attachment(
 /// is dropped). Returns whether it was added.
 pub async fn push_stale(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     location: Location,
 ) -> Result<bool, DbError> {
@@ -108,9 +116,10 @@ pub async fn push_stale(
                  FROM jsonb_array_elements(stale || $2::jsonb) WITH ORDINALITY AS t(e, n)
                  WHERE n > jsonb_array_length(stale || $2::jsonb) - 5),
                updated_at = now()
-             WHERE id = $1 AND NOT stale @> $2::jsonb",
+             WHERE id = $1 AND guild_id = $3 AND NOT stale @> $2::jsonb",
             row.get(),
             entry as _,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -121,6 +130,7 @@ pub async fn push_stale(
 /// Removes a cleaned-up location. Returns whether it was listed.
 pub async fn remove_stale(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     location: Location,
 ) -> Result<bool, DbError> {
@@ -133,9 +143,10 @@ pub async fn remove_stale(
                  SELECT COALESCE(jsonb_agg(e ORDER BY n), '[]'::jsonb)
                  FROM jsonb_array_elements(stale) WITH ORDINALITY AS t(e, n) WHERE e <> $2::jsonb),
                updated_at = now()
-             WHERE id = $1 AND stale @> jsonb_build_array($2::jsonb)",
+             WHERE id = $1 AND guild_id = $3 AND stale @> jsonb_build_array($2::jsonb)",
             row.get(),
             entry as _,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -146,6 +157,7 @@ pub async fn remove_stale(
 /// `active` → `gone` at `generation`.
 pub async fn mark_gone(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     generation: u32,
 ) -> Result<bool, DbError> {
@@ -154,9 +166,10 @@ pub async fn mark_gone(
         "messages",
         sqlx::query!(
             "UPDATE messages SET state = 'gone', create_started_at = NULL, updated_at = now()
-             WHERE id = $1 AND generation = $2 AND state = 'active'",
+             WHERE id = $1 AND generation = $2 AND guild_id = $3 AND state = 'active'",
             row.get(),
             rev(generation)?,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -167,6 +180,7 @@ pub async fn mark_gone(
 /// Records a failed sync's machine code (at most 200 characters kept).
 pub async fn set_error(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     generation: u32,
     code: &str,
@@ -176,10 +190,12 @@ pub async fn set_error(
         Update,
         "messages",
         sqlx::query!(
-            "UPDATE messages SET last_error = $3, updated_at = now() WHERE id = $1 AND generation = $2",
+            "UPDATE messages SET last_error = $3, updated_at = now()
+             WHERE id = $1 AND generation = $2 AND guild_id = $4",
             row.get(),
             rev(generation)?,
             code,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -191,6 +207,7 @@ pub async fn set_error(
 /// token is valid (§10.3). Returns whether it changed.
 pub async fn make_private(
     conn: &mut PgConnection,
+    guild: GuildId,
     row: MessageRowId,
     generation: u32,
 ) -> Result<bool, DbError> {
@@ -199,10 +216,11 @@ pub async fn make_private(
         "messages",
         sqlx::query!(
             "UPDATE messages SET private = true, create_started_at = NULL, updated_at = now()
-             WHERE id = $1 AND generation = $2 AND kind = 'case_receipt' AND NOT private
-               AND message_id IS NULL AND token_expires_at > now()",
+             WHERE id = $1 AND generation = $2 AND guild_id = $3 AND state = 'active'
+               AND kind = 'case_receipt' AND NOT private AND message_id IS NULL AND token_expires_at > now()",
             row.get(),
             rev(generation)?,
+            i64::from(guild),
         )
         .execute(conn),
     )
@@ -210,15 +228,23 @@ pub async fn make_private(
     Ok(done.rows_affected() == 1)
 }
 
-/// Forgets a receipt's interaction token.
-pub async fn clear_token(conn: &mut PgConnection, row: MessageRowId) -> Result<bool, DbError> {
+/// Forgets a receipt's interaction token, only while it is still `token`
+/// (a newer token is never cleared).
+pub async fn clear_token(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    row: MessageRowId,
+    token: &str,
+) -> Result<bool, DbError> {
     let done = obs::run(
         Update,
         "messages",
         sqlx::query!(
             "UPDATE messages SET interaction_token = NULL, token_expires_at = NULL, updated_at = now()
-             WHERE id = $1 AND interaction_token IS NOT NULL",
+             WHERE id = $1 AND guild_id = $2 AND interaction_token = $3",
             row.get(),
+            i64::from(guild),
+            token,
         )
         .execute(conn),
     )
@@ -228,11 +254,12 @@ pub async fn clear_token(conn: &mut PgConnection, row: MessageRowId) -> Result<b
 
 /// Posts the message anew in `channel` (a move, a repost after deletion):
 /// the old location goes to `stale`, `generation + 1`, `active`, bumped and
-/// synced. Returns whether the row exists.
+/// synced. Returns whether the row was still at `generation`.
 pub async fn relocate(
     tx: &mut Tx,
     guild: GuildId,
     row: MessageRowId,
+    generation: u32,
     channel: Option<ChannelId>,
 ) -> Result<bool, DbError> {
     let done = obs::run(
@@ -248,10 +275,11 @@ pub async fn relocate(
                  WHERE n > jsonb_array_length(stale) + 1 - 5) END,
                channel_id = $3, message_id = NULL, generation = generation + 1, create_started_at = NULL,
                state = 'active', wanted_revision = wanted_revision + 1, wanted_at = now(), updated_at = now()
-             WHERE guild_id = $1 AND id = $2",
+             WHERE guild_id = $1 AND id = $2 AND generation = $4",
             i64::from(guild),
             row.get(),
             channel.map(i64::from),
+            rev(generation)?,
         )
         .execute(&mut **tx),
     )
@@ -341,8 +369,8 @@ pub async fn move_open_appeal_posts(
     let rows = obs::run(
         Update,
         "messages",
-        sqlx::query_scalar!(
-            "SELECT m.id FROM messages m JOIN appeals a ON a.id = m.appeal_id
+        sqlx::query!(
+            "SELECT m.id, m.generation FROM messages m JOIN appeals a ON a.id = m.appeal_id
              WHERE m.guild_id = $1 AND m.kind = 'appeal_post' AND m.state = 'active'
                AND m.channel_id IS DISTINCT FROM $2 AND a.state IN ('pending', 'needs_information')
              ORDER BY m.id FOR UPDATE OF m",
@@ -352,9 +380,18 @@ pub async fn move_open_appeal_posts(
         .fetch_all(&mut **tx),
     )
     .await?;
-    let rows: Vec<MessageRowId> = rows.into_iter().map(MessageRowId::from_uuid).collect();
-    for row in &rows {
-        relocate(tx, guild, *row, Some(channel)).await?;
+    let mut moved = Vec::with_capacity(rows.len());
+    for r in rows {
+        let row = MessageRowId::from_uuid(r.id);
+        relocate(
+            tx,
+            guild,
+            row,
+            crate::pg::count(r.generation)?,
+            Some(channel),
+        )
+        .await?;
+        moved.push(row);
     }
-    Ok(rows)
+    Ok(moved)
 }
