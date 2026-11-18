@@ -180,6 +180,11 @@ pub fn samples() -> Vec<Sample> {
         error::replacement_invalid(12),
     ));
     v.push(text(
+        "error.case_numbers_exhausted",
+        "",
+        error::case_numbers_exhausted(),
+    ));
+    v.push(text(
         "error.honeypot_policy_changed",
         "",
         error::honeypot_policy_changed(),
@@ -346,6 +351,7 @@ pub fn api_codes() -> Vec<ApiCode> {
         ApiCode::FileUnavailable,
         ApiCode::IdempotencyKeyReused,
         ApiCode::ContextChanged,
+        ApiCode::CaseNumbersExhausted,
         ApiCode::BodyTooLarge,
         ApiCode::UnsupportedMediaType,
         ApiCode::IdempotencyKeyRequired,

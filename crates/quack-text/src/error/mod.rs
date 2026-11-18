@@ -181,6 +181,14 @@ pub fn replacement_invalid(number: u64) -> Text {
     ))
 }
 
+/// `error.case_numbers_exhausted`: the server has used every case number
+/// Quack can store (§4.4).
+pub fn case_numbers_exhausted() -> Text {
+    Text::fixed(
+        "No case was added. This server has reached the highest case number Quack can store.",
+    )
+}
+
 /// `error.honeypot_policy_changed`.
 pub fn honeypot_policy_changed() -> Text {
     Text::fixed("The honeypot settings changed, so Quack didn't add a case for this post.")

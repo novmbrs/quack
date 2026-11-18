@@ -61,6 +61,11 @@ discord: Someone else changed this case's context. Open it again before you save
 plain:   Someone else changed this case's context. Open it again before you save.
 model:   [Fixed("Someone else changed this case's context. Open it again before you save.")]
 
+## case_numbers_exhausted
+discord: No case was added. This server has reached the highest case number Quack can store.
+plain:   No case was added. This server has reached the highest case number Quack can store.
+model:   [Fixed("No case was added. This server has reached the highest case number Quack can store.")]
+
 ## body_too_large
 discord: That's too much to save at once. The limit is 256 KB.
 plain:   That's too much to save at once. The limit is 256 KB.

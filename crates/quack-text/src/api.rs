@@ -36,6 +36,8 @@ pub enum ApiCode {
     IdempotencyKeyReused,
     /// `409 context_changed`.
     ContextChanged,
+    /// `409 case_numbers_exhausted`.
+    CaseNumbersExhausted,
     /// `413 body_too_large`.
     BodyTooLarge,
     /// `415 unsupported_media_type`.
@@ -70,6 +72,7 @@ impl ApiCode {
             Self::FileUnavailable => "file_unavailable",
             Self::IdempotencyKeyReused => "idempotency_key_reused",
             Self::ContextChanged => "context_changed",
+            Self::CaseNumbersExhausted => "case_numbers_exhausted",
             Self::BodyTooLarge => "body_too_large",
             Self::UnsupportedMediaType => "unsupported_media_type",
             Self::IdempotencyKeyRequired => "idempotency_key_required",
@@ -96,6 +99,7 @@ impl ApiCode {
             Self::FileUnavailable => file_unavailable(),
             Self::IdempotencyKeyReused => idempotency_key_reused(),
             Self::ContextChanged => crate::error::context_changed(),
+            Self::CaseNumbersExhausted => crate::error::case_numbers_exhausted(),
             Self::BodyTooLarge => body_too_large(),
             Self::IdempotencyKeyRequired => idempotency_key_required(),
             Self::RateLimited(seconds) => rate_limited(seconds),

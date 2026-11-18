@@ -2480,7 +2480,7 @@ matching error code (§14.6).
 | `error.too_many_links` | Add at most 10 message links at a time. |
 | `error.replacement_invalid` | Case #{number} can't be replaced: only a voided case in this server that has no replacement yet can be. |
 | `error.honeypot_policy_changed` | The honeypot settings changed, so Quack didn't add a case for this post. |
-| `error.case_numbers_exhausted` | No case was added. This server has reached the highest case number Quack can store. *(Not yet in `quack-text`; §4.4.)* |
+| `error.case_numbers_exhausted` | No case was added. This server has reached the highest case number Quack can store. |
 | `interaction.busy` | Quack is busy right now. Try again in a moment. |
 | `interaction.expired_button` | This button has expired. Run the command again. |
 | `interaction.legacy_button` | This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead. |
@@ -3460,7 +3460,8 @@ id fits, the API uses it (domain errors through
 `{name}` in `api.rule_name_taken` is bold on Discord, like `{rule}`.
 Transport codes that reuse another text (snapshot `api.code`):
 `action_not_found` uses `error.action_not_found`, `context_changed` uses
-`error.context_changed`, `discord_unavailable` uses
+`error.context_changed`, `case_numbers_exhausted` uses
+`error.case_numbers_exhausted`, `discord_unavailable` uses
 `error.discord_unavailable`, and `unsupported_media_type` uses the
 `api.invalid_json` words.
 
