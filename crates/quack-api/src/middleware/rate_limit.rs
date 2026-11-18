@@ -202,7 +202,7 @@ pub(crate) async fn layer(State(state): State<ApiState>, request: Request, next:
                     .and_then(|p| {
                         p.iter()
                             .find(|(k, _)| *k == "guild_id")
-                            .map(|(_, v)| v.to_owned())
+                            .map(|(_, v)| guild_bucket(v))
                     });
                 key.push_str(":g:");
                 key.push_str(&guild.unwrap_or_default());
@@ -230,10 +230,26 @@ pub(crate) async fn layer(State(state): State<ApiState>, request: Request, next:
     next.run(Request::from_parts(parts, body)).await
 }
 
+/// A server's part of a rate-limit key, canonical as the staff extractor
+/// parses it: every spelling of one server is one bucket, and every
+/// malformed one shares the account's empty bucket.
+fn guild_bucket(raw: &str) -> String {
+    raw.parse::<quack_core::ids::GuildId>()
+        .map(|g| g.get().to_string())
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
+
+    #[test]
+    fn spellings_of_one_server_share_a_bucket() {
+        assert_eq!(super::guild_bucket("1001"), super::guild_bucket("0001001"));
+        assert_eq!(super::guild_bucket("x"), super::guild_bucket("%31"));
+        assert_ne!(super::guild_bucket("1001"), super::guild_bucket("1002"));
+    }
 
     #[test]
     fn buckets_refill_and_say_when() {
