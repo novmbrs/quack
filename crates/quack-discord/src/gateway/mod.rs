@@ -274,6 +274,7 @@ impl Gateway {
                         // the whole frame (interaction tokens, message text).
                         let (kind, event) = describe(error.kind());
                         tracing::warn!(kind, event, "couldn't read a gateway event");
+                        self.lost(kind, event.as_deref());
                     }
                     continue;
                 }
@@ -294,8 +295,27 @@ impl Gateway {
             self.close().await;
         }
         self.status.set_connected(false);
+        self.guilds.untrust(false);
         dispatcher.stop().await;
         result
+    }
+
+    /// A frame Twilight couldn't read. An unreadable event other than a
+    /// message or an interaction may have been a cache update the resume
+    /// won't replay: the cache isn't trusted until a new session. A broken
+    /// connection (compression, reconnect) isn't trusted until it is back.
+    fn lost(&self, kind: &str, event: Option<&str>) {
+        if kind == "deserializing" {
+            let harmless = event.is_some_and(|e| {
+                e.starts_with("MESSAGE_") || e.starts_with("TYPING") || e == "INTERACTION_CREATE"
+            });
+            if !harmless {
+                self.guilds.untrust(true);
+            }
+        } else {
+            self.status.set_connected(false);
+            self.guilds.untrust(false);
+        }
     }
 
     /// Updates the caches and the connection state for one event.

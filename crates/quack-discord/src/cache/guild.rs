@@ -30,6 +30,9 @@ pub(crate) const NAME: CacheName = CacheName::new("guilds");
 #[derive(Debug, Default)]
 struct State {
     connected: bool,
+    /// A cache update was lost (an unreadable event): only a new session
+    /// (`READY`) rebuilds the cache, a resume doesn't.
+    tainted: bool,
     loaded: HashSet<GuildId>,
     quack_id: Option<AccountId>,
     quack_members: HashMap<GuildId, Member>,
@@ -95,11 +98,12 @@ impl GuildCache {
         match event {
             Event::Ready(ready) => {
                 state.connected = true;
+                state.tainted = false;
                 state.quack_id = convert::id(ready.user.id);
                 state.loaded.clear();
                 state.quack_members.clear();
             }
-            Event::Resumed => state.connected = true,
+            Event::Resumed => state.connected = !state.tainted,
             Event::GatewayClose(_)
             | Event::GatewayReconnect
             | Event::GatewayInvalidateSession(_) => {
@@ -154,6 +158,15 @@ impl GuildCache {
             }
             _ => {}
         }
+    }
+
+    /// Stops trusting the cache: until a resume (the connection broke or
+    /// the shard stopped), or with `lost_update` until a new session (an
+    /// event the cache needed couldn't be read).
+    pub(crate) fn untrust(&self, lost_update: bool) {
+        let mut state = self.write();
+        state.connected = false;
+        state.tainted |= lost_update;
     }
 
     /// Whether the cache is exact for this server right now.

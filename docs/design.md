@@ -8153,3 +8153,11 @@ folds these into the sections (or changes the code) and removes them here.
     request and writes its answer (a member, or its absence) only if no
     change came in between, under the same lock, so a late answer never
     resurrects a departed member or erases a rejoin.
+66. §11.9, §11.10 (Discord review MAJOR 11) → a gateway frame Twilight
+    can't read distrusts the guild cache: an unreadable event other than a
+    message or interaction may have been a cache update a resume won't
+    replay, so the cache is untrusted until the next `READY` (facts come
+    from REST meanwhile); a compression or reconnect failure marks the
+    session disconnected until it resumes; the shard stopping untrusts the
+    cache too. (A transport EOF that Twilight resumes on its own is not
+    visible to Quack; the resume replays what was missed.)

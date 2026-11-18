@@ -76,6 +76,24 @@ fn quack_update(roles: &[&str]) -> Event {
 }
 
 #[test]
+fn a_lost_cache_update_waits_for_a_new_session() {
+    let (cache, members) = loaded();
+    assert!(cache.is_trusted(g(1)));
+    cache.untrust(true);
+    assert!(!cache.is_trusted(g(1)));
+    cache.update(&Event::Resumed);
+    assert!(!cache.is_trusted(g(1)), "a resume doesn't replay it");
+    feed(&cache, &members, &[ready(), guild_create()]);
+    assert!(cache.is_trusted(g(1)), "a new session rebuilt it");
+    cache.untrust(false);
+    cache.update(&Event::Resumed);
+    assert!(
+        cache.is_trusted(g(1)),
+        "a broken connection only needs the resume"
+    );
+}
+
+#[test]
 fn trusted_only_while_connected_and_loaded() {
     let (cache, members) = (GuildCache::new(), MemberCache::default());
     assert!(!cache.is_trusted(g(1)));
