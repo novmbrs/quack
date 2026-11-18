@@ -112,7 +112,11 @@ export async function unwrap<T>(pending: Promise<Result<T>>): Promise<T> {
   try {
     result = await pending;
   } catch {
-    throw new ApiError(0, "network_error", "Quack can't be reached right now. Check your connection and try again.");
+    throw new ApiError(
+      0,
+      "network_error",
+      "Quack can't be reached right now. Check your connection and try again.",
+    );
   }
   const { data, error, response } = result;
   if (response.ok) return data as T;
@@ -132,7 +136,8 @@ export function toApiError(response: Response, body: unknown): ApiError {
       fields: detail?.fields,
       problems: detail?.problems,
       traceId: detail?.trace_id ?? null,
-      retryAfter: detail?.retry_after_seconds ?? (Number.isFinite(retryHeader) ? retryHeader : null),
+      retryAfter:
+        detail?.retry_after_seconds ?? (Number.isFinite(retryHeader) ? retryHeader : null),
     },
   );
 }

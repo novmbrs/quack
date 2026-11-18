@@ -14,7 +14,15 @@ import { Outcome, OutcomeBadge } from "~/features/cases/Outcome";
 import { Timeline } from "~/features/cases/Timeline";
 import { voidCase } from "~/features/cases/writes";
 import { UserChip } from "~/features/people/User";
-import { appealMeta, dmOutcome, fullDate, levelName, plural, sourceLabel, stamp } from "~/lib/format";
+import {
+  appealMeta,
+  dmOutcome,
+  fullDate,
+  levelName,
+  plural,
+  sourceLabel,
+  stamp,
+} from "~/lib/format";
 import { useCan } from "~/lib/permissions";
 import { Badge } from "~/ui/Badge";
 import { Button } from "~/ui/Button";
@@ -279,7 +287,12 @@ function CasePage() {
         replacesCaseNumber={c.number}
       />
       {editing ? (
-        <EditContextDialog guildId={guildId} value={c} open={editing} onClose={() => setEditing(false)} />
+        <EditContextDialog
+          guildId={guildId}
+          value={c}
+          open={editing}
+          onClose={() => setEditing(false)}
+        />
       ) : null}
       <AddEvidenceDialog
         guildId={guildId}

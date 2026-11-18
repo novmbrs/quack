@@ -71,7 +71,9 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
   return (
     <Empty
       icon={forbidden ? "lock" : missing ? "search" : "error"}
-      title={forbidden ? "You can't open this" : missing ? "Nothing here" : "Quack couldn't load this"}
+      title={
+        forbidden ? "You can't open this" : missing ? "Nothing here" : "Quack couldn't load this"
+      }
       action={
         retry && !forbidden && !missing ? (
           <Button variant="secondary" size="sm" onClick={retry}>

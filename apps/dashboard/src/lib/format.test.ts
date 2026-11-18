@@ -24,7 +24,7 @@ describe("duration", () => {
     expect(duration(45)).toBe("45 seconds");
     expect(duration(0)).toBe("0 seconds");
   });
-  it("drops the one after \"the last\"", () => {
+  it('drops the one after "the last"', () => {
     expect(last(86400)).toBe("day");
     expect(last(7 * 86400)).toBe("7 days");
     expect(last(5400)).toBe("1 hour 30 minutes");

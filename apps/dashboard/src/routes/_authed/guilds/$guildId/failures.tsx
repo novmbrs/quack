@@ -191,8 +191,8 @@ function Failures() {
         <>
           {!dismissed && failures.data.actions.length > 0 ? (
             <p className={s.intro}>
-              Quack tries again on its own while it can. These need a person: usually Quack's role is
-              below the member's, or it's missing a permission. Fix that in Discord, then retry.
+              Quack tries again on its own while it can. These need a person: usually Quack's role
+              is below the member's, or it's missing a permission. Fix that in Discord, then retry.
               Dismissing takes an action off this list; the case keeps its history.
             </p>
           ) : null}

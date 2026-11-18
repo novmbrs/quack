@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,9 +85,16 @@ function skip(node: ts.Node): boolean {
   // Class names, keys, and paths in JSX attributes aren't read by people.
   if (ts.isJsxAttribute(parent)) {
     const name = parent.name.getText();
-    return !["title", "label", "aria-label", "placeholder", "alt", "description", "topic", "hint"].includes(
-      name,
-    );
+    return ![
+      "title",
+      "label",
+      "aria-label",
+      "placeholder",
+      "alt",
+      "description",
+      "topic",
+      "hint",
+    ].includes(name);
   }
   return false;
 }
@@ -109,9 +118,7 @@ function scan(path: string): Hit[] {
     for (const [pattern, use] of banned) {
       const match = pattern.exec(trimmed);
       if (!match) continue;
-      const ok = allowed.some(
-        (a) => (a.file === "*" || a.file === file) && a.text.test(trimmed),
-      );
+      const ok = allowed.some((a) => (a.file === "*" || a.file === file) && a.text.test(trimmed));
       if (ok) continue;
       const { line } = source.getLineAndCharacterOfPosition(node.getStart());
       hits.push({ file, line: line + 1, text: trimmed, word: match[0], use });
@@ -157,7 +164,10 @@ describe("glossary", () => {
     );
     const words: string[] = [];
     const visit = (node: ts.Node) => {
-      if (ts.isJsxText(node) || ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && !skip(node))) {
+      if (
+        ts.isJsxText(node) ||
+        ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && !skip(node))
+      ) {
         const text = ts.isJsxText(node) ? node.text : node.text;
         for (const [pattern] of banned) {
           const m = pattern.exec(text);

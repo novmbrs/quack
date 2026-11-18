@@ -104,7 +104,9 @@ export type Outcome = { label: string; tone: Tone };
  * actionOutcome is the short outcome word for an action (design §12.2): in
  * progress, done, failed, couldn't confirm, cancelled, or left in place.
  */
-export function actionOutcome(a: Pick<Action, "state"> & Partial<Pick<Action, "failure_reason">>): Outcome {
+export function actionOutcome(
+  a: Pick<Action, "state"> & Partial<Pick<Action, "failure_reason">>,
+): Outcome {
   switch (a.state) {
     case "pending":
     case "running":

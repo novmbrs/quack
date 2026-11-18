@@ -71,7 +71,8 @@ function Cases() {
   const archived = useQuery(rulesQuery(guildId, true));
   const rules = [...(active.data ?? []), ...(archived.data ?? [])];
 
-  const set = (patch: Partial<Search>) => void navigate({ search: (prev) => ({ ...prev, ...patch }) });
+  const set = (patch: Partial<Search>) =>
+    void navigate({ search: (prev) => ({ ...prev, ...patch }) });
 
   const columns = useMemo(() => caseColumns(guildId), [guildId]);
 

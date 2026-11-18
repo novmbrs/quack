@@ -71,8 +71,7 @@ export const guildMeQuery = (guildId: string) =>
 export const healthQuery = (guildId: string) =>
   queryOptions({
     queryKey: [...keys.guild(guildId), "health"],
-    queryFn: () =>
-      unwrap(api.GET("/api/guilds/{guild_id}/health", { params: guildPath(guildId) })),
+    queryFn: () => unwrap(api.GET("/api/guilds/{guild_id}/health", { params: guildPath(guildId) })),
     staleTime: 30_000,
   });
 

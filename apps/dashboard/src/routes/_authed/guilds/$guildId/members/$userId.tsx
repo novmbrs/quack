@@ -207,7 +207,9 @@ function Summary({ summary }: { summary: MemberSummary }) {
                 <span className={s.bar}>
                   <span
                     className={s.fill}
-                    style={{ width: `${Math.max(4, Math.round((r.count / summary.total) * 100))}%` }}
+                    style={{
+                      width: `${Math.max(4, Math.round((r.count / summary.total) * 100))}%`,
+                    }}
                   />
                 </span>
                 <span className={s.ruleCount}>
