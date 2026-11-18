@@ -211,19 +211,6 @@ impl RefusalKind {
             _ => Self::Other,
         }
     }
-
-    /// Whether the thing asked about does not exist (any `Unknown…` code).
-    pub const fn is_unknown_resource(self) -> bool {
-        matches!(
-            self,
-            Self::UnknownGuild
-                | Self::UnknownMember
-                | Self::UnknownUser
-                | Self::UnknownBan
-                | Self::UnknownMessage
-                | Self::UnknownChannel
-        )
-    }
 }
 
 /// Why a request may have taken effect without Quack learning the answer.

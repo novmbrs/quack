@@ -5,7 +5,6 @@
 //! An initial callback is not idempotent: a second one for the same
 //! interaction is refused, so callers never repeat an ack.
 
-use quack_core::ids::MessageId;
 use serde::Serialize;
 use twilight_model::channel::message::{Component, MessageFlags};
 
@@ -125,23 +124,6 @@ impl DiscordClient {
         .await
     }
 
-    /// Replaces the message the component is on at once (type 7).
-    pub async fn update_message(
-        &self,
-        interaction: &InteractionRef,
-        message: &RenderedMessage,
-    ) -> Outcome<()> {
-        let data = message_data(message, COMPONENTS_V2);
-        self.callback(
-            interaction,
-            &Callback {
-                kind: 7,
-                data: Some(data),
-            },
-        )
-        .await
-    }
-
     /// Opens a modal (type 9).
     pub async fn open_modal(
         &self,
@@ -223,22 +205,5 @@ impl DiscordClient {
                     },
                 )
             })
-    }
-
-    /// Edits a follow-up message.
-    pub async fn edit_followup(
-        &self,
-        token: &InteractionToken,
-        message_id: MessageId,
-        message: &RenderedMessage,
-    ) -> Outcome<()> {
-        let route = Route::webhook_message(
-            Method::Patch,
-            self.application_id(),
-            token.expose(),
-            &message_id.to_string(),
-        );
-        self.object(with_json(route, &message_data(message, COMPONENTS_V2)))
-            .await
     }
 }

@@ -171,8 +171,6 @@ mod tests {
         assert_eq!(done.class(), RestOutcome::Done);
         let refused: Outcome<u8> = Outcome::Refused(Refusal::new(404, Some(10007)));
         assert_eq!(refused.refusal(), Some(RefusalKind::UnknownMember));
-        assert!(RefusalKind::UnknownMember.is_unknown_resource());
-        assert!(!RefusalKind::MissingAccess.is_unknown_resource());
         assert_eq!(refused.class(), RestOutcome::Refused);
         assert_eq!(
             Outcome::<()>::RetryAfter(Duration::ZERO).class(),
