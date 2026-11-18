@@ -60,9 +60,44 @@ pub async fn handle(engine: &Engine, job: &ClaimedJob, phase: Phase) -> Result<H
         (JobKind::RunAction, Phase::Finalize) => crate::actions::finalize(engine, job).await,
         (JobKind::SendDm, Phase::Run) => crate::dms::send(engine, job).await,
         (JobKind::SendDm, Phase::Finalize) => crate::dms::finalize(engine, job).await,
+        (JobKind::SyncMessage, Phase::Run) => crate::messages::sync(engine, job).await,
+        (JobKind::SyncMessage, Phase::Finalize) => crate::messages::finalize(engine, job).await,
+        (JobKind::PostModLog, Phase::Run) => crate::modlog::post(engine, job).await,
+        (JobKind::PostModLog, Phase::Finalize) => crate::modlog::finalize_post(engine, job).await,
+        (JobKind::CaptureEvidence, Phase::Run) => crate::evidence::capture(engine, job).await,
+        (JobKind::CaptureEvidence, Phase::Finalize) => crate::evidence::finalize(engine, job).await,
+        (JobKind::Housekeeping, _) => housekeeping(engine, job).await,
         _ => Ok(dead("no_handler")),
     }
 }
+
+/// One `housekeeping` run (§16.6): deletes expired rows in batches for at
+/// most 60 seconds, then runs again at once when rows remain, else in 10
+/// minutes. Safe to repeat: it only deletes what has expired.
+async fn housekeeping(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError> {
+    crate::obs::use_case("housekeeping", None, async {
+        let mut conn = engine.db().conn().await?;
+        let report = quack_db::housekeeping::run(
+            &mut conn,
+            &engine.config().session_key_fingerprint,
+            HOUSEKEEPING_BUDGET,
+        )
+        .await?;
+        let next = if report.more {
+            RunAt::Now
+        } else {
+            RunAt::In(HOUSEKEEPING_EVERY)
+        };
+        tracing::debug!(job_id = %job.id.get(), ?report, "housekeeping pass");
+        Ok(Handled::Settle(JobResult::Reschedule { at: next }))
+    })
+    .await
+}
+
+/// The longest one housekeeping run deletes for.
+const HOUSEKEEPING_BUDGET: std::time::Duration = std::time::Duration::from_secs(60);
+/// How often housekeeping runs when nothing is left.
+const HOUSEKEEPING_EVERY: std::time::Duration = std::time::Duration::from_mins(10);
 
 /// Retry with the kind's backoff after this attempt.
 pub(crate) fn retry(job: &ClaimedJob, error: impl Into<String>) -> JobResult {

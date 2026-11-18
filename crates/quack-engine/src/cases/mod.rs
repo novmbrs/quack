@@ -3,11 +3,14 @@
 
 mod apply;
 mod apply_tx;
-// mod edit;
-// mod evidence_add;
+mod card;
+mod edit;
+mod evidence_add;
 mod facts;
-// mod view;
-// mod view_member;
+mod records;
+mod timeline;
+mod view;
+mod view_member;
 mod void;
 
 use quack_core::DomainError;
@@ -24,8 +27,18 @@ use crate::port::InteractionToken;
 use crate::principal::Principal;
 
 pub use apply::apply_rule;
-// pub use edit::edit_context;
-// pub use evidence_add
+pub(crate) use card::{card, receipt};
+pub use edit::{ContextEdited, edit_context};
+pub use evidence_add::{EvidenceAdded, add_evidence};
+pub(crate) use records::CaseRecords;
+pub use view::{
+    ActionItem, AppealItem, AttemptItem, CaseView, DmItem, EvidenceFileItem, EvidenceItem,
+    TimelineItem, TimelineText, VoidItem, get, get_by_number,
+};
+pub use view_member::{
+    MemberAppeal, MemberAppealEvent, MemberCaseView, MemberContextLine, MemberEmbed,
+    MemberEvidence, MemberEvidenceFile, member_case,
+};
 pub use void::{VoidEffects, Voided, void_case};
 
 /// Who applies a rule.

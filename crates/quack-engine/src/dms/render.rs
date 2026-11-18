@@ -97,7 +97,6 @@ async fn case_dm(
 }
 
 /// A case's answered context, in its rule version's field order.
-#[allow(dead_code, reason = "the staff and member case views use it next")]
 pub(crate) fn context_lines(def: &RuleDefinition, values: &ContextValues) -> Vec<ContextLine> {
     let fields = def.context_fields();
     let values = values.clone().with_kinds(&fields);

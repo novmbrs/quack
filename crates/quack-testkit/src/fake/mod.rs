@@ -25,7 +25,7 @@ use quack_text::Msg;
 use time::OffsetDateTime;
 use tokio::sync::Notify;
 
-pub use state::{FakeMessage, GuildSetup, MemberSetup, World};
+pub use state::{FakeMessage, GuildSetup, GuildState, MemberSetup, World, everyone_permissions};
 
 /// Every kind of port call, for scripting and assertions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -93,6 +93,8 @@ pub enum Call {
 /// How one scripted call goes.
 #[derive(Clone, Debug)]
 pub enum Script {
+    /// The call behaves normally (to script a later call of the kind).
+    Pass,
     /// Discord definitely refuses; nothing changes.
     Refuse(Refusal),
     /// Rate limited before sending; nothing changes.

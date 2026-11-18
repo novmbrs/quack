@@ -16,9 +16,12 @@
 pub mod actions;
 pub mod cache;
 pub mod cases;
+mod channels;
 pub mod dms;
 mod engine;
+pub mod evidence;
 pub mod jobs;
+pub mod messages;
 pub mod modlog;
 mod obs;
 mod opkey;

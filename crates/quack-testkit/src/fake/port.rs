@@ -24,7 +24,7 @@ impl FakeDiscord {
         recorded.scripted = script.as_ref().map(|s| format!("{s:?}"));
         self.record(recorded);
         match script {
-            None => self.world(effect),
+            None | Some(Script::Pass) => self.world(effect),
             Some(Script::Refuse(r)) => Outcome::Refused(r),
             Some(Script::RetryAfter(d)) => Outcome::RetryAfter(d),
             Some(Script::NotSent) => Outcome::NotSent(NotSentCause::Connection),

@@ -11,6 +11,11 @@ use quack_engine::port::{FetchedAttachment, FetchedMessage};
 use quack_text::Msg;
 use time::OffsetDateTime;
 
+/// What @everyone may do in the fake's servers.
+pub fn everyone_permissions() -> Permissions {
+    Permission::ViewChannel | Permission::SendMessages | Permission::ReadMessageHistory
+}
+
 /// What one server holds.
 #[derive(Clone, Debug)]
 pub struct GuildState {
@@ -173,7 +178,7 @@ impl World {
             id: setup.id.everyone_role(),
             name: "@everyone".to_owned(),
             position: 0,
-            permissions: Permission::ViewChannel | Permission::SendMessages,
+            permissions: everyone_permissions(),
             managed: false,
         };
         let mut members = HashMap::new();
@@ -209,10 +214,13 @@ impl World {
         }
     }
 
-    /// Adds (or replaces) a member.
+    /// Adds (or replaces) a member. Their server permissions include
+    /// @everyone's, as Discord computes them.
     pub fn add_member(&mut self, guild: GuildId, setup: &MemberSetup) {
         if let Some(g) = self.guilds.get_mut(&guild) {
-            g.members.insert(setup.id, setup.facts());
+            let mut facts = setup.facts();
+            facts.permissions = facts.permissions | everyone_permissions();
+            g.members.insert(setup.id, facts);
         }
         self.accounts.insert(
             setup.id.account(),
@@ -353,6 +361,14 @@ impl World {
             content_type: content_type.map(str::to_owned),
             size_bytes: size,
             url,
+        }
+    }
+
+    /// Discord forgets every nonce (its window passed): a create repeated
+    /// with an old nonce now creates a new message.
+    pub fn forget_nonces(&mut self) {
+        for m in self.messages.values_mut() {
+            m.nonce = None;
         }
     }
 

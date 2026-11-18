@@ -207,3 +207,14 @@ pub(crate) fn since(
 ) -> std::time::Duration {
     std::time::Duration::try_from(later - earlier).unwrap_or_default()
 }
+
+pub(crate) const fn message_kind(kind: quack_core::messages::MessageKind) -> labels::MessageKind {
+    use quack_core::messages::MessageKind as K;
+    match kind {
+        K::CaseReceipt => labels::MessageKind::CaseReceipt,
+        K::AppealPost => labels::MessageKind::AppealPost,
+        K::TicketPanel => labels::MessageKind::TicketPanel,
+        K::TicketPost => labels::MessageKind::TicketPost,
+        K::HoneypotWarning => labels::MessageKind::HoneypotWarning,
+    }
+}

@@ -1,6 +1,8 @@
 //! The moderation log (§9): writing entries with their typed links, posting
 //! them to the log channel, and reading them.
 
+mod post;
+mod read;
 use quack_core::ids::{AccountId, GuildId, ModLogId};
 use quack_core::modlog::{ModLogEntry, ModLogLinks, ModLogSource};
 use quack_db::modlog::{self, NewEntry};
@@ -8,6 +10,9 @@ use quack_db::{DbError, Tx};
 use quack_telemetry::spans::SpanEvent;
 
 use crate::obs::{event, kv};
+
+pub use post::{finalize_post, post};
+pub use read::{EntryView, ModLogPage, entry_text, list};
 
 /// Who wrote an entry and from where.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

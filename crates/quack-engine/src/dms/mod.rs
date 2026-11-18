@@ -21,6 +21,7 @@ use quack_telemetry::metrics;
 use crate::modlog::{self, By};
 use crate::{Engine, obs};
 
+pub(crate) use render::context_lines;
 pub use send::{finalize, send};
 
 /// The `send_dm` payload.

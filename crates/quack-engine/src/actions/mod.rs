@@ -19,6 +19,7 @@ use quack_db::{DbError, Tx};
 
 use crate::modlog::{self, By};
 
+pub(crate) use controls::view;
 pub use controls::{ActionError, ControlDone, dismiss, retry, undo};
 pub use run::{finalize, run};
 
