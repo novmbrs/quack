@@ -20,7 +20,6 @@ mod auth;
 mod bot;
 mod dedupe;
 mod errors;
-mod forms;
 mod gateway;
 mod handlers;
 pub mod modules;

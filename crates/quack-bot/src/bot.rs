@@ -12,7 +12,6 @@ use tracing::Instrument as _;
 
 use crate::ack::{Finish, Pending};
 use crate::dedupe::Dedupe;
-use crate::forms::Forms;
 use crate::modules::Module;
 use crate::respond::Responder;
 use crate::{gateway, router};
@@ -27,8 +26,6 @@ pub(crate) struct Shared {
     pub(crate) modules: Vec<Arc<dyn Module>>,
     /// Interaction ids seen in the last 15 minutes.
     pub(crate) dedupe: Arc<Dedupe>,
-    /// `/case add` forms opened before their draft exists.
-    pub(crate) forms: Forms,
     /// One channel creation per server at a time (§13.1.4).
     pub(crate) creating: tokio::sync::Mutex<()>,
 }
@@ -65,7 +62,6 @@ impl Bot {
                 responder,
                 modules,
                 dedupe,
-                forms: Forms::default(),
                 creating: tokio::sync::Mutex::new(()),
             }),
         }

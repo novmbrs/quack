@@ -8,7 +8,7 @@
 mod common;
 
 use common::payload::{self, interaction, moderator};
-use common::{Sent, Step, World, snapshot};
+use common::{Sent, World, snapshot};
 use quack_core::ids::{CaseId, RuleId};
 use quack_core::rule::{Field, FieldKey, FieldKind, RuleDefinition};
 use quack_testkit::MEMBER;
@@ -96,7 +96,8 @@ async fn a_two_page_form_saves_each_page_once_and_applies_at_the_end() -> Result
     let w = World::new().await?;
     let rule = w.h.rule(form_rule("Scam", 6)).await?;
 
-    // 1. /case add opens page 1 at once, from memory only.
+    // 1. /case add opens page 1 at once; the draft row is written after
+    //    that acknowledgement, so the form survives a restart.
     w.send(&interaction(
         2,
         moderator(),
@@ -105,9 +106,10 @@ async fn a_two_page_form_saves_each_page_once_and_applies_at_the_end() -> Result
     ))
     .await;
     w.assert_acked_first();
-    assert!(
-        w.log.steps().iter().all(|s| !matches!(s, Step::Work(_))),
-        "no database work"
+    assert_eq!(
+        w.h.db.count("SELECT count(*) FROM case_drafts").await?,
+        1,
+        "the form's draft"
     );
     let first = w.modal().expect("page 1");
     assert_eq!(first.title, "Scam (1/2)");

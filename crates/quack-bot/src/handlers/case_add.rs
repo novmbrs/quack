@@ -8,7 +8,7 @@ use quack_discord::interaction::{AutocompleteFor, Person, RuleArg};
 use quack_discord::rest::AutocompleteChoice;
 use quack_engine::cache::{CachedRule, GuildRules};
 use quack_engine::cases::{Actor, ApplyRule, apply_rule};
-use quack_engine::drafts::{page_fields, pages};
+use quack_engine::drafts::{CommandDraft, page_fields, pages, start};
 use quack_text::actions::DraftPage;
 use quack_text::case::{FormField, form_modal, picker_fill_form};
 use quack_text::error::ErrorFacts;
@@ -19,7 +19,6 @@ use super::{op_key, person};
 use crate::ack::{Acked, Failure, Finish, Pending};
 use crate::auth::{self, payload_capabilities};
 use crate::errors;
-use crate::forms::FormStart;
 
 /// Most characters in an autocomplete label or value.
 const CHOICE_MAX: usize = 100;
@@ -102,21 +101,11 @@ pub(crate) async fn run(
     a.finish_opt(result).await
 }
 
-/// Opens the first page of a fresh form (no stored values, §11.3).
+/// Opens the first page of a fresh form (no stored values, §11.3), then,
+/// after that acknowledgement, writes its draft row so the page's submit
+/// finds the member and the receipt choice even after a restart.
 async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: bool) -> Finish {
     let draft = uuid::Uuid::now_v7();
-    if let (Some(guild), Some(actor)) = (p.guild(), p.ix.invoker.as_ref()) {
-        p.shared().forms.opened(
-            draft,
-            FormStart {
-                used: false,
-                guild,
-                actor: actor.account.id,
-                member: member.account.id.member(),
-                private,
-            },
-        );
-    }
     let at = page_at(CaseId::from_uuid(draft), rule, 1);
     let modal = form_modal(
         &rule.definition.name,
@@ -124,7 +113,30 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
         pages(&rule.definition),
         &form_fields(rule, 1),
     );
-    p.modal(&modal).await
+    let (ix, shared) = (p.ix, p.shared());
+    let finish = p.modal(&modal).await;
+    if finish == Finish::Done {
+        let started = async {
+            let principal = auth::principal(&shared.engine, ix).await?;
+            let channel = ix.channel_id.ok_or_else(crate::router::expired)?;
+            let form = CommandDraft {
+                draft,
+                member: member.account.id.member(),
+                rule: Some((rule.id, rule.version)),
+                source: None,
+                private,
+                channel,
+            };
+            start(&shared.engine, &principal, &form)
+                .await
+                .map_err(|e| outcome::apply_failed(&e, None, None))
+        };
+        if let Err(failure) = started.await {
+            // The page's submit then answers that the form expired.
+            tracing::warn!(?failure, "couldn't save a /case add form's draft");
+        }
+    }
+    finish
 }
 
 /// The rule's id: picked, or found by its exact name.
@@ -176,16 +188,18 @@ async fn apply_now(
     {
         auth::require(engine, &principal, Capability::Moderate).await?;
         let draft = uuid::Uuid::now_v7();
-        a.shared().forms.opened(
+        let channel = a.ix.channel_id.ok_or_else(crate::router::expired)?;
+        let form = CommandDraft {
             draft,
-            FormStart {
-                used: false,
-                guild: principal.guild,
-                actor: principal.account,
-                member: member.account.id.member(),
-                private,
-            },
-        );
+            member: member.account.id.member(),
+            rule: Some((found.id, found.version)),
+            source: None,
+            private,
+            channel,
+        };
+        start(engine, &principal, &form)
+            .await
+            .map_err(|e| outcome::apply_failed(&e, None, None))?;
         let first = page_at(CaseId::from_uuid(draft), found, 1);
         return Ok(Some(picker_fill_form(
             &found.definition.name,

@@ -84,6 +84,7 @@ async fn begin(
         &CommandDraft {
             draft,
             member,
+            rule: None,
             source,
             private,
             channel,

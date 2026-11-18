@@ -286,13 +286,16 @@ pub async fn apply(
 }
 
 /// A draft started from the "Add case" message or member command, before a
-/// rule is picked (§11.6).
+/// rule is picked, or from `/case add` when its form opened (§11.6).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommandDraft {
     /// A fresh draft id.
     pub draft: uuid::Uuid,
     /// The member.
     pub member: MemberId,
+    /// The rule and the version the form was built from (`/case add`);
+    /// `None` until the picker chooses one.
+    pub rule: Option<(RuleId, u32)>,
     /// The message the command was used on.
     pub source: Option<MessageLink>,
     /// Private receipt (message command) or public (member command).
@@ -301,7 +304,9 @@ pub struct CommandDraft {
     pub channel: ChannelId,
 }
 
-/// Starts a draft for the "Add case" commands (step 1).
+/// Starts a draft: for the "Add case" commands (step 1), and for
+/// `/case add` right after its first form page opened, so the page's
+/// submit finds who and where the case is for even after a restart.
 pub async fn start(
     engine: &Engine,
     principal: &Principal,
@@ -316,7 +321,7 @@ pub async fn start(
             guild: principal.guild,
             actor: principal.account,
             member: new.member,
-            rule: None,
+            rule: new.rule,
             private: new.private,
             receipt_channel: new.channel,
             source: new.source.map(|l| (l.channel_id, l.message_id)),

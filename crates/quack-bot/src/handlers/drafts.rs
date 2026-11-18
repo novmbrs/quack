@@ -113,25 +113,14 @@ async fn read_draft(
         .map_err(|e| errors::db(&e))
 }
 
-/// Who and where a draft is for: remembered when `/case add` opened its
-/// form, else read from its row.
+/// Who and where a draft is for, from its row (`/case add` writes it when
+/// the form opens; the "Add case" commands when they start).
 async fn draft_target(
     a: &Acked<'_>,
     guild: quack_core::ids::GuildId,
     actor: quack_core::ids::AccountId,
     draft: CaseId,
-    page: u8,
 ) -> Result<Option<(MemberId, bool, ChannelId)>, Failure> {
-    // Only the first page may create the draft row (§11.6 step 2); a later
-    // page without a row means the draft expired or was already used.
-    if page == 1
-        && let (Some(form), Some(channel)) = (
-            a.shared().forms.get(draft.get(), guild, actor),
-            a.ix.channel_id,
-        )
-    {
-        return Ok(Some((form.member, form.private, channel)));
-    }
     Ok(read_draft(a.engine(), guild, actor, draft)
         .await?
         .map(|d| (d.member, d.private, d.receipt_channel)))
@@ -183,7 +172,7 @@ async fn save(
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
     let Some((member, private, channel)) =
-        draft_target(a, principal.guild, principal.account, at.draft, at.page).await?
+        draft_target(a, principal.guild, principal.account, at.draft).await?
     else {
         // No form and no row: the draft expired, or it was already used.
         return retry(a, &principal, at, rule, true).await;
@@ -200,9 +189,6 @@ async fn save(
     };
     let receipt = receipt(a.ix, private, channel);
     let saved = save_page(engine, &principal, &submit, Some(receipt)).await;
-    if let Ok(PageSaved::Applied(_)) = &saved {
-        a.shared().forms.used(at.draft.get());
-    }
     match saved {
         Ok(PageSaved::Expired) => retry(a, &principal, at, rule, private).await,
         Ok(PageSaved::AlreadySaved { page }) if page > total(a, principal.guild, at) => {
