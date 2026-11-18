@@ -88,7 +88,7 @@ function AppealsLayout() {
   };
 
   // j and k move through the queue from anywhere on the page, like a mail
-  // client, unless the user is typing or a dialog is open.
+  // client, unless the reader is typing or a dialog is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;

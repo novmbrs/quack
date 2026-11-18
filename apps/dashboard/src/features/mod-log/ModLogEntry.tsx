@@ -16,8 +16,8 @@ import { iconFor, resultLabel, sourceLabel } from "./kinds";
 import s from "./ModLogEntry.module.css";
 
 /**
- * ModLogEntry is one row of the moderation log, laid out like Discord's
- * server audit log: who acted, the server's sentence for what happened,
+ * ModLogEntry is one row of the moderation log, laid out like Discord's own
+ * server history: who acted, the server's sentence for what happened,
  * when, and links to what it's about.
  */
 export function ModLogEntry({ guildId, entry }: { guildId: string; entry: Entry }) {
