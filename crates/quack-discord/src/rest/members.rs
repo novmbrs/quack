@@ -14,6 +14,9 @@ use crate::convert;
 use crate::model::{GatewayBot, Guild, Member};
 use crate::permissions::member_facts;
 
+/// Most accounts [`DiscordClient::accounts`] reads in one call.
+pub const ACCOUNTS_MAX: usize = 100;
+
 #[derive(Serialize)]
 struct TimeoutBody {
     communication_disabled_until: Option<String>,
@@ -37,6 +40,23 @@ impl DiscordClient {
         self.json::<twilight_model::user::User>(Request::new(Route::user(user)))
             .await
             .and_then(|u| converted(convert::user(&u)))
+    }
+
+    /// Accounts by id (`GET /users/{id}` for each, in order). Ids Discord
+    /// doesn't know (10013) are left out; any other failure stops the read
+    /// and is returned. At most [`ACCOUNTS_MAX`] ids are read.
+    pub async fn accounts(&self, ids: &[AccountId]) -> Outcome<Vec<AccountFacts>> {
+        let mut found = Vec::with_capacity(ids.len().min(ACCOUNTS_MAX));
+        for id in ids.iter().take(ACCOUNTS_MAX) {
+            match self.user(*id).await {
+                Outcome::Refused(r) if r.kind == RefusalKind::UnknownUser => {}
+                other => match other.into_result() {
+                    Ok(account) => found.push(account),
+                    Err(failure) => return failure,
+                },
+            }
+        }
+        Outcome::Done(found)
     }
 
     /// `GET /gateway/bot`: how many shards Discord recommends (§11.9).
@@ -119,7 +139,7 @@ impl DiscordClient {
 
     /// `GET /guilds/{g}/bans/{m}`: the ban and its reason, or `Done(None)`
     /// for Discord's 404 Unknown Ban.
-    pub async fn get_ban(&self, guild: GuildId, member: MemberId) -> Outcome<Option<BanFacts>> {
+    pub async fn ban(&self, guild: GuildId, member: MemberId) -> Outcome<Option<BanFacts>> {
         match self
             .json::<twilight_model::guild::Ban>(Request::new(Route::ban(
                 Method::Get,

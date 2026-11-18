@@ -152,9 +152,9 @@ async fn reads_answer_absent_only_for_their_unknown_code() {
         client.member(g(1), m(4)).await.refusal(),
         Some(crate::RefusalKind::UnknownUser)
     );
-    let ban = client.get_ban(g(1), m(2)).await.done().flatten().unwrap();
+    let ban = client.ban(g(1), m(2)).await.done().flatten().unwrap();
     assert_eq!(ban.case_marker(), Some(3));
-    assert_eq!(client.get_ban(g(1), m(3)).await, Outcome::Done(None));
+    assert_eq!(client.ban(g(1), m(3)).await, Outcome::Done(None));
 }
 
 #[tokio::test]
@@ -254,6 +254,7 @@ async fn files_go_as_multipart_and_edits_keep_or_replace_them() {
                 .body_includes(r#""allowed_mentions":{"parse":[]}"#)
                 .body_includes(r#"name="files[0]"; filename="SPOILER_a.png""#)
                 .body_includes("PNGDATA")
+                .body_includes("Content-Type: image/png")
                 .body_excludes("components");
             then.status(200).json_body(fixtures::message(10, 5));
         })
@@ -269,6 +270,7 @@ async fn files_go_as_multipart_and_edits_keep_or_replace_them() {
     let client = client(&server.base_url());
     let file = OutgoingFile {
         name: "SPOILER_a.png".into(),
+        content_type: Some("image/png".into()),
         bytes: b"PNGDATA".to_vec(),
     };
     let nonce = Nonce::new("file").unwrap();
@@ -368,7 +370,12 @@ async fn interaction_responses_use_the_token_and_no_bot_auth() {
             .await
             .is_done()
     );
-    assert!(client.edit_original(&i.token, &rendered()).await.is_done());
+    assert!(
+        client
+            .edit_interaction_original(&i.token, &rendered())
+            .await
+            .is_done()
+    );
     let sent = client
         .followup(&i.token, &rendered(), true)
         .await

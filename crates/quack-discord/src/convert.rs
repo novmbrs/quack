@@ -121,6 +121,7 @@ pub(crate) fn channel(c: &twilight_model::channel::Channel) -> Option<Channel> {
         thread: c.thread_metadata.as_ref().map(|t| ThreadState {
             archived: t.archived,
             locked: t.locked,
+            archived_at: time(t.archive_timestamp),
         }),
     })
 }

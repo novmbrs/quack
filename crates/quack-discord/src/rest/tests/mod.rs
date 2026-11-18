@@ -2,6 +2,7 @@
 //! outcome classification, without Discord.
 
 mod fixtures;
+mod lookups;
 mod outcomes;
 mod shapes;
 

@@ -10,6 +10,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
+use quack_telemetry::labels::RateLimitScope;
 use quack_telemetry::spans::SpanEvent;
 use quack_telemetry::{metrics, spans};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, RETRY_AFTER, USER_AGENT};
@@ -126,6 +127,18 @@ fn rate_limit_headers(headers: &HeaderMap) -> Option<RateLimitHeaders> {
     }
 }
 
+/// Which limit a 429 was for: `X-RateLimit-Scope` (`user` is a route
+/// bucket), or `X-RateLimit-Global: true` on older answers.
+fn limit_scope(headers: &HeaderMap) -> RateLimitScope {
+    let text = |name: &str| headers.get(name).and_then(|v| v.to_str().ok());
+    match text(RateLimitHeaders::SCOPE) {
+        Some("global") => RateLimitScope::Global,
+        Some("shared") => RateLimitScope::Shared,
+        _ if text("x-ratelimit-global") == Some("true") => RateLimitScope::Global,
+        _ => RateLimitScope::Route,
+    }
+}
+
 impl Transport {
     /// Sends one request and classifies the answer. `Done` carries the
     /// response body.
@@ -164,6 +177,7 @@ impl Transport {
             } else {
                 self.request_timeout
             };
+        let route_template = request.route.url_template();
         let Some(http_request) = self.build(request) else {
             return Answer::without_status(Outcome::NotSent(NotSentCause::Invalid));
         };
@@ -180,6 +194,7 @@ impl Transport {
             .get(RETRY_AFTER)
             .and_then(|v| v.to_str().ok())
             .map(str::to_owned);
+        let scope = limit_scope(response.headers());
         let success = (200..300).contains(&status);
         let body = match tokio::time::timeout_at(deadline, response.bytes()).await {
             Ok(Ok(bytes)) => bytes.to_vec(),
@@ -205,6 +220,12 @@ impl Transport {
         } else {
             classify_failure(status, &body, retry_after.as_deref())
         };
+        if let Outcome::RetryAfter(delay) = outcome {
+            // A 429 is counted by its status on the request metric; the hit
+            // is also counted by scope, so global limits can be alerted on.
+            metrics().discord.rate_limited(route_template, scope, delay);
+            spans::event(span, SpanEvent::RateLimited, Vec::new());
+        }
         if !outcome.is_done() {
             tracing::debug!(status, "discord answered with a failure");
         }
@@ -235,11 +256,9 @@ impl Transport {
         let waited = started.elapsed();
         let bucket_wait = seen_rx.try_recv().ok().flatten();
         if bucket_wait.is_some() {
-            metrics().discord.rate_limited(
-                route.url_template(),
-                quack_telemetry::labels::RateLimitScope::Route,
-                waited,
-            );
+            metrics()
+                .discord
+                .rate_limited(route.url_template(), RateLimitScope::Route, waited);
             spans::record_rate_limit_wait(span, waited);
             spans::event(span, SpanEvent::RateLimited, Vec::new());
         }
@@ -347,6 +366,27 @@ mod tests {
             ]))
             .is_none()
         );
+    }
+
+    #[test]
+    fn reads_the_scope_of_a_429() {
+        assert_eq!(
+            limit_scope(&headers(&[("x-ratelimit-scope", "global")])),
+            RateLimitScope::Global
+        );
+        assert_eq!(
+            limit_scope(&headers(&[("x-ratelimit-global", "true")])),
+            RateLimitScope::Global
+        );
+        assert_eq!(
+            limit_scope(&headers(&[("x-ratelimit-scope", "shared")])),
+            RateLimitScope::Shared
+        );
+        assert_eq!(
+            limit_scope(&headers(&[("x-ratelimit-scope", "user")])),
+            RateLimitScope::Route
+        );
+        assert_eq!(limit_scope(&headers(&[])), RateLimitScope::Route);
     }
 
     #[test]

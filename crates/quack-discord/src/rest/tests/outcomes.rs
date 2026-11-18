@@ -111,9 +111,9 @@ async fn a_bucket_exhausted_beyond_the_budget_answers_retry_after_at_once() {
         })
         .await;
     let client = client(&server.base_url());
-    assert_eq!(client.get_ban(g(), m()).await, Outcome::Done(None));
+    assert_eq!(client.ban(g(), m()).await, Outcome::Done(None));
     let started = Instant::now();
-    match client.get_ban(g(), m()).await {
+    match client.ban(g(), m()).await {
         Outcome::RetryAfter(d) => assert!(d > Duration::from_secs(50), "{d:?}"),
         other => panic!("expected RetryAfter, got {other:?}"),
     }
@@ -140,9 +140,9 @@ async fn a_bucket_that_resets_within_the_budget_waits() {
         })
         .await;
     let client = client(&server.base_url());
-    assert_eq!(client.get_ban(g(), m()).await, Outcome::Done(None));
+    assert_eq!(client.ban(g(), m()).await, Outcome::Done(None));
     let started = Instant::now();
-    assert_eq!(client.get_ban(g(), m()).await, Outcome::Done(None));
+    assert_eq!(client.ban(g(), m()).await, Outcome::Done(None));
     assert!(started.elapsed() >= Duration::from_millis(150));
     assert_eq!(mock.calls_async().await, 2);
 }

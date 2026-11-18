@@ -10,7 +10,8 @@ use super::transport::{Body, Request};
 use super::{DiscordClient, Outcome, converted, json_body, multipart};
 use crate::convert;
 use crate::model::{FileEdit, Message, Nonce, OutgoingFile, SentMessage};
-use crate::render::RenderedMessage;
+use crate::render::{RenderedMessage, render};
+use quack_text::{CommandIds, Msg};
 
 /// Who a message may ping. Mentions always render; they ping only when
 /// listed here (§11.11: only the ticket welcome pings its member).
@@ -37,6 +38,16 @@ impl MessageBody {
         Self {
             components: Some(message.components),
             mentions: Mentions::None,
+        }
+    }
+
+    /// The body for a neutral message: rendered, or [`Self::files_only`]
+    /// when it has no blocks and no rows (evidence copies, §7.3).
+    pub fn from_msg(msg: &Msg, commands: &CommandIds) -> Self {
+        if msg.blocks.is_empty() && msg.rows.is_empty() {
+            Self::files_only()
+        } else {
+            Self::rendered(render(msg, commands))
         }
     }
 

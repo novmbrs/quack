@@ -29,10 +29,11 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use twilight_http_ratelimiting::RateLimiter;
 
-pub use channels::ThreadPage;
+pub use channels::{FIND_THREADS_MAX_PAGES, ThreadPage};
 pub use commands::RegisteredCommand;
 pub use download::DownloadPolicy;
 pub use interactions::AutocompleteChoice;
+pub use members::ACCOUNTS_MAX;
 pub use messages::{Mentions, MessageBody};
 pub use outcome::{NotSentCause, Outcome, Refusal, RefusalKind, UnknownCause};
 

@@ -184,7 +184,7 @@ impl DiscordClient {
     /// Edits the original response after an ack (`PATCH
     /// /webhooks/{app}/{token}/messages/@original`); sets the Components V2
     /// flag (§11.3).
-    pub async fn edit_original(
+    pub async fn edit_interaction_original(
         &self,
         token: &InteractionToken,
         message: &RenderedMessage,

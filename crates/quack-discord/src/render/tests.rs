@@ -253,7 +253,7 @@ proptest! {
         blocks in proptest::collection::vec(block(), 0..30),
         rows in proptest::collection::vec(row(), 0..3),
     ) {
-        let msg = Msg { tone, blocks, rows };
+        let msg = Msg { tone, blocks, rows, trimmed: None };
         let rendered = render(&msg, &ids());
         prop_assert!(component_count(&rendered.components) <= quack_text::budget::COMPONENT_BUDGET);
         let (mut text, mut custom_ids) = (0, Vec::new());

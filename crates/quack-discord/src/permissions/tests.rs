@@ -200,6 +200,7 @@ fn facts_from_members_and_channels() {
         thread: Some(crate::model::ThreadState {
             archived: false,
             locked: false,
+            archived_at: None,
         }),
         ..parent.clone()
     };

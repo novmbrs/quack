@@ -118,3 +118,19 @@ pub(crate) fn message(id: u64, channel: u64) -> Value {
         "flags": 0
     })
 }
+
+pub(crate) fn thread(id: u64, parent: u64, name: &str, archived_at: &str) -> Value {
+    json!({
+        "id": id.to_string(),
+        "guild_id": "1",
+        "type": 12,
+        "name": name,
+        "parent_id": parent.to_string(),
+        "thread_metadata": {
+            "archived": true,
+            "auto_archive_duration": 1440,
+            "archive_timestamp": archived_at,
+            "locked": false
+        }
+    })
+}

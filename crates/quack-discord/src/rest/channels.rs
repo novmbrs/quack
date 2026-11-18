@@ -4,6 +4,7 @@
 use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId};
 use quack_core::permissions::{Overwrite, OverwriteTarget};
 use serde::{Deserialize, Serialize};
+use time::format_description::well_known::Rfc3339;
 
 use super::route::{Method, Route};
 use super::transport::Request;
@@ -84,6 +85,10 @@ pub struct ThreadPage {
     pub has_more: bool,
 }
 
+/// Most archived-thread pages [`DiscordClient::find_threads`] reads (100
+/// threads each), so one lookup stays bounded.
+pub const FIND_THREADS_MAX_PAGES: usize = 10;
+
 fn channels(list: &[twilight_model::channel::Channel]) -> Vec<Channel> {
     list.iter().filter_map(convert::channel).collect()
 }
@@ -133,6 +138,48 @@ impl DiscordClient {
             threads: channels(&list.threads),
             has_more: list.has_more,
         })
+    }
+
+    /// Threads under `parent` named exactly `name`, oldest first: active
+    /// threads of the server, then archived private threads under `parent`
+    /// (at most [`FIND_THREADS_MAX_PAGES`] pages). Ticket threads are found
+    /// this way before one is created, because threads have no nonce
+    /// (§10.4, §13.2.3).
+    pub async fn find_threads(
+        &self,
+        guild: GuildId,
+        parent: ChannelId,
+        name: &str,
+    ) -> Outcome<Vec<ChannelId>> {
+        let named = |c: &Channel| c.parent_id == Some(parent) && c.name == name;
+        let mut found: Vec<ChannelId> = match self.active_threads(guild).await.into_result() {
+            Ok(active) => active.iter().filter(|c| named(c)).map(|c| c.id).collect(),
+            Err(failure) => return failure,
+        };
+        let mut before: Option<String> = None;
+        for _ in 0..FIND_THREADS_MAX_PAGES {
+            let page = match self
+                .archived_private_threads(parent, before.as_deref())
+                .await
+                .into_result()
+            {
+                Ok(page) => page,
+                Err(failure) => return failure,
+            };
+            found.extend(page.threads.iter().filter(|c| named(c)).map(|c| c.id));
+            before = page
+                .threads
+                .last()
+                .and_then(|c| c.thread?.archived_at)
+                .and_then(|at| at.format(&Rfc3339).ok());
+            if !page.has_more || before.is_none() {
+                break;
+            }
+        }
+        // Snowflakes grow with creation time.
+        found.sort_unstable();
+        found.dedup();
+        Outcome::Done(found)
     }
 
     /// Creates a text channel with the given overwrites (§13.1.4). Channels

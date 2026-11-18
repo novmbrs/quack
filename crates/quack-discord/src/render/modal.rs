@@ -1,8 +1,8 @@
 //! The neutral `Modal` → a modal callback: one Label per input, wrapping a
 //! Text Input or a Yes / No string select (§11.11).
 
-use quack_text::{budget, word};
 use quack_text::model::{Input, InputKind, InputStyle, Modal};
+use quack_text::{budget, word};
 use twilight_model::channel::message::Component;
 use twilight_model::channel::message::component::{
     Label, SelectMenu, SelectMenuOption, SelectMenuType, TextInput, TextInputStyle,

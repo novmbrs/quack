@@ -26,6 +26,18 @@ fn header_safe(name: &str) -> String {
     }
 }
 
+/// A MIME type safe inside a part header: `type/subtype` with optional
+/// parameters, printable ASCII only; anything else is sent as
+/// `application/octet-stream`.
+fn content_type(file: &OutgoingFile) -> &str {
+    file.content_type
+        .as_deref()
+        .filter(|t| {
+            t.contains('/') && t.len() <= 255 && t.bytes().all(|b| (0x20..0x7f).contains(&b))
+        })
+        .unwrap_or("application/octet-stream")
+}
+
 /// Builds the body. `boundary` must not occur in any part; callers pass a
 /// fresh random one.
 pub(crate) fn form(boundary: &str, payload_json: &[u8], files: &[&OutgoingFile]) -> Body {
@@ -45,8 +57,9 @@ pub(crate) fn form(boundary: &str, payload_json: &[u8], files: &[&OutgoingFile])
         let _ = write!(
             head,
             "\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"files[{i}]\"; \
-             filename=\"{}\"\r\nContent-Type: application/octet-stream\r\n\r\n",
-            header_safe(&file.name)
+             filename=\"{}\"\r\nContent-Type: {}\r\n\r\n",
+            header_safe(&file.name),
+            content_type(file)
         );
         bytes.extend_from_slice(head.as_bytes());
         bytes.extend_from_slice(&file.bytes);
@@ -71,6 +84,7 @@ mod tests {
     fn builds_payload_and_file_parts() {
         let file = OutgoingFile {
             name: "a\"b\r.txt".into(),
+            content_type: None,
             bytes: b"hello".to_vec(),
         };
         let Body::Multipart {
@@ -91,5 +105,20 @@ mod tests {
         );
         assert_ne!(boundary(), boundary());
         assert_eq!(header_safe(""), "file");
+        let typed = |t: &str| OutgoingFile {
+            name: "a".into(),
+            content_type: Some(t.into()),
+            bytes: Vec::new(),
+        };
+        assert_eq!(content_type(&typed("image/png")), "image/png");
+        assert_eq!(
+            content_type(&typed("text/plain; charset=utf-8")),
+            "text/plain; charset=utf-8"
+        );
+        assert_eq!(
+            content_type(&typed("a\r\nX-Evil: 1/2")),
+            "application/octet-stream"
+        );
+        assert_eq!(content_type(&typed("png")), "application/octet-stream");
     }
 }

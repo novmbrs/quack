@@ -72,6 +72,9 @@ pub struct ThreadState {
     pub archived: bool,
     /// Whether only moderators can unarchive it.
     pub locked: bool,
+    /// When its archive state last changed (the paging key for archived
+    /// threads).
+    pub archived_at: Option<OffsetDateTime>,
 }
 
 /// A channel or thread as Discord returns it.
@@ -172,6 +175,8 @@ pub struct SentMessage {
 pub struct OutgoingFile {
     /// The file name (also the `attachment://` name the message refers to).
     pub name: String,
+    /// Its MIME type, when known (`application/octet-stream` otherwise).
+    pub content_type: Option<String>,
     /// Its contents.
     pub bytes: Vec<u8>,
 }
@@ -180,6 +185,7 @@ impl fmt::Debug for OutgoingFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("OutgoingFile")
             .field("name", &self.name)
+            .field("content_type", &self.content_type)
             .field("bytes", &self.bytes.len())
             .finish()
     }
@@ -289,11 +295,12 @@ mod tests {
         assert_eq!(token.expose(), "secret");
         let file = OutgoingFile {
             name: "a.txt".into(),
+            content_type: None,
             bytes: vec![1, 2, 3],
         };
         assert_eq!(
             format!("{file:?}"),
-            r#"OutgoingFile { name: "a.txt", bytes: 3 }"#
+            r#"OutgoingFile { name: "a.txt", content_type: None, bytes: 3 }"#
         );
     }
 }
