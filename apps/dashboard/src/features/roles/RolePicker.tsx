@@ -85,7 +85,7 @@ export function RolePicker({
           <TextInput
             id={id}
             value={text}
-            placeholder={roles.isError ? "Couldn't load roles" : placeholder}
+            placeholder={roles.isError ? "Quack couldn't load the roles" : placeholder}
             autoComplete="off"
             role="combobox"
             aria-expanded={showList}
@@ -169,7 +169,7 @@ function RoleChip({
   onRemove?: () => void;
 }) {
   const deleted = !role && !loading;
-  const name = role?.name ?? (loading ? "Loading…" : "Deleted role");
+  const name = role?.name ?? (loading ? "Loading…" : "Unknown role");
   return (
     <li
       className={s.chip}

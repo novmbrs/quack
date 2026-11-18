@@ -7,10 +7,10 @@ import { channelLabel, groupChannels } from "./channels";
 const ch = (
   id: string,
   name: string,
-  type: DirectoryChannel["type"],
+  kind: DirectoryChannel["kind"],
   position: number,
   parent_id = "",
-): DirectoryChannel => ({ id, name, type, position, parent_id });
+): DirectoryChannel => ({ id, name, kind, position, parent_id });
 
 describe("groupChannels", () => {
   const channels = [
@@ -36,7 +36,7 @@ describe("groupChannels", () => {
 
   it("keeps only the requested types and drops empty categories", () => {
     const groups = groupChannels(channels);
-    expect(groups.flatMap((g) => g.channels).some((c) => c.type === "voice")).toBe(false);
+    expect(groups.flatMap((g) => g.channels).some((c) => c.kind === "voice")).toBe(false);
     expect(groups.some((g) => g.category?.name === "Empty")).toBe(false);
 
     const forums = groupChannels(channels, ["forum"]);

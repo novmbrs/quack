@@ -1,7 +1,7 @@
-import type { ChannelType, DirectoryChannel } from "~/api/types";
+import type { ChannelKind, DirectoryChannel } from "~/api/types";
 
 /** messageChannels are the channel types Quack can post a message in. */
-export const messageChannels: readonly ChannelType[] = ["text", "announcement"];
+export const messageChannels: readonly ChannelKind[] = ["text", "announcement"];
 
 /** ChannelGroup is one category and the channels under it, in Discord's order. */
 export type ChannelGroup = {
@@ -20,13 +20,13 @@ const byPosition = (a: DirectoryChannel, b: DirectoryChannel) =>
  */
 export function groupChannels(
   channels: readonly DirectoryChannel[],
-  types: readonly ChannelType[] = messageChannels,
+  types: readonly ChannelKind[] = messageChannels,
 ): ChannelGroup[] {
-  const categories = channels.filter((c) => c.type === "category").sort(byPosition);
+  const categories = channels.filter((c) => c.kind === "category").sort(byPosition);
   const known = new Set(categories.map((c) => c.id));
   const members = new Map<string, DirectoryChannel[]>();
   for (const channel of channels) {
-    if (channel.type === "category" || !types.includes(channel.type)) continue;
+    if (channel.kind === "category" || !types.includes(channel.kind)) continue;
     const parent = channel.parent_id && known.has(channel.parent_id) ? channel.parent_id : "";
     const list = members.get(parent) ?? [];
     list.push(channel);
