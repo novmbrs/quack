@@ -2,7 +2,8 @@
 //! log channel, appeals, and evidence areas. Every click re-checks
 //! `manage_settings` + 2FA (inside `settings::patch`), saves at once
 //! through the same engine call as the dashboard, and re-renders the
-//! panel with a result line. The module areas are routed to their modules.
+//! panel with a result line. The module areas' controls are in
+//! [`super::setup_modules`].
 
 use quack_core::ids::{ChannelId, GuildId};
 use quack_core::limits;
@@ -12,14 +13,16 @@ use quack_engine::settings::{
     FieldProblem, SettingsError, SettingsPatch, SettingsView, get, patch,
 };
 use quack_text::actions::{InputId, SetupArea, SetupOp};
+use quack_text::case::PickerRule;
 use quack_text::setup::{
     ActivityRoutes, ChannelKind, SetupResult, SetupState, channel_not_staff_only, channel_problem,
-    invite_modal, result, settings_problem,
+    invite_modal, result, settings_problem, warning_modal,
 };
 use quack_text::{ChannelRef, Msg, Text};
 
 use super::op_key;
 use super::setup_channels::{self, Made};
+use super::setup_modules::{self, Chosen};
 use crate::ack::{Acked, Failure, Finish, Pending};
 use crate::router::{expired, text_of};
 use crate::{auth, errors};
@@ -83,7 +86,32 @@ async fn panel(
 ) -> Result<Msg, Failure> {
     let view = read(a, principal).await?;
     let s = state(a, principal.guild, &view);
-    Ok(quack_text::setup::area(area, &s, line, &[]))
+    let rules = if area == SetupArea::Honeypot {
+        honeypot_rules(a, principal.guild)
+    } else {
+        Vec::new()
+    };
+    Ok(quack_text::setup::area(area, &s, line, &rules))
+}
+
+/// The rules the honeypot can use: active, without required fields
+/// (§3.8), by name.
+fn honeypot_rules(a: &Acked<'_>, guild: GuildId) -> Vec<PickerRule> {
+    let Some(rules) = a.engine().rules_cache().cached(guild) else {
+        return Vec::new();
+    };
+    let mut out: Vec<PickerRule> = rules
+        .active
+        .iter()
+        .filter(|r| !r.definition.has_required_fields())
+        .map(|r| PickerRule {
+            id: r.id,
+            name: r.definition.name.clone(),
+            description: r.definition.description.clone(),
+        })
+        .collect();
+    out.sort_by_key(|r| r.name.to_lowercase());
+    out
 }
 
 /// `/setup`: the home panel.
@@ -108,8 +136,10 @@ pub(crate) async fn control(
     values: &[SelectChoice],
     source: Source,
 ) -> Finish {
-    if (area, op) == (SetupArea::Appeals, SetupOp::SetInvite) {
-        return open_invite(p).await;
+    match (area, op) {
+        (SetupArea::Appeals, SetupOp::SetInvite) => return open_invite(p).await,
+        (SetupArea::Honeypot, SetupOp::EditWarning) => return open_warning(p).await,
+        _ => {}
     }
     let a = match p.defer_from(source).await {
         Ok(a) => a,
@@ -119,7 +149,80 @@ pub(crate) async fn control(
         SelectChoice::Channel(c) => Some(*c),
         _ => None,
     });
-    let result = apply(&a, area, op, chosen).await;
+    let result = if is_module_area(area) {
+        let rule = values.iter().find_map(|v| match v {
+            SelectChoice::Rule(r) => Some(*r),
+            _ => None,
+        });
+        module_control(
+            &a,
+            area,
+            op,
+            Chosen {
+                channel: chosen,
+                rule,
+            },
+        )
+        .await
+    } else {
+        apply(&a, area, op, chosen).await
+    };
+    a.finish(result).await
+}
+
+/// The areas that belong to an optional module.
+const fn is_module_area(area: SetupArea) -> bool {
+    matches!(
+        area,
+        SetupArea::Tickets | SetupArea::Honeypot | SetupArea::ActivityLog
+    )
+}
+
+async fn module_control(
+    a: &Acked<'_>,
+    area: SetupArea,
+    op: SetupOp,
+    chosen: Chosen,
+) -> Result<Msg, Failure> {
+    let principal = auth::principal(a.engine(), a.ix).await?;
+    // Reading the area first checks `manage_settings` + 2FA before any
+    // module settings are shown or changed.
+    read(a, &principal).await?;
+    let line = setup_modules::apply(a, &principal, area, op, chosen).await?;
+    panel(a, &principal, area, line).await
+}
+
+/// "Edit warning" (`warn`, §11.3's exception): the modal prefilled with
+/// the server's warning.
+async fn open_warning(p: Pending<'_>) -> Finish {
+    let ix = p.ix;
+    p.prefilled_modal(|engine| async move {
+        let principal = auth::principal(engine, ix).await?;
+        let view = quack_honeypot::settings(engine, &principal)
+            .await
+            .map_err(|e| errors::settings(&e))?;
+        Ok(warning_modal(view.warning_text.as_deref()))
+    })
+    .await
+}
+
+/// The honeypot warning modal (`warnm`).
+pub(crate) async fn save_warning(
+    p: Pending<'_>,
+    fields: &[(InputId, FieldValue)],
+    source: Source,
+) -> Finish {
+    let text = text_of(fields, &InputId::Warning);
+    let a = match p.defer_from(source).await {
+        Ok(a) => a,
+        Err(finish) => return finish,
+    };
+    let result = async {
+        let principal = auth::principal(a.engine(), a.ix).await?;
+        let line = setup_modules::save_warning(&a, &principal, text).await?;
+        panel(&a, &principal, SetupArea::Honeypot, Some(line)).await
+    }
+    .await;
     a.finish(result).await
 }
 
@@ -225,7 +328,12 @@ async fn save(
     }
 }
 
-fn problems_line(problems: &[(&'static str, FieldProblem)], chosen: Option<ChannelId>) -> Text {
+/// Field problems as the result line (`chosen` names the channel a
+/// channel problem is about).
+pub(crate) fn problems_line(
+    problems: &[(&'static str, FieldProblem)],
+    chosen: Option<ChannelId>,
+) -> Text {
     let mut out = Text::new();
     for (i, (field, problem)) in problems.iter().enumerate() {
         let line = match problem {

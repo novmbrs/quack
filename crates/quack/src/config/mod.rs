@@ -99,18 +99,14 @@ pub struct Config {
 }
 
 impl Config {
-    /// The first 8 bytes of SHA-256 of the session secret (sessions sealed
-    /// under another secret are deleted by housekeeping, §14.4).
+    /// The first 8 bytes of SHA-256 of the decoded session secret (the
+    /// API's `key_fingerprint`; sessions sealed under another secret are
+    /// deleted by housekeeping, §14.4). Zero without a valid secret.
     pub fn session_key_fingerprint(&self) -> [u8; 8] {
-        let mut out = [0_u8; 8];
-        if let Some(secret) = &self.session_secret {
-            let digest =
-                aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, secret.expose().as_bytes());
-            for (o, d) in out.iter_mut().zip(digest.as_ref()) {
-                *o = *d;
-            }
-        }
-        out
+        self.session_secret
+            .as_ref()
+            .and_then(|s| quack_api::SessionSecret::from_base64(s.expose()).ok())
+            .map_or([0; 8], |s| s.fingerprint())
     }
 }
 

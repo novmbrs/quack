@@ -244,9 +244,9 @@ async fn setup_chooses_creates_and_clears_the_log_channel() -> Result {
     w.assert_acked_first();
     snapshot("setup_invite_saved", &w.answer());
 
-    // Module areas wait for their module.
+    // Module areas show their module's settings.
     w.send(&su(&w, admin(), "1:su:tk:open", &[])).await;
-    snapshot("setup_module_not_connected", &w.answer());
+    snapshot("setup_tickets_area", &w.answer());
     Ok(())
 }
 

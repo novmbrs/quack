@@ -11,7 +11,6 @@
 //! until 5 s before the deadline; then refuse new Discord calls, close the
 //! pool, and release the fence. The caller flushes telemetry.
 
-pub mod http;
 mod listen;
 mod ready;
 mod start;
@@ -110,12 +109,13 @@ async fn shut_down(s: start::Started, ready: &Readiness, stop: &CancellationToke
             runner.shutdown(drain).await;
         }
     };
+    let modules = s.modules.shutdown(drain);
     let tasks = async {
         for task in s.tasks {
             let _ = task.await;
         }
     };
-    if tokio::time::timeout(drain, async { tokio::join!(runner, tasks) })
+    if tokio::time::timeout(drain, async { tokio::join!(runner, modules, tasks) })
         .await
         .is_err()
     {

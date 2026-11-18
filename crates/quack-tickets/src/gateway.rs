@@ -108,6 +108,23 @@ impl Journal {
         self.gap(engine, guild, channel).await;
     }
 
+    /// Remembers that an event for `channel` was dropped, without waiting
+    /// (the gateway's shard loop calls this); [`Journal::record_pending`]
+    /// records the gap if `channel` is a ticket's thread.
+    pub fn remember_gap(&self, guild: GuildId, channel: ChannelId) {
+        if let Ok(mut pending) = self.pending.lock()
+            && pending.len() < PENDING_GAPS
+        {
+            pending.insert((guild, channel));
+        }
+    }
+
+    /// Records every remembered gap; one the database refuses stays
+    /// remembered for the next call.
+    pub async fn record_pending(&self, engine: &Engine) {
+        self.flush(engine).await;
+    }
+
     /// Threads whose gap is still to be recorded.
     pub fn pending(&self) -> usize {
         self.pending.lock().map_or(0, |p| p.len())

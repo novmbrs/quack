@@ -11,8 +11,6 @@ publish.workspace = true
 [lints]
 workspace = true
 
-# quack-api, quack-import, and the module crates are connected through
-# `wiring` once they are finished.
 [dependencies]
 quack-core = { workspace = true }
 quack-text = { workspace = true }
@@ -21,6 +19,11 @@ quack-db = { workspace = true }
 quack-discord = { workspace = true }
 quack-engine = { workspace = true }
 quack-bot = { workspace = true }
+quack-api = { workspace = true }
+quack-import = { workspace = true }
+quack-tickets = { workspace = true }
+quack-honeypot = { workspace = true }
+quack-activity-log = { workspace = true }
 anyhow = { workspace = true }
 aws-lc-rs = { workspace = true }
 axum = { workspace = true }

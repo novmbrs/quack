@@ -1,7 +1,7 @@
-//! "Create #…" in `/setup` for the core staff destinations (§13.1.4):
-//! find a channel Quack just made, else check Quack's permissions and
-//! create one with staff-only overwrites. Saving it is the caller's
-//! settings update.
+//! "Create #…" in `/setup` (§13.1.4): find a channel Quack just made,
+//! else check Quack's permissions and create one with the overwrites of
+//! its kind (staff-only destinations, the ticket entry channel, the
+//! honeypot). Saving it is the caller's settings update.
 
 use quack_core::ids::{ChannelId, GuildId, RoleId};
 use quack_core::permissions::{
@@ -42,14 +42,52 @@ impl Made {
     }
 }
 
-fn staff_destination() -> (Permissions, Permissions) {
-    let quack = Permission::ViewChannel
-        | Permission::SendMessages
-        | Permission::ReadMessageHistory
-        | Permission::AttachFiles
-        | Permission::EmbedLinks;
-    let staff = Permission::ViewChannel | Permission::SendMessages | Permission::ReadMessageHistory;
-    (quack, staff)
+/// The overwrites a created channel gets (§13.1.4): Quack's member
+/// overwrite, the @everyone overwrite, and what staff roles are allowed
+/// (`None` for the channels members use).
+struct Shape {
+    quack: Permissions,
+    everyone_allow: Permissions,
+    everyone_deny: Permissions,
+    staff: Option<Permissions>,
+}
+
+fn shape(kind: ChannelKind) -> Shape {
+    let read = Permission::ViewChannel | Permission::SendMessages | Permission::ReadMessageHistory;
+    match kind {
+        ChannelKind::TicketEntry => Shape {
+            quack: read
+                | Permission::CreatePrivateThreads
+                | Permission::ManageThreads
+                | Permission::SendMessagesInThreads,
+            everyone_allow: Permission::ViewChannel
+                | Permission::ReadMessageHistory
+                | Permission::SendMessagesInThreads,
+            everyone_deny: Permission::SendMessages.into(),
+            staff: None,
+        },
+        ChannelKind::Honeypot => Shape {
+            quack: read | Permission::ManageMessages,
+            everyone_allow: read,
+            everyone_deny: Permissions::NONE,
+            staff: None,
+        },
+        ChannelKind::Log
+        | ChannelKind::Appeals
+        | ChannelKind::Evidence
+        | ChannelKind::TicketQueue
+        | ChannelKind::ActivityLog => Shape {
+            quack: read | Permission::AttachFiles | Permission::EmbedLinks,
+            everyone_allow: Permissions::NONE,
+            everyone_deny: Permission::ViewChannel.into(),
+            staff: Some(read),
+        },
+    }
+}
+
+/// Whether members can see a channel of this kind (`setup.created_public`).
+pub(crate) const fn is_public(kind: ChannelKind) -> bool {
+    matches!(kind, ChannelKind::TicketEntry | ChannelKind::Honeypot)
 }
 
 /// Whether a snowflake was made in the last 10 minutes.
@@ -102,7 +140,7 @@ fn staff_roles(facts: &GuildFacts, configured: &[RoleId]) -> Vec<RoleId> {
         .collect()
 }
 
-/// Creates (or adopts) a staff destination channel of `kind`.
+/// Creates (or adopts) a channel of `kind` with its overwrites.
 pub(crate) async fn create(
     engine: &Engine,
     guild: GuildId,
@@ -121,15 +159,21 @@ pub(crate) async fn create(
     if let Some(id) = just_made(&channels, name, quack) {
         return Ok(Made::Adopted(ChannelRef::new(id, name)));
     }
-    let (quack_allow, staff_allow) = staff_destination();
+    let shape = shape(kind);
     let held = facts
         .quack
         .as_ref()
         .map_or(Permissions::NONE, |q| q.permissions);
+    // Discord lets Quack allow or deny only what it holds itself.
+    let needed = shape.quack
+        | shape.everyone_allow
+        | shape.everyone_deny
+        | shape.staff.unwrap_or(Permissions::NONE)
+        | Permission::ManageChannels;
     let missing = if held.contains(Permission::Administrator.into()) {
         Vec::new()
     } else {
-        held.missing(quack_allow | Permission::ManageChannels)
+        held.missing(needed)
     };
     if !missing.is_empty() {
         return Err(Failure::refused(
@@ -153,24 +197,26 @@ pub(crate) async fn create(
     let mut overwrites = vec![
         Overwrite {
             target: OverwriteTarget::Role(everyone),
-            allow: Permissions::NONE,
-            deny: Permission::ViewChannel.into(),
+            allow: shape.everyone_allow,
+            deny: shape.everyone_deny,
         },
         Overwrite {
             target: OverwriteTarget::Member(quack),
-            allow: quack_allow,
+            allow: shape.quack,
             deny: Permissions::NONE,
         },
     ];
-    overwrites.extend(
-        staff_roles(&facts, moderator_roles)
-            .into_iter()
-            .map(|role| Overwrite {
-                target: OverwriteTarget::Role(role),
-                allow: staff_allow,
-                deny: Permissions::NONE,
-            }),
-    );
+    if let Some(staff_allow) = shape.staff {
+        overwrites.extend(
+            staff_roles(&facts, moderator_roles)
+                .into_iter()
+                .map(|role| Overwrite {
+                    target: OverwriteTarget::Role(role),
+                    allow: staff_allow,
+                    deny: Permissions::NONE,
+                }),
+        );
+    }
     let spec = ChannelSpec {
         name: name.to_owned(),
         topic: Some(channel_topic(kind).to_owned()),

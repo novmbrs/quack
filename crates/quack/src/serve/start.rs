@@ -19,10 +19,10 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use super::ready::{self, GatewaySource, Readiness};
-use super::{DiscordMode, LOAD_WAIT, Options, ServeError, http as web, listen};
+use super::{DiscordMode, LOAD_WAIT, Options, ServeError, listen};
 use crate::config::Config;
 use crate::port::DiscordPort;
-use crate::wiring;
+use crate::wiring::{self, Modules};
 
 /// How often a held-elsewhere fence is tried again.
 const FENCE_RETRY: Duration = Duration::from_secs(5);
@@ -35,6 +35,7 @@ pub(super) struct Started {
     pub(super) tasks: Vec<JoinHandle<()>>,
     pub(super) fence: Arc<Mutex<Option<Fence>>>,
     pub(super) fence_lost: CancellationToken,
+    pub(super) modules: Arc<Modules>,
 }
 
 fn failed(what: &'static str) -> impl FnOnce(quack_db::DbError) -> ServeError {
@@ -153,12 +154,13 @@ pub async fn sync_commands(
 }
 
 /// The in-process pieces built from the client: caches, the engine over
-/// the `DiscordPort`, and the bot.
+/// the `DiscordPort`, the modules, and the bot.
 struct Parts {
     engine: Engine,
     mentions: CommandMentions,
     guilds: Arc<GuildCache>,
     members: Arc<MemberCache>,
+    modules: Arc<Modules>,
 }
 
 impl Parts {
@@ -178,11 +180,13 @@ impl Parts {
                 session_key_fingerprint: config.session_key_fingerprint(),
             },
         );
+        let modules = Arc::new(Modules::new(&engine));
         Self {
             engine,
             mentions,
             guilds,
             members,
+            modules,
         }
     }
 
@@ -190,30 +194,37 @@ impl Parts {
         Bot::new(
             self.engine.clone(),
             Arc::new(DiscordResponder::new(client.clone(), self.mentions.clone())),
-            wiring::modules(&self.engine),
+            self.modules.adapters(Arc::clone(&self.guilds)),
         )
     }
 }
 
-/// Step 5: bind and serve HTTP (`/livez` at once; `/readyz` false until
-/// ready) until `stop`.
+/// Step 5: bind and serve HTTP (the API, `/livez` at once, `/readyz`
+/// false until ready) until `stop`.
 async fn http(
     config: &Config,
+    options: &Options,
     ready: &Arc<Readiness>,
     engine: &Engine,
     stop: &CancellationToken,
 ) -> Result<JoinHandle<()>, ServeError> {
+    let discord_base = match &options.discord {
+        DiscordMode::Off { api_base } => Some(api_base.as_str()),
+        DiscordMode::Connect => None,
+    };
+    let api =
+        wiring::api_config(config, discord_base).map_err(|e| ServeError::Startup(e.to_string()))?;
+    let app = wiring::api_router(engine, api, ready)
+        .map_err(|e| ServeError::Startup(format!("couldn't start the API: {e}")))?;
     let listener = tokio::net::TcpListener::bind(config.listen_addr)
         .await
         .map_err(|e| {
             ServeError::Startup(format!("couldn't listen on {}: {e}", config.listen_addr))
         })?;
-    let app = web::health(Arc::clone(ready), engine.db().clone())
-        .merge(wiring::api_router(engine, config, ready));
     let stop = stop.clone();
     Ok(tokio::spawn(async move {
         let shutdown = async move { stop.cancelled().await };
-        if let Err(error) = web::serve(listener, app, shutdown).await {
+        if let Err(error) = quack_api::serve(listener, app, shutdown).await {
             tracing::error!(%error, "the HTTP server stopped");
         }
     }))
@@ -267,15 +278,13 @@ async fn gateway(
     );
     let status = gateway.status();
     let gateway_stop = stop.clone();
+    let on_dropped = parts.modules.on_dropped();
     tasks.push(tokio::spawn(async move {
         let handler = move |event| {
             let bot = bot.clone();
             async move { bot.on_event(event).await }
         };
-        if let Err(error) = gateway
-            .run(handler, wiring::on_dropped_event, gateway_stop)
-            .await
-        {
+        if let Err(error) = gateway.run(handler, on_dropped, gateway_stop).await {
             tracing::error!(%error, "the gateway stopped");
         }
     }));
@@ -295,7 +304,7 @@ pub(super) async fn start(
     let mut tasks = vec![fence_watch];
     let client = rest(config, options).await?;
     let parts = Parts::new(config, &db, &client);
-    tasks.push(http(config, &ready, &parts.engine, &stop).await?);
+    tasks.push(http(config, options, &ready, &parts.engine, &stop).await?);
     if options.discord == DiscordMode::Connect {
         parts.mentions.set(sync_commands(config, &client).await?);
     }
@@ -303,6 +312,13 @@ pub(super) async fn start(
     tasks.push(notifications(&parts.engine, &runner_cell, &stop).await?);
     let bot = parts.bot(&client);
     let gateway = gateway(config, options, &parts, bot, &stop, &mut tasks).await;
+    tasks.extend(
+        parts
+            .modules
+            .start(&parts.engine, &stop)
+            .await
+            .map_err(failed("couldn't start the modules"))?,
+    );
     let runner = start_runner(config, &parts.engine, &db).await?;
     let _ = runner_cell.set(runner.clone());
     let gauges = Gauges::install();
@@ -326,6 +342,7 @@ pub(super) async fn start(
         tasks,
         fence,
         fence_lost,
+        modules: parts.modules,
     })
 }
 
@@ -366,7 +383,7 @@ async fn start_runner(config: &Config, engine: &Engine, db: &Db) -> Result<Runne
     let runner = quack_engine::jobs::runner(
         engine.clone(),
         RunnerConfig::new(config.worker_concurrency),
-        wiring::module_jobs(engine),
+        Modules::jobs(engine),
     );
     runner.start();
     Ok(runner)

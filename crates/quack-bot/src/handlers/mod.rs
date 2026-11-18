@@ -18,6 +18,7 @@ pub(crate) mod outcome;
 pub(crate) mod rules;
 pub(crate) mod setup;
 mod setup_channels;
+mod setup_modules;
 
 use quack_discord::interaction::{Interaction, Person};
 use quack_engine::OpKey;

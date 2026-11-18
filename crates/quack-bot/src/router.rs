@@ -175,6 +175,7 @@ async fn modal(
             appeals::decide(p, ModalDecision::Reject, appeal, version, fields, source).await
         }
         CustomId::SetupInviteModal => setup::save_invite(p, fields, source).await,
+        CustomId::SetupWarningModal => setup::save_warning(p, fields, source).await,
         _ => p.fail(expired()).await,
     }
 }

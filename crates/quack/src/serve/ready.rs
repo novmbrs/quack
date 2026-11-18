@@ -55,6 +55,25 @@ impl Readiness {
     }
 }
 
+/// The API's `/readyz` reads the same flags (§14.9).
+impl quack_api::ReadinessFacts for Readiness {
+    fn migrations_current(&self) -> bool {
+        self.migrations.load(Ordering::Acquire)
+    }
+    fn fence_held(&self) -> bool {
+        self.fence.load(Ordering::Acquire)
+    }
+    fn gateway_ready(&self) -> bool {
+        self.gateway.load(Ordering::Acquire)
+    }
+    fn workers_fresh(&self) -> bool {
+        self.workers.load(Ordering::Acquire)
+    }
+    fn shutting_down(&self) -> bool {
+        self.shutdown.load(Ordering::Acquire)
+    }
+}
+
 /// Where the gateway flag comes from.
 #[derive(Clone, Debug)]
 pub enum GatewaySource {

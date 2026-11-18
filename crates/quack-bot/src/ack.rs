@@ -44,9 +44,10 @@ pub(crate) enum Finish {
     Failed(Reason),
 }
 
-/// A refusal or failure with its message.
+/// A refusal or failure with its message: what a handler (or a module's
+/// component handler) answers instead of a result.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct Failure {
+pub struct Failure {
     /// What the person reads.
     pub(crate) text: Text,
     /// How the interaction ended.
@@ -58,7 +59,7 @@ pub(crate) struct Failure {
 
 impl Failure {
     /// A refusal the person can act on.
-    pub(crate) const fn refused(text: Text, reason: Reason) -> Self {
+    pub const fn refused(text: Text, reason: Reason) -> Self {
         Self {
             text,
             finish: Finish::Refused(reason),
@@ -67,7 +68,7 @@ impl Failure {
     }
 
     /// A failure on Quack's or Discord's side.
-    pub(crate) const fn failed(text: Text, reason: Reason) -> Self {
+    pub const fn failed(text: Text, reason: Reason) -> Self {
         Self {
             text,
             finish: Finish::Failed(reason),

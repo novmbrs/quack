@@ -1,0 +1,11 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Tickets
+Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.
+Tickets: Off
+{select: Channel where members open tickets}
+{select: Staff channel for new tickets}
+[Create #support and #ticket-log] [Turn on] [Back]
