@@ -1,6 +1,7 @@
-//! `/rules` (§12.12): the server's active rules with a dashboard link each.
+//! `/rules` (§12.12): the server's active rules with a dashboard link each,
+//! and the messages for problems with a rule definition (§3.3).
 
-use quack_core::rule::LevelAction;
+use quack_core::rule::{LevelAction, RuleProblemCode};
 
 use crate::actions::ButtonAction;
 use crate::fmt;
@@ -47,4 +48,33 @@ pub fn list(rows: &[RuleRow], archived: u64, page: u32, pages: u32) -> Msg {
     }
     msg.block(Block::Subtext(footer))
         .buttons(word::pager(page, pages, ButtonAction::RulesPage))
+}
+
+/// `rule.problem.*`: one problem with a rule definition (§3.3), the
+/// `message` of a `validation_failed` field on the dashboard's rule editor.
+pub fn problem(code: RuleProblemCode) -> Text {
+    Text::fixed(match code {
+        RuleProblemCode::NameLength => "Give the rule a name of 1 to 100 characters.",
+        RuleProblemCode::DescriptionLength => "Keep the description to 500 characters or fewer.",
+        RuleProblemCode::ReasonLength => "Give the rule a reason of 1 to 1,000 characters.",
+        RuleProblemCode::CountingWindow => {
+            "Count cases from the last 1 to 36,500 days, or count every case."
+        }
+        RuleProblemCode::TooManyFields => "A rule can have at most 10 context fields.",
+        RuleProblemCode::FieldKey => {
+            "Use 2 to 64 lowercase letters, digits, dashes, or underscores for the key, starting with a letter or digit."
+        }
+        RuleProblemCode::FieldKeyDuplicate => "Another field of this rule already uses this key.",
+        RuleProblemCode::FieldLabelLength => "Give the field a label of 1 to 100 characters.",
+        RuleProblemCode::LevelCount => "A rule needs 1 to 10 levels.",
+        RuleProblemCode::FirstLevelNotOne => "The first level must start at case 1.",
+        RuleProblemCode::LevelCaseCount => {
+            "Start each later level at a case count from 2 to 1,000,000."
+        }
+        RuleProblemCode::LevelOrder => {
+            "Start each level at a higher case count than the level before it."
+        }
+        RuleProblemCode::TimeoutDuration => "A timeout lasts from 1 second to 28 days.",
+        RuleProblemCode::BanDeleteWindow => "A ban can delete at most the last 7 days of messages.",
+    })
 }

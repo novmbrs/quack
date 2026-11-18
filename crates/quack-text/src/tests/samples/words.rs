@@ -216,5 +216,8 @@ pub fn samples() -> Vec<Sample> {
         "",
         Out::Msg(rules::list(&[], 0, 1, 1)),
     ));
+    for code in quack_core::rule::RuleProblemCode::ALL {
+        v.push(text("rule.problem", code.as_str(), rules::problem(*code)));
+    }
     v
 }
