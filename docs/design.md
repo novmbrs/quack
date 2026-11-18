@@ -2291,10 +2291,10 @@ a Components V2 message (flag `IS_COMPONENTS_V2`, no `content`, no embeds):
 
 | `Msg` part | Components V2 |
 | --- | --- |
-| `Block::Heading(text)` | Text Display `### text` |
+| `Block::Heading(text)` | Text Display `### text`, on one line (line breaks in names become spaces) |
 | `Block::Text(text)` | Text Display |
 | `Block::Quote(text)` | Text Display, every line prefixed `> ` |
-| `Block::Field { label, value }` | Text Display `**label:** value` |
+| `Block::Field { label, value }` | Text Display `**label:** value`; the label is escaped like typed text (rule fields name it), and a label ending in `?` gets no colon and its value on the next line |
 | `Block::Subtext(text)` | Text Display `-# text` |
 | `Block::Divider` | Separator |
 | `Block::File(name)` | File component `attachment://<name>` (Discord shows a V2 message's attachments only through File components) |
@@ -2311,8 +2311,11 @@ a Components V2 message (flag `IS_COMPONENTS_V2`, no `content`, no embeds):
   Markdown escaping. `budget::fit` enforces the text budget before
   rendering: it removes Subtext blocks, then cuts the longest Quote or Text
   block (with "…", never below 200 characters), then drops trailing Field,
-  Text, and Quote blocks, never headings or rows, and adds
-  `render.trimmed` ("Some details are only on the dashboard."). Variable
+  Text, and Quote blocks, never headings or rows, and adds the message's
+  own note saying where the full details are (`Msg::when_trimmed`, such as
+  `dm.case.trimmed`), else `render.trimmed` ("Quack shortened this message
+  to fit in Discord."). Messages put the lines that must survive (case
+  number, action, appeal instructions) first. Variable
   lists are paged or cut before rendering (10 list rows, 20 rows in an
   activity bulk-delete post with "and N more"), so the component budget
   always holds. A test renders maximal inputs for every message and checks
@@ -2372,7 +2375,9 @@ own Markdown (DM introduction and footer, honeypot warning) keeps its
 formatting but can't mention anyone. Consecutive text blocks of one message
 render as one Text Display, one block per line. A message over Discord's
 text budget drops subtext, cuts its longest quote or paragraph, then drops
-trailing fields and paragraphs, and ends with `render.trimmed`.
+trailing fields and paragraphs, and ends with the message's own note (where
+the full details are) or `render.trimmed`. A field whose label ends in `?`
+renders as `**Label?**` with its value on the next line.
 
 ### 12.1 Commands
 
@@ -2430,7 +2435,7 @@ trailing fields and paragraphs, and ends with `render.trimmed`.
 | `button.open_in_dashboard` | Open in dashboard |
 | `button.failed_actions` | Failed actions |
 | `select.open_case` | Open a case (placeholder; each option is "#{number} · {rule name}", at most 25) |
-| `render.trimmed` | Some details are only on the dashboard. |
+| `render.trimmed` | Quack shortened this message to fit in Discord. |
 | `level.summary.item` | from case {from}: {outcome} |
 | `level.outcome.warning` | warning |
 | `level.outcome.timeout` | timeout for {duration} |
@@ -2843,81 +2848,105 @@ and `button.open_case`.
 
 ### 12.7 DM outcome sentences
 
-Staff-facing (receipt, card, dashboard staff view, log channel). `{because}`
-is a §6.5 fragment (`dm.failure.discord_refused` when the failure isn't
-known).
+One staff sentence per DM outcome, built by `quack_text::dm::outcome_sentence`
+and used unchanged on the receipt, the card, the dashboard staff view, and
+the log channel (which links `{case}`), so the same outcome reads the same
+everywhere. `{about}` names what the DM was about: "about {case}" (case
+DM), "about the appeal for {case}" (appeal DM), or "with the ticket
+transcript" (`ticket_closed`). `{recovery}` is what the reader can do
+instead: "{member} can sign in to the Quack dashboard to see the case."
+(case), "… to see the appeal." (appeal), or "Staff can open the ticket on
+the dashboard to check for the transcript." (ticket). When Quack can't
+name the member, `{member}` is "the member" ("The member" at the start of
+a sentence).
 
 | Id | Text |
 | --- | --- |
-| `dm.state.in_progress` | Quack is sending {member} a DM. |
-| `dm.state.sent` | Quack sent {member} a DM. |
-| `dm.state.failed` | Quack couldn't send {member} a DM {because}. They can still see the case by signing in to the dashboard. |
-| `dm.state.unknown` | Quack couldn't confirm whether Discord accepted the DM to {member}, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard. |
+| `dm.state.pending` | Quack will try to send {member} a DM {about}. |
+| `dm.state.in_progress` | Quack is sending {member} a DM {about}. |
+| `dm.state.sent` | Quack sent {member} a DM {about}. |
+| `dm.state.failed` | Quack couldn't send {member} a DM {about}. {failure} {recovery} |
+| `dm.state.unknown` | Quack couldn't confirm whether Discord accepted the DM to {member} {about}. Quack won't send it again. {recovery} |
 | `dm.state.not_needed.level` | This level doesn't send a DM. |
 | `dm.state.not_needed.voided` | Quack didn't send a DM because the case was voided first. |
-| `dm.failure.dms_closed` | because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack) |
-| `dm.failure.not_in_shared_server` | because they no longer share a server with Quack |
-| `dm.failure.discord_unavailable` | because Discord wasn't available |
-| `dm.failure.discord_refused` | because Discord refused the message |
+| `dm.failure.dms_closed` | Discord didn't allow the DM. |
+| `dm.failure.not_in_shared_server` | {member} and Quack don't share a server. |
+| `dm.failure.discord_unavailable` | (no sentence; the lead ends "… {about} in time.") |
+| `dm.failure.discord_refused` | Discord didn't allow the DM. |
+
+A failure with no known reason reads as `discord_refused`. Discord's
+refusal doesn't say why (closed DMs, a block, or a privacy setting), so the
+text doesn't guess.
 
 Combined example (failed DM on the staff card): "**DM:** Quack couldn't
-send @Sam a DM because Discord didn't let Quack message them (their DMs may
-be closed, or they may have blocked Quack). They can still see the case by
-signing in to the dashboard."
+send @Sam a DM about case #12. Discord didn't allow the DM. @Sam can sign in
+to the Quack dashboard to see the case."
 
-Member-facing (dashboard member view):
+Member-facing (dashboard member view; the member is already on their case
+page, so the sentence doesn't point back to it):
 
 | Id | Text |
 | --- | --- |
+| `member.dm.pending` | Quack will try to send you a DM about this case. |
 | `member.dm.in_progress` | Quack is sending you a DM about this case. |
 | `member.dm.sent` | Quack sent you a DM about this case. |
-| `member.dm.failed` | Quack couldn't send you a DM about this case. You can see your case here. |
-| `member.dm.unknown` | Quack couldn't confirm whether you got a DM about this case. You can see your case here. |
-| `member.dm.not_needed` | This case didn't need a DM. |
+| `member.dm.failed` | Quack couldn't send you a DM about this case. |
+| `member.dm.unknown` | Quack couldn't confirm whether Discord accepted the DM about this case. Quack won't send it again. |
+| `member.dm.not_needed` | Quack doesn't send a DM for this case. |
+| `member.dm.not_needed.voided` | Quack didn't send a DM because the case was voided first. |
 
 ### 12.8 DMs to members
 
-`dm.case` (one `Msg`; lines in order, omitted when the condition is false):
+`dm.case` (one `Msg`; lines in order, omitted when the condition is false).
+The case number, date, action, and appeal line come before the server's
+text and the case context, so trimming a long DM never removes them:
 
 | Id | Text | Condition |
 | --- | --- | --- |
-| `dm.case.heading` | ### You have a new case in {server} | always |
-| `dm.case.rule` | Rule: {rule} | always |
+| `dm.case.heading` | ### Case #{number} in {server} | always |
+| `dm.case.rule` | Rule: {rule} · {datetime} | always |
 | `dm.case.reason` | > {reason} | always |
+| `dm.case.outcome.warning` | **Action for this case:** This case is a warning. | no action |
+| `dm.case.outcome.timeout` | **Action for this case:** The rule calls for a timeout until {ends_at}. Open your case on the dashboard to check its outcome. ("…calls for a timeout." when the end isn't known) | timeout |
+| `dm.case.outcome.kick` | **Action for this case:** The rule calls for removing you from the server. Open your case on the dashboard to check its outcome. | kick |
+| `dm.case.outcome.ban` | **Action for this case:** The rule calls for banning you from the server. Open your case on the dashboard to check its outcome. | ban |
+| `dm.case.appeal` | To ask the moderators to review this case, select Appeal case. You can appeal once. | appealable |
+| `dm.case.not_appealable` | This case can't be appealed. | not appealable |
 | `dm.case.intro` | {dm_intro} (the server's text, Markdown allowed, mentions suppressed) | set and not blank |
 | `dm.case.details_heading` | **Details** | the case has non-link context |
 | `dm.case.detail_line` | **{label}:** {value} (cut to 300 characters with "…"; booleans Yes/No; `message_link` fields never shown) | per field |
-| `dm.case.outcome.warning` | **What happens:** This is a warning. No other action is taken. | no action |
-| `dm.case.outcome.timeout` | **What happens:** The moderators decided to time you out until {ends_at}. ("…to time you out." when the end isn't known) | timeout |
-| `dm.case.outcome.kick` | **What happens:** The moderators decided to remove you from the server. | kick |
-| `dm.case.outcome.ban` | **What happens:** The moderators decided to ban you from the server. | ban |
-| `dm.case.appeal` | If you think this case is wrong, you can appeal it once. | appealable |
-| `dm.case.not_appealable` | This case can't be appealed. | not appealable |
 | `dm.case.footer_text` | {dm_footer} (the server's text) | set and not blank |
-| `dm.case.subtext` | -# Case #{number} · {datetime} | always |
-| `dm.case.button.appeal` | Appeal | appealable (custom ID `1:ap:<case>`) |
-| `dm.case.button.dashboard` | Open in dashboard | always (link to `/guilds/{guild_id}/cases/{case_id}/appeal`) |
+| `dm.case.trimmed` | Open your case on the dashboard for the full details. | the DM was shortened to fit |
+| `dm.case.button.appeal` | Appeal case | appealable (custom ID `1:ap:<case>`) |
+| `dm.case.button.dashboard` | Open your case | always (link to `/guilds/{guild_id}/cases/{case_id}/appeal`) |
 
-DM subtexts show the full date and time (`{datetime}`), not a relative
-time, because a DM is read long after it is sent.
+The action line describes the rule's configured action, never Discord's
+result: the DM may arrive before a kick or ban runs (§6.3), and the
+member's case page shows the outcome. The DM shows the full date and time
+(`{datetime}`), not a relative time, because a DM is read long after it is
+sent.
 
-`dm.appeal.*` (one per appeal event, rendered from that event; every one
-ends with the subtext `-# Case #{number} · {server name, not bold} ·
-{datetime of the event}` and a link button `dm.appeal.button` "View
-appeal", or `dm.appeal.button.reply` "Reply on the dashboard" for
-information requests and reopened appeals):
+`dm.appeal.*` (one per appeal event, rendered from that event). Every one
+has the heading `### Your appeal for case #{number} in {server}`, a lead
+saying what the moderators did, the moderator's words as a quote, the
+subtext `-# {datetime of the event}`, and one link button to the member's
+case page: `dm.appeal.button.reply` "Reply to appeal" when the moderators
+asked for information, `dm.appeal.button` "Open your appeal" after a
+rejection or close, `dm.appeal.button.case` "Open your case" after an
+acceptance or a void. A shortened appeal DM ends with
+`dm.appeal.trimmed` "Open your appeal on the dashboard for the full
+details.".
 
-| Id | Heading | Body |
+| Id | Lead | After the quote |
 | --- | --- | --- |
-| `dm.appeal.information_requested` | ### The moderators of {server} need more information about your appeal | > {reason}\nReply on the dashboard to continue your appeal for case #{number}. |
-| `dm.appeal.reopened` | ### The moderators of {server} reopened your appeal | > {reason}\nThey need more information. Reply on the dashboard to continue your appeal for case #{number}. |
-| `dm.appeal.accepted` | ### Your appeal for case #{number} in {server} was accepted | > {reason}\nThe case no longer counts. Open your case to see what happened to any timeout or ban. |
-| `dm.appeal.accepted.rejoin_ban` | (appended) | If your ban is removed, you can rejoin with this invite: {invite, as a link} |
-| `dm.appeal.accepted.rejoin_kick` | (appended) | You can rejoin the server with this invite: {invite, as a link} |
-| `dm.appeal.rejected` | ### Your appeal for case #{number} in {server} was rejected | > {reason}\nThe case still counts. |
-| `dm.appeal.closed` | ### Your appeal for case #{number} in {server} was closed | > {reason} |
-| `dm.appeal.closed_case_voided` | ### Your appeal for case #{number} in {server} was closed | The case was voided, so there's nothing left to appeal. It no longer counts against you. |
-| `dm.appeal.button.reply` | Reply on the dashboard | information requested, reopened |
+| `dm.appeal.information_requested` | The moderators asked for more information: | Select Reply to appeal to answer on the dashboard. |
+| `dm.appeal.reopened` | The moderators reopened your appeal and asked for more information: | Select Reply to appeal to answer on the dashboard. |
+| `dm.appeal.accepted` | The moderators accepted your appeal. Case #{number} no longer counts. | Open your case to check whether any timeout or ban was removed. |
+| `dm.appeal.accepted.rejoin_ban` | (appended) | Once your ban is removed, you can try this invite to rejoin the server: {invite, as a link} |
+| `dm.appeal.accepted.rejoin_kick` | (appended) | You can try this invite to rejoin the server: {invite, as a link} |
+| `dm.appeal.rejected` | The moderators rejected your appeal. Case #{number} still counts. | |
+| `dm.appeal.closed` | The moderators closed your appeal. Case #{number} still counts. | |
+| `dm.appeal.closed_case_voided` | Your appeal was closed because case #{number} was voided. The case no longer counts. | (no quote) |
 
 ### 12.9 Appeals
 

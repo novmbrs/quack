@@ -171,7 +171,7 @@ pub fn open_case_select(cases: &[CaseOption]) -> Option<Select> {
 
 /// `render.trimmed`.
 pub fn render_trimmed() -> Text {
-    Text::fixed("Some details are only on the dashboard.")
+    Text::fixed("Quack shortened this message to fit in Discord.")
 }
 
 /// `level.outcome.*`: what a level does ("timeout for 1 hour").

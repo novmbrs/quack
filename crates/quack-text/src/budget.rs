@@ -263,13 +263,17 @@ pub fn cut_text(t: &Text, max: usize) -> Text {
 
 /// Shrinks a message that is over the text budget (§11.11): removes
 /// subtext, then cuts the longest quote or paragraph, then drops trailing
-/// fields and paragraphs (never headings or rows), and says that some
-/// details are only on the dashboard.
+/// fields and paragraphs (never headings or rows), and ends with the
+/// message's own note ([`Msg::when_trimmed`]) or `render.trimmed`.
 pub fn fit(msg: &mut Msg) {
     if text_len(msg) <= TEXT_BUDGET {
         return;
     }
-    let notice = Block::Text(crate::word::render_trimmed());
+    let notice = Block::Text(
+        msg.trimmed
+            .clone()
+            .unwrap_or_else(crate::word::render_trimmed),
+    );
     let reserve =
         render::block_markdown(&notice, &CommandIds::EMPTY).map_or(0, |s| s.chars().count() + 1);
     let budget = TEXT_BUDGET - reserve;

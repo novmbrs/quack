@@ -8,7 +8,7 @@ tone: Neutral
 <@222> · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 **Action:** No action. This case is a warning.
-**DM:** Quack sent <@222> a DM.
+**DM:** Quack sent <@222> a DM about case #12.
 -# Added by <@333> <t:1794924309:R>
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
@@ -16,14 +16,14 @@ Case #12 · Spam
 Sam · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 Action: No action. This case is a warning.
-DM: Quack sent Sam a DM.
+DM: Quack sent Sam a DM about case #12.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
 Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (starts at case 1) · case count 1")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("No action. This case is a warning.")]
-Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12.")]
 Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
 
 ## timeout done, DM failed, context, appeal pending, replaced
@@ -33,11 +33,13 @@ tone: Success
 <@222> · level 2 (starts at case 3) · case count 3
 > Posting spam or unsolicited advertising.
 **Action:** <@222> is timed out until <t:1795014309:f> (<t:1795014309:R>).
-**DM:** Quack couldn't send <@222> a DM because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+**DM:** Quack couldn't send <@222> a DM about case #12. Discord didn't allow the DM. <@222> can sign in to the Quack dashboard to see the case.
 **Evidence:** 3 items saved.
 **Case context**
-**What happened?:** Posted invite links in \#general.
-**Repeat offence?:** Yes
+**What happened?**
+Posted invite links in \#general.
+**Repeat offence?**
+Yes
 **Links posted:** 2.5
 **Message link:** [https\://discord.com/channels/1/2/3](<https://discord.com/channels/1/2/3>)
 Replaced by case #13.
@@ -50,11 +52,11 @@ Case #12 · Spam
 Sam · level 2 (starts at case 3) · case count 3
 > Posting spam or unsolicited advertising.
 Action: Sam is timed out until 18 Nov 2026 at 15:05 UTC.
-DM: Quack couldn't send Sam a DM because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+DM: Quack couldn't send Sam a DM about case #12. Discord didn't allow the DM. Sam can sign in to the Quack dashboard to see the case.
 Evidence: 3 items saved.
 Case context
-What happened?: Posted invite links in #general.
-Repeat offence?: Yes
+What happened? Posted invite links in #general.
+Repeat offence? Yes
 Links posted: 2.5
 Message link: https://discord.com/channels/1/2/3
 Replaced by case #13.
@@ -65,7 +67,7 @@ Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
 Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 2 (starts at case 3) · case count 3")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is timed out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
-Field "DM" [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.")]
+Field "DM" [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12. Discord didn't allow the DM. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]
 Field "Evidence" [Fixed("3 items saved.")]
 Text [Bold([Fixed("Case context")])]
 Field "What happened?" [User("Posted invite links in #general.")]
@@ -83,7 +85,7 @@ tone: Danger
 <@222> · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't ban <@222>. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
-**DM:** Quack couldn't confirm whether Discord accepted the DM to <@222>, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
+**DM:** Quack couldn't confirm whether Discord accepted the DM to <@222> about case #12. Quack won't send it again. <@222> can sign in to the Quack dashboard to see the case.
 **Evidence:** 2 saved, 1 couldn't be saved. Open View evidence to see why.
 **Appeal:** waiting for <@222> to add information.
 A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.
@@ -95,7 +97,7 @@ Case #12 · Spam
 Sam · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't ban Sam. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
-DM: Quack couldn't confirm whether Discord accepted the DM to Sam, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
+DM: Quack couldn't confirm whether Discord accepted the DM to Sam about case #12. Quack won't send it again. Sam can sign in to the Quack dashboard to see the case.
 Evidence: 2 saved, 1 couldn't be saved. Open View evidence to see why.
 Appeal: waiting for Sam to add information.
 A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.
@@ -105,7 +107,7 @@ Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
 Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (starts at case 1) · case count 1")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.")]
-Field "DM" [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.")]
+Field "DM" [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" about case #12. Quack won't send it again. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]
 Field "Evidence" [Fixed("2 saved, 1 couldn't be saved. Open View evidence to see why.")]
 Field "Appeal" [Fixed("waiting for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" to add information.")]
 Text [Fixed("A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.")]
@@ -119,7 +121,7 @@ tone: Neutral
 > Posting spam or unsolicited advertising.
 **Action:** Quack banned <@222>.
 **Undo:** Quack is unbanning <@222>. The last try didn't go through or wasn't confirmed, so Quack will try again <t:1795014309:R>.
-**DM:** Quack sent <@222> a DM.
+**DM:** Quack sent <@222> a DM about case #12.
 **Evidence:** Saving evidence…
 Voided by <@333> <t:1795014309:R>.
 > Wrong member.
@@ -133,7 +135,7 @@ Sam · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 Action: Quack banned Sam.
 Undo: Quack is unbanning Sam. The last try didn't go through or wasn't confirmed, so Quack will try again on 18 Nov 2026 at 15:05 UTC.
-DM: Quack sent Sam a DM.
+DM: Quack sent Sam a DM about case #12.
 Evidence: Saving evidence…
 Voided by Ana on 18 Nov 2026 at 15:05 UTC.
 > Wrong member.
@@ -146,7 +148,7 @@ Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
 Field "Undo" [Fixed("Quack is unbanning "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The last try didn't go through or wasn't confirmed, so Quack will try again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
-Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12.")]
 Field "Evidence" [Fixed("Saving evidence…")]
 Text [Fixed("Voided by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
 Quote [User("Wrong member.")]
@@ -209,17 +211,17 @@ tone: Neutral
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
 **Action:** <@222> is timed out until <t:1795014309:f> (<t:1795014309:R>).
 **Undo:** Quack couldn't remove <@222>'s timeout. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
-**DM:** Quack sent <@222> a DM.
+**DM:** Quack sent <@222> a DM about case #12.
 **Evidence:** 49 saved, 1 couldn't be saved. Open View evidence to see why.
 **Case context**
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 1:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 2:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 3:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 4:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 5:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 6:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-Some details are only on the dashboard.
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 0:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 1:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 2:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 3:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 4:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 5:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 6:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+Quack shortened this message to fit in Discord.
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [History · Secondary] History { member: MemberId(222), page: 1 } | [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 buttons: [Dismiss timeout removal · Secondary] DismissAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Failed actions](https://quack.example/guilds/111/failures) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
@@ -228,7 +230,7 @@ Sam · level 1 (starts at case 1) · case count 1
 > Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me
 Action: Sam is timed out until 18 Nov 2026 at 15:05 UTC.
 Undo: Quack couldn't remove Sam's timeout. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
-DM: Quack sent Sam a DM.
+DM: Quack sent Sam a DM about case #12.
 Evidence: 49 saved, 1 couldn't be saved. Open View evidence to see why.
 Case context
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
@@ -254,7 +256,7 @@ Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level
 Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me")]
 Field "Action" [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is timed out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
 Field "Undo" [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
-Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12.")]
 Field "Evidence" [Fixed("49 saved, 1 couldn't be saved. Open View evidence to see why.")]
 Text [Bold([Fixed("Case context")])]
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]
@@ -278,12 +280,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 ## hostile text
 tone: Neutral
 --- discord ---
-### Case #12 · **\@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
-\# Heading
-\> quote
-\- list
-1\. one
-hidden**
+### Case #12 · **\@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example \# Heading \> quote \- list 1\. one hidden**
 <@222> · level 1 (starts at case 1) · case count 1
 > \@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
 > \# Heading
@@ -292,9 +289,9 @@ hidden**
 > 1\. one
 > hidden
 **Action:** No action. This case is a warning.
-**DM:** Quack sent <@222> a DM.
+**DM:** Quack sent <@222> a DM about case #12.
 **Case context**
-**@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden:** \@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
+**\@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example \# Heading \> quote \- list 1. one hidden:** \@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
 \# Heading
 \> quote
 \- list
@@ -303,12 +300,7 @@ hidden
 -# Added by <@333> <t:1794924309:R>
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
-Case #12 · @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
-# Heading
-> quote
-- list
-1. one
-hidden
+Case #12 · @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden
 @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden · level 1 (starts at case 1) · case count 1
 > @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
 > # Heading
@@ -317,7 +309,7 @@ hidden
 > 1. one
 > hidden
 Action: No action. This case is a warning.
-DM: Quack sent @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden a DM.
+DM: Quack sent @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden a DM about case #12.
 Case context
 @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden: @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
 # Heading
@@ -331,7 +323,7 @@ Heading [Fixed("Case #12 · "), Bold([User("@everyone <@1> <@&2> <#3> **bold** _
 Text [Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") }), Fixed(" · level 1 (starts at case 1) · case count 1")]
 Quote [User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")]
 Field "Action" [Fixed("No action. This case is a warning.")]
-Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") }), Fixed(" a DM.")]
+Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") }), Fixed(" a DM about case #12.")]
 Text [Bold([Fixed("Case context")])]
 Field "@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden" [User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")]
 Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
@@ -343,7 +335,7 @@ tone: Danger
 <@222> · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't confirm whether Discord applied the ban to <@222>. Check <@222> in Discord before you retry.
-**DM:** Quack sent <@222> a DM.
+**DM:** Quack sent <@222> a DM about case #12.
 A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.
 -# Added by <@333> <t:1794924309:R>
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Failed actions](https://quack.example/guilds/111/failures)
@@ -353,7 +345,7 @@ Case #12 · Spam
 Sam · level 1 (starts at case 1) · case count 1
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't confirm whether Discord applied the ban to Sam. Check Sam in Discord before you retry.
-DM: Quack sent Sam a DM.
+DM: Quack sent Sam a DM about case #12.
 A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
@@ -361,6 +353,6 @@ Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
 Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (starts at case 1) · case count 1")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't confirm whether Discord applied the ban to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in Discord before you retry.")]
-Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12.")]
 Text [Fixed("A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.")]
 Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]

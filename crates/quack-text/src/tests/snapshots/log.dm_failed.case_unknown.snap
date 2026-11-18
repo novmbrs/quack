@@ -4,16 +4,16 @@ source: crates/quack-text/src/tests/snapshots.rs
 ##  · post
 tone: Danger
 --- discord ---
-Quack couldn't confirm whether Discord accepted the DM to <@222> about **[case #12](<https://quack.example/guilds/111/cases/12>)**, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
+Quack couldn't confirm whether Discord accepted the DM to <@222> about **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack won't send it again. <@222> can sign in to the Quack dashboard to see the case.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't confirm whether Discord accepted the DM to Sam about case #12, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
+Quack couldn't confirm whether Discord accepted the DM to Sam about case #12. Quack won't send it again. Sam can sign in to the Quack dashboard to see the case.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" about "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(", and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.")]
+Text [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" about "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack won't send it again. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ##  · dashboard text
-discord: Quack couldn't confirm whether Discord accepted the DM to <@222> about case #12, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
-plain:   Quack couldn't confirm whether Discord accepted the DM to Sam about case #12, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
-model:   [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" about case #12, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.")]
+discord: Quack couldn't confirm whether Discord accepted the DM to <@222> about case #12. Quack won't send it again. <@222> can sign in to the Quack dashboard to see the case.
+plain:   Quack couldn't confirm whether Discord accepted the DM to Sam about case #12. Quack won't send it again. Sam can sign in to the Quack dashboard to see the case.
+model:   [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" about case #12. Quack won't send it again. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]

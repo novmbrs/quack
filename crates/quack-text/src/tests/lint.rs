@@ -304,7 +304,7 @@ fn couldnt_confirm_only_for_unknown_outcomes() {
     for (name, d) in super::samples::dms_views() {
         let outcome = dm::outcome(d.as_ref());
         for s in [
-            dm::sentence(d.as_ref(), &m).plain(),
+            dm::sentence(d.as_ref(), &m, 12).plain(),
             dm::member_sentence(d.as_ref()).plain(),
         ] {
             assert_eq!(

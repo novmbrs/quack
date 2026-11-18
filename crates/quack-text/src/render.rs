@@ -159,16 +159,29 @@ pub fn block_markdown(block: &Block, commands: &CommandIds) -> Option<String> {
 fn block_to(block: &Block, surface: Surface<'_>) -> Option<String> {
     let discord = matches!(surface, Surface::Discord(_));
     Some(match block {
-        Block::Heading(t) if discord => format!("### {}", text(t, surface)),
+        // A heading is one line, even when a name in it has line breaks.
+        Block::Heading(t) if discord => format!("### {}", fmt::one_line(&text(t, surface))),
+        Block::Heading(t) => fmt::one_line(&text(t, surface)),
         Block::Subtext(t) if discord => format!("-# {}", text(t, surface)),
-        Block::Heading(t) | Block::Text(t) | Block::Subtext(t) => text(t, surface),
+        Block::Text(t) | Block::Subtext(t) => text(t, surface),
         Block::Quote(t) => quote(&text(t, surface)),
-        Block::Field { label, value } if discord => {
-            format!("**{label}:** {}", text(value, surface))
-        }
-        Block::Field { label, value } => format!("{label}: {}", text(value, surface)),
+        Block::Field { label, value } => field(label, &text(value, surface), discord),
         Block::Divider | Block::File(_) => return None,
     })
+}
+
+/// `**Label:** value`. Labels can come from a rule's fields, so they are
+/// escaped like any typed text; a question label ("What happened?") gets
+/// no colon and its answer on the next line.
+fn field(label: &str, value: &str, discord: bool) -> String {
+    let label = fmt::one_line(label);
+    let question = label.ends_with('?');
+    match (discord, question) {
+        (true, true) => format!("**{}**\n{value}", fmt::escape_markdown(&label)),
+        (true, false) => format!("**{}:** {value}", fmt::escape_markdown(&label)),
+        (false, true) => format!("{label} {value}"),
+        (false, false) => format!("{label}: {value}"),
+    }
 }
 
 fn quote(s: &str) -> String {

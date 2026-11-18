@@ -4,178 +4,175 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## warning, appealable, intro and footer
 tone: Neutral
 --- discord ---
-### You have a new case in **Duck Pond**
-Rule: **Spam**
+### Case #12 in **Duck Pond**
+Rule: **Spam** · <t:1794924309:f>
 > Posting spam or unsolicited advertising.
+**Action for this case:** This case is a warning.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 Please read the **rules** in <#1>. \@everyone
 **Details**
-**What happened?:** Posted invite links in \#general.
-**Repeat offence?:** Yes
+**What happened?**
+Posted invite links in \#general.
+**Repeat offence?**
+Yes
 **Links posted:** 2.5
-**What happens:** This is a warning. No other action is taken.
-If you think this case is wrong, you can appeal it once.
 Questions? Open a ticket.
--# Case #12 · <t:1794924309:f>
-buttons: [Appeal · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12/appeal)
+buttons: [Appeal case · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open your case](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-You have a new case in Duck Pond
-Rule: Spam
+Case #12 in Duck Pond
+Rule: Spam · 17 Nov 2026 at 14:05 UTC
 > Posting spam or unsolicited advertising.
+Action for this case: This case is a warning.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 Please read the **rules** in <#1>. @everyone
 Details
-What happened?: Posted invite links in #general.
-Repeat offence?: Yes
+What happened? Posted invite links in #general.
+Repeat offence? Yes
 Links posted: 2.5
-What happens: This is a warning. No other action is taken.
-If you think this case is wrong, you can appeal it once.
 Questions? Open a ticket.
-Case #12 · 17 Nov 2026 at 14:05 UTC
 --- model ---
-Heading [Fixed("You have a new case in "), Bold([User("Duck Pond")])]
-Text [Fixed("Rule: "), Bold([User("Spam")])]
+Heading [Fixed("Case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("Rule: "), Bold([User("Spam")]), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action for this case" [Fixed("This case is a warning.")]
+Text [Fixed("To ask the moderators to review this case, select Appeal case. You can appeal once.")]
 Text [ServerMarkdown("Please read the **rules** in <#1>. @everyone")]
 Text [Bold([Fixed("Details")])]
 Field "What happened?" [User("Posted invite links in #general.")]
 Field "Repeat offence?" [Fixed("Yes")]
 Field "Links posted" [Fixed("2.5")]
-Field "What happens" [Fixed("This is a warning. No other action is taken.")]
-Text [Fixed("If you think this case is wrong, you can appeal it once.")]
 Text [ServerMarkdown("Questions? Open a ticket.")]
-Subtext [Fixed("Case #12 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## timeout
 tone: Neutral
 --- discord ---
-### You have a new case in **Duck Pond**
-Rule: **Spam**
+### Case #12 in **Duck Pond**
+Rule: **Spam** · <t:1794924309:f>
 > Posting spam or unsolicited advertising.
-**What happens:** The moderators decided to time you out until <t:1795014309:f> (<t:1795014309:R>).
-If you think this case is wrong, you can appeal it once.
--# Case #12 · <t:1794924309:f>
-buttons: [Appeal · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12/appeal)
+**Action for this case:** The rule calls for a timeout until <t:1795014309:f> (<t:1795014309:R>). Open your case on the dashboard to check its outcome.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
+buttons: [Appeal case · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open your case](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-You have a new case in Duck Pond
-Rule: Spam
+Case #12 in Duck Pond
+Rule: Spam · 17 Nov 2026 at 14:05 UTC
 > Posting spam or unsolicited advertising.
-What happens: The moderators decided to time you out until 18 Nov 2026 at 15:05 UTC.
-If you think this case is wrong, you can appeal it once.
-Case #12 · 17 Nov 2026 at 14:05 UTC
+Action for this case: The rule calls for a timeout until 18 Nov 2026 at 15:05 UTC. Open your case on the dashboard to check its outcome.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 --- model ---
-Heading [Fixed("You have a new case in "), Bold([User("Duck Pond")])]
-Text [Fixed("Rule: "), Bold([User("Spam")])]
+Heading [Fixed("Case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("Rule: "), Bold([User("Spam")]), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 Quote [User("Posting spam or unsolicited advertising.")]
-Field "What happens" [Fixed("The moderators decided to time you out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
-Text [Fixed("If you think this case is wrong, you can appeal it once.")]
-Subtext [Fixed("Case #12 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Field "Action for this case" [Fixed("The rule calls for a timeout until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(". Open your case on the dashboard to check its outcome.")]
+Text [Fixed("To ask the moderators to review this case, select Appeal case. You can appeal once.")]
 
 ## kick, not appealable
 tone: Neutral
 --- discord ---
-### You have a new case in **Duck Pond**
-Rule: **Spam**
+### Case #12 in **Duck Pond**
+Rule: **Spam** · <t:1794924309:f>
 > Posting spam or unsolicited advertising.
+**Action for this case:** The rule calls for removing you from the server. Open your case on the dashboard to check its outcome.
+This case can't be appealed.
 Please read the **rules** in <#1>. \@everyone
 **Details**
-**What happened?:** Posted invite links in \#general.
-**Repeat offence?:** Yes
+**What happened?**
+Posted invite links in \#general.
+**Repeat offence?**
+Yes
 **Links posted:** 2.5
-**What happens:** The moderators decided to remove you from the server.
-This case can't be appealed.
 Questions? Open a ticket.
--# Case #12 · <t:1794924309:f>
-buttons: [Open in dashboard](https://quack.example/guilds/111/cases/12/appeal)
+buttons: [Open your case](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-You have a new case in Duck Pond
-Rule: Spam
+Case #12 in Duck Pond
+Rule: Spam · 17 Nov 2026 at 14:05 UTC
 > Posting spam or unsolicited advertising.
+Action for this case: The rule calls for removing you from the server. Open your case on the dashboard to check its outcome.
+This case can't be appealed.
 Please read the **rules** in <#1>. @everyone
 Details
-What happened?: Posted invite links in #general.
-Repeat offence?: Yes
+What happened? Posted invite links in #general.
+Repeat offence? Yes
 Links posted: 2.5
-What happens: The moderators decided to remove you from the server.
-This case can't be appealed.
 Questions? Open a ticket.
-Case #12 · 17 Nov 2026 at 14:05 UTC
 --- model ---
-Heading [Fixed("You have a new case in "), Bold([User("Duck Pond")])]
-Text [Fixed("Rule: "), Bold([User("Spam")])]
+Heading [Fixed("Case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("Rule: "), Bold([User("Spam")]), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action for this case" [Fixed("The rule calls for removing you from the server. Open your case on the dashboard to check its outcome.")]
+Text [Fixed("This case can't be appealed.")]
 Text [ServerMarkdown("Please read the **rules** in <#1>. @everyone")]
 Text [Bold([Fixed("Details")])]
 Field "What happened?" [User("Posted invite links in #general.")]
 Field "Repeat offence?" [Fixed("Yes")]
 Field "Links posted" [Fixed("2.5")]
-Field "What happens" [Fixed("The moderators decided to remove you from the server.")]
-Text [Fixed("This case can't be appealed.")]
 Text [ServerMarkdown("Questions? Open a ticket.")]
-Subtext [Fixed("Case #12 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## ban
 tone: Neutral
 --- discord ---
-### You have a new case in **Duck Pond**
-Rule: **Spam**
+### Case #12 in **Duck Pond**
+Rule: **Spam** · <t:1794924309:f>
 > Posting spam or unsolicited advertising.
+**Action for this case:** The rule calls for banning you from the server. Open your case on the dashboard to check its outcome.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 Please read the **rules** in <#1>. \@everyone
 **Details**
-**What happened?:** Posted invite links in \#general.
-**Repeat offence?:** Yes
+**What happened?**
+Posted invite links in \#general.
+**Repeat offence?**
+Yes
 **Links posted:** 2.5
-**What happens:** The moderators decided to ban you from the server.
-If you think this case is wrong, you can appeal it once.
 Questions? Open a ticket.
--# Case #12 · <t:1794924309:f>
-buttons: [Appeal · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12/appeal)
+buttons: [Appeal case · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open your case](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-You have a new case in Duck Pond
-Rule: Spam
+Case #12 in Duck Pond
+Rule: Spam · 17 Nov 2026 at 14:05 UTC
 > Posting spam or unsolicited advertising.
+Action for this case: The rule calls for banning you from the server. Open your case on the dashboard to check its outcome.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 Please read the **rules** in <#1>. @everyone
 Details
-What happened?: Posted invite links in #general.
-Repeat offence?: Yes
+What happened? Posted invite links in #general.
+Repeat offence? Yes
 Links posted: 2.5
-What happens: The moderators decided to ban you from the server.
-If you think this case is wrong, you can appeal it once.
 Questions? Open a ticket.
-Case #12 · 17 Nov 2026 at 14:05 UTC
 --- model ---
-Heading [Fixed("You have a new case in "), Bold([User("Duck Pond")])]
-Text [Fixed("Rule: "), Bold([User("Spam")])]
+Heading [Fixed("Case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("Rule: "), Bold([User("Spam")]), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action for this case" [Fixed("The rule calls for banning you from the server. Open your case on the dashboard to check its outcome.")]
+Text [Fixed("To ask the moderators to review this case, select Appeal case. You can appeal once.")]
 Text [ServerMarkdown("Please read the **rules** in <#1>. @everyone")]
 Text [Bold([Fixed("Details")])]
 Field "What happened?" [User("Posted invite links in #general.")]
 Field "Repeat offence?" [Fixed("Yes")]
 Field "Links posted" [Fixed("2.5")]
-Field "What happens" [Fixed("The moderators decided to ban you from the server.")]
-Text [Fixed("If you think this case is wrong, you can appeal it once.")]
 Text [ServerMarkdown("Questions? Open a ticket.")]
-Subtext [Fixed("Case #12 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## maximal
 tone: Neutral
 --- discord ---
-### You have a new case in **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \***
-Rule: **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \***
+### Case #12 in **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \***
+Rule: **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*** · <t:1794924309:f>
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
+**Action for this case:** This case is a warning.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long te…
 **Details**
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 1:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 2:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 3:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 4:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 5:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-**Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 6:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
-Some details are only on the dashboard.
-buttons: [Appeal · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open in dashboard](https://quack.example/guilds/111/cases/12/appeal)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 0:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 1:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 2:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 3:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 4:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 5:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
+Open your case on the dashboard for the full details.
+buttons: [Appeal case · Primary] Appeal(CaseId(01930000-0000-7000-8000-000000000001)) | [Open your case](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-You have a new case in Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
-Rule: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
+Case #12 in Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
+Rule: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 at 14:05 UTC
 > Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me
+Action for this case: This case is a warning.
+To ask the moderators to review this case, select Appeal case. You can appeal once.
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me
 Details
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
@@ -188,14 +185,13 @@ Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 7: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 8: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 9: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
-What happens: This is a warning. No other action is taken.
-If you think this case is wrong, you can appeal it once.
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
-Case #12 · 17 Nov 2026 at 14:05 UTC
 --- model ---
-Heading [Fixed("You have a new case in "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")])]
-Text [Fixed("Rule: "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")])]
+Heading [Fixed("Case #12 in "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")])]
+Text [Fixed("Rule: "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")]), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me")]
+Field "Action for this case" [Fixed("This case is a warning.")]
+Text [Fixed("To ask the moderators to review this case, select Appeal case. You can appeal once.")]
 Text [ServerMarkdown("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me")]
 Text [Bold([Fixed("Details")])]
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]
@@ -208,7 +204,4 @@ Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1>
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 7" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 8" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 9" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]
-Field "What happens" [Fixed("This is a warning. No other action is taken.")]
-Text [Fixed("If you think this case is wrong, you can appeal it once.")]
 Text [ServerMarkdown("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
-Subtext [Fixed("Case #12 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]

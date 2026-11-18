@@ -306,7 +306,10 @@ pub fn card(c: &CaseCard) -> Msg {
                 action::sentence(&u.view, &c.member, Detail::Full),
             ));
         }
-        msg = msg.block(field("DM", dm::sentence(c.dm.as_ref(), &c.member)));
+        msg = msg.block(field(
+            "DM",
+            dm::sentence(c.dm.as_ref(), &c.member, c.number),
+        ));
     }
     if let Some(line) = evidence_line(c.evidence) {
         msg = msg.block(field("Evidence", line));

@@ -2,7 +2,7 @@
 
 use quack_core::action::{ActionFailure, ActionKind, ActionSkipReason, Failure};
 use quack_core::case::CaseSource;
-use quack_core::dm::DmKind;
+use quack_core::dm::{DmKind, DmState};
 use quack_core::modlog::{
     ActionDoneDetail, ActionFailedDetail, CaseCreatedDetail, DmFailedDetail, DmFailedState,
     DmSentDetail, UndoSkippedDetail,
@@ -11,7 +11,7 @@ use quack_core::rule::LevelAction;
 
 use super::LogFacts;
 use crate::action;
-use crate::dm::because;
+use crate::dm::{self, DmAbout};
 use crate::fmt;
 use crate::model::{Text, TimeStyle};
 use crate::word;
@@ -37,13 +37,6 @@ fn ends(f: &LogFacts, t: Text) -> Text {
     match f.timeout_ends_at {
         Some(at) => t.s(" until ").time(at, TimeStyle::FullRelative),
         None => t,
-    }
-}
-
-fn dm_case(f: &LogFacts, t: Text) -> Text {
-    match f.case_number {
-        Some(n) => f.case(t, n),
-        None => t.s("their case"),
     }
 }
 
@@ -189,53 +182,34 @@ pub(super) fn undo_skipped(d: &UndoSkippedDetail, f: &LogFacts) -> Text {
     }
 }
 
-pub(super) fn dm_sent(d: DmSentDetail, f: &LogFacts) -> Text {
-    let member = |t: Text| f.member(t);
-    match d.dm_kind {
-        DmKind::Case => dm_case(f, member(Text::fixed("Quack sent ")).s(" a DM about ")).s("."),
-        DmKind::AppealUpdate => dm_case(
-            f,
-            member(Text::fixed("Quack sent ")).s(" a DM about their appeal for "),
-        )
-        .s("."),
-        DmKind::TicketClosed => {
-            member(Text::fixed("Quack sent ")).s(" the transcript of their ticket.")
-        }
+fn dm_about(kind: DmKind, f: &LogFacts) -> DmAbout {
+    match kind {
+        DmKind::Case => DmAbout::Case(f.case_number),
+        DmKind::AppealUpdate => DmAbout::Appeal(f.case_number),
+        DmKind::TicketClosed => DmAbout::Transcript,
     }
 }
 
+pub(super) fn dm_sent(d: DmSentDetail, f: &LogFacts) -> Text {
+    dm::outcome_with(
+        DmState::Sent,
+        None,
+        f.member.as_ref(),
+        dm_about(d.dm_kind, f),
+        &|t, n| f.case(t, n),
+    )
+}
+
 pub(super) fn dm_failed(d: &DmFailedDetail, f: &LogFacts) -> Text {
-    let member = |t: Text| f.member(t);
-    {
-        let why = because(
-            d.failure
-                .unwrap_or(quack_core::dm::DmFailure::DiscordRefused),
-        );
-        match (d.dm_kind, d.state) {
-            (DmKind::Case, DmFailedState::Failed) => dm_case(f, member(Text::fixed("Quack couldn't send ")).s(" a DM about "))
-                .s(format!(" {why}. They can still see the case by signing in to the dashboard.")),
-            (DmKind::Case, DmFailedState::Unknown) => dm_case(
-                f,
-                member(Text::fixed("Quack couldn't confirm whether Discord accepted the DM to ")).s(" about "),
-            )
-            .s(", and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard."),
-            (DmKind::AppealUpdate, DmFailedState::Failed) => dm_case(
-                f,
-                member(Text::fixed("Quack couldn't send ")).s(" a DM about their appeal for "),
-            )
-            .s(format!(" {why}. They can still see the decision on the dashboard.")),
-            (DmKind::AppealUpdate, DmFailedState::Unknown) => dm_case(
-                f,
-                member(Text::fixed("Quack couldn't confirm whether Discord accepted the DM to "))
-                    .s(" about their appeal for "),
-            )
-            .s(". They can still see the decision on the dashboard."),
-            (DmKind::TicketClosed, DmFailedState::Failed) => member(Text::fixed("Quack couldn't send "))
-                .s(format!(" the transcript of their ticket {why}. Staff can read it on the dashboard's ticket page.")),
-            (DmKind::TicketClosed, DmFailedState::Unknown) => member(Text::fixed(
-                "Quack couldn't confirm whether Discord accepted the transcript DM to ",
-            ))
-            .s(". Staff can read it on the dashboard's ticket page."),
-        }
-    }
+    let state = match d.state {
+        DmFailedState::Failed => DmState::Failed,
+        DmFailedState::Unknown => DmState::Unknown,
+    };
+    dm::outcome_with(
+        state,
+        d.failure,
+        f.member.as_ref(),
+        dm_about(d.dm_kind, f),
+        &|t, n| f.case(t, n),
+    )
 }

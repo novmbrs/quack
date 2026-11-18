@@ -4,16 +4,16 @@ source: crates/quack-text/src/tests/snapshots.rs
 ##  · post
 tone: Neutral
 --- discord ---
-Quack sent <@222> the transcript of their ticket.
+Quack sent <@222> a DM with the ticket transcript.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack sent Sam the transcript of their ticket.
+Quack sent Sam a DM with the ticket transcript.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" the transcript of their ticket.")]
+Text [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM with the ticket transcript.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ##  · dashboard text
-discord: Quack sent <@222> the transcript of their ticket.
-plain:   Quack sent Sam the transcript of their ticket.
-model:   [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" the transcript of their ticket.")]
+discord: Quack sent <@222> a DM with the ticket transcript.
+plain:   Quack sent Sam a DM with the ticket transcript.
+model:   [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM with the ticket transcript.")]

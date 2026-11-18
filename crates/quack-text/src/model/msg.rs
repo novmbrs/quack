@@ -159,6 +159,9 @@ pub struct Msg {
     pub blocks: Vec<Block>,
     /// Controls under the text, in order.
     pub rows: Vec<Row>,
+    /// The line [`budget::fit`] ends a shortened message with, saying where
+    /// the rest is; `None` uses `render.trimmed`.
+    pub trimmed: Option<Text>,
 }
 
 impl Msg {
@@ -168,7 +171,16 @@ impl Msg {
             tone,
             blocks: Vec::new(),
             rows: Vec::new(),
+            trimmed: None,
         }
+    }
+
+    /// Sets the line a shortened message ends with (where the full details
+    /// are), instead of `render.trimmed`.
+    #[must_use]
+    pub fn when_trimmed(mut self, note: Text) -> Self {
+        self.trimmed = Some(note);
+        self
     }
 
     /// A one-paragraph message, such as an error or a confirmation.

@@ -3,37 +3,37 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 tone: Neutral
 --- discord ---
-### Your appeal for case #12 in **Duck Pond** was rejected
+### Your appeal for case #12 in **Duck Pond**
+The moderators rejected your appeal. Case #12 still counts.
 > We reviewed it.
-The case still counts.
--# Case #12 · Duck Pond · <t:1795014309:f>
-buttons: [View appeal](https://quack.example/guilds/111/cases/12/appeal)
+-# <t:1795014309:f>
+buttons: [Open your appeal](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-Your appeal for case #12 in Duck Pond was rejected
+Your appeal for case #12 in Duck Pond
+The moderators rejected your appeal. Case #12 still counts.
 > We reviewed it.
-The case still counts.
-Case #12 · Duck Pond · 18 Nov 2026 at 15:05 UTC
+18 Nov 2026 at 15:05 UTC
 --- model ---
-Heading [Fixed("Your appeal for case #12 in "), Bold([User("Duck Pond")]), Fixed(" was rejected")]
+Heading [Fixed("Your appeal for case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("The moderators rejected your appeal. Case #12 still counts.")]
 Quote [User("We reviewed it.")]
-Text [Fixed("The case still counts.")]
-Subtext [Fixed("Case #12 · "), User("Duck Pond"), Fixed(" · "), Time(2026-11-18 15:05:09.0 +00:00:00, Full)]
+Subtext [Time(2026-11-18 15:05:09.0 +00:00:00, Full)]
 
 ## maximal
 tone: Neutral
 --- discord ---
-### Your appeal for case #12 in **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*** was rejected
+### Your appeal for case #12 in **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \***
+The moderators rejected your appeal. Case #12 still counts.
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and
-The case still counts.
--# Case #12 · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1795014309:f>
-buttons: [View appeal](https://quack.example/guilds/111/cases/12/appeal)
+-# <t:1795014309:f>
+buttons: [Open your appeal](https://quack.example/guilds/111/cases/12/appeal)
 --- plain ---
-Your appeal for case #12 in Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * was rejected
+Your appeal for case #12 in Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
+The moderators rejected your appeal. Case #12 still counts.
 > Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and
-The case still counts.
-Case #12 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 18 Nov 2026 at 15:05 UTC
+18 Nov 2026 at 15:05 UTC
 --- model ---
-Heading [Fixed("Your appeal for case #12 in "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")]), Fixed(" was rejected")]
+Heading [Fixed("Your appeal for case #12 in "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")])]
+Text [Fixed("The moderators rejected your appeal. Case #12 still counts.")]
 Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and")]
-Text [Fixed("The case still counts.")]
-Subtext [Fixed("Case #12 · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-18 15:05:09.0 +00:00:00, Full)]
+Subtext [Time(2026-11-18 15:05:09.0 +00:00:00, Full)]

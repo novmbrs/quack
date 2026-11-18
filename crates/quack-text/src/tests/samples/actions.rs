@@ -234,6 +234,7 @@ pub fn samples() -> Vec<Sample> {
         v.push(covering(
             "dm.state",
             &[
+                "dm.state.pending",
                 "dm.state.in_progress",
                 "dm.state.sent",
                 "dm.state.failed",
@@ -246,16 +247,18 @@ pub fn samples() -> Vec<Sample> {
                 "dm.failure.discord_refused",
             ],
             name.clone(),
-            Out::Text(dm::sentence(d.as_ref(), &sam())),
+            Out::Text(dm::sentence(d.as_ref(), &sam(), 12)),
         ));
         v.push(covering(
             "member.dm",
             &[
+                "member.dm.pending",
                 "member.dm.in_progress",
                 "member.dm.sent",
                 "member.dm.failed",
                 "member.dm.unknown",
                 "member.dm.not_needed",
+                "member.dm.not_needed.voided",
             ],
             name,
             Out::Text(dm::member_sentence(d.as_ref())),
@@ -297,7 +300,7 @@ const DM_CASE_IDS: &[&str] = &[
     "dm.case.appeal",
     "dm.case.not_appealable",
     "dm.case.footer_text",
-    "dm.case.subtext",
+    "dm.case.trimmed",
     "dm.case.button.appeal",
     "dm.case.button.dashboard",
 ];
@@ -403,7 +406,12 @@ fn dm_samples() -> Vec<Sample> {
     ] {
         v.push(covering(
             id,
-            &["dm.appeal.button", "dm.appeal.button.reply"],
+            &[
+                "dm.appeal.button",
+                "dm.appeal.button.reply",
+                "dm.appeal.button.case",
+                "dm.appeal.trimmed",
+            ],
             "",
             Out::Msg(dm::appeal(&appeal(kind))),
         ));

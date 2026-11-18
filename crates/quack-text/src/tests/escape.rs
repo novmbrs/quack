@@ -126,5 +126,10 @@ fn very_long_text_is_cut_to_the_budget() {
             .iter()
             .any(|b| matches!(b, crate::model::Block::Subtext(_)))
     );
-    assert_eq!(m.blocks.last().map(|b| matches!(b, crate::model::Block::Text(t) if t.plain() == "Some details are only on the dashboard.")), Some(true));
+    assert_eq!(
+        m.blocks.last().map(
+            |b| matches!(b, crate::model::Block::Text(t) if *t == crate::word::render_trimmed())
+        ),
+        Some(true)
+    );
 }

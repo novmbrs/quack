@@ -30,59 +30,121 @@ pub fn outcome(dm: Option<&DmView>) -> Outcome {
     }
 }
 
-/// `dm.failure.*`: the "because …" fragment (§6.5).
-pub const fn because(failure: DmFailure) -> &'static str {
-    match failure {
-        DmFailure::DmsClosed => {
-            "because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack)"
-        }
-        DmFailure::NotInSharedServer => "because they no longer share a server with Quack",
-        DmFailure::DiscordUnavailable => "because Discord wasn't available",
-        DmFailure::DiscordRefused => "because Discord refused the message",
-    }
+/// What a DM is about: the words after "a DM" in its outcome sentence.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DmAbout {
+    /// The case DM for this case number.
+    Case(Option<u64>),
+    /// An appeal DM, about the appeal for this case number.
+    Appeal(Option<u64>),
+    /// The DM with a closed ticket's transcript.
+    Transcript,
 }
 
-/// `dm.state.*`: the staff sentence for a case DM; `None` means the level
-/// sends no DM.
-pub fn sentence(dm: Option<&DmView>, member: &Person) -> Text {
-    let Some(dm) = dm else {
-        return Text::fixed("This level doesn't send a DM.");
+/// `dm.state.*`: the one staff sentence for a DM's outcome (§12.7). The
+/// card, the receipt, the log channel, and the dashboard all use it, so
+/// the same outcome reads the same everywhere. `member` is `None` when
+/// Quack can't name them ("the member").
+pub fn outcome_sentence(
+    state: DmState,
+    failure: Option<DmFailure>,
+    member: Option<&Person>,
+    about: DmAbout,
+) -> Text {
+    outcome_with(state, failure, member, about, &|t, n| {
+        t.s(crate::fmt::case_ref(n))
+    })
+}
+
+/// [`outcome_sentence`] with the case number built by `case` (the log
+/// channel links it).
+pub(crate) fn outcome_with(
+    state: DmState,
+    failure: Option<DmFailure>,
+    member: Option<&Person>,
+    about: DmAbout,
+    case: &dyn Fn(Text, u64) -> Text,
+) -> Text {
+    let who = |t: Text, start: bool| match member {
+        Some(m) => t.person(m),
+        None if start => t.s("The member"),
+        None => t.s("the member"),
     };
-    let see = " They can still see the case by signing in to the dashboard.";
-    match dm.state {
-        DmState::Pending | DmState::Sending => {
-            Text::fixed("Quack is sending ").person(member).s(" a DM.")
+    let subject = |t: Text| match about {
+        DmAbout::Case(Some(n)) => case(t.s(" about "), n),
+        DmAbout::Case(None) => t.s(" about their case"),
+        DmAbout::Appeal(Some(n)) => case(t.s(" about the appeal for "), n),
+        DmAbout::Appeal(None) => t.s(" about their appeal"),
+        DmAbout::Transcript => t.s(" with the ticket transcript"),
+    };
+    let recovery = |t: Text| match about {
+        DmAbout::Case(_) => {
+            who(t.s(" "), true).s(" can sign in to the Quack dashboard to see the case.")
         }
-        DmState::Sent => Text::fixed("Quack sent ").person(member).s(" a DM."),
-        DmState::Failed => Text::fixed("Quack couldn't send ")
-            .person(member)
-            .s(" a DM ")
-            .s(because(dm.failure.unwrap_or(DmFailure::DiscordRefused)))
-            .s(".")
-            .s(see),
-        DmState::Unknown => {
-            Text::fixed("Quack couldn't confirm whether Discord accepted the DM to ")
-                .person(member)
-                .s(", and won't send it again so it can't arrive twice.")
-                .s(see)
+        DmAbout::Appeal(_) => {
+            who(t.s(" "), true).s(" can sign in to the Quack dashboard to see the appeal.")
         }
+        DmAbout::Transcript => {
+            t.s(" Staff can open the ticket on the dashboard to check for the transcript.")
+        }
+    };
+    match state {
+        DmState::Pending => {
+            subject(who(Text::fixed("Quack will try to send "), false).s(" a DM")).s(".")
+        }
+        DmState::Sending => subject(who(Text::fixed("Quack is sending "), false).s(" a DM")).s("."),
+        DmState::Sent => subject(who(Text::fixed("Quack sent "), false).s(" a DM")).s("."),
+        DmState::Failed => {
+            let lead = subject(who(Text::fixed("Quack couldn't send "), false).s(" a DM"));
+            let lead = match failure.unwrap_or(DmFailure::DiscordRefused) {
+                DmFailure::DmsClosed | DmFailure::DiscordRefused => {
+                    lead.s(". Discord didn't allow the DM.")
+                }
+                DmFailure::NotInSharedServer => {
+                    who(lead.s(". "), true).s(" and Quack don't share a server.")
+                }
+                DmFailure::DiscordUnavailable => lead.s(" in time."),
+            };
+            recovery(lead)
+        }
+        DmState::Unknown => recovery(
+            subject(who(
+                Text::fixed("Quack couldn't confirm whether Discord accepted the DM to "),
+                false,
+            ))
+            .s(". Quack won't send it again."),
+        ),
         DmState::NotNeeded => {
             Text::fixed("Quack didn't send a DM because the case was voided first.")
         }
     }
 }
 
-/// `member.dm.*`: the member's sentence for their case DM.
+/// `dm.state.*` for a case DM; `None` means the level sends no DM.
+pub fn sentence(dm: Option<&DmView>, member: &Person, case_number: u64) -> Text {
+    match dm {
+        None => Text::fixed("This level doesn't send a DM."),
+        Some(dm) => outcome_sentence(
+            dm.state,
+            dm.failure,
+            Some(member),
+            DmAbout::Case(Some(case_number)),
+        ),
+    }
+}
+
+/// `member.dm.*`: the member's sentence for their case DM, shown on their
+/// case page (so it doesn't point back to it).
 pub fn member_sentence(dm: Option<&DmView>) -> Text {
     Text::fixed(match dm.map(|d| d.state) {
-        None | Some(DmState::NotNeeded) => "This case didn't need a DM.",
-        Some(DmState::Pending | DmState::Sending) => "Quack is sending you a DM about this case.",
+        None => "Quack doesn't send a DM for this case.",
+        Some(DmState::NotNeeded) => "Quack didn't send a DM because the case was voided first.",
+        Some(DmState::Pending) => "Quack will try to send you a DM about this case.",
+        Some(DmState::Sending) => "Quack is sending you a DM about this case.",
         Some(DmState::Sent) => "Quack sent you a DM about this case.",
-        Some(DmState::Failed) => {
-            "Quack couldn't send you a DM about this case. You can see your case here."
-        }
+        Some(DmState::Failed) => "Quack couldn't send you a DM about this case.",
         Some(DmState::Unknown) => {
-            "Quack couldn't confirm whether you got a DM about this case. You can see your case here."
+            "Quack couldn't confirm whether Discord accepted the DM about this case. Quack won't send it again."
         }
     })
 }
@@ -118,33 +180,52 @@ pub struct CaseDm {
     pub dashboard_url: String,
 }
 
+/// `dm.case.outcome.*`: the configured action, never a claim that Discord
+/// applied it (the DM may arrive first, §6.3).
 fn what_happens(dm: &CaseDm) -> Text {
+    let check = " Open your case on the dashboard to check its outcome.";
     match dm.action {
-        None => Text::fixed("This is a warning. No other action is taken."),
+        None => Text::fixed("This case is a warning."),
         Some(LevelAction::Timeout { .. }) => {
-            let t = Text::fixed("The moderators decided to time you out");
+            let t = Text::fixed("The rule calls for a timeout");
             match dm.timeout_ends_at {
                 Some(at) => t.s(" until ").time(at, TimeStyle::FullRelative).s("."),
                 None => t.s("."),
             }
+            .s(check)
         }
         Some(LevelAction::Kick) => {
-            Text::fixed("The moderators decided to remove you from the server.")
+            Text::fixed("The rule calls for removing you from the server.").s(check)
         }
         Some(LevelAction::Ban { .. }) => {
-            Text::fixed("The moderators decided to ban you from the server.")
+            Text::fixed("The rule calls for banning you from the server.").s(check)
         }
     }
 }
 
-/// `dm.case`: the one DM about a case.
+/// `dm.case`: the one DM about a case. The case number, date, action, and
+/// appeal line come first so a long reason or context can't push them out.
 pub fn case(dm: &CaseDm) -> Msg {
     let mut msg = Msg::new(Tone::Neutral)
         .block(Block::Heading(
-            Text::fixed("You have a new case in ").bold_user(&dm.server),
+            Text::fixed(format!("Case #{} in ", dm.number)).bold_user(&dm.server),
         ))
-        .block(Block::Text(Text::fixed("Rule: ").bold_user(&dm.rule)))
-        .block(Block::Quote(Text::new().user(&dm.reason)));
+        .block(Block::Text(
+            Text::fixed("Rule: ")
+                .bold_user(&dm.rule)
+                .s(" · ")
+                .time(dm.created_at, TimeStyle::Full),
+        ))
+        .block(Block::Quote(Text::new().user(&dm.reason)))
+        .block(Block::Field {
+            label: "Action for this case".to_owned(),
+            value: what_happens(dm),
+        })
+        .para(Text::fixed(if dm.appealable {
+            "To ask the moderators to review this case, select Appeal case. You can appeal once."
+        } else {
+            "This case can't be appealed."
+        }));
     if let Some(intro) = dm.intro.as_deref().filter(|s| !s.trim().is_empty()) {
         msg = msg.para(Text::new().push(Inline::ServerMarkdown(intro.to_owned())));
     }
@@ -158,31 +239,22 @@ pub fn case(dm: &CaseDm) -> Msg {
             });
         }
     }
-    msg = msg.block(Block::Field {
-        label: "What happens".to_owned(),
-        value: what_happens(dm),
-    });
-    msg = msg.para(Text::fixed(if dm.appealable {
-        "If you think this case is wrong, you can appeal it once."
-    } else {
-        "This case can't be appealed."
-    }));
     if let Some(footer) = dm.footer.as_deref().filter(|s| !s.trim().is_empty()) {
         msg = msg.para(Text::new().push(Inline::ServerMarkdown(footer.to_owned())));
     }
-    msg = msg.block(Block::Subtext(
-        Text::fixed(format!("Case #{} · ", dm.number)).time(dm.created_at, TimeStyle::Full),
-    ));
     let mut buttons = Vec::new();
     if dm.appealable {
         buttons.push(Button::new(
-            "Appeal",
+            "Appeal case",
             ButtonStyle::Primary,
             ButtonAction::Appeal(dm.case),
         ));
     }
-    buttons.push(Button::link("Open in dashboard", &dm.dashboard_url));
-    msg.buttons(buttons)
+    buttons.push(Button::link("Open your case", &dm.dashboard_url));
+    msg.when_trimmed(Text::fixed(
+        "Open your case on the dashboard for the full details.",
+    ))
+    .buttons(buttons)
 }
 
 /// Whether a kick or a ban is what a rejoin invite is for.
@@ -228,78 +300,73 @@ pub struct AppealDm {
     pub dashboard_url: String,
 }
 
-/// `dm.appeal.*`: the DM about one appeal event.
+/// `dm.appeal.*`: the DM about one appeal event. Every one has the same
+/// heading, says what the moderators did and what it means for the case,
+/// then quotes their words.
 pub fn appeal(dm: &AppealDm) -> Msg {
     let n = dm.number;
-    let your_appeal = |what: &str| {
-        Text::fixed(format!("Your appeal for case #{n} in "))
-            .bold_user(&dm.server)
-            .s(format!(" was {what}"))
-    };
     let reason = Block::Quote(Text::new().user(&dm.reason));
-    let reply = format!("Reply on the dashboard to continue your appeal for case #{n}.");
-    let (heading, body, asks): (Text, Vec<Block>, bool) = match &dm.kind {
+    let reply = "Select Reply to appeal to answer on the dashboard.";
+    let (lead, body, button): (String, Vec<Block>, &str) = match &dm.kind {
         AppealDmKind::InformationRequested => (
-            Text::fixed("The moderators of ")
-                .bold_user(&dm.server)
-                .s(" need more information about your appeal"),
+            "The moderators asked for more information:".to_owned(),
             vec![reason, Block::Text(Text::fixed(reply))],
-            true,
+            "Reply to appeal",
         ),
         AppealDmKind::Reopened => (
-            Text::fixed("The moderators of ")
-                .bold_user(&dm.server)
-                .s(" reopened your appeal"),
-            vec![
-                reason,
-                Block::Text(Text::fixed(format!("They need more information. {reply}"))),
-            ],
-            true,
+            "The moderators reopened your appeal and asked for more information:".to_owned(),
+            vec![reason, Block::Text(Text::fixed(reply))],
+            "Reply to appeal",
         ),
         AppealDmKind::Accepted(rejoin) => {
             let mut body = vec![
                 reason,
                 Block::Text(Text::fixed(
-                    "The case no longer counts. Open your case to see what happened to any timeout or ban.",
+                    "Open your case to check whether any timeout or ban was removed.",
                 )),
             ];
             if let Some((after, invite)) = rejoin {
                 let lead = match after {
-                    RejoinAfter::Ban => "If your ban is removed, you can rejoin with this invite: ",
-                    RejoinAfter::Kick => "You can rejoin the server with this invite: ",
+                    RejoinAfter::Ban => {
+                        "Once your ban is removed, you can try this invite to rejoin the server: "
+                    }
+                    RejoinAfter::Kick => "You can try this invite to rejoin the server: ",
                 };
                 body.push(Block::Text(Text::fixed(lead).link(invite, invite)));
             }
-            (your_appeal("accepted"), body, false)
+            (
+                format!("The moderators accepted your appeal. Case #{n} no longer counts."),
+                body,
+                "Open your case",
+            )
         }
         AppealDmKind::Rejected => (
-            your_appeal("rejected"),
-            vec![reason, Block::Text(Text::fixed("The case still counts."))],
-            false,
+            format!("The moderators rejected your appeal. Case #{n} still counts."),
+            vec![reason],
+            "Open your appeal",
         ),
-        AppealDmKind::Closed => (your_appeal("closed"), vec![reason], false),
+        AppealDmKind::Closed => (
+            format!("The moderators closed your appeal. Case #{n} still counts."),
+            vec![reason],
+            "Open your appeal",
+        ),
         AppealDmKind::ClosedCaseVoided => (
-            your_appeal("closed"),
-            vec![Block::Text(Text::fixed(
-                "The case was voided, so there's nothing left to appeal. It no longer counts against you.",
-            ))],
-            false,
+            format!(
+                "Your appeal was closed because case #{n} was voided. The case no longer counts."
+            ),
+            vec![],
+            "Open your case",
         ),
     };
-    let mut msg = Msg::new(Tone::Neutral).block(Block::Heading(heading));
+    let mut msg = Msg::new(Tone::Neutral)
+        .block(Block::Heading(
+            Text::fixed(format!("Your appeal for case #{n} in ")).bold_user(&dm.server),
+        ))
+        .para(Text::fixed(lead));
     msg.blocks.extend(body);
-    msg.block(Block::Subtext(
-        Text::fixed(format!("Case #{n} · "))
-            .user(&dm.server)
-            .s(" · ")
-            .time(dm.at, TimeStyle::Full),
-    ))
-    .buttons(vec![Button::link(
-        if asks {
-            "Reply on the dashboard"
-        } else {
-            "View appeal"
-        },
-        &dm.dashboard_url,
-    )])
+    msg.block(Block::Subtext(Text::new().time(dm.at, TimeStyle::Full)))
+        .when_trimmed(Text::fixed(
+            "Open your appeal on the dashboard for the full details.",
+        ))
+        .buttons(vec![Button::link(button, &dm.dashboard_url)])
 }
