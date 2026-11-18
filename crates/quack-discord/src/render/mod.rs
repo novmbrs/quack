@@ -18,11 +18,11 @@ use quack_text::model::{
 };
 use quack_text::render::{CommandIds, block_markdown};
 use twilight_model::channel::ChannelType;
+use twilight_model::channel::message::Component;
 use twilight_model::channel::message::component::{
     ActionRow, Button as TwButton, ButtonStyle as TwButtonStyle, Container, FileDisplay,
     SelectMenu, SelectMenuOption, SelectMenuType, Separator, TextDisplay, UnfurledMediaItem,
 };
-use twilight_model::channel::message::Component;
 
 use crate::custom_id::{CustomId, encode_select_value};
 

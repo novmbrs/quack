@@ -1,6 +1,5 @@
 ---
 source: crates/quack-discord/src/render/tests.rs
-assertion_line: 128
 expression: "(&void.custom_id, &void.title, &void.components)"
 ---
 [

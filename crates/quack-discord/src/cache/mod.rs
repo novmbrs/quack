@@ -52,12 +52,16 @@ pub(crate) fn feed_members(members: &MemberCache, event: &Event) {
             }
         }
         Event::MemberAdd(add) => {
-            if let (Some(guild), Some(member)) = (convert::id(add.guild_id), convert::member(&add.member)) {
+            if let (Some(guild), Some(member)) =
+                (convert::id(add.guild_id), convert::member(&add.member))
+            {
                 members.put_event(guild, member);
             }
         }
         Event::MemberUpdate(update) => {
-            if let (Some(guild), Some(member)) = (convert::id(update.guild_id), member_update(update)) {
+            if let (Some(guild), Some(member)) =
+                (convert::id(update.guild_id), member_update(update))
+            {
                 members.put_event(guild, member);
             }
         }

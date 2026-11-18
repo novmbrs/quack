@@ -42,7 +42,8 @@ impl DownloadPolicy {
     }
 }
 
-const TEMPLATE: UrlTemplate = UrlTemplate::new("/attachments/{channel_id}/{attachment_id}/{filename}");
+const TEMPLATE: UrlTemplate =
+    UrlTemplate::new("/attachments/{channel_id}/{attachment_id}/{filename}");
 
 /// The download client: redirects are followed only within the policy.
 pub(super) fn client(policy: DownloadPolicy) -> reqwest::Result<reqwest::Client> {
@@ -77,30 +78,38 @@ impl DiscordClient {
             spans::record_status(&span, status);
         }
         spans::record(&span, outcome.class());
-        metrics()
-            .discord
-            .request(HttpMethod::Get, TEMPLATE, status, outcome.class(), started.elapsed());
+        metrics().discord.request(
+            HttpMethod::Get,
+            TEMPLATE,
+            status,
+            outcome.class(),
+            started.elapsed(),
+        );
         outcome
     }
 
     async fn download_in(&self, url: &str, max_bytes: u64) -> (Option<u16>, Outcome<Vec<u8>>) {
         let inner = &self.inner;
-        if inner.transport.closed.load(std::sync::atomic::Ordering::Acquire) {
+        if inner
+            .transport
+            .closed
+            .load(std::sync::atomic::Ordering::Acquire)
+        {
             return (None, Outcome::NotSent(NotSentCause::ShuttingDown));
         }
         let Some(url) = Url::parse(url).ok().filter(|u| inner.downloads.allows(u)) else {
             return (None, Outcome::NotSent(NotSentCause::Invalid));
         };
         let deadline = tokio::time::Instant::now() + inner.file_timeout;
-        let response = match tokio::time::timeout_at(deadline, inner.downloader.get(url).send()).await
-        {
-            Err(_) => return (None, Outcome::Unknown(UnknownCause::Timeout)),
-            Ok(Err(error)) if error.is_redirect() => {
-                return (None, Outcome::NotSent(NotSentCause::Invalid));
-            }
-            Ok(Err(error)) => return (None, error_outcome(&error)),
-            Ok(Ok(response)) => response,
-        };
+        let response =
+            match tokio::time::timeout_at(deadline, inner.downloader.get(url).send()).await {
+                Err(_) => return (None, Outcome::Unknown(UnknownCause::Timeout)),
+                Ok(Err(error)) if error.is_redirect() => {
+                    return (None, Outcome::NotSent(NotSentCause::Invalid));
+                }
+                Ok(Err(error)) => return (None, error_outcome(&error)),
+                Ok(Ok(response)) => response,
+            };
         let status = response.status().as_u16();
         if !response.status().is_success() {
             return (Some(status), classify_failure(status, b"", None));

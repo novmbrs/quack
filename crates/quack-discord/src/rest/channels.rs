@@ -125,12 +125,14 @@ impl DiscordClient {
         parent: ChannelId,
         before: Option<&str>,
     ) -> Outcome<ThreadPage> {
-        self.json::<ThreadList>(Request::new(Route::archived_private_threads(parent, before)))
-            .await
-            .map(|list| ThreadPage {
-                threads: channels(&list.threads),
-                has_more: list.has_more,
-            })
+        self.json::<ThreadList>(Request::new(Route::archived_private_threads(
+            parent, before,
+        )))
+        .await
+        .map(|list| ThreadPage {
+            threads: channels(&list.threads),
+            has_more: list.has_more,
+        })
     }
 
     /// Creates a text channel with the given overwrites (§13.1.4). Channels
@@ -143,9 +145,12 @@ impl DiscordClient {
             parent_id: spec.parent_id.map(|p| p.to_string()),
             permission_overwrites: spec.overwrites.iter().map(OverwriteBody::from).collect(),
         };
-        self.json::<twilight_model::channel::Channel>(with_json(Route::create_channel(guild), &body))
-            .await
-            .and_then(|c| converted(convert::id(c.id)))
+        self.json::<twilight_model::channel::Channel>(with_json(
+            Route::create_channel(guild),
+            &body,
+        ))
+        .await
+        .and_then(|c| converted(convert::id(c.id)))
     }
 
     /// Creates a private thread under `parent` that members can't invite to
@@ -157,16 +162,23 @@ impl DiscordClient {
             invitable: false,
             auto_archive_duration: 1440,
         };
-        self.json::<twilight_model::channel::Channel>(with_json(Route::create_thread(parent), &body))
-            .await
-            .and_then(|c| converted(convert::id(c.id)))
+        self.json::<twilight_model::channel::Channel>(with_json(
+            Route::create_thread(parent),
+            &body,
+        ))
+        .await
+        .and_then(|c| converted(convert::id(c.id)))
     }
 
     /// Whether an account is a member of a thread: `Done(false)` for
     /// Discord's 404 Unknown Member (§7.2).
     pub async fn is_thread_member(&self, thread: ChannelId, account: AccountId) -> Outcome<bool> {
         match self
-            .call(Request::new(Route::thread_member(Method::Get, thread, account)))
+            .call(Request::new(Route::thread_member(
+                Method::Get,
+                thread,
+                account,
+            )))
             .await
         {
             Outcome::Refused(r) if r.kind == RefusalKind::UnknownMember => Outcome::Done(false),
@@ -206,7 +218,12 @@ impl DiscordClient {
     }
 
     /// Archives or unarchives, locks or unlocks a thread.
-    pub async fn set_thread_state(&self, thread: ChannelId, archived: bool, locked: bool) -> Outcome<()> {
+    pub async fn set_thread_state(
+        &self,
+        thread: ChannelId,
+        archived: bool,
+        locked: bool,
+    ) -> Outcome<()> {
         self.unit(with_json(
             Route::channel(Method::Patch, thread),
             &ThreadStateBody { archived, locked },

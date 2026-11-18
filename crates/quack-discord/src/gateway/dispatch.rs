@@ -71,14 +71,27 @@ impl Dispatcher {
         let mut depths = Vec::with_capacity(EVENT_QUEUES);
         for _ in 0..EVENT_QUEUES {
             let (q, rx, depth) = queue(EVENT_QUEUE_LEN);
-            consumers.spawn(ordered(rx, handler.clone(), depth.clone(), stopping.clone()));
+            consumers.spawn(ordered(
+                rx,
+                handler.clone(),
+                depth.clone(),
+                stopping.clone(),
+            ));
             depths.push(depth);
             events.push(q);
         }
         let (interactions, rx, interaction_depth) = queue(INTERACTION_QUEUE_LEN);
-        consumers.spawn(pooled(rx, handler, interaction_depth.clone(), stopping.clone()));
+        consumers.spawn(pooled(
+            rx,
+            handler,
+            interaction_depth.clone(),
+            stopping.clone(),
+        ));
         metrics().queues.observe_depth(EVENTS, move || {
-            depths.iter().map(|d| d.load(Ordering::Relaxed) as u64).sum()
+            depths
+                .iter()
+                .map(|d| d.load(Ordering::Relaxed) as u64)
+                .sum()
         });
         metrics().queues.observe_depth(INTERACTIONS, move || {
             interaction_depth.load(Ordering::Relaxed) as u64
@@ -97,9 +110,9 @@ impl Dispatcher {
         let (q, name) = if matches!(event, Event::Interaction(_)) {
             (&self.interactions, INTERACTIONS)
         } else {
-            let index = event
-                .guild_id()
-                .map_or(0, |g| usize::try_from(g.get() % EVENT_QUEUES as u64).unwrap_or(0));
+            let index = event.guild_id().map_or(0, |g| {
+                usize::try_from(g.get() % EVENT_QUEUES as u64).unwrap_or(0)
+            });
             match self.events.get(index) {
                 Some(q) => (q, EVENTS),
                 None => return Some(event),

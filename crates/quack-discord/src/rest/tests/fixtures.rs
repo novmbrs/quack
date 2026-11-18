@@ -44,7 +44,7 @@ pub(crate) fn role(id: u64, position: i64, permissions: u64) -> Value {
     })
 }
 
-pub(crate) fn guild(id: u64, owner: u64, roles: Vec<Value>) -> Value {
+pub(crate) fn guild(id: u64, owner: u64, roles: &[Value]) -> Value {
     json!({
         "id": id.to_string(),
         "name": "Server",

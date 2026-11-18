@@ -129,7 +129,11 @@ impl Route {
     // Servers, members, bans.
 
     pub(crate) fn guild(guild: GuildId) -> Self {
-        Self::bot(Method::Get, "/guilds/{guild_id}", format!("/guilds/{guild}"))
+        Self::bot(
+            Method::Get,
+            "/guilds/{guild_id}",
+            format!("/guilds/{guild}"),
+        )
     }
     pub(crate) fn guild_channels(guild: GuildId) -> Self {
         Self::bot(
@@ -178,10 +182,18 @@ impl Route {
     // Channels and threads.
 
     pub(crate) fn channel(method: Method, channel: ChannelId) -> Self {
-        Self::bot(method, "/channels/{channel_id}", format!("/channels/{channel}"))
+        Self::bot(
+            method,
+            "/channels/{channel_id}",
+            format!("/channels/{channel}"),
+        )
     }
     pub(crate) fn dm_channel() -> Self {
-        Self::bot(Method::Post, "/users/@me/channels", "/users/@me/channels".into())
+        Self::bot(
+            Method::Post,
+            "/users/@me/channels",
+            "/users/@me/channels".into(),
+        )
     }
     pub(crate) fn create_thread(parent: ChannelId) -> Self {
         Self::bot(
@@ -197,10 +209,9 @@ impl Route {
             format!("/channels/{parent}/threads/archived/private"),
         );
         match before {
-            Some(before) => route.with_query(format!(
-                "limit=100&before={}",
-                encode_component(before)
-            )),
+            Some(before) => {
+                route.with_query(format!("limit=100&before={}", encode_component(before)))
+            }
             None => route.with_query("limit=100".into()),
         }
     }
@@ -321,7 +332,10 @@ mod tests {
     fn queries_are_encoded_and_kept_out_of_the_limiter_path() {
         let guild = GuildId::new(1).unwrap();
         let route = Route::search_members(guild, "a b&c=ü", 5);
-        assert_eq!(route.query.as_deref(), Some("query=a%20b%26c%3D%C3%BC&limit=5"));
+        assert_eq!(
+            route.query.as_deref(),
+            Some("query=a%20b%26c%3D%C3%BC&limit=5")
+        );
         assert_eq!(route.limit_path, "guilds/1/members/search");
         assert_eq!(
             route.url_template().as_str(),

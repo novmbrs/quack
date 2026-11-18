@@ -68,8 +68,11 @@ fn case() -> Command {
                 .option(user(text::CASE_ADD_MEMBER, true))
                 .option(rule(text::CASE_ADD_RULE, true).max_length(RULE_OPTION_MAX))
                 .option(
-                    BooleanBuilder::new(text::CASE_ADD_PRIVATE.name, text::CASE_ADD_PRIVATE.description)
-                        .required(false),
+                    BooleanBuilder::new(
+                        text::CASE_ADD_PRIVATE.name,
+                        text::CASE_ADD_PRIVATE.description,
+                    )
+                    .required(false),
                 ),
         )
         .option(sub(text::CASE_VIEW).option(number(text::CASE_NUMBER)))
@@ -79,12 +82,17 @@ fn case() -> Command {
                 .option(rule(text::CASE_LIST_RULE, false)),
         )
         .option(
-            sub(text::CASE_VOID).option(number(text::CASE_NUMBER)).option(
-                StringBuilder::new(text::CASE_VOID_REASON.name, text::CASE_VOID_REASON.description)
+            sub(text::CASE_VOID)
+                .option(number(text::CASE_NUMBER))
+                .option(
+                    StringBuilder::new(
+                        text::CASE_VOID_REASON.name,
+                        text::CASE_VOID_REASON.description,
+                    )
                     .required(true)
                     .min_length(1)
                     .max_length(VOID_REASON_MAX),
-            ),
+                ),
         )
         .option(sub(text::CASE_HISTORY).option(user(text::CASE_HISTORY_MEMBER, true)))
         .build()

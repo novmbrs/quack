@@ -276,7 +276,10 @@ mod tests {
     fn nonces_are_bounded() {
         assert!(Nonce::new("").is_none());
         assert!(Nonce::new("a".repeat(26)).is_none());
-        assert_eq!(Nonce::new("a".repeat(25)).map(|n| n.as_str().len()), Some(25));
+        assert_eq!(
+            Nonce::new("a".repeat(25)).map(|n| n.as_str().len()),
+            Some(25)
+        );
     }
 
     #[test]
@@ -288,6 +291,9 @@ mod tests {
             name: "a.txt".into(),
             bytes: vec![1, 2, 3],
         };
-        assert_eq!(format!("{file:?}"), r#"OutgoingFile { name: "a.txt", bytes: 3 }"#);
+        assert_eq!(
+            format!("{file:?}"),
+            r#"OutgoingFile { name: "a.txt", bytes: 3 }"#
+        );
     }
 }

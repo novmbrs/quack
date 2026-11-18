@@ -22,7 +22,8 @@ const READ_MESSAGE_HISTORY: u64 = Permission::ReadMessageHistory.bit();
 const SEND_MESSAGES: u64 = Permission::SendMessages.bit();
 /// What losing Send Messages also takes away in a text channel: Mention
 /// Everyone, Send TTS Messages, Attach Files, Embed Links.
-const NEEDS_SEND: u64 = (1 << 17) | (1 << 12) | Permission::AttachFiles.bit() | Permission::EmbedLinks.bit();
+const NEEDS_SEND: u64 =
+    (1 << 17) | (1 << 12) | Permission::AttachFiles.bit() | Permission::EmbedLinks.bit();
 const ADMINISTRATOR: u64 = Permission::Administrator.bit();
 
 /// Who permissions are computed for.

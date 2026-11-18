@@ -87,13 +87,20 @@ impl DiscordClient {
             flags: Some(EPHEMERAL),
             ..Data::default()
         });
-        self.callback(interaction, &Callback { kind: 5, data }).await
+        self.callback(interaction, &Callback { kind: 5, data })
+            .await
     }
 
     /// Defers an update of the message the component is on (type 6).
     pub async fn defer_update(&self, interaction: &InteractionRef) -> Outcome<()> {
-        self.callback(interaction, &Callback { kind: 6, data: None })
-            .await
+        self.callback(
+            interaction,
+            &Callback {
+                kind: 6,
+                data: None,
+            },
+        )
+        .await
     }
 
     /// Replies at once with a message (type 4), such as `/help`.
@@ -104,8 +111,14 @@ impl DiscordClient {
         ephemeral: bool,
     ) -> Outcome<()> {
         let data = message_data(message, content_flags(ephemeral));
-        self.callback(interaction, &Callback { kind: 4, data: Some(data) })
-            .await
+        self.callback(
+            interaction,
+            &Callback {
+                kind: 4,
+                data: Some(data),
+            },
+        )
+        .await
     }
 
     /// Replaces the message the component is on at once (type 7).
@@ -115,20 +128,36 @@ impl DiscordClient {
         message: &RenderedMessage,
     ) -> Outcome<()> {
         let data = message_data(message, COMPONENTS_V2);
-        self.callback(interaction, &Callback { kind: 7, data: Some(data) })
-            .await
+        self.callback(
+            interaction,
+            &Callback {
+                kind: 7,
+                data: Some(data),
+            },
+        )
+        .await
     }
 
     /// Opens a modal (type 9).
-    pub async fn open_modal(&self, interaction: &InteractionRef, modal: &RenderedModal) -> Outcome<()> {
+    pub async fn open_modal(
+        &self,
+        interaction: &InteractionRef,
+        modal: &RenderedModal,
+    ) -> Outcome<()> {
         let data = Data {
             components: Some(&modal.components),
             custom_id: Some(&modal.custom_id),
             title: Some(&modal.title),
             ..Data::default()
         };
-        self.callback(interaction, &Callback { kind: 9, data: Some(data) })
-            .await
+        self.callback(
+            interaction,
+            &Callback {
+                kind: 9,
+                data: Some(data),
+            },
+        )
+        .await
     }
 
     /// Answers an autocomplete request (type 8), at most 25 choices.
@@ -142,8 +171,14 @@ impl DiscordClient {
             choices: Some(choices),
             ..Data::default()
         };
-        self.callback(interaction, &Callback { kind: 8, data: Some(data) })
-            .await
+        self.callback(
+            interaction,
+            &Callback {
+                kind: 8,
+                data: Some(data),
+            },
+        )
+        .await
     }
 
     /// Edits the original response after an ack (`PATCH

@@ -35,14 +35,19 @@ fn custom_id() -> impl Strategy<Value = CustomId> {
         case().prop_map(CustomId::OpenCase),
         Just(CustomId::CasePicker),
         case().prop_map(CustomId::EditContext),
-        (case(), any::<u32>()).prop_map(|(case, revision)| CustomId::EditContextModal { case, revision }),
+        (case(), any::<u32>())
+            .prop_map(|(case, revision)| CustomId::EditContextModal { case, revision }),
         case().prop_map(CustomId::AddEvidence),
         case().prop_map(CustomId::AddEvidenceModal),
         (case(), any::<u32>()).prop_map(|(case, item)| CustomId::ViewEvidence { case, item }),
         case().prop_map(CustomId::VoidCase),
         case().prop_map(CustomId::VoidCaseModal),
         (snowflake(), any::<u32>()).prop_map(|(member, page)| CustomId::History { member, page }),
-        (any::<u32>(), proptest::option::of(snowflake()), proptest::option::of(uuid()))
+        (
+            any::<u32>(),
+            proptest::option::of(snowflake()),
+            proptest::option::of(uuid())
+        )
             .prop_map(|(page, member, rule)| CustomId::CaseList {
                 page,
                 member,
@@ -60,10 +65,14 @@ fn custom_id() -> impl Strategy<Value = CustomId> {
         case().prop_map(CustomId::DraftSaveAgain),
         case().prop_map(CustomId::Appeal),
         case().prop_map(CustomId::AppealModal),
-        (appeal(), any::<u32>()).prop_map(|(appeal, version)| CustomId::AcceptAppeal { appeal, version }),
-        (appeal(), any::<u32>()).prop_map(|(appeal, version)| CustomId::AcceptAppealModal { appeal, version }),
-        (appeal(), any::<u32>()).prop_map(|(appeal, version)| CustomId::RejectAppeal { appeal, version }),
-        (appeal(), any::<u32>()).prop_map(|(appeal, version)| CustomId::RejectAppealModal { appeal, version }),
+        (appeal(), any::<u32>())
+            .prop_map(|(appeal, version)| CustomId::AcceptAppeal { appeal, version }),
+        (appeal(), any::<u32>())
+            .prop_map(|(appeal, version)| CustomId::AcceptAppealModal { appeal, version }),
+        (appeal(), any::<u32>())
+            .prop_map(|(appeal, version)| CustomId::RejectAppeal { appeal, version }),
+        (appeal(), any::<u32>())
+            .prop_map(|(appeal, version)| CustomId::RejectAppealModal { appeal, version }),
         appeal().prop_map(CustomId::OpenAppeal),
         any::<u32>().prop_map(CustomId::AppealsPage),
         any::<u32>().prop_map(CustomId::RulesPage),
@@ -107,17 +116,29 @@ proptest! {
 #[test]
 fn examples_from_the_design() {
     let case = CaseId::from_uuid(Uuid::nil());
-    assert_eq!(CustomId::OpenCase(case).encode(), format!("1:cv:{}", case.to_u22()));
+    assert_eq!(
+        CustomId::OpenCase(case).encode(),
+        format!("1:cv:{}", case.to_u22())
+    );
     assert_eq!(CustomId::OpenTicket.encode(), "1:to");
     assert_eq!(CustomId::CasePicker.encode(), "1:cvs");
     assert_eq!(
-        CustomId::CaseList { page: 2, member: None, rule: None }.encode(),
+        CustomId::CaseList {
+            page: 2,
+            member: None,
+            rule: None
+        }
+        .encode(),
         "1:cl:2:0:0"
     );
     assert_eq!(CustomId::SetupInviteModal.encode(), "1:su:ap:invm");
     assert_eq!(CustomId::SetupWarningModal.encode(), "1:su:hp:warnm");
     assert_eq!(
-        CustomId::Setup(quack_text::actions::SetupArea::Tickets, quack_text::actions::SetupOp::TicketQueue).encode(),
+        CustomId::Setup(
+            quack_text::actions::SetupArea::Tickets,
+            quack_text::actions::SetupOp::TicketQueue
+        )
+        .encode(),
         "1:su:tk:queue"
     );
     // The longest form.
@@ -160,12 +181,16 @@ fn legacy_ids_map_exactly() {
     let mapped = |raw: &str| decode(raw);
     assert_eq!(
         mapped(&format!("appeal:submit:v1:{ulid}")),
-        ComponentId::Legacy(Legacy::Mapped(CustomId::Appeal(CaseId::from_uuid(mapped_id))))
+        ComponentId::Legacy(Legacy::Mapped(CustomId::Appeal(CaseId::from_uuid(
+            mapped_id
+        ))))
     );
     for verb in ["accept", "reject"] {
         assert_eq!(
             mapped(&format!("appeal:{verb}:v1:{ulid}")),
-            ComponentId::Legacy(Legacy::Mapped(CustomId::OpenAppeal(AppealId::from_uuid(mapped_id))))
+            ComponentId::Legacy(Legacy::Mapped(CustomId::OpenAppeal(AppealId::from_uuid(
+                mapped_id
+            ))))
         );
     }
     assert_eq!(
@@ -174,16 +199,22 @@ fn legacy_ids_map_exactly() {
     );
     assert_eq!(
         mapped(&format!("ticket:close:v1:{ulid}")),
-        ComponentId::Legacy(Legacy::Mapped(CustomId::CloseTicket(TicketId::from_uuid(mapped_id))))
+        ComponentId::Legacy(Legacy::Mapped(CustomId::CloseTicket(TicketId::from_uuid(
+            mapped_id
+        ))))
     );
     assert_eq!(
         mapped(&format!("ticket:repair:v1:{ulid}")),
-        ComponentId::Legacy(Legacy::Mapped(CustomId::FixTicketAccess(TicketId::from_uuid(mapped_id))))
+        ComponentId::Legacy(Legacy::Mapped(CustomId::FixTicketAccess(
+            TicketId::from_uuid(mapped_id)
+        )))
     );
     for verb in ["view", "evidence", "edit_context", "void"] {
         assert_eq!(
             mapped(&format!("case:{verb}:v1:{ulid}")),
-            ComponentId::Legacy(Legacy::Mapped(CustomId::OpenCase(CaseId::from_uuid(mapped_id))))
+            ComponentId::Legacy(Legacy::Mapped(CustomId::OpenCase(CaseId::from_uuid(
+                mapped_id
+            ))))
         );
     }
     for verb in ["retry", "dismiss"] {
@@ -217,14 +248,23 @@ fn legacy_ids_map_exactly() {
 #[test]
 fn text_actions_map_to_their_rows() {
     let case = CaseId::from_uuid(Uuid::from_u128(1));
-    assert_eq!(CustomId::from(&ButtonAction::OpenCase(case)), CustomId::OpenCase(case));
+    assert_eq!(
+        CustomId::from(&ButtonAction::OpenCase(case)),
+        CustomId::OpenCase(case)
+    );
     assert_eq!(CustomId::from(SelectAction::OpenCase), CustomId::CasePicker);
-    assert_eq!(CustomId::from(SelectAction::PickRule(case)), CustomId::RulePicker(case));
+    assert_eq!(
+        CustomId::from(SelectAction::PickRule(case)),
+        CustomId::RulePicker(case)
+    );
     assert_eq!(
         CustomId::from(&ModalAction::VoidCase(case)),
         CustomId::VoidCaseModal(case)
     );
-    assert_eq!(CustomId::from(&ModalAction::SetupInvite), CustomId::SetupInviteModal);
+    assert_eq!(
+        CustomId::from(&ModalAction::SetupInvite),
+        CustomId::SetupInviteModal
+    );
 }
 
 #[test]

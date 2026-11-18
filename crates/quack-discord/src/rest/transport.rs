@@ -167,12 +167,12 @@ impl Transport {
         let Some(http_request) = self.build(request) else {
             return Answer::without_status(Outcome::NotSent(NotSentCause::Invalid));
         };
-        let response = match tokio::time::timeout_at(deadline, self.http.execute(http_request)).await
-        {
-            Err(_) => return Answer::without_status(Outcome::Unknown(UnknownCause::Timeout)),
-            Ok(Err(error)) => return Answer::without_status(error_outcome(&error)),
-            Ok(Ok(response)) => response,
-        };
+        let response =
+            match tokio::time::timeout_at(deadline, self.http.execute(http_request)).await {
+                Err(_) => return Answer::without_status(Outcome::Unknown(UnknownCause::Timeout)),
+                Ok(Err(error)) => return Answer::without_status(error_outcome(&error)),
+                Ok(Ok(response)) => response,
+            };
         let status = response.status().as_u16();
         permit.complete(rate_limit_headers(response.headers()));
         let retry_after = response
@@ -351,7 +351,10 @@ mod tests {
 
     #[test]
     fn audit_log_reasons_are_cut_and_encoded() {
-        assert_eq!(encode_reason("Quack case #4: Spam"), "Quack%20case%20%234%3A%20Spam");
+        assert_eq!(
+            encode_reason("Quack case #4: Spam"),
+            "Quack%20case%20%234%3A%20Spam"
+        );
         let long = "é".repeat(600);
         assert_eq!(encode_reason(&long), "%C3%A9".repeat(512));
     }

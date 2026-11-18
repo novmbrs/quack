@@ -11,7 +11,13 @@ use crate::model::OutgoingFile;
 fn header_safe(name: &str) -> String {
     let cleaned: String = name
         .chars()
-        .map(|c| if c == '"' || c == '\\' || c.is_control() { '_' } else { c })
+        .map(|c| {
+            if c == '"' || c == '\\' || c.is_control() {
+                '_'
+            } else {
+                c
+            }
+        })
         .collect();
     if cleaned.is_empty() {
         "file".to_owned()
@@ -67,7 +73,11 @@ mod tests {
             name: "a\"b\r.txt".into(),
             bytes: b"hello".to_vec(),
         };
-        let Body::Multipart { boundary: used, bytes } = form("XYZ", br#"{"a":1}"#, &[&file]) else {
+        let Body::Multipart {
+            boundary: used,
+            bytes,
+        } = form("XYZ", br#"{"a":1}"#, &[&file])
+        else {
             panic!("expected multipart");
         };
         assert_eq!(used, "XYZ");

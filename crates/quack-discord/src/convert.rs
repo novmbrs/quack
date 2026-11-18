@@ -7,9 +7,7 @@
 use quack_core::ids::{AccountId, AttachmentId, ChannelId, GuildId, MemberId, MessageId, RoleId};
 use quack_core::permissions::{AccountFacts, Overwrite, OverwriteTarget, Permissions, RoleFacts};
 use time::OffsetDateTime;
-use twilight_model::channel::permission_overwrite::{
-    PermissionOverwrite, PermissionOverwriteType,
-};
+use twilight_model::channel::permission_overwrite::{PermissionOverwrite, PermissionOverwriteType};
 use twilight_model::guild::MfaLevel;
 use twilight_model::util::Timestamp;
 
@@ -134,10 +132,12 @@ pub(crate) fn message(m: &twilight_model::channel::Message) -> Option<Message> {
         guild_id: m.guild_id.and_then(id::<GuildId, _>),
         author: user(&m.author)?,
         webhook: m.webhook_id.is_some(),
-        member_role_ids: m
-            .member
-            .as_ref()
-            .map(|pm| pm.roles.iter().filter_map(|r| id::<RoleId, _>(*r)).collect()),
+        member_role_ids: m.member.as_ref().map(|pm| {
+            pm.roles
+                .iter()
+                .filter_map(|r| id::<RoleId, _>(*r))
+                .collect()
+        }),
         content: m.content.clone(),
         created_at: time(m.timestamp)?,
         edited_at: m.edited_timestamp.and_then(time),

@@ -25,7 +25,9 @@ use twilight_gateway::{
 
 use crate::cache::{GuildCache, MemberCache, feed_members};
 
-pub use dispatch::{EVENT_QUEUE_LEN, EVENT_QUEUES, INTERACTION_QUEUE_LEN, MAX_INTERACTION_HANDLERS};
+pub use dispatch::{
+    EVENT_QUEUE_LEN, EVENT_QUEUES, INTERACTION_QUEUE_LEN, MAX_INTERACTION_HANDLERS,
+};
 pub use event::{BanChange, Event};
 
 /// The intents Quack connects with (fixed, §11.9). `GUILD_MEMBERS` and
@@ -170,9 +172,9 @@ impl Gateway {
             .gateway
             .observe_connected(move || status.upgrade().is_some_and(|s| s.is_connected()));
         let guilds = Arc::downgrade(&self.guilds);
-        metrics().gateway.observe_guilds(move || {
-            guilds.upgrade().map_or(0, |g| g.guild_count() as u64)
-        });
+        metrics()
+            .gateway
+            .observe_guilds(move || guilds.upgrade().map_or(0, |g| g.guild_count() as u64));
         let mut sessions = 0_u32;
         let mut close_code = None;
         let result = loop {
@@ -203,7 +205,10 @@ impl Gateway {
                     sessions += 1;
                 }
                 if let Some(dropped) = dispatcher.dispatch(event) {
-                    tracing::warn!(event = dropped.name(), "dropped a gateway event: queue full");
+                    tracing::warn!(
+                        event = dropped.name(),
+                        "dropped a gateway event: queue full"
+                    );
                     on_dropped(&dropped);
                 }
             }
@@ -240,7 +245,9 @@ impl Gateway {
             }
             Raw::GatewayHeartbeatAck => {
                 if let Some(latency) = self.shard.latency().recent().first() {
-                    let micros = u64::try_from(latency.as_micros()).unwrap_or(u64::MAX).max(1);
+                    let micros = u64::try_from(latency.as_micros())
+                        .unwrap_or(u64::MAX)
+                        .max(1);
                     self.status.latency_micros.store(micros, Ordering::Relaxed);
                     gateway.heartbeat(*latency);
                 }

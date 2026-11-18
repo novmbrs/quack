@@ -320,9 +320,13 @@ pub fn decode(raw: &RawInteraction) -> Interaction {
     } else {
         match (raw.kind, &raw.data) {
             (
-                InteractionType::ApplicationCommand | InteractionType::ApplicationCommandAutocomplete,
+                InteractionType::ApplicationCommand
+                | InteractionType::ApplicationCommandAutocomplete,
                 Some(InteractionData::ApplicationCommand(data)),
-            ) => command::decode(data, raw.kind == InteractionType::ApplicationCommandAutocomplete),
+            ) => command::decode(
+                data,
+                raw.kind == InteractionType::ApplicationCommandAutocomplete,
+            ),
             (InteractionType::MessageComponent, Some(InteractionData::MessageComponent(data))) => {
                 component::decode_component(data, raw.message.as_ref())
             }

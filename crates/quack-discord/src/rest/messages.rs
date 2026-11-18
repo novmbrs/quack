@@ -223,8 +223,12 @@ impl DiscordClient {
 
     /// Deletes a message.
     pub async fn delete_message(&self, channel: ChannelId, message: MessageId) -> Outcome<()> {
-        self.unit(Request::new(Route::message(Method::Delete, channel, message)))
-            .await
+        self.unit(Request::new(Route::message(
+            Method::Delete,
+            channel,
+            message,
+        )))
+        .await
     }
 
     /// Reads one message (for evidence, §7.2). REST messages carry no

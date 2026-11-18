@@ -16,9 +16,7 @@ use quack_text::actions::{InputId, SetupOp};
 fn source(message: Option<&Message>) -> Source {
     message.map_or_else(Source::default, |m| Source {
         message_id: convert::id(m.id),
-        ephemeral: m
-            .flags
-            .is_some_and(|f| f.contains(MessageFlags::EPHEMERAL)),
+        ephemeral: m.flags.is_some_and(|f| f.contains(MessageFlags::EPHEMERAL)),
     })
 }
 

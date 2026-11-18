@@ -184,8 +184,16 @@ impl Event {
 fn guild_create(guild: &twilight_model::guild::Guild) -> Option<Event> {
     Some(Event::GuildCreate {
         guild: convert::guild(guild)?,
-        channel_ids: guild.channels.iter().filter_map(|c| convert::id(c.id)).collect(),
-        thread_ids: guild.threads.iter().filter_map(|c| convert::id(c.id)).collect(),
+        channel_ids: guild
+            .channels
+            .iter()
+            .filter_map(|c| convert::id(c.id))
+            .collect(),
+        thread_ids: guild
+            .threads
+            .iter()
+            .filter_map(|c| convert::id(c.id))
+            .collect(),
     })
 }
 
@@ -223,7 +231,11 @@ pub(crate) fn map(raw: &Raw, sessions_before: u32) -> Option<Event> {
     match raw {
         Raw::Ready(ready) => Some(Event::Ready {
             quack_id: convert::id(ready.user.id)?,
-            guild_ids: ready.guilds.iter().filter_map(|g| convert::id(g.id)).collect(),
+            guild_ids: ready
+                .guilds
+                .iter()
+                .filter_map(|g| convert::id(g.id))
+                .collect(),
             missed_events: sessions_before > 0,
         }),
         Raw::Resumed => Some(Event::Resumed),

@@ -3,14 +3,16 @@
 use quack_core::ids::RuleId;
 use quack_text::help::Topic;
 use twilight_model::application::command::CommandType;
+use twilight_model::application::interaction::InteractionDataResolved;
 use twilight_model::application::interaction::application_command::{
     CommandData, CommandDataOption, CommandOptionValue,
 };
-use twilight_model::application::interaction::InteractionDataResolved;
 use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 
-use super::{AutocompleteFor, PayloadMember, Person, Request, RuleArg, TargetMessage, UnknownReason};
+use super::{
+    AutocompleteFor, PayloadMember, Person, Request, RuleArg, TargetMessage, UnknownReason,
+};
 use crate::convert;
 
 const UNKNOWN: Request = Request::Unknown(UnknownReason::UnknownCommand);
@@ -89,7 +91,10 @@ fn autocomplete(sub: &str, options: &[CommandDataOption]) -> Request {
     focused.map_or(UNKNOWN, |query| Request::Autocomplete { command, query })
 }
 
-fn case_add(options: &[CommandDataOption], resolved: Option<&InteractionDataResolved>) -> Option<Request> {
+fn case_add(
+    options: &[CommandDataOption],
+    resolved: Option<&InteractionDataResolved>,
+) -> Option<Request> {
     Some(Request::CaseAdd {
         member: user_option(options, "member", resolved)?,
         rule: rule_arg(&string_option(options, "rule")?),

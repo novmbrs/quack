@@ -33,7 +33,7 @@ pub use channels::ThreadPage;
 pub use commands::RegisteredCommand;
 pub use download::DownloadPolicy;
 pub use interactions::AutocompleteChoice;
-pub use messages::{MessageBody, Mentions};
+pub use messages::{Mentions, MessageBody};
 pub use outcome::{NotSentCause, Outcome, Refusal, RefusalKind, UnknownCause};
 
 use self::route::Route;

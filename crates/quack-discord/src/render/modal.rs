@@ -1,7 +1,7 @@
 //! The neutral `Modal` → a modal callback: one Label per input, wrapping a
 //! Text Input or a Yes / No string select (§11.11).
 
-use quack_text::budget;
+use quack_text::{budget, word};
 use quack_text::model::{Input, InputKind, InputStyle, Modal};
 use twilight_model::channel::message::Component;
 use twilight_model::channel::message::component::{
@@ -83,8 +83,8 @@ fn yes_no(id: String, placeholder: &str, value: Option<bool>, required: bool) ->
         max_values: Some(1),
         min_values: Some(u8::from(required)),
         options: Some(vec![
-            option("Yes", "yes", value == Some(true)),
-            option("No", "no", value == Some(false)),
+            option(word::yes_no(true), "yes", value == Some(true)),
+            option(word::yes_no(false), "no", value == Some(false)),
         ]),
         placeholder: Some(cut(placeholder, budget::SELECT_PLACEHOLDER)),
         required: Some(required),

@@ -65,10 +65,17 @@ const KICK: u64 = Permission::KickMembers.bit();
 
 #[test]
 fn server_permissions_add_up_roles() {
-    let g = guild(vec![role(GUILD, 0, VIEW), role(10, 1, KICK), role(11, 2, BAN)]);
+    let g = guild(vec![
+        role(GUILD, 0, VIEW),
+        role(10, 1, KICK),
+        role(11, 2, BAN),
+    ]);
     assert_eq!(in_guild(&g, who(ALICE, &[])).0, VIEW);
     assert_eq!(in_guild(&g, who(ALICE, &[r(10)])).0, VIEW | KICK);
-    assert_eq!(in_guild(&g, who(ALICE, &[r(10), r(11)])).0, VIEW | KICK | BAN);
+    assert_eq!(
+        in_guild(&g, who(ALICE, &[r(10), r(11)])).0,
+        VIEW | KICK | BAN
+    );
     // A role the server no longer has grants nothing.
     assert_eq!(in_guild(&g, who(ALICE, &[r(99)])).0, VIEW);
     assert_eq!(highest_position(&g, &[r(10), r(11), r(99)]), 2);
@@ -80,18 +87,29 @@ fn owner_and_administrator_get_everything() {
     let g = guild(vec![role(GUILD, 0, 0), role(10, 1, ADMINISTRATOR)]);
     assert_eq!(in_guild(&g, who(OWNER, &[])), ALL);
     assert_eq!(in_guild(&g, who(ALICE, &[r(10)])), ALL);
-    let deny_all = [ow(OverwriteTarget::Member(MemberId::new(ALICE).unwrap()), 0, u64::MAX)];
+    let deny_all = [ow(
+        OverwriteTarget::Member(MemberId::new(ALICE).unwrap()),
+        0,
+        u64::MAX,
+    )];
     assert_eq!(in_channel(&g, who(ALICE, &[r(10)]), &deny_all), ALL);
     assert_eq!(in_channel(&g, who(OWNER, &[]), &deny_all), ALL);
 }
 
 #[test]
 fn overwrites_apply_in_discord_order() {
-    let g = guild(vec![role(GUILD, 0, VIEW | SEND), role(10, 1, 0), role(11, 2, 0)]);
+    let g = guild(vec![
+        role(GUILD, 0, VIEW | SEND),
+        role(10, 1, 0),
+        role(11, 2, 0),
+    ]);
     let everyone = OverwriteTarget::Role(r(GUILD));
     let alice = OverwriteTarget::Member(MemberId::new(ALICE).unwrap());
     // @everyone denied, a role allows: the role wins.
-    let o = [ow(everyone, 0, VIEW), ow(OverwriteTarget::Role(r(10)), VIEW, 0)];
+    let o = [
+        ow(everyone, 0, VIEW),
+        ow(OverwriteTarget::Role(r(10)), VIEW, 0),
+    ];
     assert_eq!(in_channel(&g, who(ALICE, &[r(10)]), &o).0, VIEW | SEND);
     assert_eq!(in_channel(&g, who(ALICE, &[]), &o), Permissions::NONE);
     // One role allows, another denies: allow wins (allows are applied last).
@@ -99,7 +117,10 @@ fn overwrites_apply_in_discord_order() {
         ow(OverwriteTarget::Role(r(10)), ATTACH, 0),
         ow(OverwriteTarget::Role(r(11)), 0, ATTACH),
     ];
-    assert_eq!(in_channel(&g, who(ALICE, &[r(10), r(11)]), &o).0, VIEW | SEND | ATTACH);
+    assert_eq!(
+        in_channel(&g, who(ALICE, &[r(10), r(11)]), &o).0,
+        VIEW | SEND | ATTACH
+    );
     // The member's own overwrite beats every role.
     let o = [
         ow(OverwriteTarget::Role(r(10)), ATTACH, 0),
@@ -124,12 +145,19 @@ fn implicit_rules_follow_view_and_send() {
 
 #[test]
 fn timeouts_leave_view_and_history() {
-    let g = guild(vec![role(GUILD, 0, VIEW | SEND | READ_MESSAGE_HISTORY | KICK)]);
+    let g = guild(vec![role(
+        GUILD,
+        0,
+        VIEW | SEND | READ_MESSAGE_HISTORY | KICK,
+    )]);
     let mut subject = who(ALICE, &[]);
     subject.timed_out = true;
     assert_eq!(in_guild(&g, subject).0, VIEW | READ_MESSAGE_HISTORY);
     let allow_send = [ow(OverwriteTarget::Role(r(GUILD)), SEND, 0)];
-    assert_eq!(in_channel(&g, subject, &allow_send).0, VIEW | READ_MESSAGE_HISTORY);
+    assert_eq!(
+        in_channel(&g, subject, &allow_send).0,
+        VIEW | READ_MESSAGE_HISTORY
+    );
 }
 
 #[test]
@@ -175,7 +203,10 @@ fn facts_from_members_and_channels() {
         }),
         ..parent.clone()
     };
-    assert_eq!(channel_facts(&g, &parent, None, now).quack_permissions.0, VIEW | BAN);
+    assert_eq!(
+        channel_facts(&g, &parent, None, now).quack_permissions.0,
+        VIEW | BAN
+    );
     let in_thread = channel_facts(&g, &thread, Some(&parent), now);
     assert_eq!(in_thread.quack_permissions.0, VIEW | BAN);
     assert_eq!(in_thread.overwrites, parent.overwrites);

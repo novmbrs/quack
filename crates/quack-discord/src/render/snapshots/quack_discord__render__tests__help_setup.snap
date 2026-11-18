@@ -1,0 +1,26 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+expression: "json(&render(&quack_text::help::help(Some(Topic::Setup),\n\"https://quack.example\"), &ids()))"
+---
+[
+  {
+    "components": [
+      {
+        "content": "### Setup\nRun </setup:1000000000000000002> to choose the log channel, the appeal channel, and the evidence channel, and to turn on tickets, the honeypot, and the server activity log. Quack can create each channel for you with staff-only permissions. Everything in </setup:1000000000000000002> is also in the dashboard settings.",
+        "type": 10
+      },
+      {
+        "components": [
+          {
+            "label": "Open the dashboard",
+            "style": 5,
+            "type": 2,
+            "url": "https://quack.example"
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 17
+  }
+]

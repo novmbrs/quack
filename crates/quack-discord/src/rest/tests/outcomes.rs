@@ -67,7 +67,11 @@ async fn server_errors_are_unknown_and_never_retried() {
             client.kick(g(), m(), "r").await,
             Outcome::Unknown(UnknownCause::ServerError(status))
         );
-        assert_eq!(mock.calls_async().await, 1, "a {status} must not be retried");
+        assert_eq!(
+            mock.calls_async().await,
+            1,
+            "a {status} must not be retried"
+        );
         mock.delete_async().await;
     }
 }
@@ -114,7 +118,11 @@ async fn a_bucket_exhausted_beyond_the_budget_answers_retry_after_at_once() {
         other => panic!("expected RetryAfter, got {other:?}"),
     }
     assert!(started.elapsed() < Duration::from_millis(200));
-    assert_eq!(mock.calls_async().await, 1, "nothing was sent while rate limited");
+    assert_eq!(
+        mock.calls_async().await,
+        1,
+        "nothing was sent while rate limited"
+    );
 }
 
 #[tokio::test]
@@ -175,10 +183,13 @@ async fn a_connection_dropped_after_sending_is_unknown() {
 
 #[tokio::test]
 async fn a_success_whose_body_is_cut_off_is_unknown() {
-    let response = b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 500\r\n\r\n{\"id\":";
+    let response =
+        b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 500\r\n\r\n{\"id\":";
     let client = client(&raw_server(response).await);
     assert_eq!(
-        client.open_dm(quack_core::ids::AccountId::new(9).unwrap()).await,
+        client
+            .open_dm(quack_core::ids::AccountId::new(9).unwrap())
+            .await,
         Outcome::Unknown(UnknownCause::Connection)
     );
 }
@@ -194,7 +205,9 @@ async fn a_success_quack_cannot_read_is_unknown() {
         .await;
     let client = client(&server.base_url());
     assert_eq!(
-        client.open_dm(quack_core::ids::AccountId::new(9).unwrap()).await,
+        client
+            .open_dm(quack_core::ids::AccountId::new(9).unwrap())
+            .await,
         Outcome::Unknown(UnknownCause::Malformed)
     );
 }
@@ -215,9 +228,7 @@ async fn a_closed_client_sends_nothing() {
         Outcome::NotSent(NotSentCause::ShuttingDown)
     );
     assert_eq!(
-        client
-            .download_attachment(&server.url("/a.png"), 10)
-            .await,
+        client.download_attachment(&server.url("/a.png"), 10).await,
         Outcome::NotSent(NotSentCause::ShuttingDown)
     );
     assert_eq!(mock.calls_async().await, 0);
@@ -244,10 +255,7 @@ async fn downloads_stay_on_allowed_hosts_and_under_the_limit() {
             then.status(404);
         })
         .await;
-    let elsewhere = format!(
-        "http://localhost:{}/small.png",
-        server.address().port()
-    );
+    let elsewhere = format!("http://localhost:{}/small.png", server.address().port());
     server
         .mock_async(|when, then| {
             when.method("GET").path("/moved.png");
@@ -262,11 +270,15 @@ async fn downloads_stay_on_allowed_hosts_and_under_the_limit() {
         .await;
     let client = client(&server.base_url());
     assert_eq!(
-        client.download_attachment(&server.url("/small.png"), 10).await,
+        client
+            .download_attachment(&server.url("/small.png"), 10)
+            .await,
         Outcome::Done(b"12345".to_vec())
     );
     assert_eq!(
-        client.download_attachment(&server.url("/hop.png"), 10).await,
+        client
+            .download_attachment(&server.url("/hop.png"), 10)
+            .await,
         Outcome::Done(b"12345".to_vec())
     );
     assert_eq!(
@@ -284,7 +296,9 @@ async fn downloads_stay_on_allowed_hosts_and_under_the_limit() {
         Some(RefusalKind::Other)
     );
     assert_eq!(
-        client.download_attachment(&server.url("/moved.png"), 10).await,
+        client
+            .download_attachment(&server.url("/moved.png"), 10)
+            .await,
         Outcome::NotSent(NotSentCause::Invalid)
     );
     assert_eq!(
@@ -308,7 +322,9 @@ async fn a_chunked_download_stops_at_the_limit() {
         Some(RefusalKind::TooLarge)
     );
     assert_eq!(
-        client.download_attachment(&format!("{base}/a.png"), 16).await,
+        client
+            .download_attachment(&format!("{base}/a.png"), 16)
+            .await,
         Outcome::Done(b"1234567812345678".to_vec())
     );
 }

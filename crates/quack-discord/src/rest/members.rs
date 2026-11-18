@@ -150,7 +150,12 @@ impl DiscordClient {
     }
 
     /// Ends a member's timeout (`communication_disabled_until: null`).
-    pub async fn remove_timeout(&self, guild: GuildId, member: MemberId, reason: &str) -> Outcome<()> {
+    pub async fn remove_timeout(
+        &self,
+        guild: GuildId,
+        member: MemberId,
+        reason: &str,
+    ) -> Outcome<()> {
         self.set_timeout(guild, member, None, reason).await
     }
 

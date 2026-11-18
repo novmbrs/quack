@@ -100,7 +100,9 @@ impl GuildCache {
                 state.quack_members.clear();
             }
             Event::Resumed => state.connected = true,
-            Event::GatewayClose(_) | Event::GatewayReconnect | Event::GatewayInvalidateSession(_) => {
+            Event::GatewayClose(_)
+            | Event::GatewayReconnect
+            | Event::GatewayInvalidateSession(_) => {
                 state.connected = false;
             }
             Event::GuildCreate(create) => match &**create {
@@ -197,7 +199,11 @@ impl GuildCache {
             .cache
             .guild_roles(id)?
             .iter()
-            .filter_map(|r| self.cache.role(*r).and_then(|role| convert::role(role.resource())))
+            .filter_map(|r| {
+                self.cache
+                    .role(*r)
+                    .and_then(|role| convert::role(role.resource()))
+            })
             .collect();
         let mut facts = GuildFacts {
             guild_id: guild,

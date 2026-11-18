@@ -49,7 +49,10 @@ fn registered(list: Vec<serde_json::Value>) -> Vec<RegisteredCommand> {
 
 impl DiscordClient {
     /// The registered commands: global, or one server's when `guild` is set.
-    pub async fn registered_commands(&self, guild: Option<GuildId>) -> Outcome<Vec<RegisteredCommand>> {
+    pub async fn registered_commands(
+        &self,
+        guild: Option<GuildId>,
+    ) -> Outcome<Vec<RegisteredCommand>> {
         self.json::<Vec<serde_json::Value>>(Request::new(Route::commands(
             Method::Get,
             self.application_id(),

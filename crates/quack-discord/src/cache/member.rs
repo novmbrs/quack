@@ -64,9 +64,9 @@ impl MemberCache {
     /// Reports the cache's size on `quack.cache.size`.
     pub fn observe(self: &Arc<Self>) {
         let me = Arc::downgrade(self);
-        metrics().caches.observe_size(NAME, move || {
-            me.upgrade().map_or(0, |c| c.len() as u64)
-        });
+        metrics()
+            .caches
+            .observe_size(NAME, move || me.upgrade().map_or(0, |c| c.len() as u64));
     }
 
     /// A cached member. Event-fed entries count only when `trusted` (the
@@ -88,7 +88,9 @@ impl MemberCache {
     }
 
     fn insert(&self, guild: GuildId, member: Member, fed: Fed) {
-        let evicted = self.lock().insert((guild, member.id), Entry { member, fed });
+        let evicted = self
+            .lock()
+            .insert((guild, member.id), Entry { member, fed });
         if evicted > 0 {
             metrics().caches.evicted(NAME, evicted as u64);
         }
@@ -153,7 +155,10 @@ mod tests {
         let g = GuildId::new(1).unwrap();
         let cache = MemberCache::new(10, Duration::from_millis(30));
         cache.put_event(g, member(5));
-        assert_eq!(cache.get(g, MemberId::new(5).unwrap(), true), Some(member(5)));
+        assert_eq!(
+            cache.get(g, MemberId::new(5).unwrap(), true),
+            Some(member(5))
+        );
         assert_eq!(cache.get(g, MemberId::new(5).unwrap(), false), None);
         cache.put_rest(g, member(6));
         assert!(cache.get(g, MemberId::new(6).unwrap(), false).is_some());

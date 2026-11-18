@@ -1,6 +1,5 @@
 ---
 source: crates/quack-discord/src/render/tests.rs
-assertion_line: 99
 expression: "json(&render(&quack_text::ticket::panel(true), &CommandIds::EMPTY))"
 ---
 [

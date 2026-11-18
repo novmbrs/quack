@@ -7,8 +7,8 @@ use quack_text::{Msg, Text, Tone};
 use serde_json::json;
 use time::macros::datetime;
 
-use super::fixtures;
 use super::client;
+use super::fixtures;
 use crate::model::{ChannelSpec, FileEdit, InteractionRef, InteractionToken, Nonce, OutgoingFile};
 use crate::render::{RenderedMessage, render};
 use crate::rest::{AutocompleteChoice, MessageBody, Outcome};
@@ -82,9 +82,18 @@ async fn moderation_actions_send_the_audit_log_reason() {
     let why = "Quack case #4: Spam & scams";
     assert_eq!(client.kick(g(1), m(2), why).await, Outcome::Done(()));
     let until = datetime!(2026-11-17 12:00 UTC);
-    assert_eq!(client.timeout(g(1), m(3), until, why).await, Outcome::Done(()));
-    assert_eq!(client.remove_timeout(g(1), m(4), why).await, Outcome::Done(()));
-    assert_eq!(client.ban_member(g(1), m(5), 999_999, why).await, Outcome::Done(()));
+    assert_eq!(
+        client.timeout(g(1), m(3), until, why).await,
+        Outcome::Done(())
+    );
+    assert_eq!(
+        client.remove_timeout(g(1), m(4), why).await,
+        Outcome::Done(())
+    );
+    assert_eq!(
+        client.ban_member(g(1), m(5), 999_999, why).await,
+        Outcome::Done(())
+    );
     assert_eq!(
         client.unban(g(1), m(6), "Quack case #4 voided").await,
         Outcome::Done(())
@@ -106,26 +115,30 @@ async fn reads_answer_absent_only_for_their_unknown_code() {
     server
         .mock_async(|when, then| {
             when.method("GET").path("/api/v10/guilds/1/members/3");
-            then.status(404).json_body(json!({"code": 10007, "message": "Unknown Member"}));
+            then.status(404)
+                .json_body(json!({"code": 10007, "message": "Unknown Member"}));
         })
         .await;
     server
         .mock_async(|when, then| {
             when.method("GET").path("/api/v10/guilds/1/members/4");
-            then.status(404).json_body(json!({"code": 10013, "message": "Unknown User"}));
+            then.status(404)
+                .json_body(json!({"code": 10013, "message": "Unknown User"}));
         })
         .await;
     server
         .mock_async(|when, then| {
             when.method("GET").path("/api/v10/guilds/1/bans/2");
-            then.status(200)
-                .json_body(json!({"reason": "Quack case #3: Spam", "user": fixtures::user(2, "x")}));
+            then.status(200).json_body(
+                json!({"reason": "Quack case #3: Spam", "user": fixtures::user(2, "x")}),
+            );
         })
         .await;
     server
         .mock_async(|when, then| {
             when.method("GET").path("/api/v10/guilds/1/bans/3");
-            then.status(404).json_body(json!({"code": 10026, "message": "Unknown Ban"}));
+            then.status(404)
+                .json_body(json!({"code": 10026, "message": "Unknown Ban"}));
         })
         .await;
     let client = client(&server.base_url());
@@ -153,7 +166,7 @@ async fn guild_facts_compute_quacks_permissions() {
             then.status(200).json_body(fixtures::guild(
                 1,
                 8,
-                vec![fixtures::role(1, 0, 1024), fixtures::role(20, 5, 4)],
+                &[fixtures::role(1, 0, 1024), fixtures::role(20, 5, 4)],
             ));
         })
         .await;
@@ -208,7 +221,12 @@ async fn messages_carry_nonce_flags_and_empty_allowed_mentions() {
     let client = client(&server.base_url());
     let nonce = Nonce::new("AAAAAAAAAAAAAAAAAAAAAA0").unwrap();
     let sent = client
-        .send(c(5), &MessageBody::rendered(message.clone()), &[], Some(&nonce))
+        .send(
+            c(5),
+            &MessageBody::rendered(message.clone()),
+            &[],
+            Some(&nonce),
+        )
         .await
         .done()
         .unwrap();
@@ -294,9 +312,9 @@ async fn interaction_responses_use_the_token_and_no_bot_auth() {
         .await;
     let choices = server
         .mock_async(|when, then| {
-            when.method("POST")
-                .path(path)
-                .json_body(json!({"type": 8, "data": {"choices": [{"name": "Spam", "value": "u"}]}}));
+            when.method("POST").path(path).json_body(
+                json!({"type": 8, "data": {"choices": [{"name": "Spam", "value": "u"}]}}),
+            );
             then.status(204);
         })
         .await;
@@ -344,9 +362,18 @@ async fn interaction_responses_use_the_token_and_no_bot_auth() {
         quack_core::ids::CaseId::from_uuid(uuid::Uuid::from_u128(1)),
         Some(4),
     );
-    assert!(client.open_modal(&i, &crate::render::render_modal(&void)).await.is_done());
+    assert!(
+        client
+            .open_modal(&i, &crate::render::render_modal(&void))
+            .await
+            .is_done()
+    );
     assert!(client.edit_original(&i.token, &rendered()).await.is_done());
-    let sent = client.followup(&i.token, &rendered(), true).await.done().unwrap();
+    let sent = client
+        .followup(&i.token, &rendered(), true)
+        .await
+        .done()
+        .unwrap();
     assert_eq!(sent.message_id, MessageId::new(13).unwrap());
     for mock in [defer, update, choices, modal, original, followup] {
         mock.assert_async().await;
@@ -354,7 +381,7 @@ async fn interaction_responses_use_the_token_and_no_bot_auth() {
 }
 
 #[tokio::test]
-async fn channels_threads_and_dms() {
+async fn channels_and_threads() {
     let server = MockServer::start_async().await;
     let create = server
         .mock_async(|when, then| {
@@ -387,8 +414,10 @@ async fn channels_threads_and_dms() {
         .await;
     server
         .mock_async(|when, then| {
-            when.method("GET").path("/api/v10/channels/31/thread-members/7");
-            then.status(404).json_body(json!({"code": 10007, "message": "Unknown Member"}));
+            when.method("GET")
+                .path("/api/v10/channels/31/thread-members/7");
+            then.status(404)
+                .json_body(json!({"code": 10007, "message": "Unknown Member"}));
         })
         .await;
     let freeze = server
@@ -397,23 +426,6 @@ async fn channels_threads_and_dms() {
                 .path("/api/v10/channels/31")
                 .json_body(json!({"archived": true, "locked": true}));
             then.status(200).json_body(fixtures::channel(31, 1, 12));
-        })
-        .await;
-    let dm = server
-        .mock_async(|when, then| {
-            when.method("POST")
-                .path("/api/v10/users/@me/channels")
-                .json_body(json!({"recipient_id": "9"}));
-            then.status(200).json_body(json!({"id": "40", "type": 1, "recipients": [fixtures::user(9, "x")]}));
-        })
-        .await;
-    let search = server
-        .mock_async(|when, then| {
-            when.method("GET")
-                .path("/api/v10/guilds/1/members/search")
-                .query_param("query", "a b")
-                .query_param("limit", "5");
-            then.status(200).json_body(json!([fixtures::member(2, &[])]));
         })
         .await;
     server
@@ -440,26 +452,65 @@ async fn channels_threads_and_dms() {
             },
         ],
     };
-    assert_eq!(client.create_channel(g(1), &spec).await, Outcome::Done(c(30)));
+    assert_eq!(
+        client.create_channel(g(1), &spec).await,
+        Outcome::Done(c(30))
+    );
     assert_eq!(
         client.create_private_thread(c(30), "ticket-abc").await,
         Outcome::Done(c(31))
     );
     assert_eq!(
-        client.is_thread_member(c(31), AccountId::new(7).unwrap()).await,
+        client
+            .is_thread_member(c(31), AccountId::new(7).unwrap())
+            .await,
         Outcome::Done(false)
     );
     assert!(client.set_thread_state(c(31), true, true).await.is_done());
+    let fetched = client.channel(c(30)).await.done().unwrap();
+    assert_eq!(fetched.overwrites.len(), 2);
+    for mock in [create, thread, freeze] {
+        mock.assert_async().await;
+    }
+}
+
+#[tokio::test]
+async fn dms_and_member_search() {
+    let server = MockServer::start_async().await;
+    let dm = server
+        .mock_async(|when, then| {
+            when.method("POST")
+                .path("/api/v10/users/@me/channels")
+                .json_body(json!({"recipient_id": "9"}));
+            then.status(200)
+                .json_body(json!({"id": "40", "type": 1, "recipients": [fixtures::user(9, "x")]}));
+        })
+        .await;
+    let search = server
+        .mock_async(|when, then| {
+            when.method("GET")
+                .path("/api/v10/guilds/1/members/search")
+                .query_param("query", "a b")
+                .query_param("limit", "5");
+            then.status(200)
+                .json_body(json!([fixtures::member(2, &[])]));
+        })
+        .await;
+    let client = client(&server.base_url());
     assert_eq!(
         client.open_dm(AccountId::new(9).unwrap()).await,
         Outcome::Done(c(40))
     );
-    assert_eq!(client.search_members(g(1), "a b", 5).await.done().map(|v| v.len()), Some(1));
-    let fetched = client.channel(c(30)).await.done().unwrap();
-    assert_eq!(fetched.overwrites.len(), 2);
-    for mock in [create, thread, freeze, dm, search] {
-        mock.assert_async().await;
-    }
+    assert_eq!(
+        client
+            .search_members(g(1), "a b", 5)
+            .await
+            .done()
+            .map(|v| v.len()),
+        Some(1)
+    );
+    dm.assert_async().await;
+    search.assert_async().await;
 }
 
 #[tokio::test]
@@ -489,7 +540,10 @@ async fn fetching_messages_converts_them() {
         .unwrap();
     assert_eq!(message.content, "hello");
     assert_eq!(message.author.id, AccountId::new(9).unwrap());
-    assert_eq!(message.attachments[0].content_type.as_deref(), Some("image/png"));
+    assert_eq!(
+        message.attachments[0].content_type.as_deref(),
+        Some("image/png")
+    );
     assert_eq!(message.embeds[0].kind, "rich");
     assert_eq!(message.guild_id, None);
     let page = client

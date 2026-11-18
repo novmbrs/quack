@@ -1,6 +1,5 @@
 ---
 source: crates/quack-discord/src/render/tests.rs
-assertion_line: 84
 expression: "json(&render(&quack_text::help::help(None, \"https://quack.example\"), &ids()))"
 ---
 [

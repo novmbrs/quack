@@ -317,7 +317,8 @@ mod tests {
 
     #[test]
     fn too_many_requests_carries_the_delay() {
-        let body = br#"{"message": "You are being rate limited.", "retry_after": 2.5, "global": false}"#;
+        let body =
+            br#"{"message": "You are being rate limited.", "retry_after": 2.5, "global": false}"#;
         assert_eq!(
             classify_failure::<()>(429, body, Some("3")),
             Outcome::RetryAfter(Duration::from_millis(2500))
@@ -344,7 +345,10 @@ mod tests {
     fn combinators_and_classes() {
         let done: Outcome<u8> = Outcome::Done(2);
         assert_eq!(done.clone().map(u16::from), Outcome::Done(2_u16));
-        assert_eq!(done.clone().and_then(|v| Outcome::Done(v + 1)).done(), Some(3));
+        assert_eq!(
+            done.clone().and_then(|v| Outcome::Done(v + 1)).done(),
+            Some(3)
+        );
         assert_eq!(done.class(), RestOutcome::Done);
         let refused: Outcome<u8> = Outcome::Refused(Refusal::new(404, Some(10007)));
         assert_eq!(refused.refusal(), Some(RefusalKind::UnknownMember));
