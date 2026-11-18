@@ -367,14 +367,17 @@ async fn an_idle_runner_issues_a_handful_of_queries_per_second(
     let handler: Handler = Arc::new(|_, _| panic!("no jobs"));
     let runner = Runner::new(db.clone(), RunnerConfig::new(16), handler);
     runner.start();
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    // Past the first passes, which also prepare each statement on each new
+    // pool connection.
+    tokio::time::sleep(Duration::from_secs(3)).await;
     let mut conn = db.conn().await?;
     let before = commits(&mut conn).await?;
     tokio::time::sleep(Duration::from_secs(4)).await;
     let after = commits(&mut conn).await?;
     runner.shutdown(WAIT).await;
     // Ten kinds, one query per pass, one pass per 2-second poll: about
-    // five a second (the statistics view lags a little either way).
+    // five a second (the statistics view lags a little either way). The
+    // spinning runner this guards against made thousands.
     let per_second = (after - before) / 4;
     assert!(
         per_second <= 10,
