@@ -5,8 +5,8 @@
 )]
 
 use proptest::prelude::*;
-use quack_core::ids::{GuildId, MemberId};
-use quack_core::permissions::RoleFacts;
+use quack_core::ids::{AccountId, GuildId, MemberId};
+use quack_core::permissions::{Overwrite, OverwriteTarget, Permission, RoleFacts};
 use time::macros::datetime;
 
 use super::*;
@@ -57,8 +57,13 @@ fn ow(target: OverwriteTarget, allow: u64, deny: u64) -> Overwrite {
     }
 }
 
-const VIEW: u64 = VIEW_CHANNEL;
-const SEND: u64 = SEND_MESSAGES;
+const VIEW: u64 = Permission::ViewChannel.bit();
+const SEND: u64 = Permission::SendMessages.bit();
+const READ_MESSAGE_HISTORY: u64 = Permission::ReadMessageHistory.bit();
+const SEND_IN_THREADS: u64 = Permission::SendMessagesInThreads.bit();
+const MANAGE_THREADS: u64 = Permission::ManageThreads.bit();
+const ADMINISTRATOR: u64 = Permission::Administrator.bit();
+const NEEDS_SEND: u64 = (1 << 17) | (1 << 12) | ATTACH | Permission::EmbedLinks.bit();
 const ATTACH: u64 = Permission::AttachFiles.bit();
 const BAN: u64 = Permission::BanMembers.bit();
 const KICK: u64 = Permission::KickMembers.bit();
@@ -92,8 +97,8 @@ fn owner_and_administrator_get_everything() {
         0,
         u64::MAX,
     )];
-    assert_eq!(in_channel(&g, who(ALICE, &[r(10)]), &deny_all), ALL);
-    assert_eq!(in_channel(&g, who(OWNER, &[]), &deny_all), ALL);
+    assert_eq!(in_channel(&g, who(ALICE, &[r(10)]), &deny_all, false), ALL);
+    assert_eq!(in_channel(&g, who(OWNER, &[]), &deny_all, false), ALL);
 }
 
 #[test]
@@ -110,15 +115,21 @@ fn overwrites_apply_in_discord_order() {
         ow(everyone, 0, VIEW),
         ow(OverwriteTarget::Role(r(10)), VIEW, 0),
     ];
-    assert_eq!(in_channel(&g, who(ALICE, &[r(10)]), &o).0, VIEW | SEND);
-    assert_eq!(in_channel(&g, who(ALICE, &[]), &o), Permissions::NONE);
+    assert_eq!(
+        in_channel(&g, who(ALICE, &[r(10)]), &o, false).0,
+        VIEW | SEND
+    );
+    assert_eq!(
+        in_channel(&g, who(ALICE, &[]), &o, false),
+        Permissions::NONE
+    );
     // One role allows, another denies: allow wins (allows are applied last).
     let o = [
         ow(OverwriteTarget::Role(r(10)), ATTACH, 0),
         ow(OverwriteTarget::Role(r(11)), 0, ATTACH),
     ];
     assert_eq!(
-        in_channel(&g, who(ALICE, &[r(10), r(11)]), &o).0,
+        in_channel(&g, who(ALICE, &[r(10), r(11)]), &o, false).0,
         VIEW | SEND | ATTACH
     );
     // The member's own overwrite beats every role.
@@ -126,7 +137,10 @@ fn overwrites_apply_in_discord_order() {
         ow(OverwriteTarget::Role(r(10)), ATTACH, 0),
         ow(alice, 0, ATTACH),
     ];
-    assert_eq!(in_channel(&g, who(ALICE, &[r(10)]), &o).0, VIEW | SEND);
+    assert_eq!(
+        in_channel(&g, who(ALICE, &[r(10)]), &o, false).0,
+        VIEW | SEND
+    );
 }
 
 #[test]
@@ -134,11 +148,11 @@ fn implicit_rules_follow_view_and_send() {
     let g = guild(vec![role(GUILD, 0, VIEW | SEND | ATTACH | BAN)]);
     let everyone = OverwriteTarget::Role(r(GUILD));
     assert_eq!(
-        in_channel(&g, who(ALICE, &[]), &[ow(everyone, 0, VIEW)]),
+        in_channel(&g, who(ALICE, &[]), &[ow(everyone, 0, VIEW)], false),
         Permissions::NONE
     );
     assert_eq!(
-        in_channel(&g, who(ALICE, &[]), &[ow(everyone, 0, SEND)]).0,
+        in_channel(&g, who(ALICE, &[]), &[ow(everyone, 0, SEND)], false).0,
         VIEW | BAN
     );
 }
@@ -155,7 +169,43 @@ fn timeouts_leave_view_and_history() {
     assert_eq!(in_guild(&g, subject).0, VIEW | READ_MESSAGE_HISTORY);
     let allow_send = [ow(OverwriteTarget::Role(r(GUILD)), SEND, 0)];
     assert_eq!(
-        in_channel(&g, subject, &allow_send).0,
+        in_channel(&g, subject, &allow_send, false).0,
+        VIEW | READ_MESSAGE_HISTORY
+    );
+}
+
+#[test]
+fn a_thread_sends_with_send_messages_in_threads() {
+    let everyone = OverwriteTarget::Role(r(GUILD));
+    // Send Messages in Threads but not Send Messages: can send in a thread.
+    let g = guild(vec![role(GUILD, 0, VIEW | SEND_IN_THREADS | ATTACH)]);
+    let thread = in_channel(&g, who(ALICE, &[]), &[], true);
+    assert!(thread.contains(Permissions(SEND | ATTACH)), "{thread:?}");
+    assert_eq!(
+        in_channel(&g, who(ALICE, &[]), &[], false).0 & (SEND | ATTACH),
+        0
+    );
+    // Send Messages but its thread twice denied: can't.
+    let g = guild(vec![role(GUILD, 0, VIEW | SEND | ATTACH)]);
+    let denied = [ow(everyone, 0, SEND_IN_THREADS)];
+    assert_eq!(
+        in_channel(&g, who(ALICE, &[]), &denied, true).0 & (SEND | ATTACH),
+        0
+    );
+}
+
+#[test]
+fn a_timeout_applies_after_overwrites_that_grant_more() {
+    let g = guild(vec![
+        role(GUILD, 0, VIEW | READ_MESSAGE_HISTORY),
+        role(10, 3, 0),
+    ]);
+    let grant = [ow(OverwriteTarget::Role(r(10)), MANAGE_THREADS | SEND, 0)];
+    let roles = [r(10)];
+    let mut subject = who(ALICE, &roles);
+    subject.timed_out = true;
+    assert_eq!(
+        in_channel(&g, subject, &grant, true).0,
         VIEW | READ_MESSAGE_HISTORY
     );
 }
@@ -212,9 +262,10 @@ fn facts_from_members_and_channels() {
     let in_thread = channel_facts(&g, &thread, Some(&parent), now);
     assert_eq!(in_thread.quack_permissions.0, VIEW | BAN);
     assert_eq!(in_thread.overwrites, parent.overwrites);
+    // Without its parent a thread's overwrites are unknown: nothing.
     assert_eq!(
-        channel_facts(&g, &thread, None, now).quack_permissions.0,
-        VIEW | SEND | BAN
+        channel_facts(&g, &thread, None, now).quack_permissions,
+        Permissions::NONE
     );
     g.quack = None;
     assert_eq!(
@@ -294,10 +345,10 @@ proptest! {
         let base = in_guild(&g, who(ALICE, &mine)).0;
         let held_ows: Vec<(u64, u64)> = (0..3).filter(|i| held[*i]).map(|i| role_ows[i]).collect();
         let expected = oracle(base, everyone_ow, &held_ows, member_ow);
-        prop_assert_eq!(in_channel(&g, who(ALICE, &mine), &overwrites).0, expected);
+        prop_assert_eq!(in_channel(&g, who(ALICE, &mine), &overwrites, false).0, expected);
         // Overwrite order never matters.
         overwrites.reverse();
-        prop_assert_eq!(in_channel(&g, who(ALICE, &mine), &overwrites).0, expected);
+        prop_assert_eq!(in_channel(&g, who(ALICE, &mine), &overwrites, false).0, expected);
     }
 
     #[test]

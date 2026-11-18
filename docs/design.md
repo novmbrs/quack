@@ -8139,3 +8139,11 @@ folds these into the sections (or changes the code) and removes them here.
     staff detail that `/case view` and the dashboard read live; terminal
     transitions bump as before. The member's timeline dates a skipped
     undo by its `action_undo_skipped` entry, not by when it was requested.
+64. §2, §7.2, §11.10 (Discord review MAJOR 12) → one permission
+    calculation, `quack_core::permissions::in_channel`, serves the Discord
+    facts and evidence access (the engine's copy is gone). In a thread it
+    uses the parent's overwrites and Send Messages in Threads as the send
+    permission; the timeout restriction comes after every overwrite (so an
+    overwrite can't give a timed-out member Manage Threads back); a thread
+    whose parent is unknown gets no permissions (fail closed). Voice
+    channels' Connect rule isn't applied: Quack never posts in them.

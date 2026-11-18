@@ -8,6 +8,7 @@
 
 mod capabilities;
 mod channel;
+mod compute;
 mod facts;
 mod member;
 
@@ -20,6 +21,7 @@ pub use capabilities::{
 pub use channel::{
     ChannelProblem, Overwrite, OverwriteTarget, StaffChannelFacts, check_staff_channel,
 };
+pub use compute::{ALL, Subject, in_channel, in_guild};
 pub use facts::{
     AccountFacts, BanFacts, ChannelFacts, GuildFacts, MemberFacts, RoleFacts, TEXT_CHANNEL,
 };

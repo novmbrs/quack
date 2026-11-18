@@ -1,110 +1,12 @@
-//! Discord's permission computation over quack-core facts, and the facts
-//! structs built from Discord data.
-//!
-//! Twilight's calculator (`twilight-util`) omits Discord's implicit rules
-//! (no View Channel means no permissions in the channel; no Send Messages
-//! drops the permissions that depend on it) and timeouts, so this is a small
-//! purpose-built version of Discord's documented algorithm.
+//! The facts structs built from Discord data, with permissions from
+//! quack-core's one calculation (`quack_core::permissions::in_channel`).
 
-use quack_core::ids::{AccountId, RoleId};
-use quack_core::permissions::{
-    ChannelFacts, GuildFacts, MemberFacts, Overwrite, OverwriteTarget, Permission, Permissions,
-};
+use quack_core::ids::RoleId;
+pub use quack_core::permissions::{ALL, Subject, in_channel, in_guild};
+use quack_core::permissions::{ChannelFacts, GuildFacts, MemberFacts, Permissions};
 use time::OffsetDateTime;
 
 use crate::model::{Channel, Member};
-
-/// Every permission: what the owner and Administrator get.
-pub const ALL: Permissions = Permissions(u64::MAX);
-
-const VIEW_CHANNEL: u64 = Permission::ViewChannel.bit();
-const READ_MESSAGE_HISTORY: u64 = Permission::ReadMessageHistory.bit();
-const SEND_MESSAGES: u64 = Permission::SendMessages.bit();
-/// What losing Send Messages also takes away in a text channel: Mention
-/// Everyone, Send TTS Messages, Attach Files, Embed Links.
-const NEEDS_SEND: u64 =
-    (1 << 17) | (1 << 12) | Permission::AttachFiles.bit() | Permission::EmbedLinks.bit();
-const ADMINISTRATOR: u64 = Permission::Administrator.bit();
-
-/// Who permissions are computed for.
-#[derive(Clone, Copy, Debug)]
-pub struct Subject<'a> {
-    /// Their account.
-    pub account: AccountId,
-    /// Their role ids (without @everyone).
-    pub role_ids: &'a [RoleId],
-    /// Whether they are timed out right now.
-    pub timed_out: bool,
-}
-
-/// Server-level permissions: @everyone plus every role; the owner and
-/// Administrator get everything; a timed-out member keeps only View Channel
-/// and Read Message History.
-pub fn in_guild(guild: &GuildFacts, who: Subject<'_>) -> Permissions {
-    if who.account == guild.owner_id {
-        return ALL;
-    }
-    let mut bits = guild
-        .role(guild.guild_id.everyone_role())
-        .map_or(0, |r| r.permissions.0);
-    for id in who.role_ids {
-        if let Some(role) = guild.role(*id) {
-            bits |= role.permissions.0;
-        }
-    }
-    if bits & ADMINISTRATOR != 0 {
-        return ALL;
-    }
-    if who.timed_out {
-        bits &= VIEW_CHANNEL | READ_MESSAGE_HISTORY;
-    }
-    Permissions(bits)
-}
-
-/// Permissions in a channel with these overwrites: server permissions, then
-/// the @everyone overwrite, then all role overwrites together, then the
-/// member's own overwrite; no View Channel means nothing.
-pub fn in_channel(guild: &GuildFacts, who: Subject<'_>, overwrites: &[Overwrite]) -> Permissions {
-    let base = in_guild(guild, who);
-    if base.0 & ADMINISTRATOR != 0 {
-        return ALL;
-    }
-    let everyone = guild.guild_id.everyone_role();
-    let mut bits = base.0;
-    if let Some(o) = overwrites
-        .iter()
-        .find(|o| o.target == OverwriteTarget::Role(everyone))
-    {
-        bits = (bits & !o.deny.0) | o.allow.0;
-    }
-    let (mut allow, mut deny) = (0, 0);
-    for o in overwrites {
-        if let OverwriteTarget::Role(role) = o.target
-            && role != everyone
-            && who.role_ids.contains(&role)
-        {
-            allow |= o.allow.0;
-            deny |= o.deny.0;
-        }
-    }
-    bits = (bits & !deny) | allow;
-    if let Some(o) = overwrites
-        .iter()
-        .find(|o| o.target == OverwriteTarget::Member(who.account.member()))
-    {
-        bits = (bits & !o.deny.0) | o.allow.0;
-    }
-    if who.timed_out {
-        bits &= VIEW_CHANNEL | READ_MESSAGE_HISTORY;
-    }
-    if bits & VIEW_CHANNEL == 0 {
-        return Permissions::NONE;
-    }
-    if bits & SEND_MESSAGES == 0 {
-        bits &= !NEEDS_SEND;
-    }
-    Permissions(bits)
-}
 
 /// The position of the member's highest role (0 for @everyone only).
 /// Discord breaks position ties by role id, but Quack only compares
@@ -155,28 +57,35 @@ pub fn member_facts(guild: &GuildFacts, member: &Member, now: OffsetDateTime) ->
 
 /// A channel's facts with Quack's permissions in it. A thread uses its
 /// parent's overwrites (the ones that apply to it), so pass the parent for
-/// threads; without it a thread gets server-level permissions.
+/// threads; without it Quack has no permissions there (fail closed).
 pub fn channel_facts(
     guild: &GuildFacts,
     channel: &Channel,
     parent: Option<&Channel>,
     now: OffsetDateTime,
 ) -> ChannelFacts {
+    let thread = channel.is_thread();
     let overwrites = match parent {
-        Some(parent) if channel.is_thread() => parent.overwrites.clone(),
-        _ => channel.overwrites.clone(),
+        Some(parent) if thread => Some(parent.overwrites.clone()),
+        // A thread without its parent: the overwrites that apply are
+        // unknown, so Quack is taken to have nothing there.
+        None if thread => None,
+        _ => Some(channel.overwrites.clone()),
     };
-    let quack_permissions = guild.quack.as_ref().map_or(Permissions::NONE, |quack| {
-        in_channel(
+    let quack_permissions = match (&guild.quack, &overwrites) {
+        (Some(quack), Some(overwrites)) => in_channel(
             guild,
             Subject {
                 account: quack.id.account(),
                 role_ids: &quack.role_ids,
                 timed_out: timed_out(quack.timeout_until, now),
             },
-            &overwrites,
-        )
-    });
+            overwrites,
+            thread,
+        ),
+        _ => Permissions::NONE,
+    };
+    let overwrites = overwrites.unwrap_or_default();
     ChannelFacts {
         id: channel.id,
         guild_id: channel.guild_id.unwrap_or(guild.guild_id),
