@@ -60,11 +60,7 @@ pub async fn gather(engine: &Engine, guild: GuildId, channel: ChannelId) -> Gath
 
 /// Checks gathered facts with these moderator roles (the ones a settings
 /// change is saving, or the saved ones).
-pub fn check(
-    gathered: &Gathered,
-    moderator_roles: &[RoleId],
-    needs: Permissions,
-) -> ChannelCheck {
+pub fn check(gathered: &Gathered, moderator_roles: &[RoleId], needs: Permissions) -> ChannelCheck {
     match gathered {
         Gathered::Facts(facts) => {
             let problems = check_staff_channel(facts, moderator_roles, needs);
@@ -151,4 +147,108 @@ async fn staff_facts(
         quack_id,
         members,
     })
+}
+
+/// Checks `channel` as a staff destination from server facts alone: a
+/// module's enable check, which runs inside the enable transaction and
+/// can't look members up. A member overwrite that allows viewing counts as
+/// not staff unless it is Quack's or the owner's, so the check only errs
+/// toward refusing.
+pub fn check_from_facts(
+    guild: &GuildFacts,
+    channel: &ChannelFacts,
+    moderator_roles: &[RoleId],
+    needs: Permissions,
+) -> Vec<ChannelProblem> {
+    let Some(quack) = guild.quack.as_ref() else {
+        return vec![ChannelProblem::Inaccessible];
+    };
+    let role_permissions = channel
+        .overwrites
+        .iter()
+        .filter_map(|o| match o.target {
+            OverwriteTarget::Role(role) => Some((
+                role,
+                guild
+                    .role(role)
+                    .map_or(Permissions::NONE, |r| r.permissions),
+            )),
+            OverwriteTarget::Member(_) => None,
+        })
+        .collect();
+    let facts = StaffChannelFacts {
+        guild_id: guild.guild_id,
+        channel_guild_id: channel.guild_id,
+        is_text: channel.is_text(),
+        overwrites: channel.overwrites.clone(),
+        quack_permissions: channel.quack_permissions,
+        role_permissions,
+        owner_id: guild.owner_id,
+        quack_id: quack.id.account(),
+        members: Vec::new(),
+    };
+    check_staff_channel(&facts, moderator_roles, needs)
+}
+
+#[cfg(test)]
+mod tests {
+    use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId};
+    use quack_core::permissions::{MemberFacts, Overwrite, Permission, TEXT_CHANNEL};
+
+    use super::*;
+
+    fn quack() -> MemberFacts {
+        MemberFacts {
+            id: MemberId::new(2).unwrap(),
+            bot: true,
+            role_ids: Vec::new(),
+            highest_role_position: 1,
+            permissions: Permissions::NONE,
+            joined_at: None,
+            timeout_until: None,
+            username: "quack".to_owned(),
+            global_name: None,
+            nick: None,
+        }
+    }
+
+    #[test]
+    fn checks_staff_channels_from_server_facts_alone() {
+        let guild_id = GuildId::new(100).unwrap();
+        let guild = GuildFacts {
+            guild_id,
+            name: "Ducks".to_owned(),
+            icon_hash: None,
+            owner_id: AccountId::new(1).unwrap(),
+            mfa_required: false,
+            roles: Vec::new(),
+            quack: Some(quack()),
+        };
+        let deny_everyone = Overwrite {
+            target: OverwriteTarget::Role(guild_id.everyone_role()),
+            allow: Permissions::NONE,
+            deny: Permission::ViewChannel.into(),
+        };
+        let mut channel = ChannelFacts {
+            id: ChannelId::new(5).unwrap(),
+            guild_id,
+            kind: TEXT_CHANNEL,
+            name: "staff".to_owned(),
+            parent_id: None,
+            overwrites: vec![deny_everyone],
+            quack_permissions: Permission::ViewChannel | Permission::SendMessages,
+        };
+        let needs = Permission::ViewChannel | Permission::SendMessages;
+        assert_eq!(check_from_facts(&guild, &channel, &[], needs), Vec::new());
+        let stranger = MemberId::new(9).unwrap();
+        channel.overwrites.push(Overwrite {
+            target: OverwriteTarget::Member(stranger),
+            allow: Permission::ViewChannel.into(),
+            deny: Permissions::NONE,
+        });
+        assert_eq!(
+            check_from_facts(&guild, &channel, &[], needs),
+            vec![ChannelProblem::MemberCanView(stranger)]
+        );
+    }
 }
