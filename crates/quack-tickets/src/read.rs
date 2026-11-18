@@ -11,7 +11,7 @@ use time::OffsetDateTime;
 
 use crate::TicketError;
 use crate::close::authorize;
-use crate::obs::span;
+use quack_engine::span;
 
 /// A ticket as the API shows it (§14.3).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

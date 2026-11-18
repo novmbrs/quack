@@ -16,7 +16,7 @@ use quack_telemetry::metrics;
 use time::OffsetDateTime;
 
 use crate::jobs::{begin, dead, finish, retry};
-use crate::obs::span;
+use quack_engine::span;
 
 /// The `honeypot_cleanup` payload.
 #[derive(Clone, Copy, Debug, serde::Deserialize)]

@@ -22,7 +22,6 @@ mod cache;
 mod events;
 mod intake;
 mod log;
-mod obs;
 mod settings;
 
 pub use events::{

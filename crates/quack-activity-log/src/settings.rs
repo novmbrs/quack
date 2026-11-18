@@ -19,7 +19,7 @@ use quack_engine::settings::{
 use quack_engine::{Engine, OpKey, Principal};
 use serde::{Deserialize, Serialize};
 
-use crate::obs::span;
+use quack_engine::span;
 
 /// What Quack needs in a route channel.
 fn needs() -> Permissions {

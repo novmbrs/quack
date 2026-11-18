@@ -16,7 +16,7 @@ use quack_engine::Engine;
 use quack_engine::port::{Outcome, RefusalKind};
 use time::OffsetDateTime;
 
-use crate::obs::span;
+use quack_engine::span;
 
 /// The Discord dispatch events the tickets module wants: `MESSAGE_CREATE`
 /// (the journal), `THREAD_DELETE`, `GUILD_CREATE` (missed thread

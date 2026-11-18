@@ -28,7 +28,6 @@ mod error;
 mod gateway;
 mod gauge;
 mod jobs;
-mod obs;
 mod open;
 mod open_job;
 mod read;

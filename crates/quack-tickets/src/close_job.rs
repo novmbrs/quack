@@ -17,8 +17,8 @@ use quack_telemetry::metrics;
 use time::OffsetDateTime;
 
 use crate::jobs::{Payload, begin, dead, finish, retry};
-use crate::obs::span;
 use crate::transcript::{self, HISTORY_PAGE, HISTORY_PAGES, Header, History};
+use quack_engine::span;
 
 /// Runs the close steps that are not done yet.
 pub(crate) async fn run(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError> {

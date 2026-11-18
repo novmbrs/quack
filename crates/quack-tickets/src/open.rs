@@ -10,7 +10,7 @@ use quack_text::Text;
 use quack_text::model::ChannelRef;
 
 use crate::TicketError;
-use crate::obs::span;
+use quack_engine::span;
 
 /// What the member is told after selecting **Open a ticket**.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

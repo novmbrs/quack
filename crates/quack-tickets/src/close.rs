@@ -13,7 +13,7 @@ use quack_engine::{Engine, Principal};
 use quack_text::Text;
 
 use crate::TicketError;
-use crate::obs::span;
+use quack_engine::span;
 
 /// What the closer is told.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

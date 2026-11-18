@@ -19,7 +19,7 @@ use quack_text::model::Person;
 use time::OffsetDateTime;
 
 use crate::jobs::{Payload, begin, dead, finish, retry};
-use crate::obs::span;
+use quack_engine::span;
 
 /// How one step ended.
 enum Step<T> {

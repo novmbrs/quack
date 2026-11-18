@@ -10,7 +10,7 @@ use quack_engine::Engine;
 use quack_telemetry::labels::HoneypotOutcome;
 use quack_telemetry::metrics;
 
-use crate::obs::span;
+use quack_engine::span;
 
 /// The Discord dispatch events the honeypot wants: `MESSAGE_CREATE`.
 /// Intents: `GUILDS`, `GUILD_MESSAGES` (the text is not needed).

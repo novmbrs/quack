@@ -14,6 +14,7 @@ use quack_core::ids::GuildId;
 use quack_core::permissions::MemberRefusal;
 use quack_telemetry::labels;
 use quack_telemetry::spans::{self, SpanEvent};
+use tracing::instrument::Instrumented;
 use tracing::{Instrument as _, Span};
 
 /// Runs `work` inside a `use_case {name}` span (§18.4).
@@ -24,6 +25,11 @@ pub(crate) async fn use_case<T>(
 ) -> T {
     work.instrument(spans::use_case(name, guild.map(GuildId::get)))
         .await
+}
+
+/// Runs a module's use case or job in a `use_case {name}` span for `guild`.
+pub fn span<F: Future>(name: &'static str, guild: GuildId, work: F) -> Instrumented<F> {
+    work.instrument(spans::use_case(name, Some(guild.get())))
 }
 
 /// Adds a domain event to the current span.

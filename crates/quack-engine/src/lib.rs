@@ -39,6 +39,7 @@ pub mod stats;
 pub use cases::CaseRef;
 pub use config_cache::{ConfigCache, GuildConfig};
 pub use engine::{Engine, EngineConfig, Links};
+pub use obs::span;
 pub use opkey::OpKey;
 pub use port::{BoxFuture, Discord, Outcome};
 pub use principal::{Origin, Principal, PrincipalError};

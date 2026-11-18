@@ -21,7 +21,6 @@ mod case_job;
 mod cleanup_job;
 mod intake;
 mod jobs;
-mod obs;
 mod settings;
 
 pub use intake::{GATEWAY_EVENTS, Intake, PostFacts, on_message, recover};

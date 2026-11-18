@@ -22,7 +22,7 @@ use quack_telemetry::labels::HoneypotOutcome;
 use quack_telemetry::metrics;
 
 use crate::jobs::{begin, dead, finish, retry};
-use crate::obs::span;
+use quack_engine::span;
 
 /// The `honeypot_case` payload (the server is the job's).
 #[derive(Clone, Copy, Debug, serde::Deserialize)]

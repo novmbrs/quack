@@ -13,8 +13,8 @@ use quack_text::Text;
 use quack_text::model::Person;
 
 use crate::TicketError;
-use crate::obs::span;
 use crate::open::channel;
+use quack_engine::span;
 
 /// How fixing access went.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
