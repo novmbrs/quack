@@ -1,0 +1,334 @@
+//! The lead sentence of each moderation log entry (§12.10 `log.*`).
+
+use quack_core::action::ActionKind;
+use quack_core::case::VoidCause;
+use quack_core::modlog::ModLogEntry;
+use quack_core::modules::{
+    ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
+};
+use quack_core::permissions::{MemberRefusal, MemberRefusalCode};
+
+use super::LogFacts;
+use crate::action::permission;
+use crate::error::refusal_reason;
+use crate::fmt;
+use crate::model::{Actor, Inline, Text};
+use crate::setup::module_name;
+use crate::word;
+
+/// The quote under the lead sentence: the void reason of a staff void.
+pub fn quote(entry: &ModLogEntry, f: &LogFacts) -> Option<Text> {
+    match entry {
+        ModLogEntry::CaseVoided(d) if d.cause == VoidCause::Staff => {
+            f.void_reason.as_ref().map(|r| Text::new().user(r))
+        }
+        _ => None,
+    }
+}
+
+/// `setting` in `log.channel_setting_cleared`.
+const fn channel_setting(s: ChannelSetting) -> &'static str {
+    match s {
+        ChannelSetting::LogChannel => "log channel",
+        ChannelSetting::AppealChannel => "appeal channel",
+        ChannelSetting::EvidenceChannel => "evidence channel",
+        ChannelSetting::TicketEntryChannel => "ticket entry channel",
+        ChannelSetting::TicketQueueChannel => "ticket staff channel",
+        ChannelSetting::HoneypotChannel => "honeypot channel",
+        ChannelSetting::ActivityLogRoute => "server activity channel",
+    }
+}
+
+/// Lowercases the first letter of a reused sentence, except the names
+/// Quack and Discord.
+fn lower_first(mut t: Text) -> Text {
+    if let Some(Inline::Fixed(s)) = t.0.first_mut()
+        && !s.starts_with("Quack")
+        && !s.starts_with("Discord")
+    {
+        *s = fmt::lower_first(s);
+    }
+    t
+}
+
+fn refusal_from_code(code: MemberRefusalCode, kind: Option<ActionKind>) -> MemberRefusal {
+    match code {
+        MemberRefusalCode::QuackNotInServer => MemberRefusal::QuackNotInServer,
+        MemberRefusalCode::ActorNotInServer => MemberRefusal::ActorNotInServer,
+        MemberRefusalCode::MemberNotInServer => MemberRefusal::MemberNotInServer,
+        MemberRefusalCode::MemberIsSelf => MemberRefusal::MemberIsSelf,
+        MemberRefusalCode::MemberIsBot => MemberRefusal::MemberIsBot,
+        MemberRefusalCode::MemberIsOwner => MemberRefusal::MemberIsOwner,
+        MemberRefusalCode::MemberRoleTooHigh => MemberRefusal::MemberRoleTooHigh,
+        MemberRefusalCode::QuackRoleTooLow => MemberRefusal::QuackRoleTooLow,
+        MemberRefusalCode::QuackMissingPermission => {
+            MemberRefusal::QuackMissingPermission(kind.unwrap_or(ActionKind::Ban).permission())
+        }
+        MemberRefusalCode::MemberIsAdministrator => MemberRefusal::MemberIsAdministrator,
+    }
+}
+
+/// The lead sentence of an entry.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one arm per entry kind, each a catalog row"
+)]
+pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
+    let actor = || Text::new().actor(&f.actor);
+    let member = |t: Text| f.member(t);
+    let case = |t: Text, n: u64| f.case(t, n);
+    match entry {
+        ModLogEntry::CaseCreated(d) => super::actions::case_created(d, f),
+        ModLogEntry::CaseCreateRefused(d) => {
+            let t = f.rule(member(Text::fixed("Quack couldn't add a case for ")).s(" under "));
+            match d.refusal {
+                MemberRefusalCode::QuackRoleTooLow => {
+                    t.s(": their highest role is at or above Quack's. Move Quack's role above it.")
+                }
+                MemberRefusalCode::QuackMissingPermission => t.s(format!(
+                    ": Quack needs the {} permission.",
+                    permission(d.permission.map_or(
+                        quack_core::permissions::Permission::BanMembers,
+                        quack_core::permissions::DiscordPermission::permission
+                    ))
+                )),
+                MemberRefusalCode::QuackNotInServer => t.s(" because Quack isn't in the server."),
+                other => t.s(": ").then(lower_first(refusal_reason(
+                    refusal_from_code(other, None),
+                    f.member.as_ref(),
+                    None,
+                ))),
+            }
+        }
+        ModLogEntry::CaseVoided(d) => match d.cause {
+            VoidCause::Staff => {
+                member(case(actor().s(" voided "), d.case_number).s(" for ")).s(".")
+            }
+            VoidCause::AppealAccepted => case(
+                member(actor().s(" accepted ")).s("'s appeal, so "),
+                d.case_number,
+            )
+            .s(" is voided."),
+        },
+        ModLogEntry::CaseContextEdited(d) => {
+            case(actor().s(" edited the case context of "), d.case_number).s(".")
+        }
+        ModLogEntry::EvidenceAdded(d) => case(
+            actor().s(format!(
+                " added {} to ",
+                fmt::plural(u64::from(d.count), "evidence item", "evidence items")
+            )),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::ActionDone(d) => super::actions::action_done(d, f),
+        ModLogEntry::ActionFailed(d) => super::actions::action_failed(d, f),
+        ModLogEntry::ActionRetryRequested(d) => case(
+            actor().s(format!(
+                " asked Quack to try the {} for ",
+                word::action_noun(d.kind)
+            )),
+            d.case_number,
+        )
+        .s(" again."),
+        ModLogEntry::ActionDismissed(d) => case(
+            actor().s(format!(
+                " dismissed the failed {} for ",
+                word::action_noun(d.kind)
+            )),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::ActionUndoRequested(d) => match d.kind {
+            ActionKind::Unban | ActionKind::Ban => case(
+                member(actor().s(" asked Quack to unban ")).s(". The ban came from "),
+                d.case_number,
+            )
+            .s("."),
+            ActionKind::RemoveTimeout | ActionKind::Timeout | ActionKind::Kick => case(
+                member(actor().s(" asked Quack to remove ")).s("'s timeout from "),
+                d.case_number,
+            )
+            .s("."),
+        },
+        ModLogEntry::ActionUndoSkipped(d) => super::actions::undo_skipped(d, f),
+        ModLogEntry::DmSent(d) => super::actions::dm_sent(*d, f),
+        ModLogEntry::DmFailed(d) => super::actions::dm_failed(d, f),
+        ModLogEntry::AppealSubmitted(d) => {
+            case(member(Text::new()).s(" appealed "), d.case_number).s(".")
+        }
+        ModLogEntry::AppealInformationRequested(d) => case(
+            member(actor().s(" asked ")).s(" for more information about their appeal for "),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::AppealInformationProvided(d) => case(
+            member(Text::new()).s(" added information to their appeal for "),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::AppealAccepted(d) => case(
+            member(actor().s(" accepted ")).s("'s appeal for "),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::AppealRejected(d) => case(
+            member(actor().s(" rejected ")).s("'s appeal for "),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::AppealClosed(d) if d.because_case_voided => case(
+            member(Text::fixed("Quack closed ")).s("'s appeal for "),
+            d.case_number,
+        )
+        .s(" because the case was voided."),
+        ModLogEntry::AppealClosed(d) => case(
+            member(actor().s(" closed ")).s("'s appeal for "),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::AppealReopened(d) => case(
+            member(actor().s(" reopened ")).s("'s appeal for "),
+            d.case_number,
+        )
+        .s(" and asked for more information."),
+        ModLogEntry::RuleCreated(d) => actor().s(" created the rule ").bold_user(&d.name).s("."),
+        ModLogEntry::RuleEdited(d) => actor()
+            .s(" edited the rule ")
+            .bold_user(&d.name)
+            .s(format!(". New cases use version {}.", d.version)),
+        ModLogEntry::RuleArchived(d) => actor()
+            .s(" archived the rule ")
+            .bold_user(&d.name)
+            .s(". It can't be applied until someone restores it."),
+        ModLogEntry::RuleRestored(d) => actor().s(" restored the rule ").bold_user(&d.name).s("."),
+        ModLogEntry::RuleImported(d) => actor().s(" imported the rule ").bold_user(&d.name).s("."),
+        ModLogEntry::SettingsChanged(d) => {
+            let names = d.fields.iter().map(|k| super::setting_name(k));
+            actor().s(format!(
+                " changed Quack's settings: {}.",
+                super::fields(names)
+            ))
+        }
+        ModLogEntry::ModuleEnabled(d) => {
+            actor().s(format!(" turned on {}.", module_name(d.module)))
+        }
+        ModLogEntry::ModuleDisabled(d) => match d.reason {
+            None => actor().s(format!(" turned off {}.", module_name(d.module))),
+            Some(ModuleDisabledReason::ChannelDeleted) => Text::fixed(format!(
+                "Quack turned off {} because its channel was deleted.",
+                module_name(d.module)
+            )),
+            Some(ModuleDisabledReason::QuackLeft) => Text::fixed(format!(
+                "Quack turned off {} because Quack left the server.",
+                module_name(d.module)
+            )),
+        },
+        ModLogEntry::ModuleSettingsChanged(d) => {
+            let names = d
+                .fields
+                .iter()
+                .map(|k| super::module_setting_name(d.module, k));
+            let module = match d.module {
+                ModuleName::Tickets => "ticket",
+                ModuleName::ActivityLog => "server activity log",
+                ModuleName::Honeypot => "honeypot",
+            };
+            actor().s(format!(
+                " changed the {module} settings: {}.",
+                super::fields(names)
+            ))
+        }
+        ModLogEntry::QuackJoined(d) if d.first_join => f
+            .rule(Text::fixed(
+                "Quack joined the server and created the starter rule ",
+            ))
+            .s(". Review it on the dashboard."),
+        ModLogEntry::QuackJoined(_) => Text::fixed("Quack rejoined the server."),
+        ModLogEntry::QuackLeft(_) => Text::fixed("Quack left the server."),
+        ModLogEntry::ChannelSettingCleared(d) => Text::fixed(format!(
+            "Quack stopped using the {} because its channel was deleted.",
+            channel_setting(d.setting)
+        )),
+        ModLogEntry::LogChannelFailed(d) => Text::fixed(match d.reason {
+            LogChannelFailure::NotStaffOnly => {
+                "Quack stopped posting in the log channel because it isn't staff-only anymore. Entries are still in the moderation log. Fix the channel's permissions to resume."
+            }
+            LogChannelFailure::DiscordRefused => {
+                "Discord didn't let Quack post in the log channel. Entries are still in the moderation log. Check Quack's permissions there."
+            }
+            LogChannelFailure::RetriesExhausted => {
+                "Quack couldn't confirm that an entry reached the log channel because Discord kept failing. Entries are still in the moderation log."
+            }
+        }),
+        ModLogEntry::TicketOpened(_) => {
+            let t = member(Text::new()).s(" opened a ticket");
+            match &f.thread {
+                Some(thread) => t.s(": ").channel(thread).s("."),
+                None => t.s("."),
+            }
+        }
+        ModLogEntry::TicketClosed(d) => {
+            let by_member =
+                matches!((&f.actor, &f.member), (Actor::Person(a), Some(m)) if a.id == m.id);
+            let t = if by_member {
+                member(Text::new()).s(" closed their ticket.")
+            } else {
+                member(actor().s(" closed ")).s("'s ticket.")
+            };
+            let t = t.s(" The transcript is saved on the dashboard.");
+            if d.transcript_complete {
+                t
+            } else {
+                t.s(" Some messages may be missing from the transcript.")
+            }
+        }
+        ModLogEntry::HoneypotCaseFailed(d) => {
+            let why = match d.refusal {
+                HoneypotRefusal::Member(code) => lower_first(refusal_reason(
+                    refusal_from_code(code, None),
+                    f.member.as_ref(),
+                    None,
+                )),
+                HoneypotRefusal::RuleUnavailable => Text::fixed(
+                    "the honeypot's rule is archived or no longer exists. Choose another rule in ",
+                )
+                .command(crate::model::Command::Setup)
+                .s(" or on the dashboard."),
+                HoneypotRefusal::PolicyChanged => {
+                    Text::fixed("the honeypot settings changed while Quack was adding it.")
+                }
+                HoneypotRefusal::DiscordUnavailable => {
+                    Text::fixed("Discord wasn't available, so Quack gave up.")
+                }
+            };
+            member(Text::fixed("Quack couldn't add a honeypot case for "))
+                .s(": ")
+                .then(why)
+        }
+        ModLogEntry::Legacy(d) => Text::fixed("Imported from the previous version of Quack: ")
+            .user(legacy_action(&d.action))
+            .s("."),
+    }
+}
+
+/// A Go-era action name in today's words: separators become spaces and the
+/// old vocabulary becomes the glossary's ("template" is "rule").
+fn legacy_action(name: &str) -> String {
+    name.split(['_', '.', ':', '-', ' '])
+        .filter(|w| !w.is_empty())
+        .map(|w| match w.to_ascii_lowercase().as_str() {
+            "template" | "templates" | "policy" | "policies" => "rule",
+            "execution" | "executions" | "punishment" | "punishments" | "enforcement" => "action",
+            "infraction" | "infractions" | "incident" | "incidents" => "case",
+            "notification" | "notifications" | "notice" | "notices" => "DM",
+            "audit" => "moderation log",
+            "mirror" => "log channel",
+            "user" | "users" | "target" | "offender" => "member",
+            "mod" | "mods" => "moderator",
+            "admin" | "admins" => "administrator",
+            _ => w,
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
