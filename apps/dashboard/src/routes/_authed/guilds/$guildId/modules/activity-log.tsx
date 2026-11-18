@@ -3,26 +3,28 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Webhook } from "lucide-react";
 import { useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
+import { ApiError, api, write } from "~/api/client";
 import { channelsQuery } from "~/api/directory";
-import { guildMeQuery, keys, loggingSettingsQuery } from "~/api/queries";
-import type { LoggingSettingsResponse } from "~/api/types";
+import { activityLogModuleQuery, guildMeQuery, healthQuery, keys } from "~/api/queries";
+import type { ActivityLogModule } from "~/api/types";
 import { ChannelName, ChannelPicker } from "~/features/channels/ChannelPicker";
 import {
-  channelsFrom,
-  type LogEvent,
-  logEventGroups,
-  logEvents,
+  type ActivityEvent,
+  activityEventGroups,
+  activityEvents,
+  eventLabel,
   missingDestinations,
   type Routes,
   routesFrom,
+  routesToSave,
   sameRoutes,
-} from "~/features/modules/logging";
+  withoutEvents,
+} from "~/features/modules/activity-log";
+import { errorText } from "~/features/modules/enable";
 import { Callout, ModuleHeader, StatTiles, useModuleSwitch } from "~/features/modules/ModuleParts";
-import { ago, fullDate, plural } from "~/lib/format";
+import { plural } from "~/lib/format";
 import { useCan } from "~/lib/permissions";
 import { Button } from "~/ui/Button";
-import { ConfirmDialog } from "~/ui/ConfirmDialog";
 import { Field, SwitchRow } from "~/ui/Field";
 import { Heading, Page, Section } from "~/ui/Page";
 import { SaveBar } from "~/ui/SaveBar";
@@ -34,134 +36,120 @@ import s from "./activity-log.module.css";
 export const Route = createFileRoute("/_authed/guilds/$guildId/modules/activity-log")({
   loader: async ({ context, params }) => {
     const me = await context.queryClient.ensureQueryData(guildMeQuery(params.guildId));
-    if (me.permissions["guild_settings.write"]) {
+    if (me.capabilities.manage_settings) {
       await Promise.all([
-        context.queryClient.prefetchQuery(loggingSettingsQuery(params.guildId)),
+        context.queryClient.prefetchQuery(activityLogModuleQuery(params.guildId)),
         context.queryClient.prefetchQuery(channelsQuery(params.guildId)),
       ]);
     }
   },
-  component: LoggingPage,
+  component: ActivityLogPage,
 });
 
-function LoggingPage() {
+function ActivityLogPage() {
   const { guildId } = Route.useParams();
   const can = useCan(guildId);
-  const canManage = can("guild_settings.write");
   return (
     <Page
       icon={<Webhook size={22} />}
-      title="Logging"
-      topic="Server events in your staff channels."
+      title="Server activity log"
+      topic="Discord events posted to your staff channels."
       width="narrow"
     >
-      {canManage ? (
-        <Logging guildId={guildId} />
+      {can("manage_settings") ? (
+        <ActivityLog guildId={guildId} />
       ) : (
-        <Empty icon="lock" title="Logging needs Manage Server">
-          Ask someone with Manage Server to change where Quack logs server events.
+        <Empty icon="lock" title="The server activity log needs Manage Server">
+          To change Quack's settings, you need Manage Server in Discord. Ask an administrator to
+          check your roles in Server Settings → Roles.
         </Empty>
       )}
     </Page>
   );
 }
 
-function Logging({ guildId }: { guildId: string }) {
-  const logging = useQuery({ ...loggingSettingsQuery(guildId), refetchInterval: 30_000 });
-  const toggle = useModuleSwitch(guildId, "general_logging", "Logging");
+function ActivityLog({ guildId }: { guildId: string }) {
+  const module = useQuery(activityLogModuleQuery(guildId));
+  const toggle = useModuleSwitch(guildId, "activity_log");
   const [dirty, setDirty] = useState(false);
 
   return (
     <>
       <ModuleHeader
+        module="activity_log"
         icon="message"
-        title="Logging"
-        enabled={logging.data?.enabled}
+        state={module.data}
         onToggle={toggle.toggle}
         pending={toggle.pending}
         canManage
-        locked={dirty ? "Save or reset your changes before switching logging on or off." : null}
+        locked={
+          dirty
+            ? "Save or reset your changes before turning the server activity log on or off."
+            : null
+        }
         problem={toggle.problem}
-        setupCommand="/setup logging"
       >
         Quack posts message edits and deletions, joins and leaves, bans, and server changes to
-        channels only your staff can see. It doesn't keep an archive, and it's separate from{" "}
-        <Link to="/guilds/$guildId/audit" params={{ guildId }} className={s.link}>
-          Quack's audit log
+        channels only your staff can see. It doesn't keep a history of these posts, and it's
+        separate from{" "}
+        <Link to="/guilds/$guildId/mod-log" params={{ guildId }} className={s.link}>
+          the moderation log
         </Link>
         .
       </ModuleHeader>
 
-      {logging.isPending ? (
+      {module.isPending ? (
         <SkeletonRows rows={6} />
-      ) : logging.isError ? (
-        <ErrorState error={logging.error} retry={() => void logging.refetch()} />
+      ) : module.isError ? (
+        <ErrorState error={module.error} retry={() => void module.refetch()} />
       ) : (
-        <>
-          <Health guildId={guildId} data={logging.data} />
-          <LoggingForm guildId={guildId} data={logging.data} onDirtyChange={setDirty} />
-        </>
+        <ActivityLogForm guildId={guildId} data={module.data} onDirtyChange={setDirty} />
       )}
     </>
   );
 }
 
-function Health({ guildId, data }: { guildId: string; data: LoggingSettingsResponse }) {
-  const queryClient = useQueryClient();
+/**
+ * Status shows the counters since Quack last started and warns about
+ * routes whose channel is gone. Quack stops posting to a deleted channel by
+ * itself; clearing the route here just makes the form match.
+ */
+function Status({
+  guildId,
+  data,
+  routes,
+  onClear,
+}: {
+  guildId: string;
+  data: ActivityLogModule;
+  routes: Routes;
+  onClear: (events: ActivityEvent[]) => void;
+}) {
   const channels = useQuery(channelsQuery(guildId));
-  const [repairing, setRepairing] = useState<{ channelId: string; events: LogEvent[] } | null>(
-    null,
-  );
-  const [repairError, setRepairError] = useState<string | null>(null);
-  const routes = routesFrom(data.settings.channels);
   const missing = channels.data
     ? missingDestinations(routes, new Set(channels.data.map((c) => c.id)))
     : [];
-  const routed = logEvents.filter((e) => routes[e]).length;
+  const routed = activityEvents.filter((e) => routes[e]).length;
 
-  const repair = useMutation({
-    mutationFn: (channelId: string) =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/modules/general-logging/repair-channel/{channelID}", {
-          params: { path: { discordGuildID: guildId, channelID: channelId } },
-        }),
-      ),
-    onSuccess: (result) => {
-      setRepairing(null);
-      toast.success(
-        result.enabled
-          ? "Removed the missing channel from logging."
-          : "Removed the missing channel. Nothing is routed now, so logging is off.",
-      );
-      void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
-      void queryClient.invalidateQueries({ queryKey: keys.settings(guildId) });
-    },
-    onError: (e) =>
-      setRepairError(
-        e instanceof ApiError && e.status === 400
-          ? "Quack couldn't repair logging. Another log channel may also be unusable. Check that each one exists and only staff can see it."
-          : e instanceof ApiError
-            ? e.message
-            : "Couldn't repair logging.",
-      ),
-  });
-
-  const { status } = data;
   return (
-    <Section title="Status" description="Since Quack last restarted.">
+    <Section title="Status" description="Counts reset when Quack restarts.">
       <StatTiles
         items={[
-          { label: "Delivered", value: status.delivered },
-          { label: "Failed", value: status.failed, tone: status.failed > 0 ? "danger" : undefined },
           {
-            label: "Events routed",
-            value: `${routed} of ${logEvents.length}`,
-            tone: data.enabled && routed === 0 ? "warning" : undefined,
+            label: "Posted",
+            value: data.posted_since_start,
+            hint: "Events Quack posted since it last started.",
           },
           {
-            label: "Messages cached",
-            value: status.cached_messages,
-            hint: "Recent messages Quack holds in memory so it can show what an edit or delete changed.",
+            label: "Dropped",
+            value: data.dropped_since_start,
+            tone: data.dropped_since_start > 0 ? "warning" : undefined,
+            hint: "Events Quack didn't post since it last started, because too many were waiting or their route was removed.",
+          },
+          {
+            label: "Events routed",
+            value: `${routed} of ${activityEvents.length}`,
+            tone: data.enabled && routed === 0 ? "warning" : undefined,
           },
         ]}
       />
@@ -170,52 +158,19 @@ function Health({ guildId, data }: { guildId: string; data: LoggingSettingsRespo
           key={m.channelId}
           tone="danger"
           icon="warn"
-          title="A log channel is missing"
+          title="A channel for the server activity log is missing"
           action={
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setRepairError(null);
-                setRepairing(m);
-              }}
-            >
-              Repair
+            <Button size="sm" variant="secondary" onClick={() => onClear(m.events)}>
+              Clear these events
             </Button>
           }
         >
           Quack can't find <ChannelName guildId={guildId} channelId={m.channelId} />, so{" "}
-          {plural(m.events.length, "event")} can't be logged. It was probably deleted. Repair stops
-          sending events there.
+          {plural(m.events.length, "event")} (
+          {m.events.map((e) => eventLabel(e).toLowerCase()).join(", ")}) can't be posted. It was
+          probably deleted. Choose another channel for them, or clear them and save.
         </Callout>
       ))}
-      {status.last_error ? (
-        <Callout tone="warning" icon="error" title="The last delivery failed">
-          {status.last_error}
-          {status.last_failure_at ? (
-            <>
-              {" "}
-              <time title={fullDate(status.last_failure_at)}>({ago(status.last_failure_at)})</time>
-            </>
-          ) : null}
-        </Callout>
-      ) : null}
-      <ConfirmDialog
-        open={repairing !== null}
-        onClose={() => setRepairing(null)}
-        title="Stop logging to the missing channel?"
-        description={
-          repairing
-            ? `Quack stops sending ${repairing.events
-                .map((e) => eventLabel(e).toLowerCase())
-                .join(", ")} there. If no other events are routed, logging turns off.`
-            : undefined
-        }
-        confirmLabel="Repair"
-        pending={repair.isPending}
-        error={repairError}
-        onConfirm={() => repairing && repair.mutate(repairing.channelId)}
-      />
     </Section>
   );
 }
@@ -223,35 +178,35 @@ function Health({ guildId, data }: { guildId: string; data: LoggingSettingsRespo
 type Draft = {
   routes: Routes;
   content: boolean;
-  attachments: boolean;
+  files: boolean;
   embeds: boolean;
 };
 
-const draftFrom = (data: LoggingSettingsResponse): Draft => ({
-  routes: routesFrom(data.settings.channels),
+const draftFrom = (data: ActivityLogModule): Draft => ({
+  routes: routesFrom(data.settings.routes),
   content: data.settings.include_message_content,
-  attachments: data.settings.include_attachment_metadata,
-  embeds: data.settings.include_embed_metadata,
+  files: data.settings.include_file_names,
+  embeds: data.settings.include_embed_types,
 });
 
 const differs = (a: Draft, b: Draft) =>
   !sameRoutes(a.routes, b.routes) ||
   a.content !== b.content ||
-  a.attachments !== b.attachments ||
+  a.files !== b.files ||
   a.embeds !== b.embeds;
 
-function LoggingForm({
+function ActivityLogForm({
   guildId,
   data,
   onDirtyChange,
 }: {
   guildId: string;
-  data: LoggingSettingsResponse;
+  data: ActivityLogModule;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const [edits, setEdits] = useState<Draft | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<unknown>(null);
   const base = draftFrom(data);
   const form = edits ?? base;
   const dirty = differs(form, base);
@@ -262,7 +217,7 @@ function LoggingForm({
     setSaveError(null);
     onDirtyChange(differs(next, base));
   };
-  const route = (event: LogEvent, channelId: string) =>
+  const route = (event: ActivityEvent, channelId: string) =>
     set({ routes: { ...form.routes, [event]: channelId } });
   const reset = () => {
     setEdits(null);
@@ -270,47 +225,50 @@ function LoggingForm({
     onDirtyChange(false);
   };
 
-  const nothingRouted = logEvents.every((e) => !form.routes[e]);
+  const nothingRouted = activityEvents.every((e) => !form.routes[e]);
   const routingError =
-    data.enabled && nothingRouted ? "Route at least one event, or turn logging off first." : null;
+    data.enabled && nothingRouted
+      ? "Choose a channel for at least one event, or turn the server activity log off first."
+      : null;
 
   const save = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.PUT("/guilds/{discordGuildID}/modules/general-logging/settings", {
-          params: { path: { discordGuildID: guildId } },
+      write((init) =>
+        api.PUT("/api/guilds/{guild_id}/modules/activity-log/settings", {
+          params: { path: { guild_id: guildId } },
           body: {
-            enabled: data.enabled,
-            settings: {
-              ...data.settings,
-              channels: channelsFrom(form.routes),
-              include_message_content: form.content,
-              include_attachment_metadata: form.attachments,
-              include_embed_metadata: form.embeds,
-            },
+            routes: routesToSave(form.routes),
+            include_message_content: form.content,
+            include_file_names: form.files,
+            include_embed_types: form.embeds,
           },
+          ...init,
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      queryClient.setQueryData(activityLogModuleQuery(guildId).queryKey, result);
       reset();
-      toast.success("Logging settings saved.");
+      toast.success("Server activity log settings saved.");
       void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
+      void queryClient.invalidateQueries({ queryKey: healthQuery(guildId).queryKey });
     },
-    onError: (e) =>
-      setSaveError(
-        e instanceof ApiError && e.status === 400
-          ? "Quack couldn't save this. Every log channel has to exist and be visible only to staff."
-          : e instanceof ApiError
-            ? e.message
-            : "Couldn't save logging settings.",
-      ),
+    onError: setSaveError,
   });
+  const fieldError = (event: ActivityEvent) =>
+    saveError instanceof ApiError ? saveError.field(`routes.${event}`) : undefined;
 
   return (
     <>
+      <Status
+        guildId={guildId}
+        data={data}
+        routes={form.routes}
+        onClear={(events) => set({ routes: withoutEvents(form.routes, events) })}
+      />
+
       <Section
         title="Where events go"
-        description="Pick a staff-only channel for each kind of event, or leave it off. Quack checks that only staff can see each channel when you save."
+        description="Choose a staff-only channel for each kind of event, or leave it off. Quack checks that only staff can see each channel when you save."
       >
         <Field label="Send everything to one channel">
           {(id) => (
@@ -323,14 +281,14 @@ function LoggingForm({
               onChange={(channelId) => {
                 if (!channelId) return;
                 const routes = {} as Routes;
-                for (const e of logEvents) routes[e] = channelId;
+                for (const e of activityEvents) routes[e] = channelId;
                 set({ routes });
               }}
             />
           )}
         </Field>
         {routingError ? <InlineError>{routingError}</InlineError> : null}
-        {logEventGroups.map((group) => (
+        {activityEventGroups.map((group) => (
           <div key={group.title} className={s.group}>
             <Heading>{group.title}</Heading>
             <div className={s.routes}>
@@ -345,9 +303,13 @@ function LoggingForm({
                     value={form.routes[event.key]}
                     onChange={(channelId) => route(event.key, channelId)}
                     clearable
-                    noneLabel="Don't log"
+                    noneLabel="Don't post"
+                    invalid={Boolean(fieldError(event.key))}
                     className={s.picker}
                   />
+                  {fieldError(event.key) ? (
+                    <InlineError>{fieldError(event.key)}</InlineError>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -359,24 +321,24 @@ function LoggingForm({
 
       <Section
         title="Message details"
-        description="What Quack includes when it logs an edited or deleted message."
+        description="What Quack includes when it posts an edited or deleted message."
       >
         <div>
           <SwitchRow
             title="Message text"
-            description="The words of the message, before and after an edit."
+            description="The words of the message, before and after an edit. Turning this off also stops Quack keeping the text in memory."
             checked={form.content}
             onChange={(content) => set({ content })}
           />
           <SwitchRow
-            title="Attachments"
-            description="File names, types, and sizes. Quack doesn't keep copies of the files."
-            checked={form.attachments}
-            onChange={(attachments) => set({ attachments })}
+            title="File names"
+            description="The names of files attached to the message, linked to Discord's copy. Quack doesn't keep copies of the files."
+            checked={form.files}
+            onChange={(files) => set({ files })}
           />
           <SwitchRow
-            title="Embeds"
-            description="Which kinds of embeds the message had, like links or images."
+            title="Link previews"
+            description="Which kinds of link previews the message had, like videos or images."
             checked={form.embeds}
             onChange={(embeds) => set({ embeds })}
           />
@@ -388,15 +350,9 @@ function LoggingForm({
         onReset={reset}
         onSave={() => save.mutate()}
         pending={save.isPending}
-        error={saveError}
+        error={errorText(saveError)}
         saveDisabled={Boolean(routingError)}
       />
     </>
   );
-}
-
-function eventLabel(event: LogEvent): string {
-  for (const group of logEventGroups)
-    for (const e of group.events) if (e.key === event) return e.label;
-  return event;
 }

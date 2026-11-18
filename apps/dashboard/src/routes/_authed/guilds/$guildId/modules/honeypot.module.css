@@ -15,10 +15,6 @@
   color: var(--text-muted);
 }
 
-.error {
-  color: var(--danger);
-}
-
 .link {
   color: var(--link);
 }

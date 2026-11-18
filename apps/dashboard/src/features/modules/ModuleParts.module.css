@@ -182,3 +182,7 @@
 .tileValue[data-tone="warning"] {
   color: var(--warning);
 }
+
+.problem {
+  display: block;
+}
