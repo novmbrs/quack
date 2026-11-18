@@ -130,3 +130,27 @@ async fn find_threads_stops_at_the_first_failure() {
         Some(RefusalKind::MissingAccess)
     );
 }
+
+#[tokio::test]
+async fn thread_members_are_read_by_member_id() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method("GET").path("/api/v10/channels/31/thread-members");
+            then.status(200).json_body(json!([
+                {"id": "31", "user_id": "7", "join_timestamp": "2026-11-17T12:00:00+00:00", "flags": 0},
+                {"id": "31", "user_id": "9", "join_timestamp": "2026-11-17T12:00:00+00:00", "flags": 0}
+            ]));
+        })
+        .await;
+    let client = client(&server.base_url());
+    let members = client
+        .thread_members(ChannelId::new(31).unwrap())
+        .await
+        .done()
+        .unwrap();
+    assert_eq!(
+        members.iter().map(|m| m.get()).collect::<Vec<_>>(),
+        vec![7, 9]
+    );
+}

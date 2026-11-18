@@ -234,12 +234,12 @@ impl DiscordClient {
     }
 
     /// Every member of a thread (§13.2.4 "Fix access").
-    pub async fn thread_members(&self, thread: ChannelId) -> Outcome<Vec<AccountId>> {
+    pub async fn thread_members(&self, thread: ChannelId) -> Outcome<Vec<MemberId>> {
         self.json::<Vec<ThreadMemberRow>>(Request::new(Route::thread_members(thread)))
             .await
             .map(|rows| {
                 rows.iter()
-                    .filter_map(|r| r.user_id.and_then(convert::id))
+                    .filter_map(|r| r.user_id.and_then(convert::id::<MemberId, _>))
                     .collect()
             })
     }
