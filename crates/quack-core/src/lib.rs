@@ -12,9 +12,15 @@
 mod macros;
 
 pub mod action;
+pub mod appeal;
+pub mod case;
+pub mod dm;
 mod error;
+pub mod escalation;
+pub mod evidence;
 pub mod ids;
 pub mod limits;
 pub mod permissions;
+pub mod rule;
 
 pub use error::{DomainError, InvalidTransition, UnknownValue};
