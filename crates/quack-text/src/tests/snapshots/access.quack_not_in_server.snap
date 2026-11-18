@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack is no longer in this server. Ask an administrator to add Quack again.")]

@@ -1,23 +1,27 @@
 //! Action sentences (§12.6): the one place that turns an action's kind,
 //! state, and failure into words. The staff card, the receipts, the log
 //! channel, and the API all use [`sentence`]; the member's dashboard uses
-//! [`member_sentence`].
+//! [`member_sentence`]. A failure reason says what is wrong and where to
+//! fix it, never "retry": the card and the log post offer Retry only when
+//! it is allowed, and say so next to the button.
 
 mod controls;
 mod member;
 
 use quack_core::action::{ActionFailure, ActionKind, ActionSkipReason, ActionState, Failure};
-use quack_core::permissions::Permission;
 use time::OffsetDateTime;
 
+pub use crate::access::permission;
+pub(crate) use controls::failure_noun;
 pub use controls::{
     Undo, dismiss_done, retry_done, undo_button, undo_confirm, undo_from_original, undo_queued,
 };
 pub use member::{member_none, member_sentence};
 
+use crate::access::{self, Reader};
 use crate::fmt;
 use crate::model::{Actor, Person, Text, TimeStyle};
-use crate::word::{self, Outcome};
+use crate::word::Outcome;
 
 /// What an action is and where it stands: the facts every action sentence
 /// is built from.
@@ -47,6 +51,10 @@ pub struct ActionView {
     pub case_number: u64,
     /// Who dismissed the failure, and when.
     pub dismissed: Option<(Actor, OffsetDateTime)>,
+    /// Some attempt may have applied (§5.2,
+    /// `quack_core::action::may_have_applied` over all its attempts), so a
+    /// later refusal or a void can't say the action didn't happen.
+    pub may_have_applied: bool,
 }
 
 impl ActionView {
@@ -65,21 +73,35 @@ impl ActionView {
             ban_delete_message_seconds: None,
             case_number,
             dismissed: None,
+            may_have_applied: false,
         }
     }
 
-    fn unconfirmed(&self) -> bool {
-        self.state == ActionState::Failed
-            && self
-                .failure
-                .is_some_and(|f| f.reason == ActionFailure::Unconfirmed)
+    /// Whether Quack can't tell if Discord applied it: the last round ended
+    /// unconfirmed, or an earlier attempt may have applied before a later
+    /// refusal or a void.
+    fn uncertain(&self) -> bool {
+        match self.state {
+            ActionState::Failed => {
+                self.may_have_applied
+                    || self
+                        .failure
+                        .is_some_and(|f| f.reason == ActionFailure::Unconfirmed)
+            }
+            ActionState::Cancelled => self.may_have_applied,
+            ActionState::Pending
+            | ActionState::Running
+            | ActionState::Done
+            | ActionState::Skipped => false,
+        }
     }
 }
 
 /// How much of the sentence to show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Detail {
-    /// Staff views: the failure reason, the retry time, and who dismissed it.
+    /// Staff views: the failure reason, the check to make, the retry time,
+    /// and who dismissed it.
     Full,
     /// The public receipt (§11.7): the bare outcome, nothing staff-only.
     Receipt,
@@ -87,10 +109,12 @@ pub enum Detail {
 
 /// The outcome badge for an action (`word.outcome.*`).
 pub fn outcome(a: &ActionView) -> Outcome {
+    if a.uncertain() {
+        return Outcome::CouldntConfirm;
+    }
     match a.state {
         ActionState::Pending | ActionState::Running => Outcome::InProgress,
         ActionState::Done => Outcome::Done,
-        ActionState::Failed if a.unconfirmed() => Outcome::CouldntConfirm,
         ActionState::Failed => Outcome::Failed,
         ActionState::Cancelled => Outcome::Cancelled,
         ActionState::Skipped => Outcome::LeftInPlace,
@@ -99,97 +123,96 @@ pub fn outcome(a: &ActionView) -> Outcome {
 
 /// `action.none`.
 pub fn none() -> Text {
-    Text::fixed("No action. This case is a warning.")
+    Text::fixed("This case is a warning.")
 }
 
-/// `action.retry_scheduled`.
-pub fn retry_scheduled(at: OffsetDateTime) -> Text {
-    Text::fixed("The last try didn't go through or wasn't confirmed, so Quack will try again ")
+/// The member, or "the member" when Quack can't name them.
+fn who(t: Text, member: Option<&Person>) -> Text {
+    match member {
+        Some(m) => t.person(m),
+        None => t.s("the member"),
+    }
+}
+
+/// What the action does to the member, after a verb's tense is chosen:
+/// `(past, present)` such as ("banned @Sam", "ban @Sam").
+fn does(kind: ActionKind, member: Option<&Person>, past: bool) -> Text {
+    let t = Text::new();
+    match (kind, past) {
+        (ActionKind::Timeout, true) => who(t.s("timed out "), member),
+        (ActionKind::Timeout, false) => who(t.s("time out "), member),
+        (ActionKind::Kick, true) => who(t.s("removed "), member).s(" from the server"),
+        (ActionKind::Kick, false) => who(t.s("remove "), member).s(" from the server"),
+        (ActionKind::Ban, true) => who(t.s("banned "), member),
+        (ActionKind::Ban, false) => who(t.s("ban "), member),
+        (ActionKind::RemoveTimeout, true) => who(t.s("removed "), member).s("'s timeout"),
+        (ActionKind::RemoveTimeout, false) => who(t.s("remove "), member).s("'s timeout"),
+        (ActionKind::Unban, true) => who(t.s("unbanned "), member),
+        (ActionKind::Unban, false) => who(t.s("unban "), member),
+    }
+}
+
+/// `action.retry_scheduled`: the whole line of a pending action whose last
+/// attempt didn't go through.
+pub fn retry_scheduled(kind: ActionKind, member: &Person, at: OffsetDateTime) -> Text {
+    Text::fixed("Quack will try to ")
+        .then(does(kind, Some(member), false))
+        .s(" again ")
         .time(at, TimeStyle::Relative)
         .s(".")
 }
 
-/// `action.unconfirmed`: the result of the last attempts is unknown.
+/// `action.unconfirmed`: "Quack couldn't confirm whether Discord banned
+/// @Sam.", then (staff views) where to check.
 pub fn unconfirmed(kind: ActionKind, member: &Person, detail: Detail) -> Text {
     let first = whether_applied(kind, Some(member)).s(".");
     match detail {
-        Detail::Full => first
-            .s(" Check ")
-            .person(member)
-            .s(" in Discord before you retry."),
+        Detail::Full => first.sentence(check(kind, Some(member))),
         Detail::Receipt => first,
     }
 }
 
-/// "Quack couldn't confirm whether Discord applied the ban to @Sam", the
-/// start of every unconfirmed sentence; undos say what they undo.
-pub(crate) fn whether_applied(kind: ActionKind, member: Option<&Person>) -> Text {
-    let who = |t: Text| match member {
-        Some(m) => t.person(m),
-        None => t.s("the member"),
-    };
-    let t = Text::fixed("Quack couldn't confirm whether Discord ");
+/// `action.check.*`: where in Discord staff can see whether an action
+/// happened.
+pub(crate) fn check(kind: ActionKind, member: Option<&Person>) -> Text {
     match kind {
-        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban => {
-            who(t.s(format!("applied the {} to ", word::action(kind))))
+        ActionKind::Timeout | ActionKind::RemoveTimeout => match member {
+            Some(m) => Text::fixed("Check ").person(m).s("'s timeout in Discord."),
+            None => Text::fixed("Check the member's timeout in Discord."),
+        },
+        ActionKind::Kick => {
+            Text::fixed("Check Server Settings → Audit Log in Discord for the kick.")
         }
-        ActionKind::RemoveTimeout => who(t.s("removed ")).s("'s timeout"),
-        ActionKind::Unban => who(t.s("unbanned ")),
+        ActionKind::Ban | ActionKind::Unban => {
+            Text::fixed("Check Server Settings → Bans in Discord.")
+        }
     }
+}
+
+/// "Quack couldn't confirm whether Discord banned @Sam", the start of
+/// every uncertain sentence.
+pub(crate) fn whether_applied(kind: ActionKind, member: Option<&Person>) -> Text {
+    Text::fixed("Quack couldn't confirm whether Discord ").then(does(kind, member, true))
 }
 
 /// "Quack couldn't ban @Sam", the start of every failed sentence.
 pub(crate) fn couldnt_phrase(kind: ActionKind, member: Option<&Person>) -> Text {
-    let who = |t: Text| match member {
-        Some(m) => t.person(m),
-        None => t.s("the member"),
-    };
-    let t = Text::new();
-    match kind {
-        ActionKind::Timeout => who(t.s("Quack couldn't time out ")),
-        ActionKind::Kick => who(t.s("Quack couldn't remove ")).s(" from the server"),
-        ActionKind::Ban => who(t.s("Quack couldn't ban ")),
-        ActionKind::RemoveTimeout => who(t.s("Quack couldn't remove ")).s("'s timeout"),
-        ActionKind::Unban => who(t.s("Quack couldn't unban ")),
-    }
+    Text::fixed("Quack couldn't ").then(does(kind, member, false))
 }
 
 /// `action.dismissed_suffix`.
 pub fn dismissed_suffix(by: &Actor, at: OffsetDateTime) -> Text {
-    Text::fixed("Dismissed by ")
+    Text::new()
         .actor(by)
-        .s(" ")
+        .s(" dismissed this failure ")
         .time(at, TimeStyle::Relative)
-        .s(".")
+        .s(". The case keeps its history.")
 }
 
-/// The Discord UI name of a permission (`{permission}`).
-pub const fn permission(p: Permission) -> &'static str {
-    match p {
-        Permission::KickMembers => "Kick Members",
-        Permission::BanMembers => "Ban Members",
-        Permission::Administrator => "Administrator",
-        Permission::ManageChannels => "Manage Channels",
-        Permission::ManageGuild => "Manage Server",
-        Permission::ViewAuditLog => "View Audit Log",
-        Permission::ViewChannel => "View Channel",
-        Permission::SendMessages => "Send Messages",
-        Permission::ManageMessages => "Manage Messages",
-        Permission::EmbedLinks => "Embed Links",
-        Permission::AttachFiles => "Attach Files",
-        Permission::ReadMessageHistory => "Read Message History",
-        Permission::ManageThreads => "Manage Threads",
-        Permission::CreatePublicThreads => "Create Public Threads",
-        Permission::CreatePrivateThreads => "Create Private Threads",
-        Permission::SendMessagesInThreads => "Send Messages in Threads",
-        Permission::ModerateMembers => "Moderate Members",
-    }
-}
-
-/// `action.failure.*`: why an action failed, as the `{reason}` sentence.
-/// `None` for `unconfirmed`, which has its own whole sentence
-/// ([`unconfirmed`]) so one sentence never says both "couldn't" and
-/// "couldn't confirm".
+/// `action.failure.*`: why an action failed and where to fix it, as the
+/// `{reason}` sentences. `None` for `unconfirmed`, which has its own whole
+/// sentence ([`unconfirmed`]). `may_have_applied` drops the claim that
+/// Discord didn't apply it.
 ///
 /// Without a member (a log entry about someone Quack can't name) the
 /// sentence says "the member".
@@ -198,39 +221,47 @@ pub fn failure_reason(
     failure: &Failure,
     member: Option<&Person>,
     attempts: u32,
+    may_have_applied: bool,
 ) -> Option<Text> {
-    let t = Text::new();
     let who = |t: Text| match member {
         Some(m) => t.person(m),
         None => t.s("The member"),
     };
+    let t = Text::new();
     Some(match failure.reason {
-        ActionFailure::QuackNotInServer => t.s("Quack isn't in this server anymore."),
-        ActionFailure::QuackMissingPermission => t
-            .s("Quack needs the ")
-            .s(permission(failure.permission.unwrap_or(kind.permission()).permission()))
-            .s(" permission. Ask an administrator to give it to Quack's role, then retry."),
-        ActionFailure::QuackRoleTooLow => who(t).s(
-            "'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.",
+        ActionFailure::QuackNotInServer => access::quack_not_in_server(),
+        ActionFailure::QuackMissingPermission => access::quack_role_needs(
+            &[failure.permission.unwrap_or(kind.permission()).permission()],
+            Reader::Staff,
         ),
-        ActionFailure::MemberIsOwner => who(t).s(
-            " owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.",
-        ),
-        ActionFailure::MemberNotInServer => who(t)
-            .s(" isn't in the server, so there's no one to time out."),
+        ActionFailure::QuackRoleTooLow => access::quack_role_too_low(member),
+        ActionFailure::MemberIsOwner => who(t)
+            .s(" owns this server. Discord doesn't allow this action on the server owner."),
+        ActionFailure::MemberNotInServer => match kind {
+            ActionKind::Timeout => who(t).s(" isn't in the server, so Discord can't time them out."),
+            _ => who(t).s(" isn't in the server."),
+        },
         ActionFailure::MemberIsAdministrator => who(t).s(
-            " has the Administrator permission, and Discord doesn't allow timeouts for administrators.",
+            " has Administrator, and Discord doesn't allow timeouts for members with Administrator.",
         ),
         ActionFailure::TimeoutWindowPassed => {
-            t.s("The timeout would already have ended by now, so Quack didn't apply it.")
+            t.s("The timeout would already have ended, so Quack didn't apply it.")
         }
-        ActionFailure::DiscordRefused => {
-            t.s("Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")
+        ActionFailure::DiscordRefused => t.s(
+            "Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.",
+        ),
+        ActionFailure::RetriesExhausted => {
+            let t = if attempts <= 1 {
+                t.s("Quack stopped after one attempt.")
+            } else {
+                t.s(format!("Quack stopped trying after {} attempts.", fmt::count(attempts)))
+            };
+            if may_have_applied {
+                t
+            } else {
+                t.s(" Discord didn't apply it.")
+            }
         }
-        ActionFailure::RetriesExhausted => t
-            .s("Discord turned Quack away ")
-            .s(fmt::plural(u64::from(attempts), "time", "times"))
-            .s(", so nothing changed. Retry when Discord is available again."),
         ActionFailure::Unconfirmed => return None,
     })
 }
@@ -243,7 +274,16 @@ fn until(a: &ActionView, t: Text) -> Text {
     }
 }
 
-fn in_progress(a: &ActionView, m: &Person) -> Text {
+fn pending(a: &ActionView, m: &Person) -> Text {
+    let t = Text::fixed("Quack will ").then(does(a.kind, Some(m), false));
+    if a.kind == ActionKind::Timeout {
+        until(a, t).s(".")
+    } else {
+        t.s(".")
+    }
+}
+
+fn running(a: &ActionView, m: &Person) -> Text {
     let t = Text::new();
     match a.kind {
         ActionKind::Timeout => until(a, t.s("Quack is timing out ").person(m)).s("."),
@@ -259,26 +299,27 @@ fn done(a: &ActionView, m: &Person) -> Text {
     match (a.kind, a.no_change) {
         (ActionKind::Timeout, false) => match a.timeout_ends_at {
             Some(at) => t
+                .s("Quack set ")
                 .person(m)
-                .s(" is timed out until ")
+                .s("'s timeout to end ")
                 .time(at, TimeStyle::FullRelative)
                 .s("."),
             None => t.s("Quack timed out ").person(m).s("."),
         },
-        (ActionKind::Timeout, true) => match a.timeout_ends_at {
-            Some(at) => t
-                .person(m)
-                .s(" was already timed out until ")
-                .time(at, TimeStyle::FullRelative)
-                .s(" or later, so Quack left that timeout as it was."),
-            None => t
-                .person(m)
-                .s(" was already timed out, so Quack left that timeout as it was."),
-        },
+        (ActionKind::Timeout, true) => {
+            let t = t.person(m).s(" already had a timeout");
+            match a.timeout_ends_at {
+                Some(at) => t
+                    .s(" ending at or after ")
+                    .time(at, TimeStyle::Full)
+                    .s(". Quack left it in place."),
+                None => t.s(". Quack left it in place."),
+            }
+        }
         (ActionKind::Kick, false) => t.s("Quack removed ").person(m).s(" from the server."),
         (ActionKind::Kick, true) => t
             .person(m)
-            .s(" had already left the server, so Quack didn't remove them."),
+            .s(" left the server after this case was added, so Quack didn't remove them."),
         (ActionKind::Ban, false) => match a.ban_delete_message_seconds {
             Some(secs) if secs > 0 => t
                 .s("Quack banned ")
@@ -288,59 +329,60 @@ fn done(a: &ActionView, m: &Person) -> Text {
                 .s("."),
             _ => t.s("Quack banned ").person(m).s("."),
         },
-        (ActionKind::Ban, true) => t.person(m).s(" was already banned."),
+        (ActionKind::Ban, true) => t.person(m).s(" was already banned when Quack checked."),
         (ActionKind::RemoveTimeout, false) => t.s("Quack removed ").person(m).s("'s timeout."),
-        (ActionKind::RemoveTimeout, true) => t.person(m).s("'s timeout had already ended."),
+        (ActionKind::RemoveTimeout, true) => {
+            t.person(m).s(" had no active timeout when Quack checked.")
+        }
         (ActionKind::Unban, false) => t.s("Quack unbanned ").person(m).s("."),
-        (ActionKind::Unban, true) => t
-            .person(m)
-            .s(" wasn't banned anymore, so there was nothing to undo."),
+        (ActionKind::Unban, true) => t.person(m).s(" wasn't banned when Quack checked."),
     }
 }
 
-/// `action.<kind>.failed` without its reason: "Quack couldn't ban @Sam."
-fn couldnt(kind: ActionKind, m: &Person) -> Text {
-    couldnt_phrase(kind, Some(m)).s(".")
+/// `action.<kind>.cancelled`: the case was voided before any attempt could
+/// apply. Undo actions are never cancelled; their wording only keeps the
+/// match total.
+fn cancelled(a: &ActionView, m: &Person) -> Text {
+    Text::fixed(format!("Case #{} was voided before Quack ", a.case_number))
+        .then(does(a.kind, Some(m), true))
+        .s(".")
 }
 
-/// `action.<kind>.cancelled`. Undo actions are never cancelled; their
-/// wording here only keeps the match total.
-fn cancelled(kind: ActionKind, m: &Person) -> Text {
-    let t = Text::new();
-    let because = " because the case was voided first.";
-    match kind {
-        ActionKind::Timeout => t.s("Quack didn't time out ").person(m).s(because),
-        ActionKind::Kick | ActionKind::Ban => t
-            .s("Quack didn't ")
-            .s(if kind == ActionKind::Kick {
-                "remove "
-            } else {
-                "ban "
-            })
-            .person(m)
-            .s(because),
-        ActionKind::RemoveTimeout => t.s("Quack didn't remove ").person(m).s("'s timeout."),
-        ActionKind::Unban => t.s("Quack didn't unban ").person(m).s("."),
+/// `action.cancelled_uncertain`: voided after an attempt that may have
+/// applied. Staff views add what happens next.
+fn cancelled_uncertain(a: &ActionView, m: &Person, full: bool) -> Text {
+    let t = Text::fixed(format!("Case #{} was voided. ", a.case_number))
+        .then(whether_applied(a.kind, Some(m)))
+        .s(". Quack won't try again.");
+    if !full {
+        return t;
     }
+    t.s(match a.kind {
+        ActionKind::Timeout => " Quack will check whether the timeout can be removed.",
+        ActionKind::Ban => " Quack will check whether the ban can be removed.",
+        ActionKind::Kick => " A kick can't be undone.",
+        ActionKind::RemoveTimeout | ActionKind::Unban => "",
+    })
 }
 
 fn skipped(a: &ActionView, m: &Person) -> Text {
-    let t = Text::new();
     let what = match a.kind {
         ActionKind::RemoveTimeout => "'s timeout in place because ",
         ActionKind::Unban => "'s ban in place because ",
         // Originals are never skipped; this only keeps the match total.
-        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban => return cancelled(a.kind, m),
+        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban => return cancelled(a, m),
     };
-    let t = t.s("Quack left ").person(m).s(what);
+    let t = Text::fixed("Quack left ").person(m).s(what);
     match (a.skip, a.kind) {
-        (Some(ActionSkipReason::ChangedOutsideCase), ActionKind::Unban) => {
-            t.s("it didn't come from a voided Quack case. Check it in Discord.")
-        }
+        (Some(ActionSkipReason::ChangedOutsideCase), ActionKind::Unban) => t
+            .s(format!(
+                "it may not have come from case #{}.",
+                a.case_number
+            ))
+            .sentence(check(a.kind, Some(m))),
         (Some(ActionSkipReason::ChangedOutsideCase), _) => t
-            .s("someone changed it outside case #")
-            .s(a.case_number.to_string())
-            .s(". Check it in Discord."),
+            .s(format!("it no longer matches case #{}.", a.case_number))
+            .sentence(check(a.kind, Some(m))),
         (Some(ActionSkipReason::OtherCaseApplies) | None, _) => match a.still_applies_case {
             Some(n) => t.s(format!("case #{n} still applies.")),
             None => t.s("another case still applies."),
@@ -352,32 +394,32 @@ fn skipped(a: &ActionView, m: &Person) -> Text {
 pub fn sentence(a: &ActionView, member: &Person, detail: Detail) -> Text {
     let full = detail == Detail::Full;
     match a.state {
-        ActionState::Pending => {
-            let retry = a
-                .next_attempt_at
-                .filter(|_| full && a.attempts > 0)
-                .map_or_else(Text::new, retry_scheduled);
-            in_progress(a, member).sentence(retry)
-        }
-        ActionState::Running => in_progress(a, member),
+        ActionState::Pending => match a.next_attempt_at {
+            Some(at) if full && a.attempts > 0 => retry_scheduled(a.kind, member, at),
+            _ => pending(a, member),
+        },
+        ActionState::Running => running(a, member),
         ActionState::Done => done(a, member),
         ActionState::Failed => {
-            let base = if a.unconfirmed() {
-                unconfirmed(a.kind, member, detail)
+            let reason = a
+                .failure
+                .filter(|_| full)
+                .and_then(|f| {
+                    failure_reason(a.kind, &f, Some(member), a.attempts, a.may_have_applied)
+                })
+                .unwrap_or_default();
+            let base = if a.uncertain() {
+                unconfirmed(a.kind, member, detail).sentence(reason)
             } else {
-                let reason = a
-                    .failure
-                    .filter(|_| full)
-                    .and_then(|f| failure_reason(a.kind, &f, Some(member), a.attempts))
-                    .unwrap_or_default();
-                couldnt(a.kind, member).sentence(reason)
+                couldnt_phrase(a.kind, Some(member)).s(".").sentence(reason)
             };
             match (&a.dismissed, full) {
                 (Some((by, at)), true) => base.sentence(dismissed_suffix(by, at.to_owned())),
                 _ => base,
             }
         }
-        ActionState::Cancelled => cancelled(a.kind, member),
+        ActionState::Cancelled if a.uncertain() => cancelled_uncertain(a, member, full),
+        ActionState::Cancelled => cancelled(a, member),
         ActionState::Skipped => skipped(a, member),
     }
 }

@@ -2362,7 +2362,7 @@ dashboard renders API fields that carry these texts (`message`, `text`,
 | `{date}` | `<t:unix:d>` | "17 Nov 2026" |
 | `{duration}` | `quack_text::fmt::duration`: the largest whole unit and, when not zero, the next smaller unit, spelled out: "45 seconds", "1 minute", "1 hour 30 minutes", "1 day 1 hour", "7 days", "28 days"; zero is "0 seconds" | same |
 | `{last}` | `quack_text::fmt::last`, used after "the last": a single "1 unit" drops the number ("the last day", "the last hour"); anything else is `{duration}` ("the last 7 days", "the last 1 hour 30 minutes") | same |
-| `{permission}` | Discord's UI name: Moderate Members, Kick Members, Ban Members, Administrator, Manage Server, Manage Channels, Manage Messages, Manage Threads, View Channel, Send Messages, Send Messages in Threads, Read Message History, Attach Files, Embed Links, Create Public Threads, Create Private Threads, View Audit Log | same |
+| `{permission}` | Discord's English UI name: Timeout Members (the API's `MODERATE_MEMBERS`), Kick Members, Ban Members, Administrator, Manage Server, Manage Channels, Manage Messages, Manage Threads, View Channel, Send Messages, Send Messages in Threads, Read Message History, Attach Files, Embed Links, Create Public Threads, Create Private Threads, View Audit Log | same |
 | `{permissions}` | `{permission}` names joined as "A", "A and B", or "A, B, and C" | same |
 
 Plural variants are listed as "one: … / other: …" (and "zero: …" where zero
@@ -2464,7 +2464,7 @@ matching error code (§14.6).
 | `error.missing_capability.manage_staff_roles` | Only the server owner and administrators can change the moderator roles. |
 | `error.mfa_required` | This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it. |
 | `error.actor_not_in_server` | You're not in this server anymore. |
-| `error.quack_not_in_server` | Quack isn't in this server. Ask an administrator to add Quack again. |
+| `error.quack_not_in_server` | `access.quack_not_in_server` |
 | `error.discord_unavailable` | Quack couldn't reach Discord, so nothing changed. Try again in a moment. |
 | `error.internal` | Something went wrong inside Quack, so nothing was saved. Try again in a moment. |
 | `error.unconfirmed` | Quack couldn't confirm whether that was saved. Check before you try again. |
@@ -2541,57 +2541,78 @@ always "No case was added."):
 
 | Id | Text |
 | --- | --- |
-| `refusal.quack_not_in_server` | No case was added. Quack isn't in this server. |
+| `refusal.quack_not_in_server` | No case was added. `access.quack_not_in_server` |
 | `refusal.actor_not_in_server` | No case was added. You're not in this server anymore. |
 | `refusal.member_not_in_server` | No case was added. {member} isn't in this server. Choose a current member. |
 | `refusal.member_is_self` | No case was added. You can't add a case about yourself. Ask another moderator. |
 | `refusal.member_is_bot` | No case was added. {member} is a bot, and cases are only for people. |
-| `refusal.member_is_owner` | No case was added. {member} owns the server. |
-| `refusal.member_role_too_high` | No case was added. {member}'s highest role is at or above yours. Ask a moderator with a higher role. |
-| `refusal.quack_role_too_low` | No case was added. {member}'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it. |
-| `refusal.quack_missing_permission` | No case was added. This rule would {action_verb} {member}, but Quack doesn't have the {permission} permission. Ask an administrator to give it to Quack's role. |
-| `refusal.member_is_administrator` | No case was added. This rule would time out {member}, but Discord doesn't allow timeouts for members with the Administrator permission. |
+| `refusal.member_is_owner` | No case was added. {member} owns this server. Quack doesn't add cases about the server owner. |
+| `refusal.member_role_too_high` | No case was added. `access.your_role_too_low` |
+| `refusal.quack_role_too_low` | No case was added. `access.quack_role_too_low` |
+| `refusal.quack_missing_permission` | No case was added. This rule calls for a {timeout / kick / ban}. `access.quack_role_needs` (staff) |
+| `refusal.member_is_administrator` | No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator. |
 
-`{action_verb}`: `time out`, `kick`, `ban`, from the level's action, else
-from the missing permission (Moderate Members, Kick Members, Ban Members).
-When the member isn't known (an API error raised before the member was),
-`{member}` reads "The member" at the start of a sentence and "the member"
-inside one.
+The action named is the level's, else the one the missing permission is
+for (Timeout Members, Kick Members, Ban Members). When the member isn't
+known (an API error raised before the member was), `{member}` reads "The
+member" at the start of a sentence and "the member" inside one. The log
+channel's `log.case_create_refused` and `log.honeypot_case_failed` reuse
+these reasons in the third person (§12.10).
+
+Permission and role problems (`access.*`, `quack_text::access`): one
+sentence each, shared by refusals, action failures, setup, modules,
+evidence, and the log channel, with Discord's English UI names and the
+settings page that fixes it. Quack's role and the reader's own role are
+always named apart. "Staff" readers are asked to go to an administrator;
+"administrator" readers (setup) are told what to change.
+
+| Id | Text |
+| --- | --- |
+| `access.quack_role_needs` | staff: Quack needs {permissions}. Ask an administrator to grant {it / them} to Quack's role in Server Settings → Roles. / administrator: In Server Settings → Roles, give Quack's role {permissions}. |
+| `access.quack_channel_needs` | staff: Quack needs {permissions} in {channel}. Ask an administrator to allow {it / them} for Quack in the channel's Edit Channel → Permissions. / administrator: In {channel} → Edit Channel → Permissions, allow {permissions} for Quack. |
+| `access.quack_role_too_low` | Quack's highest role must be above {member}'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles. |
+| `access.your_role_too_low` | Your highest role must be above {member}'s highest role. Ask a moderator whose highest role is above {member}'s. |
+| `access.quack_not_in_server` | Quack is no longer in this server. Ask an administrator to add Quack again. |
 
 ### 12.4 Case card and receipt
 
 The staff card (and the private receipt, which is the card) uses these
-lines, in this order; lines whose condition is false are omitted.
+lines, in this order; lines whose condition is false are omitted. What
+staff act on comes before the case context, so trimming a long card drops
+context first; a trimmed card ends with `case.card.trimmed`.
 
 | Id | Text | Condition |
 | --- | --- | --- |
 | `case.card.heading` | ### Case #{number} · {rule} | valid |
 | `case.card.heading_voided` | ### Case #{number} · {rule} · Voided | voided |
-| `case.card.member` | {member} · level {level_index} (starts at case {from}) · case count {case_count} | not imported |
+| `case.card.member` | {member} · level {level_index} (from a case count of {from}) · case count {case_count} | not imported |
 | `case.card.member_imported` | {member} · imported from Quack v4 | imported |
 | `case.card.reason` | > {reason} | always |
 | `case.card.action` | **Action:** {action sentence, §12.6} | not imported |
 | `case.card.undo` | **Undo:** {undo sentence, §12.6} | an undo exists, not imported |
+| `case.card.controls.retry_dismiss` | To try again, select {retry label}. To take it off the failed actions list, select {dismiss label}. | per action, both buttons shown |
+| `case.card.controls.retry` | To try again, select {retry label}. | per action, only Retry shown |
+| `case.card.controls.dismiss` | To take this failure off the failed actions list, select {dismiss label}. The case keeps its history. | per action, only Dismiss shown |
 | `case.card.dm` | **DM:** {DM sentence, §12.7} | not imported |
+| `case.card.voided` | Case #{number} was voided. It no longer counts. {actor} voided it {time}. | voided |
+| `case.card.void_reason` | > {void_reason} | voided |
+| `case.card.replaces` | Replaces case #{other}. | replaces another |
+| `case.card.replaced_by` | Replaced by case #{other}. | has a replacement |
+| `case.card.appeal.pending` | **Appeal:** Waiting for a decision. | appeal pending |
+| `case.card.appeal.needs_information` | **Appeal:** Waiting for {member} to reply. | |
+| `case.card.appeal.accepted` | **Appeal:** Accepted. | |
+| `case.card.appeal.rejected` | **Appeal:** Rejected. The case still counts. | |
+| `case.card.appeal.closed` | **Appeal:** Closed. | |
 | `case.card.evidence.saving` | **Evidence:** Saving evidence… | any item `saving` |
 | `case.card.evidence.saved` | **Evidence:** one: 1 item saved. / other: {count} items saved. | all items settled, none failed |
 | `case.card.evidence.partial` | **Evidence:** {saved} saved, {failed} couldn't be saved. Open View evidence to see why. | none saving, some failed |
 | `case.card.context_heading` | **Case context** | the case has context |
 | `case.card.context_line` | **{label}:** {value} (text cut to 300 characters with "…"; booleans Yes/No; numbers as written; a message link as a link to the message) | per answered field |
-| `case.card.voided` | Voided by {actor} {time}. | voided |
-| `case.card.void_reason` | > {void_reason} | voided |
-| `case.card.replaces` | Replaces case #{other}. | replaces another |
-| `case.card.replaced_by` | Replaced by case #{other}. | has a replacement |
-| `case.card.appeal.pending` | **Appeal:** waiting for a decision. | appeal pending |
-| `case.card.appeal.needs_information` | **Appeal:** waiting for {member} to add information. | |
-| `case.card.appeal.accepted` | **Appeal:** accepted. | |
-| `case.card.appeal.rejected` | **Appeal:** rejected. | |
-| `case.card.appeal.closed` | **Appeal:** closed. | |
-| `case.card.failed_actions` | A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard. | an action is failed and not dismissed |
 | `case.card.imported_action` | -# The original Quack v4 action was {v4_action}. Quack took no action for this case. | imported |
 | `case.card.footer` | -# Added by {moderator} {time} | moderator set |
 | `case.card.footer_honeypot` | -# Added by Quack {time} after a post in the honeypot channel | honeypot |
 | `case.card.footer_imported` | -# Imported {time}. Original moderator: {v4_moderator} ("unknown" when v4 didn't record one) | imported |
+| `case.card.trimmed` | Open this case on the dashboard for the full details. | the card was shortened to fit |
 
 An imported case's card has no action, undo, or DM line: Quack took no
 action for it, and `case.card.imported_action` says what v4 did.
@@ -2607,17 +2628,20 @@ The public receipt (§11.7) uses only:
 | `case.receipt.action` | **Action:** {action sentence, §12.6, without `{reason}`, `{retry}`, or the dismissed suffix} | always |
 
 For an unconfirmed action the receipt shows only the first sentence of
-`action.unconfirmed` ("Quack couldn't confirm whether Discord applied the
-ban to {member}."), without the staff instruction to check.
+`action.unconfirmed` ("Quack couldn't confirm whether Discord banned
+{member}."), without the staff instruction to check.
 
-Buttons (labels), in this order: `case.button.edit_context` "Edit
-context", `case.button.add_evidence` "Add evidence",
-`case.button.view_evidence` "View evidence" (when the case has evidence),
-`case.button.history` "History", `case.button.void` "Void case" (when not
-voided), `case.button.retry` "Retry {action}" ("Retry timeout removal"),
-`case.button.dismiss` "Dismiss {action}" ("Dismiss timeout removal"), `case.button.remove_timeout` "Remove timeout",
-`case.button.unban` "Unban", `button.failed_actions` (when an action needs
-a decision), `button.open_in_dashboard`. The public receipt's only button
+Buttons (labels), in this order, so a failed action's controls come
+first: `case.button.retry` "Retry {action}" ("Retry removing timeout"),
+`case.button.dismiss` "Dismiss failed {action}" ("Dismiss failed timeout
+removal"; "Dismiss ban" alone would read as removing the ban), per action
+that allows them; `case.button.edit_context` "Edit context",
+`case.button.add_evidence` "Add evidence", `case.button.view_evidence`
+"View evidence" (when the case has evidence), `case.button.history`
+"History", `case.button.void` "Void case" (when not voided),
+`case.button.remove_timeout` "Remove timeout", `case.button.unban`
+"Unban", `button.failed_actions` (when an action needs a decision),
+`button.open_in_dashboard`. The public receipt's only button
 is `button.open_case`.
 
 | Id | Text |
@@ -2669,136 +2693,152 @@ to 45 and the whole question as the input's description.
 ### 12.6 Actions
 
 Action sentences for staff views, receipts, the dashboard, and the log
-channel. `{retry}` appends `action.retry_scheduled` when the action is
-`pending` after at least one attempt (staff views only). A `failed` action
-uses `action.<kind>.failed` with its `{reason}`, except `unconfirmed`,
-which uses `action.unconfirmed` alone (so one sentence never says both
-"couldn't" and "couldn't confirm"). A failure someone dismissed appends
-`action.dismissed_suffix` (staff views only). `{ends_at}` reads is left out
-when the end isn't known: a timeout reads "Quack is timing out {member}."
-in progress, "Quack timed out {member}." when done, and "{member} was
-already timed out, so Quack left that timeout as it was." when done with no
+channel. A `pending` action after at least one attempt reads
+`action.retry_scheduled` instead (staff views). A `failed` action uses
+`action.<kind>.failed` with its `{reason}`. When the outcome is unknown
+(`unconfirmed`, or `ActionView::may_have_applied` because an earlier
+attempt may have applied before a later refusal, §5.2) it uses
+`action.unconfirmed`, then the `{reason}` of the refusal when there was
+one, so a later refusal never hides that the action may have happened and
+one sentence never says both "couldn't" and "couldn't confirm". A
+`cancelled` action after an attempt that may have applied uses
+`action.cancelled_uncertain` (outcome "couldn't confirm"). A failure
+someone dismissed appends `action.dismissed_suffix` (staff views only).
+`{reason}` never says "retry": the card's `case.card.controls.*` line and
+the log post's button offer Retry only when it is allowed. `{ends_at}` is
+left out when the end isn't known: a timeout reads "Quack is timing out
+{member}." while running, "Quack timed out {member}." when done, and
+"{member} already had a timeout. Quack left it in place." when done with no
 change.
 
+`{does}` is what the action does to the member, in the tense the sentence
+needs: "time out {member}", "remove {member} from the server", "ban
+{member}", "remove {member}'s timeout", "unban {member}" (past: "timed out
+{member}", "removed {member} from the server", "banned {member}", "removed
+{member}'s timeout", "unbanned {member}").
+
 | Id | Text |
 | --- | --- |
-| `action.none` | No action. This case is a warning. |
-| `action.retry_scheduled` | The last try didn't go through or wasn't confirmed, so Quack will try again {time}. |
-| `action.unconfirmed` (timeout, kick, ban) | Quack couldn't confirm whether Discord applied the {action} to {member}. Check {member} in Discord before you retry. |
-| `action.unconfirmed` (remove timeout) | Quack couldn't confirm whether Discord removed {member}'s timeout. Check {member} in Discord before you retry. |
-| `action.unconfirmed` (unban) | Quack couldn't confirm whether Discord unbanned {member}. Check {member} in Discord before you retry. |
-| `action.timeout.in_progress` | Quack is timing out {member} until {ends_at}.{retry} |
-| `action.timeout.done` | {member} is timed out until {ends_at}. |
-| `action.timeout.done_no_change` | {member} was already timed out until {ends_at} or later, so Quack left that timeout as it was. |
+| `action.none` | This case is a warning. |
+| `action.retry_scheduled` | Quack will try to {does} again {time}. |
+| `action.unconfirmed` | Quack couldn't confirm whether Discord {does, past}. {check} (`{check}` staff views only) |
+| `action.check.timeout` | Check {member}'s timeout in Discord. (timeout, remove timeout) |
+| `action.check.kick` | Check Server Settings → Audit Log in Discord for the kick. |
+| `action.check.ban` | Check Server Settings → Bans in Discord. (ban, unban) |
+| `action.cancelled_uncertain` | Case #{number} was voided. Quack couldn't confirm whether Discord {does, past}. Quack won't try again. Staff views add: "Quack will check whether the timeout can be removed." (timeout), "Quack will check whether the ban can be removed." (ban), or "A kick can't be undone." (kick) |
+| `action.timeout.in_progress` | pending: Quack will time out {member} until {ends_at}. / running: Quack is timing out {member} until {ends_at}. |
+| `action.timeout.done` | Quack set {member}'s timeout to end {ends_at}. |
+| `action.timeout.done_no_change` | {member} already had a timeout ending at or after {datetime}. Quack left it in place. |
 | `action.timeout.failed` | Quack couldn't time out {member}. {reason} |
-| `action.timeout.cancelled` | Quack didn't time out {member} because the case was voided first. |
-| `action.kick.in_progress` | Quack is removing {member} from the server.{retry} |
+| `action.timeout.cancelled` | Case #{number} was voided before Quack timed out {member}. |
+| `action.kick.in_progress` | pending: Quack will remove {member} from the server. / running: Quack is removing {member} from the server. |
 | `action.kick.done` | Quack removed {member} from the server. |
-| `action.kick.done_no_change` | {member} had already left the server, so Quack didn't remove them. |
+| `action.kick.done_no_change` | {member} left the server after this case was added, so Quack didn't remove them. |
 | `action.kick.failed` | Quack couldn't remove {member} from the server. {reason} |
-| `action.kick.cancelled` | Quack didn't remove {member} because the case was voided first. |
-| `action.ban.in_progress` | Quack is banning {member}.{retry} |
+| `action.kick.cancelled` | Case #{number} was voided before Quack removed {member} from the server. |
+| `action.ban.in_progress` | pending: Quack will ban {member}. / running: Quack is banning {member}. |
 | `action.ban.done` | Quack banned {member}. |
 | `action.ban.done_delete` | Quack banned {member} and deleted their messages from the last {last}. |
-| `action.ban.done_no_change` | {member} was already banned. |
+| `action.ban.done_no_change` | {member} was already banned when Quack checked. |
 | `action.ban.failed` | Quack couldn't ban {member}. {reason} |
-| `action.ban.cancelled` | Quack didn't ban {member} because the case was voided first. |
-| `action.remove_timeout.in_progress` | Quack is removing {member}'s timeout.{retry} |
+| `action.ban.cancelled` | Case #{number} was voided before Quack banned {member}. |
+| `action.remove_timeout.in_progress` | pending: Quack will remove {member}'s timeout. / running: Quack is removing {member}'s timeout. |
 | `action.remove_timeout.done` | Quack removed {member}'s timeout. |
-| `action.remove_timeout.done_no_change` | {member}'s timeout had already ended. |
+| `action.remove_timeout.done_no_change` | {member} had no active timeout when Quack checked. |
 | `action.remove_timeout.failed` | Quack couldn't remove {member}'s timeout. {reason} |
 | `action.remove_timeout.skipped` | Quack left {member}'s timeout in place because case #{other} still applies. ("another case still applies" when the other case isn't known) |
-| `action.remove_timeout.skipped_changed` | Quack left {member}'s timeout in place because someone changed it outside case #{number}. Check it in Discord. |
-| `action.unban.in_progress` | Quack is unbanning {member}.{retry} |
+| `action.remove_timeout.skipped_changed` | Quack left {member}'s timeout in place because it no longer matches case #{number}. Check {member}'s timeout in Discord. |
+| `action.unban.in_progress` | pending: Quack will unban {member}. / running: Quack is unbanning {member}. |
 | `action.unban.done` | Quack unbanned {member}. |
-| `action.unban.done_no_change` | {member} wasn't banned anymore, so there was nothing to undo. |
+| `action.unban.done_no_change` | {member} wasn't banned when Quack checked. |
 | `action.unban.failed` | Quack couldn't unban {member}. {reason} |
 | `action.unban.skipped` | Quack left {member}'s ban in place because case #{other} still applies. ("another case still applies" when the other case isn't known) |
-| `action.unban.skipped_changed` | Quack left {member}'s ban in place because it didn't come from a voided Quack case. Check it in Discord. |
-| `action.dismissed_suffix` | Dismissed by {actor} {time}. |
+| `action.unban.skipped_changed` | Quack left {member}'s ban in place because it may not have come from case #{number}. Check Server Settings → Bans in Discord. |
+| `action.dismissed_suffix` | {actor} dismissed this failure {time}. The case keeps its history. |
 
 Failure reasons (`{reason}`; when the member isn't known, `{member}`
-reads "The member"):
+reads "The member"). Permission and role reasons are the shared
+`access.*` sentences (§12.3):
 
 | Id | Text |
 | --- | --- |
-| `action.failure.quack_not_in_server` | Quack isn't in this server anymore. |
-| `action.failure.quack_missing_permission` | Quack needs the {permission} permission. Ask an administrator to give it to Quack's role, then retry. |
-| `action.failure.quack_role_too_low` | {member}'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry. |
-| `action.failure.member_is_owner` | {member} owns the server, and Discord doesn't let anyone time out, kick, or ban the owner. |
-| `action.failure.member_not_in_server` | {member} isn't in the server, so there's no one to time out. |
-| `action.failure.member_is_administrator` | {member} has the Administrator permission, and Discord doesn't allow timeouts for administrators. |
-| `action.failure.timeout_window_passed` | The timeout would already have ended by now, so Quack didn't apply it. |
-| `action.failure.discord_refused` | Discord didn't let Quack do this. Check Quack's role and permissions, then retry. |
-| `action.failure.retries_exhausted` | one: Discord turned Quack away 1 time, so nothing changed. Retry when Discord is available again. / other: Discord turned Quack away {attempts} times, so nothing changed. Retry when Discord is available again. |
+| `action.failure.quack_not_in_server` | `access.quack_not_in_server` |
+| `action.failure.quack_missing_permission` | `access.quack_role_needs` (staff) |
+| `action.failure.quack_role_too_low` | `access.quack_role_too_low` |
+| `action.failure.member_is_owner` | {member} owns this server. Discord doesn't allow this action on the server owner. |
+| `action.failure.member_not_in_server` | timeout: {member} isn't in the server, so Discord can't time them out. / remove timeout: {member} isn't in the server. |
+| `action.failure.member_is_administrator` | {member} has Administrator, and Discord doesn't allow timeouts for members with Administrator. |
+| `action.failure.timeout_window_passed` | The timeout would already have ended, so Quack didn't apply it. |
+| `action.failure.discord_refused` | Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. |
+| `action.failure.retries_exhausted` | one: Quack stopped after one attempt. / other: Quack stopped trying after {attempts} attempts. Both add "Discord didn't apply it." unless an attempt may have applied. |
 
 Member-facing action sentences (dashboard member view; `you`):
 
 | Id | Text |
 | --- | --- |
-| `member.action.none` | This case is a warning. No other action was taken. |
-| `member.action.timeout.in_progress` | Quack is timing you out until {ends_at}. ("Quack is timing you out." when the end isn't known) |
-| `member.action.timeout.done` | You're timed out until {ends_at}. |
-| `member.action.unconfirmed` | Quack couldn't confirm whether Discord applied this action. |
-| `member.action.timeout.not_applied` | The timeout wasn't applied. |
-| `member.action.kick.in_progress` | Quack is removing you from the server. |
-| `member.action.kick.done` | You were removed from the server. |
-| `member.action.kick.not_applied` | You weren't removed from the server. |
-| `member.action.ban.in_progress` | Quack is banning you from the server. |
-| `member.action.ban.done` | You're banned from the server. |
-| `member.action.ban.not_applied` | The ban wasn't applied. |
-| `member.action.remove_timeout.done` | Your timeout was removed. |
-| `member.action` (remove timeout done, no change) | Your timeout had already ended. |
-| `member.action.remove_timeout.in_progress` | Quack is removing your timeout. |
-| `member.action.remove_timeout.skipped` | Your timeout stays because another case still applies. |
-| `member.action.remove_timeout.skipped_changed` | Your timeout stays. The moderators can see why. |
-| `member.action.remove_timeout.not_applied` | Your timeout hasn't been removed yet. The moderators can see why. |
-| `member.action.unban.done` | You're no longer banned. |
-| `member.action.unban.in_progress` | Quack is unbanning you. |
-| `member.action.unban.skipped` | Your ban stays because another case still applies. |
-| `member.action.unban.skipped_changed` | Your ban stays. The moderators can see why. |
-| `member.action.unban.not_applied` | Your ban hasn't been removed yet. The moderators can see why. |
+| `member.action.none` | This case is a warning. |
+| `member.action.timeout.in_progress` | pending: Quack will time you out until {ends_at}. / running: Quack is timing you out until {ends_at}. ("…time you out." when the end isn't known) |
+| `member.action.timeout.done` | Quack set your timeout to end {ends_at}. ("Quack timed you out." when the end isn't known; no change: "You already had a timeout. Quack left it in place.") |
+| `member.action.unconfirmed` | Quack couldn't confirm whether Discord {timed you out / removed you from the server / banned you / removed your timeout / unbanned you}. A cancelled timeout or ban adds "The case was voided, so Quack will check whether the {timeout / ban} can be removed."; a cancelled kick "The case was voided. A kick can't be undone." |
+| `member.action.timeout.not_applied` | failed: Quack didn't time you out. / cancelled: The case was voided before Quack timed you out. |
+| `member.action.kick.in_progress` | pending: Quack will remove you from the server. / running: Quack is removing you from the server. |
+| `member.action.kick.done` | Quack removed you from the server. (no change: "You left the server after this case was added, so Quack didn't remove you.") |
+| `member.action.kick.not_applied` | failed: Quack didn't remove you from the server. / cancelled: The case was voided before Quack removed you from the server. |
+| `member.action.ban.in_progress` | pending: Quack will ban you. / running: Quack is banning you. |
+| `member.action.ban.done` | Quack banned you. ("Quack banned you and deleted your messages from the last {last}." when it deleted messages; no change: "You were already banned when Quack checked.") |
+| `member.action.ban.not_applied` | failed: Quack didn't ban you. / cancelled: The case was voided before Quack banned you. |
+| `member.action.remove_timeout.done` | Quack removed your timeout. (no change: "You had no active timeout when Quack checked.") |
+| `member.action.remove_timeout.in_progress` | pending: Quack will remove your timeout. / running: Quack is removing your timeout. |
+| `member.action.remove_timeout.skipped` | Your timeout stays in place because another case still applies. |
+| `member.action.remove_timeout.skipped_changed` | Quack left your timeout in place. Ask the moderators if you need help. |
+| `member.action.remove_timeout.not_applied` | Your timeout is still in place. The moderators can see why. |
+| `member.action.unban.done` | Quack unbanned you. (no change: "You weren't banned when Quack checked.") |
+| `member.action.unban.in_progress` | pending: Quack will unban you. / running: Quack is unbanning you. |
+| `member.action.unban.skipped` | Your ban stays in place because another case still applies. |
+| `member.action.unban.skipped_changed` | Quack left your ban in place. Ask the moderators if you need help. |
+| `member.action.unban.not_applied` | Your ban is still in place. The moderators can see why. |
 
-`not_applied` covers `failed` with a definite reason and `cancelled`;
-`failed` with `unconfirmed` uses `member.action.unconfirmed`. `pending` and
-`running` both use `in_progress`. A `done` action with no change reads as
-follows on the member view: a kick uses `member.action.kick.not_applied`
-(they had already left, so this case didn't remove them); a timeout, ban,
-or unban uses its `done` text; a remove timeout uses "Your timeout had
-already ended."
+`not_applied` covers `failed` with a definite reason and `cancelled` with
+no attempt that may have applied; the unknown outcomes use
+`member.action.unconfirmed`.
 
 Staff controls:
 
 | Id | Text |
 | --- | --- |
-| `action.retry.done` | Quack will try the {action} for case #{number} again. The case shows the result. |
-| `action.dismiss.done` | The failed {action} for case #{number} is dismissed. The case keeps its failed attempts. |
-| `action.undo.confirm.remove_timeout` | Remove {member}'s timeout from case #{number}? |
-| `action.undo.confirm.unban` | Unban {member}? Their ban came from case #{number}. |
+| `action.retry.done` | Quack will try again to {time out the member / remove the member from the server / ban the member / remove the timeout / unban the member} for case #{number}. Open the case to see the outcome. |
+| `action.dismiss.done` | The {timeout / kick / ban} failure for case #{number} was dismissed. The case keeps its history. (undos: "The failed attempt to {remove the timeout / unban the member} for case #{number} was dismissed. …") |
+| `action.undo.confirm.remove_timeout` | Remove {member}'s timeout for case #{number}? |
+| `action.undo.confirm.unban` | Unban {member} for case #{number}? |
 | `action.undo.button.remove_timeout` | Yes, remove timeout |
 | `action.undo.button.unban` | Yes, unban |
-| `action.undo.queued.remove_timeout` | Quack is removing {member}'s timeout. Case #{number} shows the result. |
-| `action.undo.queued.unban` | Quack is unbanning {member}. Case #{number} shows the result. |
+| `action.undo.queued.remove_timeout` | Quack will check whether it can remove {member}'s timeout. Open case #{number} to see the outcome. |
+| `action.undo.queued.unban` | Quack will check whether it can unban {member}. Open case #{number} to see the outcome. |
+
+An undo checks Discord before it changes anything (§5.6), so the queued
+and void texts promise a check, not a result.
 
 Voiding:
 
 | Id | Text |
 | --- | --- |
 | `case.void.modal.title` | Void case #{number} — or "Void case" when the number is unknown |
-| `case.void.modal.label` | Why is this case wrong? |
+| `case.void.modal.label` | Why are you voiding this case? |
 | `case.void.modal.description` | The member can see this reason. |
-| `case.void.done` | Case #{number} is voided. It stays in the history but no longer counts toward {rule}. |
-| `case.void.undo.remove_timeout` | Quack is removing {member}'s timeout. |
-| `case.void.undo.unban` | Quack is unbanning {member}. |
-| `case.void.cancelled_action` | Quack won't run the {action}. |
-| `case.void.running_action` | Quack had already started the {action}. If it went through, Quack will undo it. |
-| `case.void.running_kick` | Quack had already started the kick, so {member} may still be removed. A kick can't be undone. |
-| `case.void.done_kick` | {member} was already removed from the server. A kick can't be undone. |
+| `case.void.done` | Case #{number} is voided. It stays in the history and no longer counts toward {rule}. |
+| `case.void.undo.remove_timeout` | Quack will check whether it can remove {member}'s timeout. |
+| `case.void.undo.unban` | Quack will check whether it can unban {member}. |
+| `case.void.cancelled_action` | Quack won't {time out {member} / remove {member} from the server / ban {member}}. |
+| `case.void.running_action` | Quack had already started the {timeout / ban}. ("Quack will check whether it can be removed." is added when no undo sentence follows) |
+| `case.void.running_kick` | Quack had already started removing {member} from the server. A kick can't be undone. |
+| `case.void.done_kick` | Quack had already removed {member} from the server. A kick can't be undone. |
+| `case.void.check_outcome` | Open case #{number} to see the outcome. |
 | `case.void.reason.appeal_accepted` | Appeal accepted. |
-| `case.void.appeal_closed` | The open appeal is closed, and {member} gets a DM about it. |
+| `case.void.appeal_closed` | The appeal was closed because the case was voided. Quack will try to send {member} a DM about it. |
 
 `case.void.done` is followed by one sentence for each thing the void did,
-in order, then `case.void.appeal_closed` when it closed an appeal.
+in order, then `case.void.check_outcome` when an undo is checking, then
+`case.void.appeal_closed` when it closed an appeal.
 
 Context and evidence:
 
@@ -3037,46 +3077,46 @@ Discord unbanned {member}").
 
 | Id | Kind / result | Text |
 | --- | --- | --- |
-| `log.case_created` | `case_created` ok | {actor} added {case} for {member} under {rule}: level {level_index} (starts at case {from}), case count {case_count}, {level outcome}. |
-| `log.case_created.honeypot` | `case_created` ok, source honeypot | Quack added {case} for {member} under {rule} because they posted in the honeypot channel: {level outcome}. |
+| `log.case_created` | `case_created` ok | {actor} added {case} for {member} under {rule} (level {level_index}, case count {case_count}). Action for this case: {level outcome}. ("This case is a warning." for a warning) |
+| `log.case_created.honeypot` | `case_created` ok, source honeypot | Quack added {case} for {member} under {rule} after {member} posted in the honeypot channel. Action for this case: {level outcome}. ("This case is a warning." for a warning) |
 | `log.case_created.replaces` | (appended) | It replaces case #{other}. |
-| `log.case_create_refused.quack_role_too_low` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule}: their highest role is at or above Quack's. Move Quack's role above it. |
-| `log.case_create_refused.quack_missing_permission` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule}: Quack needs the {permission} permission. (the level's action's permission when the permission isn't recorded, else Ban Members) |
-| `log.case_create_refused.quack_not_in_server` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule} because Quack isn't in the server. |
-| `log.case_create_refused` | `case_create_refused` refused, any other refusal | Quack couldn't add a case for {member} under {rule}: {refusal} |
+| `log.case_create_refused.quack_role_too_low` | `case_create_refused` refused | No case was added for {member} under {rule}. `access.quack_role_too_low` |
+| `log.case_create_refused.quack_missing_permission` | `case_create_refused` refused | No case was added for {member} under {rule}. This rule calls for a {timeout / kick / ban}. `access.quack_role_needs` (staff; the level's action's permission when the permission isn't recorded, else Ban Members) |
+| `log.case_create_refused.quack_not_in_server` | `case_create_refused` refused | No case was added for {member} under {rule}. `access.quack_not_in_server` |
+| `log.case_create_refused` | `case_create_refused` refused, any other refusal | No case was added for {member} under {rule}. {refusal reason, §12.3, about the actor in the third person: "{actor} isn't in this server anymore.", "{actor} can't add a case about themselves.", "{actor}'s highest role must be above {member}'s highest role."; "{member} isn't in the server anymore."} |
 | `log.case_voided` | `case_voided` ok, cause staff | {actor} voided {case} for {member}.\n> {void_reason} |
 | `log.case_voided.appeal` | `case_voided` ok, cause appeal | {actor} accepted {member}'s appeal, so {case} is voided. |
 | `log.case_context_edited` | `case_context_edited` ok | {actor} edited the case context of {case}. |
 | `log.evidence_added` | `evidence_added` ok (not posted) | one: {actor} added 1 evidence item to {case}. / other: {actor} added {count} evidence items to {case}. |
-| `log.action_done.timeout` | `action_done` ok | Quack timed out {member} until {ends_at} for {case}. (" until {ends_at}" left out when unknown) |
-| `log.action_done` (timeout, no change) | `action_done` ok | {member} was already timed out until {ends_at} or later when Quack tried to time them out for {case}. ("{member} was already timed out when …" when the end isn't known) |
+| `log.action_done.timeout` | `action_done` ok | Quack set {member}'s timeout to end {ends_at} for {case}. ("Quack timed out {member} for {case}." when the end isn't known) |
+| `log.action_done` (timeout, no change) | `action_done` ok | {member} already had a timeout ending at or after {datetime}, so Quack left it in place for {case}. (" ending at or after {datetime}" left out when the end isn't known) |
 | `log.action_done.kick` | `action_done` ok | Quack removed {member} from the server for {case}. |
-| `log.action_done.kick_no_change` | `action_done` ok | {member} had already left when Quack tried to remove them for {case}. |
+| `log.action_done.kick_no_change` | `action_done` ok | {member} left the server after {case} was added, so Quack didn't remove them. |
 | `log.action_done.ban` | `action_done` ok | Quack banned {member} for {case}. |
-| `log.action_done` (ban, no change) | `action_done` ok | {member} was already banned when Quack tried to ban them for {case}. |
-| `log.action_done.remove_timeout` | `action_done` ok | Quack removed {member}'s timeout from {case}. |
-| `log.action_done.remove_timeout_no_change` | `action_done` ok | {member}'s timeout from {case} had already ended. |
-| `log.action_done.unban` | `action_done` ok | Quack unbanned {member}. The ban came from {case}. |
-| `log.action_done.unban_no_change` | `action_done` ok | {member} wasn't banned anymore when Quack tried to undo the ban from {case}. |
+| `log.action_done` (ban, no change) | `action_done` ok | {member} was already banned when Quack checked for {case}. |
+| `log.action_done.remove_timeout` | `action_done` ok | Quack removed {member}'s timeout for {case}. |
+| `log.action_done.remove_timeout_no_change` | `action_done` ok | {member} had no active timeout when Quack checked for {case}. |
+| `log.action_done.unban` | `action_done` ok | Quack unbanned {member} for {case}. |
+| `log.action_done.unban_no_change` | `action_done` ok | {member} wasn't banned when Quack checked for {case}. |
 | `log.action_failed` | `action_failed` failed | {couldnt} for {case}. {reason} — with a **Retry {action}** button while retryable |
-| `log.action_failed.unconfirmed` | `action_failed` failed, reason `unconfirmed` | {whether} for {case}. Check {member} in Discord before you retry. |
-| `log.action_retry_requested` | `action_retry_requested` ok | {actor} asked Quack to try the {action} for {case} again. |
-| `log.action_dismissed` | `action_dismissed` ok | {actor} dismissed the failed {action} for {case}. |
-| `log.action_undo_requested.remove_timeout` | `action_undo_requested` ok | {actor} asked Quack to remove {member}'s timeout from {case}. |
-| `log.action_undo_requested.unban` | `action_undo_requested` ok | {actor} asked Quack to unban {member}. The ban came from {case}. |
-| `log.action_undo_skipped.timeout` | `action_undo_skipped` ok | Quack left {member}'s timeout in place because case #{other} still applies, even though {case} was voided. ("another case still applies" when the other case isn't known) |
-| `log.action_undo_skipped.ban` | `action_undo_skipped` ok | Quack left {member}'s ban in place because case #{other} still applies, even though {case} was voided. ("another case still applies" when the other case isn't known) |
-| `log.action_undo_skipped.changed_timeout` | `action_undo_skipped` ok, `changed_outside_case` | Quack left {member}'s timeout in place after {case} was voided, because someone changed the timeout outside the case. Check it in Discord. |
-| `log.action_undo_skipped.changed_ban` | `action_undo_skipped` ok, `changed_outside_case` | Quack left {member}'s ban in place after {case} was voided, because the ban didn't come from a voided Quack case. Check it in Discord. |
-| `log.dm_sent.case` | `dm_sent` ok (not posted) | Quack sent {member} a DM about {case}. |
-| `log.dm_sent.appeal` | `dm_sent` ok (not posted) | Quack sent {member} a DM about their appeal for {case}. |
-| `log.dm_sent.ticket` | `dm_sent` ok (not posted) | Quack sent {member} the transcript of their ticket. |
-| `log.dm_failed.case` | `dm_failed` failed, state failed | Quack couldn't send {member} a DM about {case} {because}. They can still see the case by signing in to the dashboard. |
-| `log.dm_failed.case_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether Discord accepted the DM to {member} about {case}, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard. |
-| `log.dm_failed.appeal` | `dm_failed` failed, state failed | Quack couldn't send {member} a DM about their appeal for {case} {because}. They can still see the decision on the dashboard. |
-| `log.dm_failed.appeal_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether Discord accepted the DM to {member} about their appeal for {case}. They can still see the decision on the dashboard. |
-| `log.dm_failed.ticket` | `dm_failed` failed | Quack couldn't send {member} the transcript of their ticket {because}. Staff can read it on the dashboard's ticket page. |
-| `log.dm_failed.ticket_unknown` | `dm_failed` failed, state unknown | Quack couldn't confirm whether Discord accepted the transcript DM to {member}. Staff can read it on the dashboard's ticket page. |
+| `log.action_failed.unconfirmed` | `action_failed` failed, reason `unconfirmed` | {whether} for {case}. {check, `action.check.*`} |
+| `log.action_retry_requested` | `action_retry_requested` ok | {actor} chose to retry {the timeout / the kick / the ban / removing the timeout / unbanning the member} for {case}. |
+| `log.action_dismissed` | `action_dismissed` ok | {actor} dismissed {the timeout / kick / ban failure; the failed attempt to remove the timeout / unban the member} for {case}. |
+| `log.action_undo_requested.remove_timeout` | `action_undo_requested` ok | {actor} asked Quack to remove {member}'s timeout for {case}. (Quack as actor: "Quack will check whether it can remove {member}'s timeout for {case}.") |
+| `log.action_undo_requested.unban` | `action_undo_requested` ok | {actor} asked Quack to unban {member} for {case}. (Quack as actor: "Quack will check whether it can unban {member} for {case}.") |
+| `log.action_undo_skipped.timeout` | `action_undo_skipped` ok | Quack left {member}'s timeout in place after {case} was voided because case #{other} still applies. ("another case still applies" when the other case isn't known) |
+| `log.action_undo_skipped.ban` | `action_undo_skipped` ok | Quack left {member}'s ban in place after {case} was voided because case #{other} still applies. ("another case still applies" when the other case isn't known) |
+| `log.action_undo_skipped.changed_timeout` | `action_undo_skipped` ok, `changed_outside_case` | Quack left {member}'s timeout in place because it no longer matches {case}. Check {member}'s timeout in Discord. |
+| `log.action_undo_skipped.changed_ban` | `action_undo_skipped` ok, `changed_outside_case` | Quack left {member}'s ban in place because it may not have come from {case}. Check Server Settings → Bans in Discord. |
+| `log.dm_sent.case` | `dm_sent` ok (not posted) | `dm.state.sent` (§12.7) |
+| `log.dm_sent.appeal` | `dm_sent` ok (not posted) | `dm.state.sent` about the appeal |
+| `log.dm_sent.ticket` | `dm_sent` ok (not posted) | `dm.state.sent` with the ticket transcript |
+| `log.dm_failed.case` | `dm_failed` failed, state failed | `dm.state.failed` (§12.7), with {case} linked |
+| `log.dm_failed.case_unknown` | `dm_failed` failed, state unknown | `dm.state.unknown` |
+| `log.dm_failed.appeal` | `dm_failed` failed, state failed | `dm.state.failed` about the appeal |
+| `log.dm_failed.appeal_unknown` | `dm_failed` failed, state unknown | `dm.state.unknown` about the appeal |
+| `log.dm_failed.ticket` | `dm_failed` failed | `dm.state.failed` with the ticket transcript |
+| `log.dm_failed.ticket_unknown` | `dm_failed` failed, state unknown | `dm.state.unknown` with the ticket transcript |
 | `log.appeal_submitted` | `appeal_submitted` ok | {member} appealed {case}. |
 | `log.appeal_information_requested` | `appeal_information_requested` ok | {actor} asked {member} for more information about their appeal for {case}. |
 | `log.appeal_information_provided` | `appeal_information_provided` ok | {member} added information to their appeal for {case}. |
@@ -3107,10 +3147,10 @@ Discord unbanned {member}").
 | `log.ticket_closed` | `ticket_closed` ok, closed by staff | {actor} closed {member}'s ticket. The transcript is saved on the dashboard. |
 | `log.ticket_closed` | `ticket_closed` ok, closed by the member | {member} closed their ticket. The transcript is saved on the dashboard. |
 | `log.ticket_closed.partial` | (appended) | Some messages may be missing from the transcript. |
-| `log.honeypot_case_failed` | `honeypot_case_failed` failed, a member refusal | Quack couldn't add a honeypot case for {member}: {refusal} |
-| `log.honeypot_case_failed` | `honeypot_case_failed` failed, `rule_unavailable` | Quack couldn't add a honeypot case for {member}: the honeypot's rule is archived or no longer exists. Choose another rule in /setup or on the dashboard. |
-| `log.honeypot_case_failed` | `honeypot_case_failed` failed, `policy_changed` | Quack couldn't add a honeypot case for {member}: the honeypot settings changed while Quack was adding it. |
-| `log.honeypot_case_failed` | `honeypot_case_failed` failed, `discord_unavailable` | Quack couldn't add a honeypot case for {member}: Discord wasn't available, so Quack gave up. |
+| `log.honeypot_case_failed` | `honeypot_case_failed` failed, a member refusal | Quack didn't add a honeypot case for {member}. {refusal reason, §12.3, for Quack as the actor: a refusal about the actor (self, role hierarchy) reads "Review the post and use /case add if a case is needed."} |
+| `log.honeypot_case_failed` | `honeypot_case_failed` failed, `rule_unavailable` | Quack didn't add a honeypot case for {member}. The honeypot rule is archived or no longer exists. Choose a rule in /setup or on the dashboard. |
+| `log.honeypot_case_failed` | `honeypot_case_failed` failed, `policy_changed` | Quack didn't add a honeypot case for {member}. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed. |
+| `log.honeypot_case_failed` | `honeypot_case_failed` failed, `discord_unavailable` | Quack didn't add a honeypot case for {member}. Quack couldn't reach Discord in time. Review the post and use /case add if a case is needed. |
 | `log.legacy` | `legacy` (imported, not posted) | Imported from the previous version of Quack: {legacy action}. |
 
 `{refusal}` reuses the §12.3 refusal texts without their first sentence

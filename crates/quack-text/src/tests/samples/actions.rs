@@ -10,16 +10,41 @@ use crate::action::{self, ActionView, Detail, Undo};
 use crate::dm::{self, AppealDm, AppealDmKind, CaseDm, DmView, RejoinAfter};
 use crate::tests::fixtures::*;
 
-/// Every action view worth a sentence: every kind in every state, every
-/// failure reason, both skip reasons, no change, retries, and dismissal.
+/// Whether the engine can produce this combination (§5.3, §5.5): undos
+/// are never cancelled, originals never skipped, and the timeout-only
+/// failures happen only to timeouts.
+pub fn reachable(kind: ActionKind, state: ActionState, reason: Option<ActionFailure>) -> bool {
+    let undo = matches!(kind, ActionKind::RemoveTimeout | ActionKind::Unban);
+    match (state, reason) {
+        (ActionState::Cancelled, _) => !undo,
+        (ActionState::Skipped, _) => undo,
+        (_, Some(ActionFailure::MemberIsAdministrator | ActionFailure::TimeoutWindowPassed)) => {
+            kind == ActionKind::Timeout
+        }
+        (_, Some(ActionFailure::MemberNotInServer)) => {
+            matches!(kind, ActionKind::Timeout | ActionKind::RemoveTimeout)
+        }
+        _ => true,
+    }
+}
+
+/// Every action view worth a sentence: every kind in every state it can
+/// reach, every failure reason it can have, both skip reasons, no change,
+/// retries, uncertainty, and dismissal.
 pub fn action_views() -> Vec<(String, ActionView)> {
     let mut v = Vec::new();
     for kind in ActionKind::ALL {
         for state in ActionState::ALL {
+            if !reachable(*kind, *state, None) {
+                continue;
+            }
             let name = format!("{kind:?} {state:?}");
             match state {
                 ActionState::Failed => {
                     for reason in ActionFailure::ALL {
+                        if !reachable(*kind, *state, Some(*reason)) {
+                            continue;
+                        }
                         let mut a = av(*kind, *state);
                         a.failure = Some(Failure {
                             permission: Some(kind.permission()),
@@ -27,6 +52,22 @@ pub fn action_views() -> Vec<(String, ActionView)> {
                         });
                         a.attempts = 8;
                         v.push((format!("{name} {reason:?}"), a.clone()));
+                        if matches!(
+                            reason,
+                            ActionFailure::QuackMissingPermission | ActionFailure::RetriesExhausted
+                        ) {
+                            let mut a = a.clone();
+                            a.may_have_applied = true;
+                            v.push((
+                                format!("{name} {reason:?} after an attempt that may have applied"),
+                                a,
+                            ));
+                        }
+                        if *reason == ActionFailure::RetriesExhausted {
+                            let mut a = a.clone();
+                            a.attempts = 1;
+                            v.push((format!("{name} {reason:?} after one attempt"), a));
+                        }
                         if *reason == ActionFailure::DiscordRefused {
                             a.dismissed = Some((ana(), later()));
                             v.push((format!("{name} {reason:?} dismissed"), a));
@@ -59,7 +100,13 @@ pub fn action_views() -> Vec<(String, ActionView)> {
                     a.next_attempt_at = Some(later());
                     v.push((format!("{name} retry scheduled"), a));
                 }
-                ActionState::Running | ActionState::Cancelled => v.push((name, av(*kind, *state))),
+                ActionState::Cancelled => {
+                    v.push((name.clone(), av(*kind, *state)));
+                    let mut a = av(*kind, *state);
+                    a.may_have_applied = true;
+                    v.push((format!("{name} after an attempt that may have applied"), a));
+                }
+                ActionState::Running => v.push((name, av(*kind, *state))),
             }
         }
     }
@@ -69,6 +116,10 @@ pub fn action_views() -> Vec<(String, ActionView)> {
 const ACTION_IDS: &[&str] = &[
     "action.retry_scheduled",
     "action.unconfirmed",
+    "action.check.timeout",
+    "action.check.kick",
+    "action.check.ban",
+    "action.cancelled_uncertain",
     "action.timeout.in_progress",
     "action.timeout.done",
     "action.timeout.done_no_change",

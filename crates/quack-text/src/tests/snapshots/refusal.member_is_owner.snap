@@ -2,11 +2,11 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## MemberIsOwner
-discord: No case was added. <@222> owns the server.
-plain:   No case was added. Sam owns the server.
-model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server.")]
+discord: No case was added. <@222> owns this server. Quack doesn't add cases about the server owner.
+plain:   No case was added. Sam owns this server. Quack doesn't add cases about the server owner.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Quack doesn't add cases about the server owner.")]
 
 ## MemberIsOwner, no member known
-discord: No case was added. The member owns the server.
-plain:   No case was added. The member owns the server.
-model:   [Fixed("No case was added. The member owns the server.")]
+discord: No case was added. The member owns this server. Quack doesn't add cases about the server owner.
+plain:   No case was added. The member owns this server. Quack doesn't add cases about the server owner.
+model:   [Fixed("No case was added. The member owns this server. Quack doesn't add cases about the server owner.")]

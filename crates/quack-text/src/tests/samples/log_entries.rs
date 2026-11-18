@@ -1,6 +1,6 @@
 //! One moderation log entry per kind and result variant (§12.10).
 
-use quack_core::action::{ActionFailure, ActionKind, ActionSkipReason};
+use quack_core::action::{ActionFailure, ActionKind, ActionSkipReason, ActionState};
 use quack_core::case::{CaseSource, VoidCause};
 use quack_core::dm::{DmFailure, DmKind};
 use quack_core::ids::ModLogId;
@@ -151,6 +151,9 @@ pub fn entries() -> Vec<(&'static str, String, ModLogEntry)> {
             );
         }
         for reason in ActionFailure::ALL {
+            if !super::actions::reachable(*kind, ActionState::Failed, Some(*reason)) {
+                continue;
+            }
             let id = if *reason == ActionFailure::Unconfirmed {
                 "log.action_failed.unconfirmed"
             } else {

@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack is unbanning <@222>. Case #12 shows the result.
-plain:   Quack is unbanning Sam. Case #12 shows the result.
-model:   [Fixed("Quack is unbanning "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Case #12 shows the result.")]
+discord: Quack will check whether it can unban <@222>. Open case #12 to see the outcome.
+plain:   Quack will check whether it can unban Sam. Open case #12 to see the outcome.
+model:   [Fixed("Quack will check whether it can unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Open case #12 to see the outcome.")]

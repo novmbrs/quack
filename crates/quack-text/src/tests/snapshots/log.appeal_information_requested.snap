@@ -17,3 +17,8 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@333> asked <@222> for more information about their appeal for case #12.
 plain:   Ana asked Sam for more information about their appeal for case #12.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for more information about their appeal for case #12.")]
+
+##  · no names known
+discord: Quack asked a member for more information about their appeal for case #12.
+plain:   Quack asked a member for more information about their appeal for case #12.
+model:   [Fixed("Quack asked a member for more information about their appeal for case #12.")]

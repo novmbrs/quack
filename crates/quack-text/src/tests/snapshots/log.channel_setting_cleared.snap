@@ -120,7 +120,7 @@ discord: Quack stopped using the server activity channel because its channel was
 plain:   Quack stopped using the server activity channel because its channel was deleted.
 model:   [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]
 
-## ActivityLogRoute · no names known
-discord: Quack stopped using the server activity channel because its channel was deleted.
-plain:   Quack stopped using the server activity channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]
+## TicketEntryChannel · no names known
+discord: Quack stopped using the ticket entry channel because its channel was deleted.
+plain:   Quack stopped using the ticket entry channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the ticket entry channel because its channel was deleted.")]

@@ -51,3 +51,8 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@333> changed the honeypot settings: honeypot channel and honeypot rule.
 plain:   Ana changed the honeypot settings: honeypot channel and honeypot rule.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" changed the honeypot settings: honeypot channel and honeypot rule.")]
+
+## Honeypot · no names known
+discord: Quack changed the honeypot settings: honeypot channel and honeypot rule.
+plain:   Quack changed the honeypot settings: honeypot channel and honeypot rule.
+model:   [Fixed("Quack changed the honeypot settings: honeypot channel and honeypot rule.")]

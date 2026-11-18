@@ -4,230 +4,230 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## quack_not_in_server · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: Quack isn't in this server.
+Quack didn't add a honeypot case for <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Quack isn't in this server.
+Quack didn't add a honeypot case for Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": Quack isn't in this server.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## quack_not_in_server · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: Quack isn't in this server.
-plain:   Quack couldn't add a honeypot case for Sam: Quack isn't in this server.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": Quack isn't in this server.")]
+discord: Quack didn't add a honeypot case for <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack didn't add a honeypot case for Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
 
 ## actor_not_in_server · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: you're not in this server anymore.
+Quack didn't add a honeypot case for <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: you're not in this server anymore.
+Quack didn't add a honeypot case for Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": you're not in this server anymore.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## actor_not_in_server · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: you're not in this server anymore.
-plain:   Quack couldn't add a honeypot case for Sam: you're not in this server anymore.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": you're not in this server anymore.")]
+discord: Quack didn't add a honeypot case for <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack didn't add a honeypot case for Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
 
 ## member_not_in_server · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: <@222> isn't in this server. Choose a current member.
+Quack didn't add a honeypot case for <@222>. <@222> isn't in the server anymore.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Sam isn't in this server. Choose a current member.
+Quack didn't add a honeypot case for Sam. Sam isn't in the server anymore.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in this server. Choose a current member.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server anymore.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## member_not_in_server · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: <@222> isn't in this server. Choose a current member.
-plain:   Quack couldn't add a honeypot case for Sam: Sam isn't in this server. Choose a current member.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in this server. Choose a current member.")]
+discord: Quack didn't add a honeypot case for <@222>. <@222> isn't in the server anymore.
+plain:   Quack didn't add a honeypot case for Sam. Sam isn't in the server anymore.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server anymore.")]
 
 ## member_is_self · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: you can't add a case about yourself. Ask another moderator.
+Quack didn't add a honeypot case for <@222>. Review the post and use </case add:1001> if a case is needed.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: you can't add a case about yourself. Ask another moderator.
+Quack didn't add a honeypot case for Sam. Review the post and use /case add if a case is needed.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": you can't add a case about yourself. Ask another moderator.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## member_is_self · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: you can't add a case about yourself. Ask another moderator.
-plain:   Quack couldn't add a honeypot case for Sam: you can't add a case about yourself. Ask another moderator.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": you can't add a case about yourself. Ask another moderator.")]
+discord: Quack didn't add a honeypot case for <@222>. Review the post and use </case add:1001> if a case is needed.
+plain:   Quack didn't add a honeypot case for Sam. Review the post and use /case add if a case is needed.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 
 ## member_is_bot · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: <@222> is a bot, and cases are only for people.
+Quack didn't add a honeypot case for <@222>. <@222> is a bot, and cases are only for people.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Sam is a bot, and cases are only for people.
+Quack didn't add a honeypot case for Sam. Sam is a bot, and cases are only for people.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## member_is_bot · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: <@222> is a bot, and cases are only for people.
-plain:   Quack couldn't add a honeypot case for Sam: Sam is a bot, and cases are only for people.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+discord: Quack didn't add a honeypot case for <@222>. <@222> is a bot, and cases are only for people.
+plain:   Quack didn't add a honeypot case for Sam. Sam is a bot, and cases are only for people.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
 
 ## member_is_owner · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: <@222> owns the server.
+Quack didn't add a honeypot case for <@222>. <@222> owns this server. Quack doesn't add cases about the server owner.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Sam owns the server.
+Quack didn't add a honeypot case for Sam. Sam owns this server. Quack doesn't add cases about the server owner.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Quack doesn't add cases about the server owner.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## member_is_owner · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: <@222> owns the server.
-plain:   Quack couldn't add a honeypot case for Sam: Sam owns the server.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server.")]
+discord: Quack didn't add a honeypot case for <@222>. <@222> owns this server. Quack doesn't add cases about the server owner.
+plain:   Quack didn't add a honeypot case for Sam. Sam owns this server. Quack doesn't add cases about the server owner.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Quack doesn't add cases about the server owner.")]
 
 ## member_role_too_high · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: <@222>'s highest role is at or above yours. Ask a moderator with a higher role.
+Quack didn't add a honeypot case for <@222>. Review the post and use </case add:1001> if a case is needed.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Sam's highest role is at or above yours. Ask a moderator with a higher role.
+Quack didn't add a honeypot case for Sam. Review the post and use /case add if a case is needed.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above yours. Ask a moderator with a higher role.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## member_role_too_high · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: <@222>'s highest role is at or above yours. Ask a moderator with a higher role.
-plain:   Quack couldn't add a honeypot case for Sam: Sam's highest role is at or above yours. Ask a moderator with a higher role.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above yours. Ask a moderator with a higher role.")]
+discord: Quack didn't add a honeypot case for <@222>. Review the post and use </case add:1001> if a case is needed.
+plain:   Quack didn't add a honeypot case for Sam. Review the post and use /case add if a case is needed.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 
 ## quack_role_too_low · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
+Quack didn't add a honeypot case for <@222>. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
+Quack didn't add a honeypot case for Sam. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## quack_role_too_low · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
-plain:   Quack couldn't add a honeypot case for Sam: Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it.")]
+discord: Quack didn't add a honeypot case for <@222>. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack didn't add a honeypot case for Sam. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
 
 ## quack_missing_permission · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: this rule would time out <@222>, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+Quack didn't add a honeypot case for <@222>. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: this rule would time out Sam, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+Quack didn't add a honeypot case for Sam. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": this rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## quack_missing_permission · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: this rule would ban <@222>, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
-plain:   Quack couldn't add a honeypot case for Sam: this rule would ban Sam, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": this rule would ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.")]
+discord: Quack didn't add a honeypot case for <@222>. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack didn't add a honeypot case for Sam. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## member_is_administrator · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: this rule would time out <@222>, but Discord doesn't allow timeouts for members with the Administrator permission.
+Quack didn't add a honeypot case for <@222>. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: this rule would time out Sam, but Discord doesn't allow timeouts for members with the Administrator permission.
+Quack didn't add a honeypot case for Sam. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": this rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Discord doesn't allow timeouts for members with the Administrator permission.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## member_is_administrator · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: this rule would time out <@222>, but Discord doesn't allow timeouts for members with the Administrator permission.
-plain:   Quack couldn't add a honeypot case for Sam: this rule would time out Sam, but Discord doesn't allow timeouts for members with the Administrator permission.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": this rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Discord doesn't allow timeouts for members with the Administrator permission.")]
+discord: Quack didn't add a honeypot case for <@222>. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+plain:   Quack didn't add a honeypot case for Sam. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.")]
 
 ## rule_unavailable · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: the honeypot's rule is archived or no longer exists. Choose another rule in </setup:1004> or on the dashboard.
+Quack didn't add a honeypot case for <@222>. The honeypot rule is archived or no longer exists. Choose a rule in </setup:1004> or on the dashboard.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: the honeypot's rule is archived or no longer exists. Choose another rule in /setup or on the dashboard.
+Quack didn't add a honeypot case for Sam. The honeypot rule is archived or no longer exists. Choose a rule in /setup or on the dashboard.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": the honeypot's rule is archived or no longer exists. Choose another rule in "), Command(Setup), Fixed(" or on the dashboard.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The honeypot rule is archived or no longer exists. Choose a rule in "), Command(Setup), Fixed(" or on the dashboard.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## rule_unavailable · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: the honeypot's rule is archived or no longer exists. Choose another rule in </setup:1004> or on the dashboard.
-plain:   Quack couldn't add a honeypot case for Sam: the honeypot's rule is archived or no longer exists. Choose another rule in /setup or on the dashboard.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": the honeypot's rule is archived or no longer exists. Choose another rule in "), Command(Setup), Fixed(" or on the dashboard.")]
+discord: Quack didn't add a honeypot case for <@222>. The honeypot rule is archived or no longer exists. Choose a rule in </setup:1004> or on the dashboard.
+plain:   Quack didn't add a honeypot case for Sam. The honeypot rule is archived or no longer exists. Choose a rule in /setup or on the dashboard.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The honeypot rule is archived or no longer exists. Choose a rule in "), Command(Setup), Fixed(" or on the dashboard.")]
 
 ## policy_changed · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: the honeypot settings changed while Quack was adding it.
+Quack didn't add a honeypot case for <@222>. The honeypot settings changed while Quack was adding it. Review the post and use </case add:1001> if a case is needed.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: the honeypot settings changed while Quack was adding it.
+Quack didn't add a honeypot case for Sam. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": the honeypot settings changed while Quack was adding it.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The honeypot settings changed while Quack was adding it. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## policy_changed · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: the honeypot settings changed while Quack was adding it.
-plain:   Quack couldn't add a honeypot case for Sam: the honeypot settings changed while Quack was adding it.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": the honeypot settings changed while Quack was adding it.")]
+discord: Quack didn't add a honeypot case for <@222>. The honeypot settings changed while Quack was adding it. Review the post and use </case add:1001> if a case is needed.
+plain:   Quack didn't add a honeypot case for Sam. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The honeypot settings changed while Quack was adding it. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 
 ## discord_unavailable · post
 tone: Danger
 --- discord ---
-Quack couldn't add a honeypot case for <@222>: Discord wasn't available, so Quack gave up.
+Quack didn't add a honeypot case for <@222>. Quack couldn't reach Discord in time. Review the post and use </case add:1001> if a case is needed.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a honeypot case for Sam: Discord wasn't available, so Quack gave up.
+Quack didn't add a honeypot case for Sam. Quack couldn't reach Discord in time. Review the post and use /case add if a case is needed.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": Discord wasn't available, so Quack gave up.")]
+Text [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack couldn't reach Discord in time. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## discord_unavailable · dashboard text
-discord: Quack couldn't add a honeypot case for <@222>: Discord wasn't available, so Quack gave up.
-plain:   Quack couldn't add a honeypot case for Sam: Discord wasn't available, so Quack gave up.
-model:   [Fixed("Quack couldn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(": Discord wasn't available, so Quack gave up.")]
+discord: Quack didn't add a honeypot case for <@222>. Quack couldn't reach Discord in time. Review the post and use </case add:1001> if a case is needed.
+plain:   Quack didn't add a honeypot case for Sam. Quack couldn't reach Discord in time. Review the post and use /case add if a case is needed.
+model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack couldn't reach Discord in time. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 
-## quack_not_in_server · no names known
-discord: Quack couldn't add a honeypot case for a member: Quack isn't in this server.
-plain:   Quack couldn't add a honeypot case for a member: Quack isn't in this server.
-model:   [Fixed("Quack couldn't add a honeypot case for a member: Quack isn't in this server.")]
+## member_is_bot · no names known
+discord: Quack didn't add a honeypot case for a member. The member is a bot, and cases are only for people.
+plain:   Quack didn't add a honeypot case for a member. The member is a bot, and cases are only for people.
+model:   [Fixed("Quack didn't add a honeypot case for a member. The member is a bot, and cases are only for people.")]
 
-## quack_role_too_low · no names known
-discord: Quack couldn't add a honeypot case for a member: the member's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
-plain:   Quack couldn't add a honeypot case for a member: the member's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
-model:   [Fixed("Quack couldn't add a honeypot case for a member: the member's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.")]
+## policy_changed · no names known
+discord: Quack didn't add a honeypot case for a member. The honeypot settings changed while Quack was adding it. Review the post and use </case add:1001> if a case is needed.
+plain:   Quack didn't add a honeypot case for a member. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed.
+model:   [Fixed("Quack didn't add a honeypot case for a member. The honeypot settings changed while Quack was adding it. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]

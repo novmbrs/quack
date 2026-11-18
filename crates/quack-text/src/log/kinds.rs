@@ -9,12 +9,11 @@ use quack_core::modules::{
 use quack_core::permissions::{DiscordPermission, MemberRefusal, MemberRefusalCode};
 
 use super::LogFacts;
-use crate::action::permission;
-use crate::error::refusal_reason;
+use crate::action;
+use crate::error::{Voice, refusal_in};
 use crate::fmt;
-use crate::model::{Actor, Inline, Text};
+use crate::model::{Actor, Command, Text};
 use crate::setup::module_name;
-use crate::word;
 
 /// The quote under the lead sentence: the void reason of a staff void.
 pub fn quote(entry: &ModLogEntry, f: &LogFacts) -> Option<Text> {
@@ -39,16 +38,15 @@ const fn channel_setting(s: ChannelSetting) -> &'static str {
     }
 }
 
-/// Lowercases the first letter of a reused sentence, except the names
-/// Quack and Discord.
-fn lower_first(mut t: Text) -> Text {
-    if let Some(Inline::Fixed(s)) = t.0.first_mut()
-        && !s.starts_with("Quack")
-        && !s.starts_with("Discord")
-    {
-        *s = fmt::lower_first(s);
+/// "the ban", "removing the timeout": what a retry tries again.
+const fn retry_noun(kind: ActionKind) -> &'static str {
+    match kind {
+        ActionKind::Timeout => "the timeout",
+        ActionKind::Kick => "the kick",
+        ActionKind::Ban => "the ban",
+        ActionKind::RemoveTimeout => "removing the timeout",
+        ActionKind::Unban => "unbanning the member",
     }
-    t
 }
 
 fn refusal_from_code(code: MemberRefusalCode, permission: DiscordPermission) -> MemberRefusal {
@@ -86,24 +84,15 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
     };
     match entry {
         ModLogEntry::CaseCreated(d) => super::actions::case_created(d, f),
-        ModLogEntry::CaseCreateRefused(d) => {
-            let t = f.rule(member(Text::fixed("Quack couldn't add a case for ")).s(" under "));
-            match d.refusal {
-                MemberRefusalCode::QuackRoleTooLow => {
-                    t.s(": their highest role is at or above Quack's. Move Quack's role above it.")
-                }
-                MemberRefusalCode::QuackMissingPermission => t.s(format!(
-                    ": Quack needs the {} permission.",
-                    permission(needed(d.permission).permission())
-                )),
-                MemberRefusalCode::QuackNotInServer => t.s(" because Quack isn't in the server."),
-                other => t.s(": ").then(lower_first(refusal_reason(
-                    refusal_from_code(other, needed(d.permission)),
-                    f.member.as_ref(),
-                    f.action,
-                ))),
-            }
-        }
+        ModLogEntry::CaseCreateRefused(d) => f
+            .rule(member(Text::fixed("No case was added for ")).s(" under "))
+            .s(".")
+            .sentence(refusal_in(
+                refusal_from_code(d.refusal, needed(d.permission)),
+                f.member.as_ref(),
+                f.action,
+                Voice::Log(&f.actor),
+            )),
         ModLogEntry::CaseVoided(d) => match d.cause {
             VoidCause::Staff => {
                 member(case(actor().s(" voided "), d.case_number).s(" for ")).s(".")
@@ -128,33 +117,38 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::ActionDone(d) => super::actions::action_done(d, f),
         ModLogEntry::ActionFailed(d) => super::actions::action_failed(d, f),
         ModLogEntry::ActionRetryRequested(d) => case(
-            actor().s(format!(
-                " asked Quack to try the {} for ",
-                word::action_noun(d.kind)
-            )),
-            d.case_number,
-        )
-        .s(" again."),
-        ModLogEntry::ActionDismissed(d) => case(
-            actor().s(format!(
-                " dismissed the failed {} for ",
-                word::action_noun(d.kind)
-            )),
+            actor().s(format!(" chose to retry {} for ", retry_noun(d.kind))),
             d.case_number,
         )
         .s("."),
-        ModLogEntry::ActionUndoRequested(d) => match d.kind {
-            ActionKind::Unban | ActionKind::Ban => case(
-                member(actor().s(" asked Quack to unban ")).s(". The ban came from "),
-                d.case_number,
-            )
-            .s("."),
-            ActionKind::RemoveTimeout | ActionKind::Timeout | ActionKind::Kick => case(
-                member(actor().s(" asked Quack to remove ")).s("'s timeout from "),
-                d.case_number,
-            )
-            .s("."),
-        },
+        ModLogEntry::ActionDismissed(d) => case(
+            actor().s(format!(" dismissed {} for ", action::failure_noun(d.kind))),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::ActionUndoRequested(d) => {
+            let ban = matches!(d.kind, ActionKind::Unban | ActionKind::Ban);
+            match (&f.actor, ban) {
+                (Actor::Quack, true) => case(
+                    member(Text::fixed("Quack will check whether it can unban ")).s(" for "),
+                    d.case_number,
+                ),
+                (Actor::Quack, false) => case(
+                    member(Text::fixed("Quack will check whether it can remove "))
+                        .s("'s timeout for "),
+                    d.case_number,
+                ),
+                (Actor::Person(_), true) => case(
+                    member(actor().s(" asked Quack to unban ")).s(" for "),
+                    d.case_number,
+                ),
+                (Actor::Person(_), false) => case(
+                    member(actor().s(" asked Quack to remove ")).s("'s timeout for "),
+                    d.case_number,
+                ),
+            }
+            .s(".")
+        }
         ModLogEntry::ActionUndoSkipped(d) => super::actions::undo_skipped(d, f),
         ModLogEntry::DmSent(d) => super::actions::dm_sent(*d, f),
         ModLogEntry::DmFailed(d) => super::actions::dm_failed(d, f),
@@ -288,27 +282,34 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
             }
         }
         ModLogEntry::HoneypotCaseFailed(d) => {
+            let review = || {
+                Text::fixed("Review the post and use ")
+                    .command(Command::CaseAdd)
+                    .s(" if a case is needed.")
+            };
             let why = match d.refusal {
-                HoneypotRefusal::Member(code) => lower_first(refusal_reason(
+                HoneypotRefusal::Member(code) => refusal_in(
                     refusal_from_code(code, needed(None)),
                     f.member.as_ref(),
                     f.action,
-                )),
+                    Voice::Log(&Actor::Quack),
+                ),
                 HoneypotRefusal::RuleUnavailable => Text::fixed(
-                    "the honeypot's rule is archived or no longer exists. Choose another rule in ",
+                    "The honeypot rule is archived or no longer exists. Choose a rule in ",
                 )
-                .command(crate::model::Command::Setup)
+                .command(Command::Setup)
                 .s(" or on the dashboard."),
                 HoneypotRefusal::PolicyChanged => {
-                    Text::fixed("the honeypot settings changed while Quack was adding it.")
+                    Text::fixed("The honeypot settings changed while Quack was adding it.")
+                        .sentence(review())
                 }
                 HoneypotRefusal::DiscordUnavailable => {
-                    Text::fixed("Discord wasn't available, so Quack gave up.")
+                    Text::fixed("Quack couldn't reach Discord in time.").sentence(review())
                 }
             };
-            member(Text::fixed("Quack couldn't add a honeypot case for "))
-                .s(": ")
-                .then(why)
+            member(Text::fixed("Quack didn't add a honeypot case for "))
+                .s(".")
+                .sentence(why)
         }
         ModLogEntry::Legacy(d) => Text::fixed("Imported from the previous version of Quack: ")
             .user(legacy_action(&d.action))

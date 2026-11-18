@@ -2,36 +2,36 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## QuackMissingPermission(ModerateMembers)
-discord: No case was added. This rule would time out <@222>, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would time out Sam, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## QuackMissingPermission(ModerateMembers), no member known
-discord: No case was added. This rule would time out the member, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would time out the member, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would time out the member, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## QuackMissingPermission(KickMembers)
-discord: No case was added. This rule would kick <@222>, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would kick Sam, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would kick "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## QuackMissingPermission(KickMembers), no member known
-discord: No case was added. This rule would kick the member, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would kick the member, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would kick the member, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## QuackMissingPermission(BanMembers)
-discord: No case was added. This rule would ban <@222>, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would ban Sam, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## QuackMissingPermission(BanMembers), no member known
-discord: No case was added. This rule would ban the member, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would ban the member, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would ban the member, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 
 ## for a timeout level
-discord: No case was added. This rule would time out <@222>, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
-plain:   No case was added. This rule would time out Sam, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
-model:   [Fixed("No case was added. This rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]
+discord: No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added. This rule calls for a timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]

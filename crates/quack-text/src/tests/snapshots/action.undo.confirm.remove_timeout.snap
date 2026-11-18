@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Remove <@222>'s timeout from case #12?
-plain:   Remove Sam's timeout from case #12?
-model:   [Fixed("Remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout from case #12?")]
+discord: Remove <@222>'s timeout for case #12?
+plain:   Remove Sam's timeout for case #12?
+model:   [Fixed("Remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12?")]

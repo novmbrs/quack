@@ -4,16 +4,16 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## quack_missing_permission · post
 tone: Danger
 --- discord ---
-Quack couldn't add a case for <@222> under **Spam**: Quack needs the Kick Members permission.
+No case was added for <@222> under **Spam**. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack couldn't add a case for Sam under Spam: Quack needs the Kick Members permission.
+No case was added for Sam under Spam. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack couldn't add a case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(": Quack needs the Kick Members permission.")]
+Text [Fixed("No case was added for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(". This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## quack_missing_permission · dashboard text
-discord: Quack couldn't add a case for <@222> under **Spam**: Quack needs the Kick Members permission.
-plain:   Quack couldn't add a case for Sam under Spam: Quack needs the Kick Members permission.
-model:   [Fixed("Quack couldn't add a case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(": Quack needs the Kick Members permission.")]
+discord: No case was added for <@222> under **Spam**. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   No case was added for Sam under Spam. This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("No case was added for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(". This rule calls for a kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]

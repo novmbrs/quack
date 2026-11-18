@@ -12,6 +12,7 @@
 //! refusal is matched exhaustively, so a new variant does not compile until
 //! it has words. Every message is snapshot-tested.
 
+pub mod access;
 pub mod action;
 pub mod actions;
 pub mod activity;

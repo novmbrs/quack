@@ -51,3 +51,8 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack turned off the honeypot because its channel was deleted.
 plain:   Quack turned off the honeypot because its channel was deleted.
 model:   [Fixed("Quack turned off the honeypot because its channel was deleted.")]
+
+## ActivityLog · no names known
+discord: Quack turned off the server activity log because its channel was deleted.
+plain:   Quack turned off the server activity log because its channel was deleted.
+model:   [Fixed("Quack turned off the server activity log because its channel was deleted.")]

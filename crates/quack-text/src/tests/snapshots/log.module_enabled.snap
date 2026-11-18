@@ -52,7 +52,7 @@ discord: <@333> turned on the honeypot.
 plain:   Ana turned on the honeypot.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned on the honeypot.")]
 
-## Honeypot · no names known
-discord: Quack turned on the honeypot.
-plain:   Quack turned on the honeypot.
-model:   [Fixed("Quack turned on the honeypot.")]
+## Tickets · no names known
+discord: Quack turned on tickets.
+plain:   Quack turned on tickets.
+model:   [Fixed("Quack turned on tickets.")]

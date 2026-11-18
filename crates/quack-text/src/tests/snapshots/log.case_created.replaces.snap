@@ -4,16 +4,16 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## ban, replacing · post
 tone: Neutral
 --- discord ---
-<@333> added **[case #12](<https://quack.example/guilds/111/cases/12>)** for <@222> under **Spam**: level 2 (starts at case 3), case count 4, ban and delete the last day of messages. It replaces case #9.
+<@333> added **[case #12](<https://quack.example/guilds/111/cases/12>)** for <@222> under **Spam** (level 2, case count 4). Action for this case: ban and delete the last day of messages. It replaces case #9.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Ana added case #12 for Sam under Spam: level 2 (starts at case 3), case count 4, ban and delete the last day of messages. It replaces case #9.
+Ana added case #12 for Sam under Spam (level 2, case count 4). Action for this case: ban and delete the last day of messages. It replaces case #9.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" added "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(": level 2 (starts at case 3), case count 4, ban and delete the last day of messages. It replaces case #9.")]
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" added "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(" (level 2, case count 4). Action for this case: ban and delete the last day of messages. It replaces case #9.")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## ban, replacing · dashboard text
-discord: <@333> added case #12 for <@222> under **Spam**: level 2 (starts at case 3), case count 4, ban and delete the last day of messages. It replaces case #9.
-plain:   Ana added case #12 for Sam under Spam: level 2 (starts at case 3), case count 4, ban and delete the last day of messages. It replaces case #9.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" added case #12 for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(": level 2 (starts at case 3), case count 4, ban and delete the last day of messages. It replaces case #9.")]
+discord: <@333> added case #12 for <@222> under **Spam** (level 2, case count 4). Action for this case: ban and delete the last day of messages. It replaces case #9.
+plain:   Ana added case #12 for Sam under Spam (level 2, case count 4). Action for this case: ban and delete the last day of messages. It replaces case #9.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" added case #12 for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(" (level 2, case count 4). Action for this case: ban and delete the last day of messages. It replaces case #9.")]

@@ -68,8 +68,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack couldn't send <@222> a DM about the appeal for case #12. Discord didn't allow the DM. <@222> can sign in to the Quack dashboard to see the appeal.
 plain:   Quack couldn't send Sam a DM about the appeal for case #12. Discord didn't allow the DM. Sam can sign in to the Quack dashboard to see the appeal.
 model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about the appeal for case #12. Discord didn't allow the DM. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the appeal.")]
-
-## DmsClosed · no names known
-discord: Quack couldn't send the member a DM about their appeal. Discord didn't allow the DM. The member can sign in to the Quack dashboard to see the appeal.
-plain:   Quack couldn't send the member a DM about their appeal. Discord didn't allow the DM. The member can sign in to the Quack dashboard to see the appeal.
-model:   [Fixed("Quack couldn't send the member a DM about their appeal. Discord didn't allow the DM. The member can sign in to the Quack dashboard to see the appeal.")]

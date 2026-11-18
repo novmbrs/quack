@@ -12,8 +12,71 @@ use crate::rules::{self, RuleRow};
 use crate::tests::fixtures::*;
 use crate::word::{self, CaseOption, Outcome};
 
-pub fn samples() -> Vec<Sample> {
+fn access_samples() -> Vec<Sample> {
+    use crate::access::{self, Reader};
+    use quack_core::permissions::Permission;
+    let one = [Permission::BanMembers];
+    let two = [Permission::ManageChannels, Permission::ManageThreads];
     let mut v = Vec::new();
+    for (name, reader) in [
+        ("staff", Reader::Staff),
+        ("administrator", Reader::Administrator),
+    ] {
+        v.push(text(
+            "access.quack_role_needs",
+            format!("{name}, one"),
+            access::quack_role_needs(&one, reader),
+        ));
+        v.push(text(
+            "access.quack_role_needs",
+            format!("{name}, two"),
+            access::quack_role_needs(&two, reader),
+        ));
+        v.push(text(
+            "access.quack_channel_needs",
+            format!("{name}, one"),
+            access::quack_channel_needs(&channel("general"), &[Permission::ViewChannel], reader),
+        ));
+        v.push(text(
+            "access.quack_channel_needs",
+            format!("{name}, two"),
+            access::quack_channel_needs(
+                &channel("general"),
+                &[Permission::ViewChannel, Permission::ReadMessageHistory],
+                reader,
+            ),
+        ));
+    }
+    v.push(text(
+        "access.quack_role_too_low",
+        "",
+        access::quack_role_too_low(Some(&sam())),
+    ));
+    v.push(text(
+        "access.quack_role_too_low",
+        "no name",
+        access::quack_role_too_low(None),
+    ));
+    v.push(text(
+        "access.your_role_too_low",
+        "",
+        access::your_role_too_low(Some(&sam())),
+    ));
+    v.push(text(
+        "access.your_role_too_low",
+        "no name",
+        access::your_role_too_low(None),
+    ));
+    v.push(text(
+        "access.quack_not_in_server",
+        "",
+        access::quack_not_in_server(),
+    ));
+    v
+}
+
+pub fn samples() -> Vec<Sample> {
+    let mut v = access_samples();
     let ids = [
         "command.case",
         "command.case.add",

@@ -33,7 +33,10 @@ const CARD_IDS: &[&str] = &[
     "case.card.appeal.accepted",
     "case.card.appeal.rejected",
     "case.card.appeal.closed",
-    "case.card.failed_actions",
+    "case.card.controls.retry_dismiss",
+    "case.card.controls.retry",
+    "case.card.controls.dismiss",
+    "case.card.trimmed",
     "case.card.imported_action",
     "case.card.footer",
     "case.card.footer_honeypot",
@@ -122,6 +125,21 @@ pub fn samples() -> Vec<Sample> {
         "ban unconfirmed",
         Out::Msg(case::card(&unconfirmed)),
     ));
+    for (name, retry, dismiss) in [
+        ("ban unconfirmed, only Retry allowed", true, false),
+        (
+            "ban unconfirmed on a voided case, only Dismiss allowed",
+            false,
+            true,
+        ),
+    ] {
+        let mut c = unconfirmed.clone();
+        if let Some(a) = c.action.as_mut() {
+            a.can_retry = retry;
+            a.can_dismiss = dismiss;
+        }
+        v.push(sample("case.card", name, Out::Msg(case::card(&c))));
+    }
     v.push(text("case.receipt.posted", "", case::receipt_posted(12)));
     v.push(text(
         "case.receipt.post_failed",
@@ -373,6 +391,7 @@ pub fn samples() -> Vec<Sample> {
                 "case.void.undo.remove_timeout",
                 "case.void.undo.unban",
                 "case.void.cancelled_action",
+                "case.void.check_outcome",
                 "case.void.running_action",
                 "case.void.running_kick",
                 "case.void.done_kick",

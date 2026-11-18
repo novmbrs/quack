@@ -8,6 +8,7 @@ use quack_core::action::ActionKind;
 use quack_core::permissions::Capability;
 
 pub use domain::{ErrorFacts, Scene, for_domain};
+pub(crate) use refusal::{Voice, refusal_in};
 pub use refusal::{refusal, refusal_reason};
 
 use crate::model::{Command, Person, Text};
@@ -45,7 +46,7 @@ pub fn actor_not_in_server() -> Text {
 
 /// `error.quack_not_in_server`.
 pub fn quack_not_in_server() -> Text {
-    Text::fixed("Quack isn't in this server. Ask an administrator to add Quack again.")
+    crate::access::quack_not_in_server()
 }
 
 /// `error.discord_unavailable` (also `api.discord_unavailable`).

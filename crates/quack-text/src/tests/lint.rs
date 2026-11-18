@@ -178,10 +178,12 @@ const BANNED: &[&str] = &[
     "disabled",
 ];
 
-/// Legitimate uses: Discord's own permission and UI names, and two fixed
+/// Legitimate uses: Discord's own permission and UI names (where staff
+/// check a kick), and two fixed
 /// phrases (a DM's "for your records", the starter rule notice setting).
 const ALLOWED: &[&str] = &[
     "View Audit Log",
+    "Server Settings → Audit Log",
     "Deny View Channel",
     "for your records",
     "starter rule notice",

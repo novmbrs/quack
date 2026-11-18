@@ -160,13 +160,11 @@ fn evidence_line(e: EvidenceSummary) -> Option<Text> {
 
 fn appeal_line(state: AppealState, member: &Person) -> Text {
     match state {
-        AppealState::Pending => Text::fixed("waiting for a decision."),
-        AppealState::NeedsInformation => Text::fixed("waiting for ")
-            .person(member)
-            .s(" to add information."),
-        AppealState::Accepted => Text::fixed("accepted."),
-        AppealState::Rejected => Text::fixed("rejected."),
-        AppealState::Closed => Text::fixed("closed."),
+        AppealState::Pending => Text::fixed("Waiting for a decision."),
+        AppealState::NeedsInformation => Text::fixed("Waiting for ").person(member).s(" to reply."),
+        AppealState::Accepted => Text::fixed("Accepted."),
+        AppealState::Rejected => Text::fixed("Rejected. The case still counts."),
+        AppealState::Closed => Text::fixed("Closed."),
     }
 }
 
@@ -181,19 +179,53 @@ fn needs_decision(a: &CardAction) -> bool {
     a.view.state == ActionState::Failed && a.view.dismissed.is_none()
 }
 
+/// `case.card.controls.*`: what the Retry and Dismiss buttons under the
+/// card do, only when they are there.
+fn controls_line(a: &CardAction) -> Option<Text> {
+    let retry = word::retry_label(a.view.kind);
+    let dismiss = word::dismiss_label(a.view.kind);
+    match (a.can_retry, a.can_dismiss) {
+        (true, true) => Some(Text::fixed(format!(
+            "To try again, select {retry}. To take it off the failed actions list, select {dismiss}."
+        ))),
+        (true, false) => Some(Text::fixed(format!("To try again, select {retry}."))),
+        (false, true) => Some(Text::fixed(format!(
+            "To take this failure off the failed actions list, select {dismiss}. The case keeps its history."
+        ))),
+        (false, false) => None,
+    }
+}
+
+/// The card's buttons: a failed action's Retry and Dismiss first, so they
+/// are easy to find, then the case's own controls.
 fn buttons(c: &CaseCard) -> Vec<Button> {
-    let mut b = vec![
-        Button::new(
-            "Edit context",
-            ButtonStyle::Secondary,
-            ButtonAction::EditContext(c.case),
-        ),
-        Button::new(
-            "Add evidence",
-            ButtonStyle::Secondary,
-            ButtonAction::AddEvidence(c.case),
-        ),
-    ];
+    let mut b = Vec::new();
+    for a in c.action.iter().chain(c.undo.iter()) {
+        if a.can_retry {
+            b.push(Button::new(
+                word::retry_label(a.view.kind),
+                ButtonStyle::Primary,
+                ButtonAction::RetryAction(a.id),
+            ));
+        }
+        if a.can_dismiss {
+            b.push(Button::new(
+                word::dismiss_label(a.view.kind),
+                ButtonStyle::Secondary,
+                ButtonAction::DismissAction(a.id),
+            ));
+        }
+    }
+    b.push(Button::new(
+        "Edit context",
+        ButtonStyle::Secondary,
+        ButtonAction::EditContext(c.case),
+    ));
+    b.push(Button::new(
+        "Add evidence",
+        ButtonStyle::Secondary,
+        ButtonAction::AddEvidence(c.case),
+    ));
     if c.evidence.any() {
         b.push(Button::new(
             "View evidence",
@@ -218,22 +250,6 @@ fn buttons(c: &CaseCard) -> Vec<Button> {
             ButtonStyle::Danger,
             ButtonAction::VoidCase(c.case),
         ));
-    }
-    for a in c.action.iter().chain(c.undo.iter()) {
-        if a.can_retry {
-            b.push(Button::new(
-                word::retry_label(a.view.kind),
-                ButtonStyle::Primary,
-                ButtonAction::RetryAction(a.id),
-            ));
-        }
-        if a.can_dismiss {
-            b.push(Button::new(
-                word::dismiss_label(a.view.kind),
-                ButtonStyle::Secondary,
-                ButtonAction::DismissAction(a.id),
-            ));
-        }
     }
     let undo = c
         .action
@@ -281,6 +297,8 @@ fn footer(c: &CaseCard) -> Option<Text> {
 }
 
 /// `case.card.*`: the staff card (also the private receipt). Ephemeral only.
+/// What staff act on (the action, its controls, the DM, the void, the
+/// appeal) comes before the case context, so trimming drops context first.
 pub fn card(c: &CaseCard) -> Msg {
     let imported = c.source == CaseSource::Imported;
     let mut msg = Msg::new(tone(c.action.as_ref().map(|a| &a.view), c.voided.is_some()))
@@ -306,10 +324,38 @@ pub fn card(c: &CaseCard) -> Msg {
                 action::sentence(&u.view, &c.member, Detail::Full),
             ));
         }
+        for a in c.action.iter().chain(c.undo.iter()) {
+            if let Some(line) = controls_line(a) {
+                msg = msg.para(line);
+            }
+        }
         msg = msg.block(field(
             "DM",
             dm::sentence(c.dm.as_ref(), &c.member, c.number),
         ));
+    }
+    if let Some(v) = &c.voided {
+        msg = msg
+            .para(
+                Text::fixed(format!(
+                    "Case #{} was voided. It no longer counts. ",
+                    c.number
+                ))
+                .actor(&v.by)
+                .s(" voided it ")
+                .time(v.at, TimeStyle::Relative)
+                .s("."),
+            )
+            .block(Block::Quote(Text::new().user(&v.reason)));
+    }
+    if let Some(n) = c.replaces {
+        msg = msg.para(Text::fixed(format!("Replaces case #{n}.")));
+    }
+    if let Some(n) = c.replaced_by {
+        msg = msg.para(Text::fixed(format!("Replaced by case #{n}.")));
+    }
+    if let Some(state) = c.appeal {
+        msg = msg.block(field("Appeal", appeal_line(state, &c.member)));
     }
     if let Some(line) = evidence_line(c.evidence) {
         msg = msg.block(field("Evidence", line));
@@ -323,31 +369,6 @@ pub fn card(c: &CaseCard) -> Msg {
             });
         }
     }
-    if let Some(v) = &c.voided {
-        msg = msg
-            .para(
-                Text::fixed("Voided by ")
-                    .actor(&v.by)
-                    .s(" ")
-                    .time(v.at, TimeStyle::Relative)
-                    .s("."),
-            )
-            .block(Block::Quote(Text::new().user(&v.reason)));
-    }
-    if let Some(n) = c.replaces {
-        msg = msg.para(Text::fixed(format!("Replaces case #{n}.")));
-    }
-    if let Some(n) = c.replaced_by {
-        msg = msg.para(Text::fixed(format!("Replaced by case #{n}.")));
-    }
-    if let Some(state) = c.appeal {
-        msg = msg.block(field("Appeal", appeal_line(state, &c.member)));
-    }
-    if c.action.iter().chain(c.undo.iter()).any(needs_decision) {
-        msg = msg.para(Text::fixed(
-            "A failed action needs a decision. Retry or dismiss it here, or see every failed action on the dashboard.",
-        ));
-    }
     if let (true, Some(i)) = (imported, &c.imported) {
         msg = msg.block(Block::Subtext(
             Text::fixed("The original Quack v4 action was ")
@@ -358,5 +379,8 @@ pub fn card(c: &CaseCard) -> Msg {
     if let Some(f) = footer(c) {
         msg = msg.block(Block::Subtext(f));
     }
-    msg.buttons(buttons(c))
+    msg.when_trimmed(Text::fixed(
+        "Open this case on the dashboard for the full details.",
+    ))
+    .buttons(buttons(c))
 }

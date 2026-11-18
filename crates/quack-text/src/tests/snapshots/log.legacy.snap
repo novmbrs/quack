@@ -51,8 +51,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Imported from the previous version of Quack: rules DMs moderators and administrators.
 plain:   Imported from the previous version of Quack: rules DMs moderators and administrators.
 model:   [Fixed("Imported from the previous version of Quack: "), User("rules DMs moderators and administrators"), Fixed(".")]
-
-## audit_log.export · no names known
-discord: Imported from the previous version of Quack: moderation log export.
-plain:   Imported from the previous version of Quack: moderation log export.
-model:   [Fixed("Imported from the previous version of Quack: "), User("moderation log export"), Fixed(".")]

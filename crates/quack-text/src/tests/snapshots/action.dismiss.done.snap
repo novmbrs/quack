@@ -2,26 +2,26 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Timeout
-discord: The failed timeout for case #12 is dismissed. The case keeps its failed attempts.
-plain:   The failed timeout for case #12 is dismissed. The case keeps its failed attempts.
-model:   [Fixed("The failed timeout for case #12 is dismissed. The case keeps its failed attempts.")]
+discord: The timeout failure for case #12 was dismissed. The case keeps its history.
+plain:   The timeout failure for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The timeout failure for case #12 was dismissed. The case keeps its history.")]
 
 ## Kick
-discord: The failed kick for case #12 is dismissed. The case keeps its failed attempts.
-plain:   The failed kick for case #12 is dismissed. The case keeps its failed attempts.
-model:   [Fixed("The failed kick for case #12 is dismissed. The case keeps its failed attempts.")]
+discord: The kick failure for case #12 was dismissed. The case keeps its history.
+plain:   The kick failure for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The kick failure for case #12 was dismissed. The case keeps its history.")]
 
 ## Ban
-discord: The failed ban for case #12 is dismissed. The case keeps its failed attempts.
-plain:   The failed ban for case #12 is dismissed. The case keeps its failed attempts.
-model:   [Fixed("The failed ban for case #12 is dismissed. The case keeps its failed attempts.")]
+discord: The ban failure for case #12 was dismissed. The case keeps its history.
+plain:   The ban failure for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The ban failure for case #12 was dismissed. The case keeps its history.")]
 
 ## RemoveTimeout
-discord: The failed remove timeout action for case #12 is dismissed. The case keeps its failed attempts.
-plain:   The failed remove timeout action for case #12 is dismissed. The case keeps its failed attempts.
-model:   [Fixed("The failed remove timeout action for case #12 is dismissed. The case keeps its failed attempts.")]
+discord: The failed attempt to remove the timeout for case #12 was dismissed. The case keeps its history.
+plain:   The failed attempt to remove the timeout for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The failed attempt to remove the timeout for case #12 was dismissed. The case keeps its history.")]
 
 ## Unban
-discord: The failed unban for case #12 is dismissed. The case keeps its failed attempts.
-plain:   The failed unban for case #12 is dismissed. The case keeps its failed attempts.
-model:   [Fixed("The failed unban for case #12 is dismissed. The case keeps its failed attempts.")]
+discord: The failed attempt to unban the member for case #12 was dismissed. The case keeps its history.
+plain:   The failed attempt to unban the member for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The failed attempt to unban the member for case #12 was dismissed. The case keeps its history.")]

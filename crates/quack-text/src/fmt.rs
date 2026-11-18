@@ -136,9 +136,9 @@ pub fn case_ref(number: u64) -> String {
     format!("case #{number}")
 }
 
-/// "level 2 (starts at case 3)".
+/// "level 2 (from a case count of 3)": "case 3" would read as case #3.
 pub fn level(index: u8, from_case_count: u32) -> String {
-    format!("level {index} (starts at case {from_case_count})")
+    format!("level {index} (from a case count of {from_case_count})")
 }
 
 /// Joins items as "a", "a and b", or "a, b, and c" (`last` is "and" or "or").
@@ -278,7 +278,7 @@ mod tests {
         assert_eq!(list(&s(&["a", "b"]), "or"), "a or b");
         assert_eq!(list(&s(&["a", "b", "c"]), "and"), "a, b, and c");
         assert_eq!(case_ref(12), "case #12");
-        assert_eq!(level(2, 3), "level 2 (starts at case 3)");
+        assert_eq!(level(2, 3), "level 2 (from a case count of 3)");
     }
 
     #[test]

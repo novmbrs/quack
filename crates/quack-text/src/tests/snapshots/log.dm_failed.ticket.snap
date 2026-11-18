@@ -68,8 +68,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack couldn't send <@222> a DM with the ticket transcript. Discord didn't allow the DM. Staff can open the ticket on the dashboard to check for the transcript.
 plain:   Quack couldn't send Sam a DM with the ticket transcript. Discord didn't allow the DM. Staff can open the ticket on the dashboard to check for the transcript.
 model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM with the ticket transcript. Discord didn't allow the DM. Staff can open the ticket on the dashboard to check for the transcript.")]
-
-## DiscordUnavailable · no names known
-discord: Quack couldn't send the member a DM with the ticket transcript in time. Staff can open the ticket on the dashboard to check for the transcript.
-plain:   Quack couldn't send the member a DM with the ticket transcript in time. Staff can open the ticket on the dashboard to check for the transcript.
-model:   [Fixed("Quack couldn't send the member a DM with the ticket transcript in time. Staff can open the ticket on the dashboard to check for the transcript.")]

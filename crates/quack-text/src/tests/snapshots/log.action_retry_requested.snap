@@ -4,84 +4,89 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## Timeout · post
 tone: Neutral
 --- discord ---
-<@333> asked Quack to try the timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)** again.
+<@333> chose to retry the timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Ana asked Quack to try the timeout for case #12 again.
+Ana chose to retry the timeout for case #12.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" again.")]
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry the timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## Timeout · dashboard text
-discord: <@333> asked Quack to try the timeout for case #12 again.
-plain:   Ana asked Quack to try the timeout for case #12 again.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the timeout for case #12 again.")]
+discord: <@333> chose to retry the timeout for case #12.
+plain:   Ana chose to retry the timeout for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry the timeout for case #12.")]
 
 ## Kick · post
 tone: Neutral
 --- discord ---
-<@333> asked Quack to try the kick for **[case #12](<https://quack.example/guilds/111/cases/12>)** again.
+<@333> chose to retry the kick for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Ana asked Quack to try the kick for case #12 again.
+Ana chose to retry the kick for case #12.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the kick for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" again.")]
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry the kick for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## Kick · dashboard text
-discord: <@333> asked Quack to try the kick for case #12 again.
-plain:   Ana asked Quack to try the kick for case #12 again.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the kick for case #12 again.")]
+discord: <@333> chose to retry the kick for case #12.
+plain:   Ana chose to retry the kick for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry the kick for case #12.")]
 
 ## Ban · post
 tone: Neutral
 --- discord ---
-<@333> asked Quack to try the ban for **[case #12](<https://quack.example/guilds/111/cases/12>)** again.
+<@333> chose to retry the ban for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Ana asked Quack to try the ban for case #12 again.
+Ana chose to retry the ban for case #12.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the ban for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" again.")]
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry the ban for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## Ban · dashboard text
-discord: <@333> asked Quack to try the ban for case #12 again.
-plain:   Ana asked Quack to try the ban for case #12 again.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the ban for case #12 again.")]
+discord: <@333> chose to retry the ban for case #12.
+plain:   Ana chose to retry the ban for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry the ban for case #12.")]
 
 ## RemoveTimeout · post
 tone: Neutral
 --- discord ---
-<@333> asked Quack to try the remove timeout action for **[case #12](<https://quack.example/guilds/111/cases/12>)** again.
+<@333> chose to retry removing the timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Ana asked Quack to try the remove timeout action for case #12 again.
+Ana chose to retry removing the timeout for case #12.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the remove timeout action for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" again.")]
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry removing the timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## RemoveTimeout · dashboard text
-discord: <@333> asked Quack to try the remove timeout action for case #12 again.
-plain:   Ana asked Quack to try the remove timeout action for case #12 again.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the remove timeout action for case #12 again.")]
+discord: <@333> chose to retry removing the timeout for case #12.
+plain:   Ana chose to retry removing the timeout for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry removing the timeout for case #12.")]
 
 ## Unban · post
 tone: Neutral
 --- discord ---
-<@333> asked Quack to try the unban for **[case #12](<https://quack.example/guilds/111/cases/12>)** again.
+<@333> chose to retry unbanning the member for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Ana asked Quack to try the unban for case #12 again.
+Ana chose to retry unbanning the member for case #12.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the unban for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" again.")]
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry unbanning the member for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## Unban · dashboard text
-discord: <@333> asked Quack to try the unban for case #12 again.
-plain:   Ana asked Quack to try the unban for case #12 again.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked Quack to try the unban for case #12 again.")]
+discord: <@333> chose to retry unbanning the member for case #12.
+plain:   Ana chose to retry unbanning the member for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry unbanning the member for case #12.")]
+
+## Unban · no names known
+discord: Quack chose to retry unbanning the member for case #12.
+plain:   Quack chose to retry unbanning the member for case #12.
+model:   [Fixed("Quack chose to retry unbanning the member for case #12.")]

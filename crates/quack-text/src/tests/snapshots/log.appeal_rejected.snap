@@ -17,8 +17,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@333> rejected <@222>'s appeal for case #12.
 plain:   Ana rejected Sam's appeal for case #12.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" rejected "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s appeal for case #12.")]
-
-##  · no names known
-discord: Quack rejected a member's appeal for case #12.
-plain:   Quack rejected a member's appeal for case #12.
-model:   [Fixed("Quack rejected a member's appeal for case #12.")]

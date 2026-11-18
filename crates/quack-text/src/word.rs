@@ -31,22 +31,23 @@ pub const fn action_noun(kind: ActionKind) -> &'static str {
     }
 }
 
-/// `case.button.retry`: "Retry ban"; a remove timeout is "Retry timeout
-/// removal", since "Retry remove timeout" doesn't read.
+/// `case.button.retry`: "Retry ban", "Retry removing timeout".
 pub fn retry_label(kind: ActionKind) -> String {
-    format!("Retry {}", button_noun(kind))
-}
-
-/// `case.button.dismiss`: "Dismiss ban", "Dismiss timeout removal".
-pub fn dismiss_label(kind: ActionKind) -> String {
-    format!("Dismiss {}", button_noun(kind))
-}
-
-const fn button_noun(kind: ActionKind) -> &'static str {
     match kind {
-        ActionKind::RemoveTimeout => "timeout removal",
+        ActionKind::RemoveTimeout => "Retry removing timeout".to_owned(),
         ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban | ActionKind::Unban => {
-            action(kind)
+            format!("Retry {}", action(kind))
+        }
+    }
+}
+
+/// `case.button.dismiss`: "Dismiss failed ban", so it can't read as
+/// undoing the ban itself.
+pub fn dismiss_label(kind: ActionKind) -> String {
+    match kind {
+        ActionKind::RemoveTimeout => "Dismiss failed timeout removal".to_owned(),
+        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban | ActionKind::Unban => {
+            format!("Dismiss failed {}", action(kind))
         }
     }
 }

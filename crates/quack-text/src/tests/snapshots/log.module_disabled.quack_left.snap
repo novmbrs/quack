@@ -51,8 +51,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack turned off the honeypot because Quack left the server.
 plain:   Quack turned off the honeypot because Quack left the server.
 model:   [Fixed("Quack turned off the honeypot because Quack left the server.")]
-
-## Tickets · no names known
-discord: Quack turned off tickets because Quack left the server.
-plain:   Quack turned off tickets because Quack left the server.
-model:   [Fixed("Quack turned off tickets because Quack left the server.")]

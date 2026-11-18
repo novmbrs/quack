@@ -17,8 +17,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack sent <@222> a DM about the appeal for case #12.
 plain:   Quack sent Sam a DM about the appeal for case #12.
 model:   [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about the appeal for case #12.")]
-
-##  · no names known
-discord: Quack sent the member a DM about their appeal.
-plain:   Quack sent the member a DM about their appeal.
-model:   [Fixed("Quack sent the member a DM about their appeal.")]

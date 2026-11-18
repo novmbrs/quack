@@ -12,7 +12,6 @@ use quack_core::rule::LevelAction;
 use super::LogFacts;
 use crate::action;
 use crate::dm::{self, DmAbout};
-use crate::fmt;
 use crate::model::{Text, TimeStyle};
 use crate::word;
 
@@ -33,152 +32,149 @@ fn level_action(
     }
 }
 
-fn ends(f: &LogFacts, t: Text) -> Text {
-    match f.timeout_ends_at {
-        Some(at) => t.s(" until ").time(at, TimeStyle::FullRelative),
-        None => t,
-    }
-}
-
 pub(super) fn case_created(d: &CaseCreatedDetail, f: &LogFacts) -> Text {
-    let actor = || Text::new().actor(&f.actor);
     let member = |t: Text| f.member(t);
     let case = |t: Text, n: u64| f.case(t, n);
-    {
-        let outcome = word::level_outcome(level_action(
-            d.action_kind,
-            d.timeout_seconds,
-            d.ban_delete_message_seconds,
-        ));
-        let t = if d.source == CaseSource::Honeypot {
-            f.rule(member(case(Text::fixed("Quack added "), d.case_number).s(" for ")).s(" under "))
-                .s(format!(
-                    " because they posted in the honeypot channel: {outcome}."
-                ))
-        } else {
-            f.rule(member(case(actor().s(" added "), d.case_number).s(" for ")).s(" under "))
-                .s(format!(
-                    ": {}, case count {}, {outcome}.",
-                    fmt::level(d.level_index, d.level_from_case_count),
-                    d.case_count
-                ))
-        };
-        match d.replaces_case_number {
-            Some(n) => t.s(format!(" It replaces case #{n}.")),
-            None => t,
-        }
+    let outcome = match level_action(
+        d.action_kind,
+        d.timeout_seconds,
+        d.ban_delete_message_seconds,
+    ) {
+        None => "This case is a warning.".to_owned(),
+        action => format!("Action for this case: {}.", word::level_outcome(action)),
+    };
+    let t = if d.source == CaseSource::Honeypot {
+        let t = f
+            .rule(member(case(Text::fixed("Quack added "), d.case_number).s(" for ")).s(" under "));
+        member(t.s(" after ")).s(" posted in the honeypot channel.")
+    } else {
+        f.rule(
+            member(case(Text::new().actor(&f.actor).s(" added "), d.case_number).s(" for "))
+                .s(" under "),
+        )
+        .s(format!(
+            " (level {}, case count {}).",
+            d.level_index, d.case_count
+        ))
+    };
+    let t = t.s(" ").s(outcome);
+    match d.replaces_case_number {
+        Some(n) => t.s(format!(" It replaces case #{n}.")),
+        None => t,
     }
 }
 
 pub(super) fn action_done(d: &ActionDoneDetail, f: &LogFacts) -> Text {
     let member = |t: Text| f.member(t);
     let case = |t: Text, n: u64| f.case(t, n);
-    {
-        let n = d.case_number;
-        match (d.kind, d.no_change) {
-            (ActionKind::Timeout, false) => case(
-                ends(f, member(Text::fixed("Quack timed out "))).s(" for "),
+    let n = d.case_number;
+    match (d.kind, d.no_change) {
+        (ActionKind::Timeout, false) => match f.timeout_ends_at {
+            Some(at) => case(
+                member(Text::fixed("Quack set "))
+                    .s("'s timeout to end ")
+                    .time(at, TimeStyle::FullRelative)
+                    .s(" for "),
                 n,
-            )
-            .s("."),
-            (ActionKind::Timeout, true) => {
-                let t = ends(f, member(Text::new()).s(" was already timed out"));
-                let t = if f.timeout_ends_at.is_some() {
-                    t.s(" or later")
-                } else {
-                    t
-                };
-                case(t.s(" when Quack tried to time them out for "), n).s(".")
-            }
-            (ActionKind::Kick, false) => case(
-                member(Text::fixed("Quack removed ")).s(" from the server for "),
-                n,
-            )
-            .s("."),
-            (ActionKind::Kick, true) => case(
-                member(Text::new()).s(" had already left when Quack tried to remove them for "),
-                n,
-            )
-            .s("."),
-            (ActionKind::Ban, false) => {
-                case(member(Text::fixed("Quack banned ")).s(" for "), n).s(".")
-            }
-            (ActionKind::Ban, true) => case(
-                member(Text::new()).s(" was already banned when Quack tried to ban them for "),
-                n,
-            )
-            .s("."),
-            (ActionKind::RemoveTimeout, false) => case(
-                member(Text::fixed("Quack removed ")).s("'s timeout from "),
-                n,
-            )
-            .s("."),
-            (ActionKind::RemoveTimeout, true) => {
-                case(member(Text::new()).s("'s timeout from "), n).s(" had already ended.")
-            }
-            (ActionKind::Unban, false) => case(
-                member(Text::fixed("Quack unbanned ")).s(". The ban came from "),
-                n,
-            )
-            .s("."),
-            (ActionKind::Unban, true) => case(
-                member(Text::new())
-                    .s(" wasn't banned anymore when Quack tried to undo the ban from "),
-                n,
-            )
-            .s("."),
+            ),
+            None => case(member(Text::fixed("Quack timed out ")).s(" for "), n),
         }
+        .s("."),
+        (ActionKind::Timeout, true) => {
+            let t = member(Text::new()).s(" already had a timeout");
+            let t = match f.timeout_ends_at {
+                Some(at) => t.s(" ending at or after ").time(at, TimeStyle::Full),
+                None => t,
+            };
+            case(t.s(", so Quack left it in place for "), n).s(".")
+        }
+        (ActionKind::Kick, false) => case(
+            member(Text::fixed("Quack removed ")).s(" from the server for "),
+            n,
+        )
+        .s("."),
+        (ActionKind::Kick, true) => case(member(Text::new()).s(" left the server after "), n)
+            .s(" was added, so Quack didn't remove them."),
+        (ActionKind::Ban, false) => case(member(Text::fixed("Quack banned ")).s(" for "), n).s("."),
+        (ActionKind::Ban, true) => case(
+            member(Text::new()).s(" was already banned when Quack checked for "),
+            n,
+        )
+        .s("."),
+        (ActionKind::RemoveTimeout, false) => case(
+            member(Text::fixed("Quack removed ")).s("'s timeout for "),
+            n,
+        )
+        .s("."),
+        (ActionKind::RemoveTimeout, true) => case(
+            member(Text::new()).s(" had no active timeout when Quack checked for "),
+            n,
+        )
+        .s("."),
+        (ActionKind::Unban, false) => {
+            case(member(Text::fixed("Quack unbanned ")).s(" for "), n).s(".")
+        }
+        (ActionKind::Unban, true) => case(
+            member(Text::new()).s(" wasn't banned when Quack checked for "),
+            n,
+        )
+        .s("."),
     }
 }
 
 pub(super) fn action_failed(d: &ActionFailedDetail, f: &LogFacts) -> Text {
-    let member = |t: Text| f.member(t);
     let case = |t: Text, n: u64| f.case(t, n);
-    {
-        let n = d.case_number;
-        if d.reason == ActionFailure::Unconfirmed {
-            let t = action::whether_applied(d.kind, f.member.as_ref()).s(" for ");
-            return member(case(t, n).s(". Check ")).s(" in Discord before you retry.");
-        }
-        let failure = Failure {
-            reason: d.reason,
-            permission: d.permission,
-            http_status: d.http_status,
-            discord_code: d.discord_code,
-        };
-        let reason = action::failure_reason(d.kind, &failure, f.member.as_ref(), d.attempts)
-            .unwrap_or_default();
-        case(
-            action::couldnt_phrase(d.kind, f.member.as_ref()).s(" for "),
+    let n = d.case_number;
+    let failure = Failure {
+        reason: d.reason,
+        permission: d.permission,
+        http_status: d.http_status,
+        discord_code: d.discord_code,
+    };
+    if d.reason == ActionFailure::Unconfirmed {
+        let t = case(
+            action::whether_applied(d.kind, f.member.as_ref()).s(" for "),
             n,
         )
-        .s(".")
-        .sentence(reason)
+        .s(".");
+        return t.sentence(action::check(d.kind, f.member.as_ref()));
     }
+    let reason = action::failure_reason(d.kind, &failure, f.member.as_ref(), d.attempts, false)
+        .unwrap_or_default();
+    case(
+        action::couldnt_phrase(d.kind, f.member.as_ref()).s(" for "),
+        n,
+    )
+    .s(".")
+    .sentence(reason)
 }
 
 pub(super) fn undo_skipped(d: &UndoSkippedDetail, f: &LogFacts) -> Text {
     let member = |t: Text| f.member(t);
     let case = |t: Text, n: u64| f.case(t, n);
-    {
-        let n = d.case_number;
-        let ban = d.kind == ActionKind::Unban;
-        let what = if ban { "ban" } else { "timeout" };
-        let left = member(Text::fixed("Quack left ")).s(format!("'s {what} in place "));
-        match (d.skip_reason, d.still_applies_case_number) {
-            (ActionSkipReason::OtherCaseApplies, Some(other)) => case(
-                left.s(format!("because case #{other} still applies, even though ")),
-                n,
-            )
-            .s(" was voided."),
-            (ActionSkipReason::OtherCaseApplies, None) => {
-                case(left.s("because another case still applies, even though "), n).s(" was voided.")
-            }
-            (ActionSkipReason::ChangedOutsideCase, _) if ban => case(left.s("after "), n)
-                .s(" was voided, because the ban didn't come from a voided Quack case. Check it in Discord."),
-            (ActionSkipReason::ChangedOutsideCase, _) => case(left.s("after "), n)
-                .s(" was voided, because someone changed the timeout outside the case. Check it in Discord."),
+    let n = d.case_number;
+    let ban = d.kind == ActionKind::Unban;
+    let what = if ban { "ban" } else { "timeout" };
+    let left = member(Text::fixed("Quack left ")).s(format!("'s {what} in place "));
+    let t = match (d.skip_reason, d.still_applies_case_number) {
+        (ActionSkipReason::OtherCaseApplies, Some(other)) => {
+            case(left.s("after "), n).s(format!(" was voided because case #{other} still applies."))
         }
+        (ActionSkipReason::OtherCaseApplies, None) => {
+            case(left.s("after "), n).s(" was voided because another case still applies.")
+        }
+        (ActionSkipReason::ChangedOutsideCase, _) if ban => {
+            case(left.s("because it may not have come from "), n).s(".")
+        }
+        (ActionSkipReason::ChangedOutsideCase, _) => {
+            case(left.s("because it no longer matches "), n).s(".")
+        }
+    };
+    match d.skip_reason {
+        ActionSkipReason::ChangedOutsideCase => {
+            t.sentence(action::check(d.kind, f.member.as_ref()))
+        }
+        ActionSkipReason::OtherCaseApplies => t,
     }
 }
 

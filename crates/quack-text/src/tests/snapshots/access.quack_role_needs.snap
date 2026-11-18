@@ -1,0 +1,22 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## staff, one
+discord: Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## staff, two
+discord: Quack needs Manage Channels and Manage Threads. Ask an administrator to grant them to Quack's role in Server Settings → Roles.
+plain:   Quack needs Manage Channels and Manage Threads. Ask an administrator to grant them to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack needs Manage Channels and Manage Threads. Ask an administrator to grant them to Quack's role in Server Settings → Roles.")]
+
+## administrator, one
+discord: In Server Settings → Roles, give Quack's role Ban Members.
+plain:   In Server Settings → Roles, give Quack's role Ban Members.
+model:   [Fixed("In Server Settings → Roles, give Quack's role Ban Members.")]
+
+## administrator, two
+discord: In Server Settings → Roles, give Quack's role Manage Channels and Manage Threads.
+plain:   In Server Settings → Roles, give Quack's role Manage Channels and Manage Threads.
+model:   [Fixed("In Server Settings → Roles, give Quack's role Manage Channels and Manage Threads.")]

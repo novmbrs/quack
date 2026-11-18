@@ -2,11 +2,11 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## QuackNotInServer
-discord: No case was added. Quack isn't in this server.
-plain:   No case was added. Quack isn't in this server.
-model:   [Fixed("No case was added. Quack isn't in this server.")]
+discord: No case was added. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   No case was added. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("No case was added. Quack is no longer in this server. Ask an administrator to add Quack again.")]
 
 ## QuackNotInServer, no member known
-discord: No case was added. Quack isn't in this server.
-plain:   No case was added. Quack isn't in this server.
-model:   [Fixed("No case was added. Quack isn't in this server.")]
+discord: No case was added. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   No case was added. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("No case was added. Quack is no longer in this server. Ask an administrator to add Quack again.")]

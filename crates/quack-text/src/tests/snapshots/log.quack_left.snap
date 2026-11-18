@@ -17,8 +17,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack left the server.
 plain:   Quack left the server.
 model:   [Fixed("Quack left the server.")]
-
-##  · no names known
-discord: Quack left the server.
-plain:   Quack left the server.
-model:   [Fixed("Quack left the server.")]
