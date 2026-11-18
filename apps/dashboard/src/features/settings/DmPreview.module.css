@@ -34,3 +34,9 @@
   line-height: 18px;
   color: var(--dc-muted);
 }
+
+.heading {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-strong);
+}

@@ -1,71 +1,75 @@
-import type { Settings, SettingsInput } from "~/api/types";
+import type { Settings, SettingsChange } from "~/api/types";
 
-/**
- * maxBrandingLength is the most the backend accepts for the DM
- * introduction or footer (internal/quack/settings.go).
- */
-export const maxBrandingLength = 2000;
+/** Limits from design §13.1.1. */
+export const limits = { dmIntro: 1000, dmFooter: 500, staffRoles: 25 } as const;
+
+/** maxStaffRoles is the most roles a staff role list can hold. */
+export const maxStaffRoles = limits.staffRoles;
 
 /** SettingsForm is the settings page's working copy of the editable fields. */
 export type SettingsForm = {
-  appealQueueChannel: string;
-  rejoinUrl: string;
-  reasonRequired: boolean;
-  auditMirrorChannel: string;
+  logChannel: string;
+  appealChannel: string;
   evidenceChannel: string;
-  introduction: string;
-  footer: string;
+  appealInvite: string;
+  dmIntro: string;
+  dmFooter: string;
   /** Moderator role IDs, in the order they were picked. */
   moderatorRoles: string[];
   /** Rules manager role IDs, in the order they were picked. */
   rulesManagerRoles: string[];
 };
 
-/** maxStaffRoles is the most roles the backend accepts per staff level. */
-export const maxStaffRoles = 25;
-
 /** formFromSettings starts a form from saved settings. */
 export function formFromSettings(s: Settings): SettingsForm {
   return {
-    appealQueueChannel: s.appeal_queue_channel_discord_id ?? "",
-    rejoinUrl: s.appeal_rejoin_url ?? "",
-    reasonRequired: s.appeal_review_reason_required ?? false,
-    auditMirrorChannel: s.audit_mirror_channel_discord_id ?? "",
-    evidenceChannel: s.managed_evidence_channel_discord_id ?? "",
-    introduction: s.notification_introduction ?? "",
-    footer: s.notification_footer ?? "",
+    logChannel: s.log_channel_id ?? "",
+    appealChannel: s.appeal_channel_id ?? "",
+    evidenceChannel: s.evidence_channel_id ?? "",
+    appealInvite: s.appeal_invite_url ?? "",
+    dmIntro: s.dm_intro ?? "",
+    dmFooter: s.dm_footer ?? "",
     moderatorRoles: s.moderator_role_ids,
     rulesManagerRoles: s.rules_manager_role_ids,
   };
 }
 
 /**
- * settingsPatch is the PATCH body for what changed between saved and draft.
- * The API leaves omitted fields alone and clears a field sent as "", so
- * unchanged fields are left out and cleared ones are sent empty, never null.
- * Text is compared trimmed, since the server trims it anyway. A staff role
- * list is sent whole when its set of roles changed; order doesn't matter.
+ * settingsPatch is the PATCH body for what changed between saved and draft
+ * (design §13.1.2). Unchanged fields are left out and cleared ones are sent
+ * as null. Text is compared trimmed, since the API trims it anyway. A staff
+ * role list is sent whole when its set of roles changed, and then
+ * expected_version is sent too, so a stale page can't put back roles an
+ * administrator just removed.
  */
-export function settingsPatch(saved: SettingsForm, draft: SettingsForm): SettingsInput {
-  const patch: SettingsInput = {};
+export function settingsPatch(
+  saved: SettingsForm,
+  draft: SettingsForm,
+  version: number,
+): SettingsChange {
+  const patch: SettingsChange = {};
   const text = (a: string, b: string) => a.trim() !== b.trim();
-  if (text(saved.appealQueueChannel, draft.appealQueueChannel))
-    patch.appeal_queue_channel_discord_id = draft.appealQueueChannel.trim();
-  if (text(saved.rejoinUrl, draft.rejoinUrl)) patch.appeal_rejoin_url = draft.rejoinUrl.trim();
-  if (saved.reasonRequired !== draft.reasonRequired)
-    patch.appeal_review_reason_required = draft.reasonRequired;
-  if (text(saved.auditMirrorChannel, draft.auditMirrorChannel))
-    patch.audit_mirror_channel_discord_id = draft.auditMirrorChannel.trim();
+  const value = (v: string) => v.trim() || null;
+  if (text(saved.logChannel, draft.logChannel)) patch.log_channel_id = value(draft.logChannel);
+  if (text(saved.appealChannel, draft.appealChannel))
+    patch.appeal_channel_id = value(draft.appealChannel);
   if (text(saved.evidenceChannel, draft.evidenceChannel))
-    patch.managed_evidence_channel_discord_id = draft.evidenceChannel.trim();
-  if (text(saved.introduction, draft.introduction))
-    patch.notification_introduction = draft.introduction.trim();
-  if (text(saved.footer, draft.footer)) patch.notification_footer = draft.footer.trim();
+    patch.evidence_channel_id = value(draft.evidenceChannel);
+  if (text(saved.appealInvite, draft.appealInvite))
+    patch.appeal_invite_url = value(draft.appealInvite);
+  if (text(saved.dmIntro, draft.dmIntro)) patch.dm_intro = value(draft.dmIntro);
+  if (text(saved.dmFooter, draft.dmFooter)) patch.dm_footer = value(draft.dmFooter);
   if (!sameRoles(saved.moderatorRoles, draft.moderatorRoles))
     patch.moderator_role_ids = [...draft.moderatorRoles];
   if (!sameRoles(saved.rulesManagerRoles, draft.rulesManagerRoles))
     patch.rules_manager_role_ids = [...draft.rulesManagerRoles];
+  if (patch.moderator_role_ids || patch.rules_manager_role_ids) patch.expected_version = version;
   return patch;
+}
+
+/** changes reports whether a patch changes anything (expected_version alone doesn't). */
+export function changes(patch: SettingsChange): boolean {
+  return Object.keys(patch).some((k) => k !== "expected_version");
 }
 
 function sameRoles(a: readonly string[], b: readonly string[]): boolean {
@@ -75,12 +79,11 @@ function sameRoles(a: readonly string[], b: readonly string[]): boolean {
 }
 
 /**
- * staffRolesProblem checks a staff role list the way the backend does when
- * it changes: there can be at most maxStaffRoles, and roles not already
- * saved must still exist in the server. Saved roles deleted in Discord
- * don't block saving; the backend drops them. known is the server's
- * current role IDs, or undefined while they load. It returns what's wrong,
- * or null.
+ * staffRolesProblem checks a staff role list the way the API does when it
+ * changes: at most 25 roles, and roles not already saved must still exist
+ * in the server. Saved roles deleted in Discord don't block saving. known
+ * is the server's current role IDs, or undefined while they load. It
+ * returns what's wrong, or null.
  */
 export function staffRolesProblem(
   roleIds: readonly string[],
@@ -94,44 +97,36 @@ export function staffRolesProblem(
 }
 
 /**
- * rejoinUrlProblem checks an appeal rejoin link the way the backend does:
- * empty, or an https discord.gg or discord.com/invite link with nothing
- * after the code. It returns what's wrong, or null.
+ * inviteProblem checks an appeal invite the way the API does: empty, or
+ * discord.gg/<code>, discord.com/invite/<code>, or discordapp.com/invite/<code>,
+ * with or without https:// and www., the code 2–64 of A–Z, a–z, 0–9, _ and
+ * -. It returns what's wrong, or null.
  */
-export function rejoinUrlProblem(raw: string): string | null {
+export function inviteProblem(raw: string): string | null {
   const value = raw.trim();
   if (value === "") return null;
-  const invalid = "Use an https Discord invite, like https://discord.gg/yourserver.";
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return invalid;
-  }
-  if (
-    value.length > 256 ||
-    url.protocol !== "https:" ||
-    url.username ||
-    url.password ||
-    url.search ||
-    url.hash ||
-    value.includes("?") ||
-    value.includes("#")
-  ) {
-    return invalid;
-  }
-  const host = url.hostname.toLowerCase();
-  let code = "";
-  if (host === "discord.gg") code = url.pathname.slice(1);
-  else if (host === "discord.com" || host === "www.discord.com")
-    code = url.pathname.startsWith("/invite/") ? url.pathname.slice("/invite/".length) : "";
-  return /^[A-Za-z0-9_-]+$/.test(code) ? null : invalid;
+  const match =
+    /^(?:https?:\/\/)?(?:www\.)?(?:discord\.gg\/|discord(?:app)?\.com\/invite\/)([A-Za-z0-9_-]{2,64})\/?$/i.exec(
+      value,
+    );
+  return match ? null : "Use a Discord invite link, like https://discord.gg/yourserver.";
 }
 
-/** brandingProblem reports an introduction or footer the API would refuse. */
-export function brandingProblem(value: string): string | null {
-  const length = new TextEncoder().encode(value.trim()).length;
-  return length > maxBrandingLength
-    ? `Keep it under ${maxBrandingLength.toLocaleString()} characters.`
+/** textProblem reports a DM introduction or footer longer than the API allows. */
+export function textProblem(value: string, max: number): string | null {
+  return Array.from(value.trim()).length > max
+    ? `Keep it to ${max.toLocaleString()} characters.`
     : null;
 }
+
+/** settingsFields maps API field paths to the form's fields, for field errors. */
+export const settingsFields: Record<string, keyof SettingsForm> = {
+  log_channel_id: "logChannel",
+  appeal_channel_id: "appealChannel",
+  evidence_channel_id: "evidenceChannel",
+  appeal_invite_url: "appealInvite",
+  dm_intro: "dmIntro",
+  dm_footer: "dmFooter",
+  moderator_role_ids: "moderatorRoles",
+  rules_manager_role_ids: "rulesManagerRoles",
+};

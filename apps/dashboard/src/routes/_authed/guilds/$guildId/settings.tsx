@@ -3,40 +3,37 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Settings as SettingsIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
+import { ApiError, api, write } from "~/api/client";
 import { rolesQuery } from "~/api/directory";
-import { guildMeQuery, guildOpsQuery, keys, settingsQuery } from "~/api/queries";
-import type { Settings } from "~/api/types";
+import { guildMeQuery, healthQuery, keys, settingsQuery } from "~/api/queries";
 import { ChannelPicker } from "~/features/channels/ChannelPicker";
-import { enableProblem } from "~/features/modules/enable";
 import { Callout, Command } from "~/features/modules/ModuleParts";
 import { RolePicker } from "~/features/roles/RolePicker";
-import {
-  buildCaseDm,
-  caseDmLength,
-  type DmOutcome,
-  discordMessageLimit,
-} from "~/features/settings/caseDm";
+import { StarterNotice } from "~/features/rules/StarterNotice";
+import { buildCaseDm, type DmAction } from "~/features/settings/caseDm";
 import { DmPreview } from "~/features/settings/DmPreview";
 import {
-  brandingProblem,
+  changes,
   formFromSettings,
+  inviteProblem,
+  limits,
   maxStaffRoles,
-  rejoinUrlProblem,
   type SettingsForm,
+  settingsFields,
   settingsPatch,
   staffRolesProblem,
+  textProblem,
 } from "~/features/settings/form";
-import { healthChecklist } from "~/features/settings/health";
+import { healthChecklist, healthy } from "~/features/settings/health";
 import { useCan } from "~/lib/permissions";
 import { Badge } from "~/ui/Badge";
-import { Button, ButtonLink } from "~/ui/Button";
-import { Field, SwitchRow, TextArea, TextInput } from "~/ui/Field";
+import { Button } from "~/ui/Button";
+import { Field, TextArea, TextInput } from "~/ui/Field";
 import { Heading, Page, Section } from "~/ui/Page";
 import { QuackIcon } from "~/ui/QuackIcon";
 import { SaveBar } from "~/ui/SaveBar";
 import { Segmented } from "~/ui/Segmented";
-import { ErrorState } from "~/ui/States";
+import { ErrorState, SkeletonRows } from "~/ui/States";
 import { toast } from "~/ui/Toast";
 
 import s from "./settings.module.css";
@@ -52,74 +49,93 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/settings")({
   ),
 });
 
+type FieldErrors = Partial<Record<keyof SettingsForm, string>>;
+
 function SettingsPage() {
   const { guildId } = Route.useParams();
-  const { data: settings } = useSuspenseQuery(settingsQuery(guildId));
+  const { data: settings, refetch } = useSuspenseQuery(settingsQuery(guildId));
   const { data: me } = useSuspenseQuery(guildMeQuery(guildId));
   const can = useCan(guildId);
-  const canWrite = can("guild_settings.write");
-  const canWriteModerators = canWrite && can("staff_roles.write");
+  const canWrite = can("manage_settings");
+  const canWriteModerators = canWrite && can("manage_staff_roles");
   const queryClient = useQueryClient();
 
   const [edits, setEdits] = useState<SettingsForm | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [serverErrors, setServerErrors] = useState<FieldErrors>({});
+  const [conflict, setConflict] = useState<string | null>(null);
   const saved = formFromSettings(settings);
   const form = edits ?? saved;
-  const patch = settingsPatch(saved, form);
-  const dirty = Object.keys(patch).length > 0;
+  const patch = settingsPatch(saved, form, settings.version);
+  const dirty = changes(patch);
 
   const set = (change: Partial<SettingsForm>) => {
     setEdits({ ...form, ...change });
     setSaveError(null);
+    setServerErrors((e) => {
+      const next = { ...e };
+      for (const k of Object.keys(change)) delete next[k as keyof SettingsForm];
+      return next;
+    });
   };
   const reset = () => {
     setEdits(null);
     setSaveError(null);
+    setServerErrors({});
   };
 
-  const rejoinError = rejoinUrlProblem(form.rejoinUrl);
-  const introError = brandingProblem(form.introduction);
-  const footerError = brandingProblem(form.footer);
+  const inviteError = serverErrors.appealInvite ?? inviteProblem(form.appealInvite);
+  const introError = serverErrors.dmIntro ?? textProblem(form.dmIntro, limits.dmIntro);
+  const footerError = serverErrors.dmFooter ?? textProblem(form.dmFooter, limits.dmFooter);
   // Only a changed role list is checked on save, so only flag those.
   const roles = useQuery(rolesQuery(guildId));
   const knownRoles = roles.data ? new Set(roles.data.map((r) => r.id)) : undefined;
   const moderatorError =
-    "moderator_role_ids" in patch
+    serverErrors.moderatorRoles ??
+    (patch.moderator_role_ids
       ? staffRolesProblem(form.moderatorRoles, saved.moderatorRoles, knownRoles)
-      : null;
+      : null);
   const rulesManagerError =
-    "rules_manager_role_ids" in patch
+    serverErrors.rulesManagerRoles ??
+    (patch.rules_manager_role_ids
       ? staffRolesProblem(form.rulesManagerRoles, saved.rulesManagerRoles, knownRoles)
-      : null;
+      : null);
 
   const save = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.PATCH("/guilds/{discordGuildID}/settings", {
-          params: { path: { discordGuildID: guildId } },
+      write((init) =>
+        api.PATCH("/api/guilds/{guild_id}/settings", {
+          params: { path: { guild_id: guildId } },
           body: patch,
+          ...init,
         }),
-      ).then((r) => r.settings),
+      ),
     onSuccess: (next) => {
       queryClient.setQueryData(settingsQuery(guildId).queryKey, next);
-      void queryClient.invalidateQueries({ queryKey: [...keys.guild(guildId), "ops"] });
+      void queryClient.invalidateQueries({ queryKey: healthQuery(guildId).queryKey });
       // Staff roles can change who is staff, the saver included.
-      if ("moderator_role_ids" in patch || "rules_manager_role_ids" in patch) {
+      if (patch.moderator_role_ids || patch.rules_manager_role_ids) {
         void queryClient.invalidateQueries({ queryKey: [...keys.guild(guildId), "me"] });
         void queryClient.invalidateQueries({ queryKey: keys.guilds });
       }
       reset();
+      setConflict(null);
       toast.success("Settings saved.");
     },
-    onError: (e) =>
-      setSaveError(
-        // 409: the staff roles changed after this page loaded them.
-        e instanceof ApiError && e.status === 409
-          ? "Settings changed while you were editing. Reload and try again."
-          : e instanceof ApiError
-            ? enableProblem(e.message).message
-            : "Couldn't save settings.",
-      ),
+    onError: (e) => {
+      if (!(e instanceof ApiError)) {
+        setSaveError("Quack couldn't save the settings. Try again in a moment.");
+        return;
+      }
+      if (e.code === "settings_changed") setConflict(e.message);
+      const mapped: FieldErrors = {};
+      for (const f of e.fields) {
+        const key = settingsFields[f.field.replace(/\[\d+\]$/, "")];
+        if (key) mapped[key] = mapped[key] ? `${mapped[key]} ${f.message}` : f.message;
+      }
+      setServerErrors(mapped);
+      setSaveError(e.unexpected && e.traceId ? `${e.message} (Trace ID ${e.traceId})` : e.message);
+    },
   });
 
   return (
@@ -131,25 +147,47 @@ function SettingsPage() {
     >
       {canWrite ? null : (
         <Callout tone="info" icon="lock" title="You can look, but not change">
-          Changing these settings needs Manage Server.
+          To change Quack's settings, you need Manage Server in Discord.
         </Callout>
       )}
 
-      {settings.starter_policy_review_required ? (
-        <StarterNotice guildId={guildId} settings={settings} canWrite={canWrite} />
+      {conflict ? (
+        <Callout
+          tone="warning"
+          icon="warn"
+          title="The settings changed while you were editing"
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                void refetch().then(() => {
+                  reset();
+                  setConflict(null);
+                })
+              }
+            >
+              Reload settings
+            </Button>
+          }
+        >
+          {conflict} Reloading discards your changes here.
+        </Callout>
       ) : null}
+
+      <StarterNotice guildId={guildId} />
 
       <Health guildId={guildId} />
 
-      <Section title="Staff roles" description="Who can moderate and manage rules.">
+      <Section title="Staff roles" description="Who can moderate and who can manage rules.">
         <div className={s.fields}>
           <Field
             label="Moderator roles"
             error={moderatorError}
             hint={
               canWriteModerators
-                ? "Moderators add and void cases, review appeals, and read the audit log. With no roles picked, members with Discord's Timeout Members permission are moderators. Once you pick any, only these roles are."
-                : "Only the server owner or Administrators can change moderator roles."
+                ? "Moderators add and void cases, review appeals, and read the moderation log. With no roles picked, members with Discord's Timeout Members permission can moderate. Once you pick any, only these roles can."
+                : "Only the server owner or a member with Administrator can change Quack's moderator roles."
             }
           >
             {(id) => (
@@ -161,7 +199,7 @@ function SettingsPage() {
                 max={maxStaffRoles}
                 invalid={Boolean(moderatorError)}
                 disabled={!canWriteModerators}
-                emptyLabel="None picked. Members with Timeout Members are moderators."
+                emptyLabel="None picked. Members with Timeout Members can moderate."
                 placeholder="Add a moderator role"
               />
             )}
@@ -169,14 +207,13 @@ function SettingsPage() {
           {canWriteModerators ? (
             <p className={s.note}>
               Moderators don't need Timeout, Kick, or Ban Members in Discord. Quack acts with its
-              own permissions, so only pick roles you trust with every punishment your rules can
-              give.
+              own permissions, so only pick roles you trust with every action your rules can take.
             </p>
           ) : null}
           <Field
             label="Rules manager roles"
             error={rulesManagerError}
-            hint="Rules managers can create, edit, import, export, and archive rules."
+            hint="Rules managers can create, edit, import, export, and archive rules. Members with Manage Server can too."
           >
             {(id) => (
               <RolePicker
@@ -193,9 +230,9 @@ function SettingsPage() {
             )}
           </Field>
           <p className={s.note}>
-            If this server requires 2FA for moderation in Discord, Quack requires it for all staff
-            too, the owner included. Staff turn it on in Discord, then sign in to this dashboard
-            again.
+            If this server requires two-factor authentication (2FA) for moderation in Discord, Quack
+            requires it for all staff too, the owner included. Staff turn it on in Discord, then
+            sign in to this dashboard again.
           </p>
         </div>
       </Section>
@@ -204,29 +241,31 @@ function SettingsPage() {
 
       <Section
         title="Appeals"
-        description="Where appeals land, and what members get when one is accepted."
+        description="Where new appeals appear, and how members who were removed can come back."
       >
         <div className={s.fields}>
           <Field
-            label="Appeal queue channel"
+            label="Appeal channel"
+            error={serverErrors.appealChannel}
             hint="Quack posts each new appeal here with Accept and Reject buttons. Pick a channel only staff can see."
           >
             {(id) => (
               <ChannelPicker
                 id={id}
                 guildId={guildId}
-                value={form.appealQueueChannel}
-                onChange={(appealQueueChannel) => set({ appealQueueChannel })}
+                value={form.appealChannel}
+                onChange={(appealChannel) => set({ appealChannel })}
                 clearable
-                noneLabel="No queue channel"
+                noneLabel="No appeal channel"
+                invalid={Boolean(serverErrors.appealChannel)}
                 disabled={!canWrite}
               />
             )}
           </Field>
           <Field
             label="Rejoin invite"
-            error={rejoinError}
-            hint="Sent with accepted appeals, so members who were kicked or banned can come back."
+            error={inviteError}
+            hint="Sent in the DM when an appeal is accepted, so members who were kicked or banned can come back."
           >
             {(id) => (
               <TextInput
@@ -234,87 +273,92 @@ function SettingsPage() {
                 type="url"
                 inputMode="url"
                 placeholder="https://discord.gg/yourserver"
-                value={form.rejoinUrl}
-                invalid={Boolean(rejoinError)}
+                value={form.appealInvite}
+                invalid={Boolean(inviteError)}
                 disabled={!canWrite}
-                onChange={(e) => set({ rejoinUrl: e.currentTarget.value })}
+                onChange={(e) => set({ appealInvite: e.currentTarget.value })}
               />
             )}
           </Field>
-          <div>
-            <SwitchRow
-              title="Require a reason for decisions"
-              description="Staff have to say why they accepted or rejected an appeal. Quack includes it in the member's DM."
-              checked={form.reasonRequired}
-              onChange={(reasonRequired) => set({ reasonRequired })}
-              disabled={!canWrite}
-            />
-          </div>
         </div>
       </Section>
 
       <Divider />
 
       <Section
-        title="Member DMs"
-        description="When a rule's level says to notify the member, Quack sends one DM per case. You can add a short note of your own; the rest is the same for everyone."
+        title="Case DMs"
+        description="When a rule's level sends a DM, the member gets one DM per case. You can add a short note of your own; the rest is the same for every server."
       >
         <div className={s.fields}>
           <Field
             label="Introduction"
             error={introError}
-            hint={<Counter value={form.introduction} hint="Shown right after the reason." />}
+            hint={
+              <Counter
+                value={form.dmIntro}
+                max={limits.dmIntro}
+                hint="Shown after the action and the appeal line."
+              />
+            }
           >
             {(id) => (
               <TextArea
                 id={id}
                 rows={3}
-                placeholder="For example: Hi, this is the mod team of our server."
-                value={form.introduction}
+                placeholder="For example: Hi, this is the moderation team of our server."
+                value={form.dmIntro}
                 invalid={Boolean(introError)}
                 disabled={!canWrite}
-                onChange={(e) => set({ introduction: e.currentTarget.value })}
+                onChange={(e) => set({ dmIntro: e.currentTarget.value })}
               />
             )}
           </Field>
           <Field
             label="Footer"
             error={footerError}
-            hint={<Counter value={form.footer} hint="Shown at the end of the DM." />}
+            hint={
+              <Counter
+                value={form.dmFooter}
+                max={limits.dmFooter}
+                hint="Shown at the end of the DM."
+              />
+            }
           >
             {(id) => (
               <TextArea
                 id={id}
                 rows={2}
                 placeholder="For example: Questions? Open a ticket in #support."
-                value={form.footer}
+                value={form.dmFooter}
                 invalid={Boolean(footerError)}
                 disabled={!canWrite}
-                onChange={(e) => set({ footer: e.currentTarget.value })}
+                onChange={(e) => set({ dmFooter: e.currentTarget.value })}
               />
             )}
           </Field>
-          <DmSample
-            guildName={me.guild.name}
-            introduction={form.introduction}
-            footer={form.footer}
-          />
+          <DmSample guildName={me.guild.name} introduction={form.dmIntro} footer={form.dmFooter} />
         </div>
       </Section>
 
       <Divider />
 
       <Section
-        title="Audit mirror"
-        description="Quack posts important audit log events, like new cases, voids, failed actions, and appeal decisions, to a staff channel as they happen."
+        title="Log channel"
+        description="Quack posts each moderation log entry here as it happens: new cases, voids, failed actions, appeal decisions, and setting changes. The moderation log on the dashboard keeps every entry either way."
       >
         <Field
-          label="Mirror channel"
+          label="Log channel"
+          error={serverErrors.logChannel}
           hint={
             <>
-              This is Quack's own moderation record. For message edits, joins, and bans, use{" "}
-              <Link to="/guilds/$guildId/modules/logging" params={{ guildId }} className={s.link}>
-                Logging
+              Pick a channel only staff can see. For message edits, deletes, joins, and leaves, use
+              the{" "}
+              <Link
+                to="/guilds/$guildId/modules/activity-log"
+                params={{ guildId }}
+                className={s.link}
+              >
+                server activity log
               </Link>{" "}
               instead.
             </>
@@ -324,10 +368,11 @@ function SettingsPage() {
             <ChannelPicker
               id={id}
               guildId={guildId}
-              value={form.auditMirrorChannel}
-              onChange={(auditMirrorChannel) => set({ auditMirrorChannel })}
+              value={form.logChannel}
+              onChange={(logChannel) => set({ logChannel })}
               clearable
-              noneLabel="Don't mirror"
+              noneLabel="Don't post the moderation log"
+              invalid={Boolean(serverErrors.logChannel)}
               disabled={!canWrite}
             />
           )}
@@ -340,7 +385,11 @@ function SettingsPage() {
         title="Evidence channel"
         description="Quack can keep copies of evidence files in a staff-only channel, so they last after the original message is deleted. Without one, Quack keeps each file's details and a link to the original."
       >
-        <Field label="Copy channel" hint="Only staff should be able to read this channel.">
+        <Field
+          label="Evidence channel"
+          error={serverErrors.evidenceChannel}
+          hint="Pick a channel only staff can see."
+        >
           {(id) => (
             <ChannelPicker
               id={id}
@@ -349,6 +398,7 @@ function SettingsPage() {
               onChange={(evidenceChannel) => set({ evidenceChannel })}
               clearable
               noneLabel="Don't keep copies"
+              invalid={Boolean(serverErrors.evidenceChannel)}
               disabled={!canWrite}
             />
           )}
@@ -363,7 +413,7 @@ function SettingsPage() {
           pending={save.isPending}
           error={saveError}
           saveDisabled={Boolean(
-            rejoinError || introError || footerError || moderatorError || rulesManagerError,
+            inviteError || introError || footerError || moderatorError || rulesManagerError,
           )}
         />
       ) : null}
@@ -375,17 +425,21 @@ function Divider() {
   return <hr className={s.divider} />;
 }
 
-function Counter({ value, hint }: { value: string; hint: ReactNode }) {
-  const length = value.trim().length;
+function Counter({ value, max, hint }: { value: string; max: number; hint: ReactNode }) {
+  const length = Array.from(value.trim()).length;
   return (
     <span className={s.counterRow}>
       <span>{hint}</span>
-      {length > 0 ? <span className={s.counter}>{length.toLocaleString()}</span> : null}
+      {length > 0 ? (
+        <span className={s.counter}>
+          {length.toLocaleString()} / {max.toLocaleString()}
+        </span>
+      ) : null}
     </span>
   );
 }
 
-const outcomes: { value: DmOutcome; label: string }[] = [
+const actions: { value: DmAction; label: string }[] = [
   { value: "warning", label: "Warning" },
   { value: "timeout", label: "Timeout" },
   { value: "kick", label: "Kick" },
@@ -404,155 +458,98 @@ function DmSample({
   introduction: string;
   footer: string;
 }) {
-  const [outcome, setOutcome] = useState<DmOutcome>("timeout");
-  // A day from when the preview first showed, like a fresh 24-hour timeout.
-  const [timeoutEnd] = useState(() => longDate.format(new Date(Date.now() + 86_400_000)));
+  const [action, setAction] = useState<DmAction>("timeout");
+  // Now and a day from when the preview first showed, like a fresh one-day timeout.
+  const [times] = useState(() => ({
+    added: longDate.format(new Date()),
+    ends: longDate.format(new Date(Date.now() + 86_400_000)),
+  }));
   const dm = buildCaseDm({
     guildName,
     ruleName: "Spam",
     reason: "Posted the same invite link in several channels.",
-    outcome,
+    action,
     introduction,
     footer,
     caseNumber: 128,
-    openedAgo: "just now",
+    addedAt: times.added,
     appealable: true,
-    timeoutEnds: {
-      relative: "in a day",
-      full: timeoutEnd,
-    },
+    timeoutEnds: { full: times.ends, relative: "in a day" },
+    details: [{ label: "Where", value: "#general" }],
   });
-  const tooLong = caseDmLength(dm) > discordMessageLimit;
   return (
     <div className={s.sample}>
       <Heading
         actions={
-          <Segmented
-            label="Sample outcome"
-            value={outcome}
-            onChange={setOutcome}
-            options={outcomes}
-          />
+          <Segmented label="Sample action" value={action} onChange={setAction} options={actions} />
         }
       >
         Preview
       </Heading>
       <DmPreview dm={dm} />
-      {tooLong ? (
-        <p role="alert" className={s.warn}>
-          <QuackIcon name="warn" size={16} /> This DM is longer than Discord allows, so it won't
-          send. Shorten the introduction or footer.
-        </p>
-      ) : (
-        <p className={s.note}>A sample case. Real DMs use the case's rule, reason, and outcome.</p>
-      )}
-    </div>
-  );
-}
-
-function StarterNotice({
-  guildId,
-  settings,
-  canWrite,
-}: {
-  guildId: string;
-  settings: Settings;
-  canWrite: boolean;
-}) {
-  const queryClient = useQueryClient();
-  const acknowledge = useMutation({
-    mutationFn: () =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/settings/starter-policy-notice/acknowledge", {
-          params: { path: { discordGuildID: guildId } },
-        }),
-      ).then((r) => r.settings),
-    onSuccess: (next) => {
-      queryClient.setQueryData(settingsQuery(guildId).queryKey, next);
-      toast.success("Thanks for checking the starter rule.");
-    },
-  });
-  return (
-    <div className={s.starter}>
-      <QuackIcon name="review" size={32} />
-      <div className={s.starterText}>
-        <p className={s.starterTitle}>Review your starter rule</p>
-        <p className={s.starterBody}>
-          Quack made a <strong>General rule violation</strong> rule when it joined, so cases work
-          right away. It notifies the member on the first two cases, adds a 24-hour timeout on the
-          third and fourth, and bans from the fifth. Make sure that fits your server.
-        </p>
-        <div className={s.starterActions}>
-          {settings.starter_policy_template_id ? (
-            <ButtonLink
-              size="sm"
-              to="/guilds/$guildId/rules/$ruleId"
-              params={{ guildId, ruleId: settings.starter_policy_template_id }}
-            >
-              Review the starter rule
-            </ButtonLink>
-          ) : null}
-          {canWrite ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              pending={acknowledge.isPending}
-              onClick={() => acknowledge.mutate()}
-            >
-              I've reviewed it
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      <p className={s.note}>
+        A sample case. Real DMs use the case's rule, reason, action, and case context.
+      </p>
     </div>
   );
 }
 
 /**
- * Health shows the server's live health checklist. The endpoint needs
- * Administrator, so for everyone else the section quietly stays away.
+ * Health shows what Quack needs fixed in this server right now: its
+ * permissions, the staff channels, and the modules that are on.
  */
 function Health({ guildId }: { guildId: string }) {
-  const ops = useQuery({ ...guildOpsQuery(guildId), retry: false });
-  if (!ops.data) return null;
-  const checks = healthChecklist(ops.data.guild_health);
-  const degraded = ops.data.guild_health.degraded;
+  const health = useQuery({ ...healthQuery(guildId), retry: false });
+  const checks = health.data ? healthChecklist(health.data) : [];
+  const ok = healthy(checks);
   return (
     <Section
       title="Server health"
       description="What Quack can do in this server right now."
       actions={
-        degraded ? (
-          <Badge tone="warning" dot>
-            Needs attention
-          </Badge>
-        ) : (
-          <Badge tone="success" dot>
-            All good
-          </Badge>
-        )
+        health.data ? (
+          ok ? (
+            <Badge tone="success" dot>
+              All good
+            </Badge>
+          ) : (
+            <Badge tone="warning" dot>
+              Needs attention
+            </Badge>
+          )
+        ) : null
       }
     >
-      <ul className={s.checklist}>
-        {checks.map((check) => (
-          <li key={check.key} className={s.check}>
-            <QuackIcon
-              name={check.state === "ok" ? "success" : check.state === "problem" ? "error" : "info"}
-              size={20}
-            />
-            <div className={s.checkText}>
-              <span className={s.checkLabel}>{check.label}</span>
-              <span className={s.checkDetail}>{check.detail}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {degraded ? (
-        <p className={s.note}>
-          Fix permissions in Server Settings, then Roles, on Quack's role. Running{" "}
-          <Command>/setup</Command> in Discord also checks them.
-        </p>
-      ) : null}
+      {health.isPending ? (
+        <SkeletonRows rows={2} />
+      ) : health.isError ? (
+        <ErrorState error={health.error} retry={() => void health.refetch()} />
+      ) : (
+        <>
+          <ul className={s.checklist}>
+            {checks.map((check) => (
+              <li key={check.key} className={s.check}>
+                <QuackIcon
+                  name={
+                    check.state === "ok" ? "success" : check.state === "problem" ? "error" : "info"
+                  }
+                  size={20}
+                />
+                <div className={s.checkText}>
+                  <span className={s.checkLabel}>{check.label}</span>
+                  <span className={s.checkDetail}>{check.detail}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {ok ? null : (
+            <p className={s.note}>
+              Running <Command>/setup</Command> in Discord checks these again and can create
+              staff-only channels for you.
+            </p>
+          )}
+        </>
+      )}
     </Section>
   );
 }
