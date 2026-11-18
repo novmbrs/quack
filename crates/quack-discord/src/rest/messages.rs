@@ -42,12 +42,17 @@ impl MessageBody {
     }
 
     /// The body for a neutral message: rendered, or [`Self::files_only`]
-    /// when it has no blocks and no rows (evidence copies, §7.3).
+    /// when it has no blocks and no rows (evidence copies, §7.3); allowed
+    /// to ping the account the message names to ping, if any.
     pub fn from_msg(msg: &Msg, commands: &CommandIds) -> Self {
-        if msg.blocks.is_empty() && msg.rows.is_empty() {
+        let body = if msg.blocks.is_empty() && msg.rows.is_empty() {
             Self::files_only()
         } else {
             Self::rendered(render(msg, commands))
+        };
+        match msg.ping {
+            Some(account) => body.mentioning(vec![account]),
+            None => body,
         }
     }
 

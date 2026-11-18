@@ -83,6 +83,7 @@ pub fn welcome(member: &Person, ticket: TicketId) -> Msg {
             .s(", your ticket is open. Tell the moderators what you need help with here."),
     )
     .buttons(vec![close_button(ticket)])
+    .pinging(member.id)
 }
 
 /// `ticket.button.close`.

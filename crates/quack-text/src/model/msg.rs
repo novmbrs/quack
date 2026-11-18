@@ -1,5 +1,7 @@
 //! Messages: blocks of text, rows of buttons and selects, and modals.
 
+use quack_core::ids::AccountId;
+
 use super::Text;
 use crate::actions::{ButtonAction, InputId, ModalAction, SelectAction, SelectValue};
 use crate::budget;
@@ -162,6 +164,9 @@ pub struct Msg {
     /// The line [`budget::fit`] ends a shortened message with, saying where
     /// the rest is; `None` uses `render.trimmed`.
     pub trimmed: Option<Text>,
+    /// The one account the message pings (only the ticket welcome, §13.2);
+    /// other mentions show but never ping.
+    pub ping: Option<AccountId>,
 }
 
 impl Msg {
@@ -172,7 +177,15 @@ impl Msg {
             blocks: Vec::new(),
             rows: Vec::new(),
             trimmed: None,
+            ping: None,
         }
+    }
+
+    /// Lets the message ping `account`.
+    #[must_use]
+    pub const fn pinging(mut self, account: AccountId) -> Self {
+        self.ping = Some(account);
+        self
     }
 
     /// Sets the line a shortened message ends with (where the full details

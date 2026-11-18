@@ -2,8 +2,8 @@
 //! tokens.
 
 use httpmock::MockServer;
-use quack_core::ids::{AccountId, AttachmentId, ChannelId, MessageId};
-use quack_text::{Msg, Text, Tone};
+use quack_core::ids::{AccountId, AttachmentId, ChannelId, MessageId, TicketId};
+use quack_text::{Msg, Person, Text, Tone};
 use serde_json::json;
 
 use super::client;
@@ -72,6 +72,39 @@ async fn messages_carry_nonce_flags_and_empty_allowed_mentions() {
     assert!(client.send(c(6), &body, &[], None).await.is_done());
     create.assert_async().await;
     ping.assert_async().await;
+}
+
+#[tokio::test]
+async fn only_the_ticket_welcome_pings_and_only_its_member() {
+    let server = MockServer::start_async().await;
+    let welcome = server
+        .mock_async(|when, then| {
+            when.method("POST")
+                .path("/api/v10/channels/6/messages")
+                .body_includes(r#""allowed_mentions":{"parse":[],"users":["9"]}"#);
+            then.status(200).json_body(fixtures::message(11, 6));
+        })
+        .await;
+    let other = server
+        .mock_async(|when, then| {
+            when.method("POST")
+                .path("/api/v10/channels/7/messages")
+                .body_includes(r#""allowed_mentions":{"parse":[]}"#);
+            then.status(200).json_body(fixtures::message(12, 7));
+        })
+        .await;
+    let client = client(&server.base_url());
+    let member = Person::unnamed(AccountId::new(9).unwrap());
+    let ticket = TicketId::from_uuid(uuid::Uuid::from_u128(5));
+    let ids = quack_text::CommandIds::EMPTY;
+    let body = MessageBody::from_msg(&quack_text::ticket::welcome(&member, ticket), &ids);
+    assert!(client.send(c(6), &body, &[], None).await.is_done());
+    // Another message naming the same member doesn't ping.
+    let note = Msg::text(Tone::Neutral, Text::new().person(&member).s(" left."));
+    let body = MessageBody::from_msg(&note, &ids);
+    assert!(client.send(c(7), &body, &[], None).await.is_done());
+    welcome.assert_async().await;
+    other.assert_async().await;
 }
 
 #[tokio::test]
