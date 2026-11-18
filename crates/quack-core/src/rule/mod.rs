@@ -5,6 +5,8 @@
 mod file;
 mod validate;
 
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
 use crate::DomainError;
@@ -96,7 +98,7 @@ str_enum! {
 #[serde(deny_unknown_fields)]
 pub struct Level {
     /// The case count at which this level starts. The first level starts at 1.
-    pub from_case_count: u16,
+    pub from_case_count: u32,
     /// The one action the level takes; `None` makes the case a warning.
     pub action: Option<LevelAction>,
     /// Whether the member gets a case DM.
@@ -201,6 +203,33 @@ impl RuleDefinition {
     pub fn field(&self, key: &FieldKey) -> Option<&Field> {
         self.fields.iter().find(|f| &f.key == key)
     }
+
+    /// The fields a case under this version is answered with: the rule's
+    /// own fields, or, when it has none, the one optional free-text
+    /// [`details_field`] (§3.2). The details field is never stored in
+    /// `fields`.
+    pub fn context_fields(&self) -> Cow<'_, [Field]> {
+        if self.fields.is_empty() {
+            Cow::Owned(vec![details_field()])
+        } else {
+            Cow::Borrowed(&self.fields)
+        }
+    }
+}
+
+/// The key of the free-text field of a rule with no fields.
+pub const DETAILS_FIELD_KEY: &str = "details";
+/// The label of the free-text field of a rule with no fields.
+pub const DETAILS_FIELD_LABEL: &str = "Details";
+
+/// The optional `long_text` field a rule with no fields is answered with.
+pub fn details_field() -> Field {
+    Field {
+        key: FieldKey(DETAILS_FIELD_KEY.to_owned()),
+        label: DETAILS_FIELD_LABEL.to_owned(),
+        kind: FieldKind::LongText,
+        required: false,
+    }
 }
 
 /// Returns the version number an edit writes, refusing a stale editor:
@@ -217,8 +246,10 @@ pub fn next_version(current: u32, expected: u32) -> Result<u32, DomainError> {
 pub fn starter_rule() -> RuleDefinition {
     RuleDefinition {
         name: "General rule violation".to_owned(),
-        description: "A starter rule. Review it and change it to fit your server.".to_owned(),
-        reason: "Breaking the server rules.".to_owned(),
+        description:
+            "A starter rule for general violations. Review it and change it for this server."
+                .to_owned(),
+        reason: "General rule violation".to_owned(),
         appealable: true,
         counting_window_days: None,
         fields: Vec::new(),
@@ -246,16 +277,18 @@ pub fn starter_rule() -> RuleDefinition {
     }
 }
 
-/// The name of the rule `/setup` uses or creates for the honeypot (§3.8).
+/// The name of the rule `/setup` creates for the honeypot (§3.8). Quack
+/// never adopts an existing rule by this name.
 pub const HONEYPOT_RULE_NAME: &str = "Honeypot";
 
-/// The rule `/setup` creates for the honeypot when none is chosen and no
-/// active rule is named "Honeypot" (§3.8).
+/// The rule `/setup` creates for the honeypot when its settings name no
+/// rule (§3.8). When an active rule already has this name, turning the
+/// honeypot on is refused instead.
 pub fn honeypot_rule() -> RuleDefinition {
     RuleDefinition {
         name: HONEYPOT_RULE_NAME.to_owned(),
         description: "Applied when a member posts in the honeypot channel.".to_owned(),
-        reason: "Posting in the honeypot channel.".to_owned(),
+        reason: "Posted in the honeypot channel despite the warning.".to_owned(),
         appealable: true,
         counting_window_days: None,
         fields: Vec::new(),

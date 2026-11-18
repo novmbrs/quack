@@ -10,7 +10,7 @@ pub struct LevelChoice {
     /// 1-based position of the level in the rule version.
     pub index: u8,
     /// The level's `from_case_count`.
-    pub from_case_count: u16,
+    pub from_case_count: u32,
     /// The level's action; `None` makes the case a warning.
     pub action: Option<LevelAction>,
     /// Whether the member gets a case DM.
@@ -21,16 +21,17 @@ pub struct LevelChoice {
 /// `from_case_count` at or below `case_count`.
 ///
 /// `case_count` is the number of counted cases plus one for the new case.
-/// Below every level (possible only for an imported historical version) the
-/// first level applies. `None` only for a definition with no levels, which
-/// validation never lets through.
+/// Every version a case can use starts at 1, so there is always a level;
+/// below every level (only a reconstructed imported version, never applied
+/// to a new case) the first level applies. `None` only for a definition
+/// with no levels, which validation never lets through.
 pub fn select_level(def: &RuleDefinition, case_count: u32) -> Option<LevelChoice> {
     let chosen = def
         .levels
         .iter()
         .enumerate()
         .rev()
-        .find(|(_, level)| u32::from(level.from_case_count) <= case_count)
+        .find(|(_, level)| level.from_case_count <= case_count)
         .or_else(|| def.levels.iter().enumerate().next())?;
     let (position, level) = chosen;
     Some(LevelChoice {
@@ -66,7 +67,7 @@ mod tests {
     use super::*;
     use crate::rule::{Level, starter_rule};
 
-    fn rule_with(froms: &[u16]) -> RuleDefinition {
+    fn rule_with(froms: &[u32]) -> RuleDefinition {
         let mut def = starter_rule();
         def.levels = froms
             .iter()
@@ -122,8 +123,8 @@ mod tests {
         assert!(in_window(datetime!(2000-01-01 0:00 UTC), None));
     }
 
-    fn levels() -> impl Strategy<Value = Vec<u16>> {
-        prop::collection::btree_set(2_u16..=1000, 0..10).prop_map(|rest| {
+    fn levels() -> impl Strategy<Value = Vec<u32>> {
+        prop::collection::btree_set(2_u32..=1_000_000, 0..10).prop_map(|rest| {
             let mut v = vec![1];
             v.extend(rest);
             v
@@ -132,7 +133,7 @@ mod tests {
 
     proptest! {
         #[test]
-        fn monotonic_in_case_count(froms in levels(), a in 1_u32..2000, b in 1_u32..2000) {
+        fn monotonic_in_case_count(froms in levels(), a in 1_u32..2_000_000, b in 1_u32..2_000_000) {
             let def = rule_with(&froms);
             let (lo, hi) = (a.min(b), a.max(b));
             let (l, h) = (select_level(&def, lo).unwrap(), select_level(&def, hi).unwrap());
@@ -141,15 +142,15 @@ mod tests {
         }
 
         #[test]
-        fn chosen_level_is_the_highest_reached(froms in levels(), n in 1_u32..2000) {
+        fn chosen_level_is_the_highest_reached(froms in levels(), n in 1_u32..2_000_000) {
             let def = rule_with(&froms);
             let choice = select_level(&def, n).unwrap();
             let level = &def.levels[usize::from(choice.index) - 1];
             prop_assert_eq!(level.from_case_count, choice.from_case_count);
             prop_assert_eq!(level.send_dm, choice.send_dm);
-            prop_assert!(u32::from(choice.from_case_count) <= n);
+            prop_assert!(choice.from_case_count <= n);
             if let Some(next) = def.levels.get(usize::from(choice.index)) {
-                prop_assert!(u32::from(next.from_case_count) > n);
+                prop_assert!(next.from_case_count > n);
             }
         }
 
@@ -159,10 +160,11 @@ mod tests {
             prop_assert_eq!(select_level(&def, 1).unwrap().index, 1);
             let last = u8::try_from(froms.len()).unwrap();
             prop_assert_eq!(select_level(&def, 1_000_000).unwrap().index, last);
+            prop_assert_eq!(select_level(&def, u32::MAX).unwrap().index, last);
         }
 
         #[test]
-        fn default_level_below_all_thresholds(first in 2_u16..=1000, n in 0_u32..2) {
+        fn default_level_below_all_thresholds(first in 2_u32..=1_000_000, n in 0_u32..2) {
             let def = rule_with(&[first]);
             prop_assert_eq!(select_level(&def, n).unwrap().index, 1);
         }

@@ -4,7 +4,8 @@ use std::collections::{BTreeMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use super::link::{LinkProblem, MessageLink};
+use super::decimal::{Decimal, DecimalError};
+use super::link::{LinkProblem, MessageLink, find_message_links};
 use crate::ids::GuildId;
 use crate::limits;
 use crate::rule::{Field, FieldKey, FieldKind};
@@ -12,14 +13,37 @@ use crate::rule::{Field, FieldKey, FieldKind};
 /// One submitted answer, before validation.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ContextInput {
-    /// From the API: any JSON value.
+    /// From the API: a JSON value. A JSON number here has already been
+    /// read by `serde_json`: integers are exact, but any other number is
+    /// read from its shortest float form, so the API passes numbers as
+    /// [`ContextInput::JsonNumber`] instead (see
+    /// [`ContextInput::from_json_text`]).
     Json(serde_json::Value),
+    /// From the API: the original text of a JSON number, e.g. `2.50`.
+    JsonNumber(String),
     /// From a Discord modal or select: text (booleans are `yes`/`no`).
     Text(String),
 }
 
-/// One stored answer: a JSON string, bool, or number.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+impl ContextInput {
+    /// Reads one API answer from its JSON text (for example a
+    /// `serde_json::value::RawValue`), keeping a number's original text so
+    /// it is never parsed through a binary float.
+    pub fn from_json_text(raw: &str) -> Result<Self, serde_json::Error> {
+        let value: serde_json::Value = serde_json::from_str(raw)?;
+        Ok(if value.is_number() {
+            Self::JsonNumber(raw.trim().to_owned())
+        } else {
+            Self::Json(value)
+        })
+    }
+}
+
+/// One stored answer: text, yes/no, or an exact decimal. Numbers are
+/// stored and sent as their canonical decimal string, so reading stored
+/// JSON gives [`ContextValue::Text`] for them until
+/// [`ContextValues::with_kinds`] types them by field.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ContextValue {
     /// Text, or a canonical message link.
@@ -27,12 +51,24 @@ pub enum ContextValue {
     /// Yes or no.
     Boolean(bool),
     /// A number.
-    Number(serde_json::Number),
+    Number(Decimal),
+}
+
+impl ContextValue {
+    /// The answer as a number: a [`ContextValue::Number`], or text that is
+    /// a canonical decimal (as stored).
+    pub fn as_decimal(&self) -> Option<Decimal> {
+        match self {
+            Self::Number(d) => Some(*d),
+            Self::Text(s) => Decimal::parse(s).ok(),
+            Self::Boolean(_) => None,
+        }
+    }
 }
 
 /// A case's validated context: field key to answer. Absent keys are
 /// unanswered optional fields. Stored as the `cases.context` JSON object.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ContextValues(pub BTreeMap<FieldKey, ContextValue>);
 
@@ -40,6 +76,44 @@ impl ContextValues {
     /// The answer for `key`.
     pub fn get(&self, key: &FieldKey) -> Option<&ContextValue> {
         self.0.get(key)
+    }
+
+    /// Types stored answers by their fields: text in a `number` field that
+    /// is a canonical decimal becomes [`ContextValue::Number`]. Use it after
+    /// reading `cases.context`.
+    #[must_use]
+    pub fn with_kinds(mut self, fields: &[Field]) -> Self {
+        for field in fields.iter().filter(|f| f.kind == FieldKind::Number) {
+            if let Some(value) = self.0.get_mut(&field.key)
+                && let Some(d) = value.as_decimal()
+            {
+                *value = ContextValue::Number(d);
+            }
+        }
+        self
+    }
+
+    /// The evidence sources the answers name (§4.2 step 4, §4.9): every
+    /// `message_link` answer, then every message link inside a text answer
+    /// (§4.6), in field order, without repeated messages. Links inside text
+    /// that point outside `guild` are ignored.
+    pub fn evidence_links(&self, fields: &[Field], guild: GuildId) -> Vec<MessageLink> {
+        let mut links = self.message_links(fields);
+        for field in fields
+            .iter()
+            .filter(|f| matches!(f.kind, FieldKind::ShortText | FieldKind::LongText))
+        {
+            if let Some(ContextValue::Text(text)) = self.0.get(&field.key) {
+                for link in find_message_links(text) {
+                    if link.guild_id == guild
+                        && !links.iter().any(|l| l.message_id == link.message_id)
+                    {
+                        links.push(link);
+                    }
+                }
+            }
+        }
+        links
     }
 
     /// Every message link answered in a `message_link` field, in field order.
@@ -108,8 +182,9 @@ impl ContextProblem {
     }
 }
 
-/// Validates submitted answers against a rule version's fields and the
-/// case's server, reporting every problem at once.
+/// Validates submitted answers against a rule version's context fields
+/// ([`crate::rule::RuleDefinition::context_fields`]) and the case's server,
+/// reporting every problem at once.
 ///
 /// An omitted, null, empty, or whitespace-only optional answer is stored as
 /// absent; `false` and `0` are answers. Text is stored trimmed.
@@ -184,7 +259,7 @@ fn is_blank(input: &ContextInput) -> bool {
         ContextInput::Json(serde_json::Value::String(s)) | ContextInput::Text(s) => {
             s.trim().is_empty()
         }
-        ContextInput::Json(_) => false,
+        ContextInput::Json(_) | ContextInput::JsonNumber(_) => false,
     }
 }
 
@@ -198,7 +273,7 @@ fn validate_one(
         ContextInput::Json(serde_json::Value::String(s)) | ContextInput::Text(s) => {
             Some(s.as_str())
         }
-        ContextInput::Json(_) => None,
+        ContextInput::Json(_) | ContextInput::JsonNumber(_) => None,
     };
     match kind {
         FieldKind::ShortText | FieldKind::LongText => {
@@ -221,18 +296,20 @@ fn validate_one(
             _ => Err(P::NotYesNo),
         },
         FieldKind::Number => {
-            let (value, decimals) = match input {
-                ContextInput::Json(serde_json::Value::Number(n)) => json_number(n),
-                ContextInput::Text(s) => parse_decimal(s.trim()).ok_or(P::NotANumber)?,
+            let text = match input {
+                ContextInput::JsonNumber(raw) => raw.trim().to_owned(),
+                ContextInput::Json(serde_json::Value::Number(n)) => n.to_string(),
+                ContextInput::Json(serde_json::Value::String(s)) | ContextInput::Text(s) => {
+                    s.trim().to_owned()
+                }
                 ContextInput::Json(_) => return Err(P::NotANumber),
             };
-            if !value.is_finite()
-                || value.abs() > limits::CONTEXT_NUMBER_MAX_ABS
-                || decimals > limits::CONTEXT_NUMBER_MAX_DECIMALS
-            {
-                return Err(P::NumberOutOfRange);
-            }
-            Ok(ContextValue::Number(store_number(value)))
+            Decimal::parse(&text)
+                .map(ContextValue::Number)
+                .map_err(|e| match e {
+                    DecimalError::NotANumber => P::NotANumber,
+                    DecimalError::OutOfRange => P::NumberOutOfRange,
+                })
         }
         FieldKind::MessageLink => {
             let text = text.ok_or(P::NotAMessageLink)?;
@@ -243,54 +320,6 @@ fn validate_one(
                     LinkProblem::OtherServer => P::OtherServer,
                 })
         }
-    }
-}
-
-/// A JSON number's value and its count of decimal places. Rust prints
-/// floats in plain decimal (never exponent form), shortest round-trip.
-#[allow(
-    clippy::cast_precision_loss,
-    reason = "the range check happens on the f64"
-)]
-fn json_number(n: &serde_json::Number) -> (f64, usize) {
-    if let Some(i) = n.as_i64() {
-        return (i as f64, 0);
-    }
-    if let Some(u) = n.as_u64() {
-        return (u as f64, 0);
-    }
-    let f = n.as_f64().unwrap_or(f64::NAN);
-    let decimals = f
-        .to_string()
-        .split_once('.')
-        .map_or(0, |(_, frac)| frac.len());
-    (f, decimals)
-}
-
-/// Parses Discord text as a decimal: optional `-`, digits, optional `.`
-/// and digits. No exponent, no `+`, no bare `.5` or `5.`.
-fn parse_decimal(s: &str) -> Option<(f64, usize)> {
-    let digits = s.strip_prefix('-').unwrap_or(s);
-    let (int, frac) = match digits.split_once('.') {
-        Some((i, f)) => (i, Some(f)),
-        None => (digits, None),
-    };
-    let all_digits = |p: &str| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit());
-    if !all_digits(int) || frac.is_some_and(|f| !all_digits(f)) {
-        return None;
-    }
-    Some((s.parse().ok()?, frac.map_or(0, str::len)))
-}
-
-#[allow(
-    clippy::cast_possible_truncation,
-    reason = "whole values are at most 10^15"
-)]
-fn store_number(value: f64) -> serde_json::Number {
-    if value.fract() == 0.0 {
-        serde_json::Number::from(value as i64)
-    } else {
-        serde_json::Number::from_f64(value).unwrap_or_else(|| serde_json::Number::from(0))
     }
 }
 

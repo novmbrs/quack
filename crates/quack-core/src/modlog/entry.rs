@@ -151,7 +151,7 @@ pub struct CaseCreatedDetail {
     /// 1-based level position.
     pub level_index: u8,
     /// That level's start.
-    pub level_from_case_count: u16,
+    pub level_from_case_count: u32,
     /// Counted cases including this one.
     pub case_count: u32,
     /// The decided action, if any.

@@ -2,6 +2,7 @@
 //! replacement links, and case context.
 
 mod context;
+mod decimal;
 mod link;
 
 use crate::DomainError;
@@ -14,7 +15,8 @@ pub use context::{
     ContextInput, ContextProblem, ContextProblemCode, ContextValue, ContextValues,
     fill_message_links, validate_context,
 };
-pub use link::{LinkProblem, MessageLink};
+pub use decimal::{Decimal, DecimalError};
+pub use link::{LinkProblem, MessageLink, find_message_links};
 
 str_enum! {
     /// Where a case came from (`case_source`).
@@ -79,7 +81,7 @@ pub struct CaseDecision {
     /// 1-based level position in that version.
     pub level_index: u8,
     /// That level's `from_case_count`.
-    pub level_from_case_count: u16,
+    pub level_from_case_count: u32,
     /// The level's action; `None` is a warning.
     pub action: Option<LevelAction>,
     /// Whether the member gets a case DM.

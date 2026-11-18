@@ -6,15 +6,21 @@ use std::fmt;
 use super::{LevelAction, RuleDefinition};
 use crate::limits;
 
-/// How strictly a definition is validated.
+/// How strictly a definition is validated (§3.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Strictness {
-    /// Every rule Quack or staff writes, and every import.
+    /// Every row of §3.3: every definition written through Quack (create,
+    /// edit, import of a rule file).
     New,
-    /// Only for versions the importer reconstructs from old cases (§19.5):
-    /// the first level may start above 1. Quack never applies these to new
-    /// cases.
-    Historical,
+    /// Only for the MySQL importer (§19.5): structure, not size limits, so
+    /// legacy rules are imported as they were. Checks a non-empty name and
+    /// reason, 1 or more levels with strictly increasing `from_case_count`,
+    /// timeouts within Discord's 28 days, and unique field keys.
+    Imported {
+        /// A partial version rebuilt from old cases, never applied to a
+        /// new case: its first level may start above 1.
+        reconstructed: bool,
+    },
 }
 
 str_enum! {
@@ -40,7 +46,7 @@ str_enum! {
         LevelCount = "level_count",
         /// The first level does not start at case count 1.
         FirstLevelNotOne = "first_level_not_one",
-        /// A later level starts outside 2–1,000.
+        /// A later level starts outside 2–1,000,000.
         LevelCaseCount = "level_case_count",
         /// A level does not start after the one before it.
         LevelOrder = "level_order",
@@ -160,13 +166,28 @@ impl fmt::Display for RuleProblem {
 }
 
 impl RuleDefinition {
-    /// Checks every limit in §3.3 and reports every problem at once, in
-    /// document order. Text is measured after trimming.
+    /// Checks the definition at `strictness` and reports every problem at
+    /// once, in document order. Text is measured after trimming.
     ///
     /// Name uniqueness, the active-rule cap, and the honeypot's no-required-
-    /// fields rule depend on other rows; the engine checks those.
+    /// fields rule depend on other rows; the engine checks those. Restoring
+    /// an archived rule re-checks only those, never the definition.
     pub fn validate(&self, strictness: Strictness) -> Result<(), Vec<RuleProblem>> {
         let mut problems = Vec::new();
+        match strictness {
+            Strictness::New => self.validate_new(&mut problems),
+            Strictness::Imported { reconstructed } => {
+                self.validate_imported(reconstructed, &mut problems);
+            }
+        }
+        if problems.is_empty() {
+            Ok(())
+        } else {
+            Err(problems)
+        }
+    }
+
+    fn validate_new(&self, problems: &mut Vec<RuleProblem>) {
         if !limits::RULE_NAME.allows(&self.name) {
             problems.push(RuleProblem::NameLength);
         }
@@ -182,16 +203,6 @@ impl RuleDefinition {
         {
             problems.push(RuleProblem::CountingWindow);
         }
-        self.validate_fields(&mut problems);
-        self.validate_levels(strictness, &mut problems);
-        if problems.is_empty() {
-            Ok(())
-        } else {
-            Err(problems)
-        }
-    }
-
-    fn validate_fields(&self, problems: &mut Vec<RuleProblem>) {
         if self.fields.len() > limits::MAX_FIELDS {
             problems.push(RuleProblem::TooManyFields);
         }
@@ -206,24 +217,15 @@ impl RuleDefinition {
                 problems.push(RuleProblem::FieldLabelLength { index });
             }
         }
-    }
-
-    fn validate_levels(&self, strictness: Strictness, problems: &mut Vec<RuleProblem>) {
         if !(limits::MIN_LEVELS..=limits::MAX_LEVELS).contains(&self.levels.len()) {
             problems.push(RuleProblem::LevelCount);
         }
-        let mut previous: Option<u16> = None;
+        let mut previous: Option<u32> = None;
         for (index, level) in self.levels.iter().enumerate() {
             let count = level.from_case_count;
             if index == 0 {
-                match strictness {
-                    Strictness::New if count != 1 => problems.push(RuleProblem::FirstLevelNotOne),
-                    Strictness::Historical
-                        if !(1..=limits::MAX_LEVEL_CASE_COUNT).contains(&count) =>
-                    {
-                        problems.push(RuleProblem::LevelCaseCount { index });
-                    }
-                    _ => {}
+                if count != 1 {
+                    problems.push(RuleProblem::FirstLevelNotOne);
                 }
             } else if !(2..=limits::MAX_LEVEL_CASE_COUNT).contains(&count) {
                 problems.push(RuleProblem::LevelCaseCount { index });
@@ -231,20 +233,65 @@ impl RuleDefinition {
                 problems.push(RuleProblem::LevelOrder { index });
             }
             previous = Some(count);
-            match level.action {
-                Some(LevelAction::Timeout { duration_seconds })
-                    if !(limits::MIN_TIMEOUT_SECONDS..=limits::MAX_TIMEOUT_SECONDS)
-                        .contains(&duration_seconds) =>
-                {
-                    problems.push(RuleProblem::TimeoutDuration { index });
-                }
-                Some(LevelAction::Ban {
-                    delete_message_seconds,
-                }) if delete_message_seconds > limits::MAX_BAN_DELETE_SECONDS => {
-                    problems.push(RuleProblem::BanDeleteWindow { index });
-                }
-                _ => {}
+            check_action(index, level.action, true, problems);
+        }
+    }
+
+    fn validate_imported(&self, reconstructed: bool, problems: &mut Vec<RuleProblem>) {
+        if self.name.trim().is_empty() {
+            problems.push(RuleProblem::NameLength);
+        }
+        if self.reason.trim().is_empty() {
+            problems.push(RuleProblem::ReasonLength);
+        }
+        let mut seen = HashSet::new();
+        for (index, field) in self.fields.iter().enumerate() {
+            if !seen.insert(field.key.as_str()) {
+                problems.push(RuleProblem::FieldKeyDuplicate { index });
             }
         }
+        if self.levels.is_empty() {
+            problems.push(RuleProblem::LevelCount);
+        }
+        let mut previous: Option<u32> = None;
+        for (index, level) in self.levels.iter().enumerate() {
+            let count = level.from_case_count;
+            match previous {
+                None if reconstructed && count == 0 => {
+                    problems.push(RuleProblem::LevelCaseCount { index });
+                }
+                None if !reconstructed && count != 1 => {
+                    problems.push(RuleProblem::FirstLevelNotOne);
+                }
+                Some(p) if count <= p => problems.push(RuleProblem::LevelOrder { index }),
+                _ => {}
+            }
+            previous = Some(count);
+            check_action(index, level.action, false, problems);
+        }
+    }
+}
+
+/// Checks a level's action: a timeout within 1–2,419,200 seconds always;
+/// the ban deletion window only when `size_limits` apply.
+fn check_action(
+    index: usize,
+    action: Option<LevelAction>,
+    size_limits: bool,
+    problems: &mut Vec<RuleProblem>,
+) {
+    match action {
+        Some(LevelAction::Timeout { duration_seconds })
+            if !(limits::MIN_TIMEOUT_SECONDS..=limits::MAX_TIMEOUT_SECONDS)
+                .contains(&duration_seconds) =>
+        {
+            problems.push(RuleProblem::TimeoutDuration { index });
+        }
+        Some(LevelAction::Ban {
+            delete_message_seconds,
+        }) if size_limits && delete_message_seconds > limits::MAX_BAN_DELETE_SECONDS => {
+            problems.push(RuleProblem::BanDeleteWindow { index });
+        }
+        _ => {}
     }
 }

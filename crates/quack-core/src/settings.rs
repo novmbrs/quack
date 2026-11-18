@@ -15,7 +15,8 @@ str_enum! {
         EveryoneRole = "everyone_role",
         /// A role the server doesn't have (and that wasn't already saved).
         UnknownRole = "unknown_role",
-        /// Not a `discord.gg` or `discord.com/invite` link.
+        /// Not a `discord.gg`, `discord.com/invite`, or
+        /// `discordapp.com/invite` link with a valid code.
         InviteUrl = "invite_url",
         /// Text is longer than the setting allows.
         TooLong = "too_long",
@@ -49,21 +50,29 @@ pub fn check_role_list(
     Ok(())
 }
 
-/// Normalizes a rejoin invite: `https://discord.gg/<code>` or
-/// `https://discord.com/invite/<code>` with a code of 2–32 characters of
-/// `[A-Za-z0-9-]`, stored as `https://discord.gg/<code>`. Empty clears it.
+/// Normalizes a rejoin invite (§13.1.1): `discord.gg/<code>`,
+/// `discord.com/invite/<code>`, or `discordapp.com/invite/<code>`, with or
+/// without `https://` and `www.`, and a code of 2–64 characters of
+/// `[A-Za-z0-9_-]`. Stored as `https://discord.gg/<code>`. Empty clears it.
 pub fn normalize_invite(url: &str) -> Result<Option<String>, SettingsProblem> {
     let url = url.trim();
     if url.is_empty() {
         return Ok(None);
     }
-    let code = url
-        .strip_prefix("https://discord.gg/")
-        .or_else(|| url.strip_prefix("https://discord.com/invite/"))
-        .ok_or(SettingsProblem::InviteUrl)?;
-    let valid = limits::INVITE_CODE.allows(code)
-        && code.len() == code.trim().len()
-        && code.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-');
+    let rest = url.strip_prefix("https://").unwrap_or(url);
+    let rest = rest.strip_prefix("www.").unwrap_or(rest);
+    let code = [
+        "discord.gg/",
+        "discord.com/invite/",
+        "discordapp.com/invite/",
+    ]
+    .iter()
+    .find_map(|prefix| rest.strip_prefix(prefix))
+    .ok_or(SettingsProblem::InviteUrl)?;
+    let valid = (limits::INVITE_CODE.min..=limits::INVITE_CODE.max).contains(&code.len())
+        && code
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
     if valid {
         Ok(Some(format!("https://discord.gg/{code}")))
     } else {
@@ -131,32 +140,44 @@ mod tests {
 
     #[test]
     fn invites() {
-        assert_eq!(
-            normalize_invite("https://discord.gg/abc-1"),
-            Ok(Some("https://discord.gg/abc-1".into()))
-        );
-        assert_eq!(
-            normalize_invite(" https://discord.com/invite/Zz "),
-            Ok(Some("https://discord.gg/Zz".into()))
-        );
-        assert_eq!(normalize_invite(""), Ok(None));
-        for bad in [
-            "http://discord.gg/abc",
-            "https://discord.gg/a",
-            "https://discord.gg/a_b",
-            "https://discord.gg/",
-            "discord.gg/abc",
+        for (input, code) in [
+            ("https://discord.gg/abc-1", "abc-1"),
+            (" https://discord.com/invite/Zz ", "Zz"),
+            ("discord.gg/a_b", "a_b"),
+            ("www.discord.gg/abc", "abc"),
+            ("https://www.discord.com/invite/abc", "abc"),
+            ("discordapp.com/invite/abc", "abc"),
+            ("https://www.discordapp.com/invite/abc", "abc"),
         ] {
             assert_eq!(
-                normalize_invite(bad),
+                normalize_invite(input),
+                Ok(Some(format!("https://discord.gg/{code}"))),
+                "{input}"
+            );
+        }
+        assert_eq!(normalize_invite(""), Ok(None));
+        let longest = "a".repeat(64);
+        assert_eq!(
+            normalize_invite(&format!("discord.gg/{longest}")),
+            Ok(Some(format!("https://discord.gg/{longest}")))
+        );
+        for bad in [
+            "http://discord.gg/abc".to_owned(),
+            "https://discord.gg/a".to_owned(),
+            "https://discord.gg/a.b".to_owned(),
+            "https://discord.gg/a b".to_owned(),
+            "https://discord.gg/".to_owned(),
+            "https://discord.gg/abc/def".to_owned(),
+            "https://evil.com/discord.gg/abc".to_owned(),
+            "https://discord.com/abc".to_owned(),
+            format!("https://discord.gg/{}", "a".repeat(65)),
+        ] {
+            assert_eq!(
+                normalize_invite(&bad),
                 Err(SettingsProblem::InviteUrl),
                 "{bad}"
             );
         }
-        assert_eq!(
-            normalize_invite(&format!("https://discord.gg/{}", "a".repeat(33))),
-            Err(SettingsProblem::InviteUrl)
-        );
     }
 
     #[test]

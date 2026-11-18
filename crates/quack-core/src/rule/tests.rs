@@ -32,7 +32,7 @@ fn field(key: &str) -> Field {
     }
 }
 
-fn level(from: u16, action: Option<LevelAction>) -> Level {
+fn level(from: u32, action: Option<LevelAction>) -> Level {
     Level {
         from_case_count: from,
         action,
@@ -176,7 +176,7 @@ fn level_rules() {
 
     def.levels = vec![level(2, None)];
     assert_eq!(problems(&def), vec![RuleProblem::FirstLevelNotOne]);
-    def.levels = vec![level(1, None), level(1001, None)];
+    def.levels = vec![level(1, None), level(1_000_001, None)];
     assert_eq!(
         problems(&def),
         vec![RuleProblem::LevelCaseCount { index: 1 }]
@@ -239,7 +239,7 @@ fn level_rules() {
             }),
         ),
         level(
-            1000,
+            1_000_000,
             Some(LevelAction::Ban {
                 delete_message_seconds: 604_800,
             }),
@@ -248,16 +248,116 @@ fn level_rules() {
     assert_eq!(def.validate(Strictness::New), Ok(()));
 }
 
+fn imported(def: &RuleDefinition, reconstructed: bool) -> Vec<RuleProblem> {
+    def.validate(Strictness::Imported { reconstructed })
+        .err()
+        .unwrap_or_default()
+}
+
 #[test]
-fn historical_allows_a_first_level_above_one() {
+fn imported_checks_structure_but_not_size_limits() {
+    let mut def = spam();
+    def.name = "x".repeat(300);
+    def.description = "x".repeat(900);
+    def.reason = "x".repeat(2000);
+    def.counting_window_days = Some(0);
+    def.fields = (0..12).map(|i| field(&format!("F {i}"))).collect();
+    def.levels = (1..=12)
+        .map(|i| {
+            level(
+                i * 2_000_000 - 1_999_999,
+                Some(LevelAction::Ban {
+                    delete_message_seconds: 9_999_999,
+                }),
+            )
+        })
+        .collect();
+    assert_eq!(imported(&def, false), vec![]);
+    assert_ne!(problems(&def), vec![]);
+
+    let mut broken = spam();
+    broken.name = "  ".into();
+    broken.reason = String::new();
+    broken.fields = vec![field("a"), field("a")];
+    broken.levels = vec![
+        level(
+            1,
+            Some(LevelAction::Timeout {
+                duration_seconds: 2_419_201,
+            }),
+        ),
+        level(3, None),
+        level(3, None),
+        level(
+            2,
+            Some(LevelAction::Timeout {
+                duration_seconds: 0,
+            }),
+        ),
+    ];
+    assert_eq!(
+        imported(&broken, false),
+        vec![
+            RuleProblem::NameLength,
+            RuleProblem::ReasonLength,
+            RuleProblem::FieldKeyDuplicate { index: 1 },
+            RuleProblem::TimeoutDuration { index: 0 },
+            RuleProblem::LevelOrder { index: 2 },
+            RuleProblem::LevelOrder { index: 3 },
+            RuleProblem::TimeoutDuration { index: 3 },
+        ]
+    );
+    broken.levels.clear();
+    assert!(imported(&broken, true).contains(&RuleProblem::LevelCount));
+}
+
+#[test]
+fn only_reconstructed_versions_may_start_above_one() {
     let mut def = spam();
     def.levels = vec![level(3, None), level(5, None)];
-    assert_eq!(def.validate(Strictness::Historical), Ok(()));
+    assert_eq!(imported(&def, true), vec![]);
+    assert_eq!(imported(&def, false), vec![RuleProblem::FirstLevelNotOne]);
     assert_eq!(problems(&def), vec![RuleProblem::FirstLevelNotOne]);
     def.levels = vec![level(0, None)];
     assert_eq!(
-        def.validate(Strictness::Historical),
-        Err(vec![RuleProblem::LevelCaseCount { index: 0 }])
+        imported(&def, true),
+        vec![RuleProblem::LevelCaseCount { index: 0 }]
+    );
+    assert_eq!(imported(&def, false), vec![RuleProblem::FirstLevelNotOne]);
+}
+
+#[test]
+fn a_rule_without_fields_takes_free_text_details() {
+    let mut def = spam();
+    assert_eq!(def.context_fields().as_ref(), def.fields.as_slice());
+    def.fields.clear();
+    let fields = def.context_fields();
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0].key.as_str(), "details");
+    assert_eq!(fields[0].label, "Details");
+    assert_eq!(fields[0].kind, FieldKind::LongText);
+    assert!(!fields[0].required);
+    assert!(fields[0].key.is_valid());
+    // Never stored: the definition itself keeps no fields.
+    assert_eq!(serde_json::to_value(&def).unwrap()["fields"], json!([]));
+}
+
+#[test]
+fn starter_and_honeypot_texts_match_the_design() {
+    let starter = starter_rule();
+    assert_eq!(starter.name, "General rule violation");
+    assert_eq!(
+        starter.description,
+        "A starter rule for general violations. Review it and change it for this server."
+    );
+    assert_eq!(starter.reason, "General rule violation");
+    let froms: Vec<u32> = starter.levels.iter().map(|l| l.from_case_count).collect();
+    assert_eq!(froms, [1, 3, 5]);
+    let honeypot = honeypot_rule();
+    assert_eq!(honeypot.name, HONEYPOT_RULE_NAME);
+    assert_eq!(
+        honeypot.reason,
+        "Posted in the honeypot channel despite the warning."
     );
 }
 

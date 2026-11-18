@@ -60,7 +60,7 @@ pub const MIN_LEVELS: usize = 1;
 /// Most levels per rule.
 pub const MAX_LEVELS: usize = 10;
 /// Highest `from_case_count` a level may start at.
-pub const MAX_LEVEL_CASE_COUNT: u16 = 1_000;
+pub const MAX_LEVEL_CASE_COUNT: u32 = 1_000_000;
 /// Shortest timeout, in seconds.
 pub const MIN_TIMEOUT_SECONDS: u32 = 1;
 /// Longest timeout, in seconds (28 days, Discord's limit).
@@ -78,12 +78,17 @@ pub const MAX_ACTIVE_RULES: u32 = 100;
 pub const CONTEXT_SHORT_TEXT: CharLimit = CharLimit::new(1, 500);
 /// Case context `long_text` answer.
 pub const CONTEXT_LONG_TEXT: CharLimit = CharLimit::new(1, 4_000);
-/// Longest case context `message_link` answer.
-pub const CONTEXT_MESSAGE_LINK_MAX_CHARS: usize = 200;
+/// Free-text context (`details`) of a rule with no fields.
+pub const CONTEXT_DETAILS: CharLimit = CharLimit::new(1, 4_000);
+/// Longest case context `message_link` input, in characters.
+pub const CONTEXT_MESSAGE_LINK_MAX_CHARS: usize = 4_000;
 /// Largest absolute value of a case context `number` answer (10^15).
-pub const CONTEXT_NUMBER_MAX_ABS: f64 = 1_000_000_000_000_000.0;
+pub const CONTEXT_NUMBER_MAX_ABS: i128 = 1_000_000_000_000_000;
 /// Most decimal places of a case context `number` answer.
-pub const CONTEXT_NUMBER_MAX_DECIMALS: usize = 6;
+pub const CONTEXT_NUMBER_MAX_DECIMALS: u32 = 6;
+
+/// Highest case number a server can reach (2^53 − 1, exact in JavaScript).
+pub const MAX_CASE_NUMBER: u64 = (1 << 53) - 1;
 
 /// Void reason.
 pub const VOID_REASON: CharLimit = CharLimit::new(1, 1_000);
@@ -119,8 +124,8 @@ pub const MAX_STAFF_ROLES: usize = 25;
 pub const DM_INTRO: CharLimit = CharLimit::new(0, 1_000);
 /// DM footer (empty stores nothing).
 pub const DM_FOOTER: CharLimit = CharLimit::new(0, 500);
-/// Rejoin invite code length (`[A-Za-z0-9-]`).
-pub const INVITE_CODE: CharLimit = CharLimit::new(2, 32);
+/// Rejoin invite code length (`[A-Za-z0-9_-]`).
+pub const INVITE_CODE: CharLimit = CharLimit::new(2, 64);
 /// Honeypot warning text (empty uses the generated warning).
 pub const HONEYPOT_WARNING: CharLimit = CharLimit::new(0, 1_500);
 /// Shortest ticket transcript retention, in days.
@@ -142,6 +147,9 @@ pub const MAX_PAGE_SIZE: u32 = 100;
 pub const DISCORD_PAGE_SIZE: u32 = 10;
 /// How long a multi-page `/case add` draft lives.
 pub const CASE_DRAFT_LIFETIME: Duration = Duration::minutes(15);
+/// How long after a create's start Quack repeats it with the same nonce
+/// (§10.4). Discord documents no exact window; Quack assumes 60 seconds.
+pub const NONCE_WINDOW: Duration = Duration::seconds(60);
 /// Largest HTTP request body, in bytes (256 KiB).
 pub const MAX_BODY_BYTES: usize = 262_144;
 /// Shortest statistics range.
