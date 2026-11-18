@@ -315,6 +315,7 @@ impl Discord for FakeDiscord {
     ) -> BoxFuture<'a, Outcome<ChannelId>> {
         let r = with(Call::CreateChannel, |r| r.guild = Some(guild));
         Box::pin(self.call(r, move |w| {
+            let quack = w.quack;
             let id = w.add_text_channel(guild, false);
             if let Some(c) = w
                 .guilds
@@ -323,6 +324,13 @@ impl Discord for FakeDiscord {
             {
                 c.name.clone_from(&spec.name);
                 c.overwrites.clone_from(&spec.overwrites);
+                // What Quack's own member overwrite allows, it holds there.
+                for o in &spec.overwrites {
+                    if o.target == quack_core::permissions::OverwriteTarget::Member(quack.member())
+                    {
+                        c.quack_permissions = c.quack_permissions | o.allow;
+                    }
+                }
             }
             Outcome::Done(id)
         }))

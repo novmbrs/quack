@@ -81,25 +81,41 @@ async fn warning_timeout_ban_appeal_accepted_and_ban_undone() -> Result<()> {
     let rule = created.json["id"].as_str().context("rule id")?.to_owned();
 
     // Case #1: a warning and its DM.
-    sys.send(&ix(2, moderator(), sys.channel, &case_add(MEMBER, &rule, None)))
-        .await;
+    sys.send(&ix(
+        2,
+        moderator(),
+        sys.channel,
+        &case_add(MEMBER, &rule, None),
+    ))
+    .await;
     sys.settle().await?;
     assert_eq!(sys.dms(MEMBER).len(), 1, "the warning's DM");
 
     // Case #2: a timeout. Quack restarts before any job runs; nothing is lost.
-    sys.send(&ix(2, moderator(), sys.channel, &case_add(MEMBER, &rule, None)))
-        .await;
+    sys.send(&ix(
+        2,
+        moderator(),
+        sys.channel,
+        &case_add(MEMBER, &rule, None),
+    ))
+    .await;
     sys.restart().await?;
     sys.settle().await?;
-    let timed_out = sys
-        .fake
-        .world(|w| w.member(sys.guild, sf(MEMBER)).and_then(|m| m.timeout_until));
+    let timed_out = sys.fake.world(|w| {
+        w.member(sys.guild, sf(MEMBER))
+            .and_then(|m| m.timeout_until)
+    });
     assert!(timed_out.is_some(), "the timeout applied once");
     assert_eq!(sys.dms(MEMBER).len(), 2);
 
     // Case #3: a ban; the DM goes out first, then the ban with its marker.
-    sys.send(&ix(2, moderator(), sys.channel, &case_add(MEMBER, &rule, None)))
-        .await;
+    sys.send(&ix(
+        2,
+        moderator(),
+        sys.channel,
+        &case_add(MEMBER, &rule, None),
+    ))
+    .await;
     sys.settle().await?;
     let marker = sys.fake.world(|w| {
         w.ban(sys.guild, sf(MEMBER))
@@ -186,7 +202,11 @@ async fn warning_timeout_ban_appeal_accepted_and_ban_undone() -> Result<()> {
         .await?;
     assert_eq!(unbans, 1);
     assert_eq!(sys.dms(MEMBER).len(), 4, "three case DMs and one appeal DM");
-    assert!(sys.dms(MEMBER).last().is_some_and(|d| d.contains("accepted")));
+    assert!(
+        sys.dms(MEMBER)
+            .last()
+            .is_some_and(|d| d.contains("accepted"))
+    );
 
     // The log channel has an entry for each step; the appeal post shows
     // the decision.
@@ -211,7 +231,10 @@ async fn warning_timeout_ban_appeal_accepted_and_ban_undone() -> Result<()> {
         at += found + 1;
     }
     let post = sys.posted(appeals).join("\n");
-    assert!(post.contains("Accepted") || post.contains("accepted"), "{post}");
+    assert!(
+        post.contains("Accepted") || post.contains("accepted"),
+        "{post}"
+    );
     let posts_pending = sys
         .db
         .count("SELECT count(*) FROM messages WHERE posted_revision < wanted_revision AND state = 'active'")

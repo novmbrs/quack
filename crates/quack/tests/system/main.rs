@@ -12,5 +12,9 @@
     reason = "test stories read top to bottom and fail loudly"
 )]
 
+mod activity;
 mod common;
+mod dm_failed;
+mod honeypot;
 mod moderation;
+mod tickets;

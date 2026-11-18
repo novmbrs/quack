@@ -21,19 +21,19 @@ use quack::compose::App;
 use quack::config::{Config, Need, validate};
 use quack::serve::Readiness;
 use quack_bot::Responder;
-use quack_core::ids::{AccountId, ChannelId, GuildId, RoleId};
-use quack_core::permissions::{Permission, Permissions, RoleFacts};
+use quack_core::ids::{AccountId, ChannelId, GuildId, MessageId, RoleId};
+use quack_core::permissions::{AccountFacts, Permission, Permissions, RoleFacts};
+use quack_discord::Outcome;
 use quack_discord::cache::GuildCache;
 use quack_discord::gateway::Event;
-use quack_discord::model::{Guild, InteractionRef, InteractionToken};
+use quack_discord::model::{Guild, InteractionRef, InteractionToken, Message};
 use quack_discord::rest::AutocompleteChoice;
-use quack_discord::Outcome;
 use quack_engine::BoxFuture;
 use quack_testkit::db::TestDb;
 use quack_testkit::fake::{Call, FakeDiscord, GuildSetup, MemberSetup};
 use quack_testkit::{ADMIN, GUILD, MEMBER, MEMBER_2, MODERATOR, OWNER, QUACK, sf};
-use quack_text::model::Modal;
 use quack_text::Msg;
+use quack_text::model::Modal;
 use serde_json::{Value, json};
 use tower::ServiceExt as _;
 
@@ -191,10 +191,16 @@ pub fn snowflake() -> u64 {
 }
 
 fn dashboard_dir() -> PathBuf {
-    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("system-dashboard-{}", uuid::Uuid::now_v7().simple()));
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "system-dashboard-{}",
+        uuid::Uuid::now_v7().simple()
+    ));
     std::fs::create_dir_all(&dir).unwrap();
-    std::fs::write(dir.join("index.html"), "<!doctype html><title>Quack</title>").unwrap();
+    std::fs::write(
+        dir.join("index.html"),
+        "<!doctype html><title>Quack</title>",
+    )
+    .unwrap();
     dir
 }
 
@@ -298,7 +304,13 @@ impl System {
     /// the bot) and composes them again over the same database and fake,
     /// then warms the caches the way `serve` does.
     pub async fn restart(&mut self) -> Result<()> {
-        self.app = compose(&self.config, &self.db, &self.fake, &self.recorder, &self.ready)?;
+        self.app = compose(
+            &self.config,
+            &self.db,
+            &self.fake,
+            &self.recorder,
+            &self.ready,
+        )?;
         self.warm().await
     }
 
@@ -319,8 +331,7 @@ impl System {
         let channels: Vec<ChannelId> = self.fake.world(|w| {
             w.guilds
                 .get(&self.guild)
-                .map(|g| g.channels.keys().copied().collect())
-                .unwrap_or_default()
+                .map_or_else(Vec::new, |g| g.channels.keys().copied().collect())
         });
         self.event(Event::GuildCreate {
             guild: Guild {
@@ -341,6 +352,75 @@ impl System {
     /// One gateway event, as the dispatcher hands it to the bot.
     pub async fn event(&self, event: Event) {
         self.app.bot.on_event(event).await;
+    }
+
+    /// `author` posts `content` in `channel`: the message exists in the
+    /// fake (so history reads find it) and its `MESSAGE_CREATE` reaches
+    /// the bot.
+    pub async fn say(&self, channel: ChannelId, author: u64, content: &str) -> MessageId {
+        let (id, roles) = self.fake.world(|w| {
+            let id = w.post(self.guild, channel, sf(author), content, Vec::new());
+            let roles = w.member(self.guild, sf(author)).map(|m| m.role_ids.clone());
+            (id, roles)
+        });
+        self.event(Event::MessageCreate(Message {
+            id,
+            channel_id: channel,
+            guild_id: Some(self.guild),
+            author: AccountFacts {
+                id: sf(author),
+                username: format!("user{author}"),
+                global_name: None,
+                avatar_hash: None,
+                bot: false,
+            },
+            webhook: false,
+            member_role_ids: roles,
+            content: content.to_owned(),
+            created_at: time::OffsetDateTime::now_utc(),
+            edited_at: None,
+            embeds: Vec::new(),
+            attachments: Vec::new(),
+        }))
+        .await;
+        id
+    }
+
+    /// `author`'s message `id` in `channel` now reads `content`
+    /// (`MESSAGE_UPDATE` with an edited time).
+    pub async fn edit(&self, channel: ChannelId, id: MessageId, author: u64, content: &str) {
+        let now = time::OffsetDateTime::now_utc();
+        self.event(Event::MessageUpdate(Message {
+            id,
+            channel_id: channel,
+            guild_id: Some(self.guild),
+            author: AccountFacts {
+                id: sf(author),
+                username: format!("user{author}"),
+                global_name: None,
+                avatar_hash: None,
+                bot: false,
+            },
+            webhook: false,
+            member_role_ids: None,
+            content: content.to_owned(),
+            created_at: now,
+            edited_at: Some(now),
+            embeds: Vec::new(),
+            attachments: Vec::new(),
+        }))
+        .await;
+    }
+
+    /// Message `id` in `channel` was deleted (`MESSAGE_DELETE`).
+    pub async fn delete(&self, channel: ChannelId, id: MessageId) {
+        self.fake.world(|w| w.messages.remove(&id));
+        self.event(Event::MessageDelete {
+            guild_id: Some(self.guild),
+            channel_id: channel,
+            message_id: id,
+        })
+        .await;
     }
 
     /// Delivers one interaction payload; returns what the bot sent for it.
@@ -440,7 +520,10 @@ impl System {
         if method != Method::GET {
             builder = builder.header("origin", PUBLIC).header(
                 "idempotency-key",
-                format!("system-key-{:08}", self.keys.fetch_add(1, Ordering::Relaxed)),
+                format!(
+                    "system-key-{:08}",
+                    self.keys.fetch_add(1, Ordering::Relaxed)
+                ),
             );
         }
         let body = match body {
@@ -512,7 +595,10 @@ impl System {
             *seen.entry(key).or_default() += 1;
         }
         let repeated: Vec<_> = seen.iter().filter(|(_, n)| **n > 1).collect();
-        assert!(repeated.is_empty(), "repeated Discord effects: {repeated:#?}");
+        assert!(
+            repeated.is_empty(),
+            "repeated Discord effects: {repeated:#?}"
+        );
     }
 }
 
@@ -622,7 +708,12 @@ pub fn click(who: Who, channel: ChannelId, custom_id: &str, ephemeral: bool) -> 
 }
 
 /// A modal submit with text inputs `(custom id, value)`.
-pub fn modal_submit(who: Who, channel: ChannelId, custom_id: &str, inputs: &[(&str, &str)]) -> Value {
+pub fn modal_submit(
+    who: Who,
+    channel: ChannelId,
+    custom_id: &str,
+    inputs: &[(&str, &str)],
+) -> Value {
     let components: Vec<Value> = inputs
         .iter()
         .enumerate()
