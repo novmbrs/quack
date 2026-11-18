@@ -135,6 +135,7 @@ impl DbError {
                 violation: Violation::Check,
                 ..
             } => DbErrorClass::CheckViolation,
+            Self::Decode(_) => DbErrorClass::Decode,
             _ => DbErrorClass::Other,
         }
     }

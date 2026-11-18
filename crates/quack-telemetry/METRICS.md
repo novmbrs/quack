@@ -142,7 +142,7 @@ times (requests, job runs, interactions handled).
 | `http.route` | static names chosen in code | API route template (semconv). |
 | `url.template` | static names chosen in code | Discord REST route template (semconv). |
 | `http.response.status_code` | static names chosen in code | HTTP status code (semconv); absent when no response arrived. |
-| `quack.discord.outcome` | `done`, `refused`, `unknown`, `rate_limited` | Outcome class of a Discord REST call. |
+| `quack.discord.outcome` | `done`, `refused`, `unknown`, `rate_limited`, `not_sent` | Outcome class of a Discord REST call (`not_sent`: it never left Quack). |
 | `quack.discord.rate_limit.scope` | `route`, `global`, `shared` | Which Discord rate limit applied. |
 | `quack.gateway.event` | static names chosen in code | Gateway event type. |
 | `quack.gateway.connection.event` | `identify`, `resume`, `reconnect`, `invalid_session` | Gateway connection change. |
@@ -151,7 +151,7 @@ times (requests, job runs, interactions handled).
 | `db.system.name` | `postgresql` | Database system (semconv). |
 | `db.operation.name` | `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `NOTIFY`, `MIGRATE` | Database operation (semconv). |
 | `db.collection.name` | static names chosen in code | Database table (semconv). |
-| `error.type` | `serialization_failure`, `deadlock`, `unique_violation`, `foreign_key_violation`, `check_violation`, `connection`, `timeout`, `pool_timeout`, `_OTHER` | Database error class (semconv `error.type`); absent on success. |
+| `error.type` | `serialization_failure`, `deadlock`, `unique_violation`, `foreign_key_violation`, `check_violation`, `connection`, `timeout`, `pool_timeout`, `decode`, `_OTHER` | Database error class (semconv `error.type`); absent on success. |
 | `db.client.connection.pool.name` | static names chosen in code | Database pool name (semconv). |
 | `db.client.connection.state` | `idle`, `used` | Pool connection state (semconv). |
 | `quack.db.transaction.outcome` | `commit`, `rollback` | How a transaction ended. |

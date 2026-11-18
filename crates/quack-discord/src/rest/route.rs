@@ -308,7 +308,6 @@ impl Route {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quack_telemetry::labels::Attribute as _;
 
     #[test]
     fn tokens_never_reach_the_limiter_path() {

@@ -74,6 +74,11 @@ macro_rules! static_label {
             pub const fn new(name: &'static str) -> Self {
                 Self(name)
             }
+
+            /// The value, without importing [`Attribute`].
+            pub const fn as_str(self) -> &'static str {
+                self.0
+            }
         }
 
         impl Attribute for $name {
@@ -382,6 +387,9 @@ label_enum! {
         Unknown => "unknown",
         /// Discord asked Quack to retry later.
         RateLimited => "rate_limited",
+        /// The request never left Quack (connecting failed, shutting down,
+        /// or a request Quack refused to build).
+        NotSent => "not_sent",
     }
 }
 
@@ -484,6 +492,8 @@ label_enum! {
         Timeout => "timeout",
         /// No connection was free in time.
         PoolTimeout => "pool_timeout",
+        /// A row Quack couldn't read back (a value its types don't allow).
+        Decode => "decode",
         /// Any other error.
         Other => "_OTHER",
     }

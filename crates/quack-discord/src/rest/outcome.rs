@@ -80,15 +80,14 @@ impl<T> Outcome<T> {
         }
     }
 
-    /// The outcome class recorded on metrics and spans. A request that was
-    /// never sent counts as `unknown` because the catalog has no closer
-    /// value; its missing status code tells the two apart.
+    /// The outcome class recorded on metrics and spans.
     pub const fn class(&self) -> RestOutcome {
         match self {
             Self::Done(_) => RestOutcome::Done,
             Self::Refused(_) => RestOutcome::Refused,
             Self::RetryAfter(_) => RestOutcome::RateLimited,
-            Self::NotSent(_) | Self::Unknown(_) => RestOutcome::Unknown,
+            Self::NotSent(_) => RestOutcome::NotSent,
+            Self::Unknown(_) => RestOutcome::Unknown,
         }
     }
 }
@@ -361,7 +360,7 @@ mod tests {
         );
         assert_eq!(
             Outcome::<()>::NotSent(NotSentCause::Connection).class(),
-            RestOutcome::Unknown
+            RestOutcome::NotSent
         );
         assert!(!Outcome::<()>::Unknown(UnknownCause::Timeout).is_done());
     }
