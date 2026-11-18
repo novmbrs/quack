@@ -3,12 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 use super::{ModLogKind, ModLogResult};
-use crate::action::{ActionFailure, ActionKind};
+use crate::action::{ActionFailure, ActionKind, ActionSkipReason};
 use crate::case::{CaseSource, VoidCause};
 use crate::dm::{DmFailure, DmKind};
 use crate::ids::{ActionId, ModLogId};
 use crate::modules::{
-    ChannelSetting, HoneypotFailure, LogChannelFailure, ModuleDisabledReason, ModuleName,
+    ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
 };
 use crate::permissions::{DiscordPermission, MemberRefusal, MemberRefusalCode};
 use crate::rule::FieldKey;
@@ -130,9 +130,16 @@ impl ModLogEntry {
         self.kind().result()
     }
 
-    /// Whether this entry is posted to the log channel.
+    /// Whether this entry is posted to the log channel: its kind is
+    /// posted, except `module_disabled` because Quack left the server.
     pub const fn is_posted(&self) -> bool {
-        self.kind().is_posted()
+        match self {
+            Self::ModuleDisabled(ModuleDisabledDetail {
+                reason: Some(ModuleDisabledReason::QuackLeft),
+                ..
+            }) => false,
+            _ => self.kind().is_posted(),
+        }
     }
 }
 
@@ -234,7 +241,7 @@ pub struct ActionDoneDetail {
     pub no_change: bool,
 }
 
-/// `action_failed` detail.
+/// `action_failed` detail. `reason` includes `unconfirmed`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActionFailedDetail {
     /// The case's number.
@@ -269,8 +276,10 @@ pub struct UndoSkippedDetail {
     pub case_number: u64,
     /// The undo's kind.
     pub kind: ActionKind,
-    /// The case that still applies.
-    pub still_applies_case_number: u64,
+    /// Why the undo left Discord unchanged.
+    pub skip_reason: ActionSkipReason,
+    /// For `other_case_applies`: the case that still applies.
+    pub still_applies_case_number: Option<u64>,
 }
 
 /// `dm_sent` detail.
@@ -354,7 +363,8 @@ pub struct ModuleDetail {
 pub struct ModuleDisabledDetail {
     /// Which module.
     pub module: ModuleName,
-    /// `None` when staff turned it off.
+    /// `None` when staff turned it off; `channel_deleted` or `quack_left`
+    /// when Quack did.
     pub reason: Option<ModuleDisabledReason>,
 }
 
@@ -402,8 +412,9 @@ pub struct TicketClosedDetail {
 /// `honeypot_case_failed` detail.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HoneypotCaseFailedDetail {
-    /// The member refusal, or `rule_unavailable`.
-    pub refusal: HoneypotFailure,
+    /// A member refusal, `rule_unavailable`, `policy_changed`, or
+    /// `discord_unavailable`.
+    pub refusal: HoneypotRefusal,
 }
 
 /// `legacy` detail: an imported Go entry, passed through [`super::redact`].

@@ -61,6 +61,11 @@ pub enum ChannelProblem {
     MemberCanView(MemberId),
     /// Quack lacks these permissions there.
     QuackMissing(Vec<Permission>),
+    /// Server health: Discord answers 403 for the channel, so Quack can't
+    /// check it (the setting is kept, §13.1.5).
+    Inaccessible,
+    /// Server health: the channel no longer exists.
+    Missing,
 }
 
 impl ChannelProblem {
@@ -72,6 +77,8 @@ impl ChannelProblem {
             Self::RoleCanView(_) => "role_can_view",
             Self::MemberCanView(_) => "member_can_view",
             Self::QuackMissing(_) => "quack_missing",
+            Self::Inaccessible => "inaccessible",
+            Self::Missing => "missing",
         }
     }
 }

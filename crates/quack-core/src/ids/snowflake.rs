@@ -112,6 +112,10 @@ snowflake!(
     /// A Discord message.
     MessageId
 );
+snowflake!(
+    /// A file attached to a Discord message.
+    AttachmentId
+);
 
 impl MemberId {
     /// The same Discord account, viewed as an account.

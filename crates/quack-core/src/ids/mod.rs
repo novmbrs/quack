@@ -11,7 +11,7 @@ mod snowflake;
 mod uuids;
 
 pub use encoding::{from_u22, to_u22, ulid_to_uuid};
-pub use snowflake::{AccountId, ChannelId, GuildId, MemberId, MessageId, RoleId};
+pub use snowflake::{AccountId, AttachmentId, ChannelId, GuildId, MemberId, MessageId, RoleId};
 pub use uuids::{
     ActionId, AppealEventId, AppealId, CaseId, DmId, EvidenceId, FileId, JobId, MessageRowId,
     ModLogId, RuleId, TicketId,

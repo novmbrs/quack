@@ -137,14 +137,15 @@ impl DomainError {
             Self::TooManyRules => "too_many_rules",
             Self::RuleUsedByHoneypot => "rule_used_by_honeypot",
             Self::RequiredFieldOnHoneypotRule => "required_field_on_honeypot_rule",
-            Self::ActionNotRetryable | Self::ActionNotDismissable => "action_not_retryable",
+            Self::ActionNotRetryable => "action_not_retryable",
+            Self::ActionNotDismissable => "action_not_dismissable",
             Self::ActionNotUndoable => "action_not_undoable",
             Self::TimeoutWindowPassed => "timeout_window_passed",
             Self::AppealChanged => "appeal_changed",
             Self::AppealExists => "appeal_exists",
             Self::AppealNotAllowed => "appeal_not_allowed",
             Self::EvidenceLimitReached { .. } => "evidence_limit_reached",
-            Self::TooManyLinks => "validation_failed",
+            Self::TooManyLinks => "too_many_links",
             Self::SettingsChanged => "settings_changed",
             Self::TicketNotOpen => "ticket_not_open",
         }
@@ -159,8 +160,8 @@ impl DomainError {
             | Self::RuleArchived
             | Self::AppealNotAllowed
             | Self::TimeoutWindowPassed
-            | Self::EvidenceLimitReached { .. } => 422,
-            Self::TooManyLinks => 400,
+            | Self::EvidenceLimitReached { .. }
+            | Self::TooManyLinks => 422,
             _ => 409,
         }
     }
@@ -169,5 +170,46 @@ impl DomainError {
 impl From<MemberRefusal> for DomainError {
     fn from(refusal: MemberRefusal) -> Self {
         Self::MemberRefused(refusal)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn api_codes_and_statuses() {
+        let cases = [
+            (DomainError::ActionNotRetryable, "action_not_retryable", 409),
+            (
+                DomainError::ActionNotDismissable,
+                "action_not_dismissable",
+                409,
+            ),
+            (DomainError::ActionNotUndoable, "action_not_undoable", 409),
+            (DomainError::CaseVoided, "case_voided", 409),
+            (
+                DomainError::TimeoutWindowPassed,
+                "timeout_window_passed",
+                422,
+            ),
+            (DomainError::TooManyLinks, "too_many_links", 422),
+            (
+                DomainError::EvidenceLimitReached { count: 50 },
+                "evidence_limit_reached",
+                422,
+            ),
+            (DomainError::AppealChanged, "appeal_changed", 409),
+            (DomainError::CaseNotFound, "not_found", 404),
+            (DomainError::MfaRequired, "mfa_required", 403),
+            (
+                DomainError::MemberRefused(MemberRefusal::MemberIsBot),
+                "member_refused",
+                422,
+            ),
+        ];
+        for (err, code, status) in cases {
+            assert_eq!((err.code(), err.http_status()), (code, status), "{err:?}");
+        }
     }
 }

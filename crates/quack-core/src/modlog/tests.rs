@@ -2,12 +2,12 @@ use serde_json::json;
 use uuid::Uuid;
 
 use super::*;
-use crate::action::{ActionFailure, ActionKind};
+use crate::action::{ActionFailure, ActionKind, ActionSkipReason};
 use crate::case::{CaseSource, VoidCause};
 use crate::dm::{DmFailure, DmKind};
 use crate::ids::{ActionId, AppealId, CaseId, MemberId, ModLogId, RuleId, TicketId};
 use crate::modules::{
-    ChannelSetting, HoneypotFailure, LogChannelFailure, ModuleDisabledReason, ModuleName,
+    ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
 };
 use crate::permissions::{DiscordPermission, MemberRefusal, MemberRefusalCode};
 use crate::rule::FieldKey;
@@ -77,7 +77,8 @@ fn one_of_each() -> Vec<ModLogEntry> {
         ModLogEntry::ActionUndoSkipped(UndoSkippedDetail {
             case_number: 3,
             kind: ActionKind::Unban,
-            still_applies_case_number: 9,
+            skip_reason: ActionSkipReason::OtherCaseApplies,
+            still_applies_case_number: Some(9),
         }),
         ModLogEntry::DmSent(DmSentDetail {
             dm_kind: DmKind::Case,
@@ -144,7 +145,7 @@ fn one_of_each() -> Vec<ModLogEntry> {
             transcript_complete: false,
         }),
         ModLogEntry::HoneypotCaseFailed(HoneypotCaseFailedDetail {
-            refusal: HoneypotFailure::RuleUnavailable,
+            refusal: HoneypotRefusal::RuleUnavailable,
         }),
         ModLogEntry::Legacy(LegacyDetail {
             action: "x".into(),
@@ -191,13 +192,56 @@ fn detail_shapes_match_the_design() {
         json!({})
     );
     let honeypot = HoneypotCaseFailedDetail {
-        refusal: HoneypotFailure::Member(MemberRefusalCode::MemberIsBot),
+        refusal: HoneypotRefusal::Member(MemberRefusalCode::MemberIsBot),
     };
     assert_eq!(
         serde_json::to_value(honeypot).unwrap(),
         json!({ "refusal": "member_is_bot" })
     );
     assert!(ModLogEntry::from_detail(ModLogKind::ActionDone, json!({ "case_number": 1 })).is_err());
+    for refusal in [
+        HoneypotRefusal::PolicyChanged,
+        HoneypotRefusal::DiscordUnavailable,
+    ] {
+        assert_eq!(
+            serde_json::to_value(HoneypotCaseFailedDetail { refusal }).unwrap(),
+            json!({ "refusal": refusal.as_str() })
+        );
+    }
+    let changed_outside = UndoSkippedDetail {
+        case_number: 4,
+        kind: ActionKind::RemoveTimeout,
+        skip_reason: ActionSkipReason::ChangedOutsideCase,
+        still_applies_case_number: None,
+    };
+    assert_eq!(
+        serde_json::to_value(changed_outside).unwrap(),
+        json!({
+            "case_number": 4, "kind": "remove_timeout",
+            "skip_reason": "changed_outside_case", "still_applies_case_number": null
+        })
+    );
+    let unconfirmed = ActionFailedDetail {
+        case_number: 4,
+        kind: ActionKind::Ban,
+        reason: ActionFailure::Unconfirmed,
+        permission: None,
+        http_status: None,
+        discord_code: None,
+        attempts: 8,
+    };
+    assert_eq!(
+        serde_json::to_value(unconfirmed).unwrap()["reason"],
+        json!("unconfirmed")
+    );
+    let left = ModuleDisabledDetail {
+        module: ModuleName::Honeypot,
+        reason: Some(ModuleDisabledReason::QuackLeft),
+    };
+    assert_eq!(
+        serde_json::to_value(left).unwrap(),
+        json!({ "module": "honeypot", "reason": "quack_left" })
+    );
 }
 
 #[test]
@@ -235,6 +279,39 @@ fn results_and_posting() {
     });
     assert!(!entry.is_posted());
     assert_eq!(entry.result(), Some(ModLogResult::Ok));
+    let disabled = |reason| {
+        ModLogEntry::ModuleDisabled(ModuleDisabledDetail {
+            module: ModuleName::Tickets,
+            reason,
+        })
+    };
+    assert!(disabled(None).is_posted());
+    assert!(disabled(Some(ModuleDisabledReason::ChannelDeleted)).is_posted());
+    assert!(!disabled(Some(ModuleDisabledReason::QuackLeft)).is_posted());
+}
+
+#[test]
+fn enum_names_match_the_database() {
+    let names = |v: Vec<&str>| v.join(",");
+    assert_eq!(
+        names(ModLogResult::ALL.iter().map(|v| v.as_str()).collect()),
+        "ok,failed,refused"
+    );
+    assert_eq!(
+        names(ModLogSource::ALL.iter().map(|v| v.as_str()).collect()),
+        "discord,dashboard,quack,imported"
+    );
+    assert_eq!(
+        names(ModLogKind::ALL.iter().map(|v| v.as_str()).collect()),
+        "case_created,case_create_refused,case_voided,case_context_edited,evidence_added,\
+         action_done,action_failed,action_retry_requested,action_dismissed,action_undo_requested,\
+         action_undo_skipped,dm_sent,dm_failed,appeal_submitted,appeal_information_requested,\
+         appeal_information_provided,appeal_accepted,appeal_rejected,appeal_closed,appeal_reopened,\
+         rule_created,rule_edited,rule_archived,rule_restored,rule_imported,settings_changed,\
+         module_enabled,module_disabled,module_settings_changed,quack_joined,quack_left,\
+         channel_setting_cleared,log_channel_failed,ticket_opened,ticket_closed,\
+         honeypot_case_failed,legacy"
+    );
 }
 
 #[test]

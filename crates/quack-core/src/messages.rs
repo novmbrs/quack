@@ -5,7 +5,6 @@ use time::{Duration, OffsetDateTime};
 
 use crate::InvalidTransition;
 use crate::ids::{ChannelId, MessageRowId};
-use crate::modules::ModuleName;
 
 str_enum! {
     /// What a tracked message shows (`message_kind`).
@@ -24,12 +23,15 @@ str_enum! {
 }
 
 impl MessageKind {
-    /// Whether rows of this kind belong to a case, appeal, or ticket
-    /// (`owner_id` set) rather than being one per server.
+    /// Whether rows of this kind belong to a case, appeal, or ticket (the
+    /// matching owner column is set) rather than being one per server.
     pub const fn has_owner(self) -> bool {
         !matches!(self, Self::TicketPanel | Self::HoneypotWarning)
     }
 }
+
+/// Most earlier locations a row keeps for clean-up after moves (`stale`).
+pub const MAX_STALE: usize = 5;
 
 str_enum! {
     /// A tracked message's state (`message_state`).
@@ -85,34 +87,74 @@ pub const fn needs_sync(wanted_revision: u32, posted_revision: u32) -> bool {
 /// How the sync job writes a message (§10.3 step 3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SyncRoute {
-    /// Edit the original interaction response through the token; store the
-    /// returned message id.
+    /// A private receipt: edit the interaction's original response
+    /// through its token.
     EditOriginal,
-    /// Create the message with the revision's nonce.
-    Create,
-    /// Edit the existing message through the token.
-    EditWithToken,
-    /// Edit the existing message with bot credentials.
-    EditWithBot,
-    /// An ephemeral receipt whose token expired can't be edited: mark gone.
+    /// A private receipt whose token expired: mark it `gone`; nothing else
+    /// is ever done with it.
     MarkGone,
+    /// No channel yet (an appeal post waiting for an appeal channel):
+    /// nothing to write.
+    Wait,
+    /// Edit the posted message with bot credentials, keeping its
+    /// attachment.
+    EditWithBot,
+    /// Create the message (§10.4) with [`create_nonce`].
+    Create,
+}
+
+/// What the sync's read step knows about a row.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "independent facts about one row"
+)]
+pub struct SyncRow {
+    /// A private receipt (token edits only).
+    pub private: bool,
+    /// Whether the interaction token is still valid.
+    pub token_valid: bool,
+    /// Whether `channel_id` is set.
+    pub has_channel: bool,
+    /// Whether `message_id` is set.
+    pub posted: bool,
 }
 
 /// Picks the write for a sync.
-pub const fn sync_route(posted: bool, token_valid: bool, private: bool) -> SyncRoute {
-    match (posted, token_valid) {
-        _ if private && !token_valid => SyncRoute::MarkGone,
-        (false, true) => SyncRoute::EditOriginal,
-        (false, false) => SyncRoute::Create,
-        (true, true) => SyncRoute::EditWithToken,
-        (true, false) => SyncRoute::EditWithBot,
+pub const fn sync_route(row: SyncRow) -> SyncRoute {
+    match row {
+        SyncRow {
+            private: true,
+            token_valid: true,
+            ..
+        } => SyncRoute::EditOriginal,
+        SyncRow { private: true, .. } => SyncRoute::MarkGone,
+        SyncRow {
+            has_channel: false, ..
+        } => SyncRoute::Wait,
+        SyncRow { posted: true, .. } => SyncRoute::EditWithBot,
+        SyncRow { .. } => SyncRoute::Create,
     }
 }
 
-/// The nonce for creating revision `rev` of a tracked message: its row's
-/// u22 plus `rev mod 1000` as 3 digits (25 characters).
-pub fn create_nonce(row: MessageRowId, rev: u32) -> String {
-    format!("{}{:03}", row.to_u22(), rev % 1000)
+/// The nonce for creating a tracked message: its row's u22 plus the
+/// generation in base 36 (at most 3 digits, so at most 25 characters).
+/// Stable across revisions, new for each generation (a move, a repost, or
+/// a reactivation).
+pub fn create_nonce(row: MessageRowId, generation: u32) -> String {
+    const DIGITS: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
+    let mut n = generation % (36 * 36 * 36);
+    let mut digits = Vec::with_capacity(3);
+    loop {
+        digits.push(char::from(DIGITS[(n % 36) as usize]));
+        n /= 36;
+        if n == 0 {
+            break;
+        }
+    }
+    let mut nonce = row.to_u22();
+    nonce.extend(digits.iter().rev());
+    nonce
 }
 
 /// Discord error codes meaning the message or its channel is gone:
@@ -133,52 +175,61 @@ pub fn sync_error_code(status: u16, code: Option<u32>) -> String {
 /// What to do when a tracked message or its channel is gone (§10.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MissingPlan {
-    /// Post it again in this channel (a new `message_id`).
+    /// Post it again in this channel (`generation + 1`).
     Repost(ChannelId),
-    /// Mark the row gone, and turn this module off when it needs the
-    /// message.
-    MarkGone {
-        /// The module to disable (`channel_deleted`), if any.
-        disable: Option<ModuleName>,
-    },
+    /// An appeal post with no appeal channel set: wait with `channel_id`
+    /// NULL.
+    WaitForChannel,
+    /// A public receipt whose create was refused while the token is valid:
+    /// it becomes a private receipt, and the moderator's reply becomes the
+    /// card with `case.receipt.post_failed`.
+    BecomePrivate,
+    /// Mark the row `gone`. (Channel reconciliation, not the sync, turns a
+    /// module off when its channel was deleted.)
+    MarkGone,
 }
 
-/// Decides what happens to a missing message of `kind`, given the channel
-/// it belongs in now (the current appeal, entry, queue, or honeypot
-/// channel setting; `None` when unset or also gone).
-pub const fn on_missing(kind: MessageKind, current_channel: Option<ChannelId>) -> MissingPlan {
+/// Decides what happens to a missing message of `kind`. `current_channel`
+/// is where it belongs now (the appeal, entry, queue, or honeypot channel
+/// setting; `None` when unset). For a receipt, `create_refused` is whether
+/// its first create was refused and `token_valid` whether the moderator's
+/// token still works.
+pub const fn on_missing(
+    kind: MessageKind,
+    current_channel: Option<ChannelId>,
+    create_refused: bool,
+    token_valid: bool,
+) -> MissingPlan {
     match (kind, current_channel) {
-        (MessageKind::CaseReceipt, _) => MissingPlan::MarkGone { disable: None },
-        (_, Some(channel)) => MissingPlan::Repost(channel),
-        (MessageKind::TicketPanel, None) => MissingPlan::MarkGone {
-            disable: Some(ModuleName::Tickets),
-        },
-        (MessageKind::HoneypotWarning, None) => MissingPlan::MarkGone {
-            disable: Some(ModuleName::Honeypot),
-        },
-        (MessageKind::AppealPost | MessageKind::TicketPost, None) => {
-            MissingPlan::MarkGone { disable: None }
+        (MessageKind::CaseReceipt, _) if create_refused && token_valid => {
+            MissingPlan::BecomePrivate
         }
+        (MessageKind::CaseReceipt, _) => MissingPlan::MarkGone,
+        (MessageKind::AppealPost, None) => MissingPlan::WaitForChannel,
+        (_, Some(channel)) => MissingPlan::Repost(channel),
+        (_, None) => MissingPlan::MarkGone,
     }
 }
 
-/// What happens to the old message after a settings change moved a
-/// tracked message to another channel.
+/// What happens to an earlier location in `stale` (§10.3 step 5).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StaleCleanup {
-    /// Edit it to say the panel moved (`ticket.panel.moved`).
+    /// Edit it, without buttons, to `ticket.panel.moved` or
+    /// `appeal.post.moved`.
     EditToMoved,
-    /// Delete it.
+    /// Delete it (404 counts as done).
     Delete,
 }
 
-/// The cleanup for a moved message of `kind`; only the ticket panel and
-/// the honeypot warning move.
-pub const fn stale_cleanup(kind: MessageKind) -> Option<StaleCleanup> {
+/// The cleanup for a stale location of `kind`: ticket panels and appeal
+/// posts say where they moved; the honeypot warning, public receipts, and
+/// ticket posts are deleted.
+pub const fn stale_cleanup(kind: MessageKind) -> StaleCleanup {
     match kind {
-        MessageKind::TicketPanel => Some(StaleCleanup::EditToMoved),
-        MessageKind::HoneypotWarning => Some(StaleCleanup::Delete),
-        _ => None,
+        MessageKind::TicketPanel | MessageKind::AppealPost => StaleCleanup::EditToMoved,
+        MessageKind::HoneypotWarning | MessageKind::CaseReceipt | MessageKind::TicketPost => {
+            StaleCleanup::Delete
+        }
     }
 }
 
@@ -190,11 +241,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn owners() {
+    fn owners_and_names() {
         assert!(MessageKind::CaseReceipt.has_owner());
         assert!(MessageKind::TicketPost.has_owner());
         assert!(!MessageKind::TicketPanel.has_owner());
         assert!(!MessageKind::HoneypotWarning.has_owner());
+        let names: Vec<&str> = MessageKind::ALL.iter().map(|k| k.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "case_receipt",
+                "appeal_post",
+                "ticket_panel",
+                "ticket_post",
+                "honeypot_warning"
+            ]
+        );
+        let names: Vec<&str> = MessageState::ALL.iter().map(|k| k.as_str()).collect();
+        assert_eq!(names, ["active", "gone"]);
     }
 
     #[test]
@@ -205,22 +269,26 @@ mod tests {
 
     #[test]
     fn routes() {
+        use SyncRoute as R;
         let cases = [
-            (false, true, false, SyncRoute::EditOriginal),
-            (false, false, false, SyncRoute::Create),
-            (true, true, false, SyncRoute::EditWithToken),
-            (true, false, false, SyncRoute::EditWithBot),
-            (false, true, true, SyncRoute::EditOriginal),
-            (true, true, true, SyncRoute::EditWithToken),
-            (true, false, true, SyncRoute::MarkGone),
-            (false, false, true, SyncRoute::MarkGone),
+            (true, true, true, false, R::EditOriginal),
+            (true, true, true, true, R::EditOriginal),
+            (true, false, true, true, R::MarkGone),
+            (true, false, false, false, R::MarkGone),
+            (false, true, false, false, R::Wait),
+            (false, false, true, true, R::EditWithBot),
+            (false, true, true, true, R::EditWithBot),
+            (false, true, true, false, R::Create),
+            (false, false, true, false, R::Create),
         ];
-        for (posted, token, private, route) in cases {
-            assert_eq!(
-                sync_route(posted, token, private),
-                route,
-                "{posted} {token} {private}"
-            );
+        for (private, token_valid, has_channel, posted, route) in cases {
+            let row = SyncRow {
+                private,
+                token_valid,
+                has_channel,
+                posted,
+            };
+            assert_eq!(sync_route(row), route, "{row:?}");
         }
     }
 
@@ -231,54 +299,56 @@ mod tests {
         let at = datetime!(2026-11-17 12:00 UTC);
         assert_eq!(token_expires_at(at), datetime!(2026-11-17 12:14 UTC));
         let row = MessageRowId::from_uuid(Uuid::from_u128(0));
-        assert_eq!(create_nonce(row, 1), "AAAAAAAAAAAAAAAAAAAAAA001");
-        assert_eq!(create_nonce(row, 2_345).len(), 25);
-        assert!(create_nonce(row, 2_345).ends_with("345"));
+        assert_eq!(create_nonce(row, 1), "AAAAAAAAAAAAAAAAAAAAAA1");
+        assert_eq!(create_nonce(row, 36), "AAAAAAAAAAAAAAAAAAAAAA10");
+        assert_eq!(create_nonce(row, 46_655), "AAAAAAAAAAAAAAAAAAAAAAzzz");
+        assert_eq!(create_nonce(row, 46_655).len(), 25);
+        for generation in [1, 2, 1_000, 46_655, 46_656, u32::MAX] {
+            assert!(create_nonce(row, generation).len() <= 25, "{generation}");
+        }
+        assert_ne!(create_nonce(row, 1), create_nonce(row, 2));
     }
 
     #[test]
     fn missing_handling() {
+        use MessageKind as K;
         assert!(is_missing(Some(10_008)) && is_missing(Some(10_003)) && is_missing(Some(50_001)));
         assert!(!is_missing(Some(50_013)) && !is_missing(None));
         assert_eq!(sync_error_code(403, Some(50_001)), "http_403_50001");
         assert_eq!(sync_error_code(400, None), "http_400");
         let ch = ChannelId::new(9).unwrap();
         assert_eq!(
-            on_missing(MessageKind::CaseReceipt, Some(ch)),
-            MissingPlan::MarkGone { disable: None }
+            on_missing(K::CaseReceipt, Some(ch), true, true),
+            MissingPlan::BecomePrivate
         );
         assert_eq!(
-            on_missing(MessageKind::AppealPost, Some(ch)),
+            on_missing(K::CaseReceipt, Some(ch), true, false),
+            MissingPlan::MarkGone
+        );
+        assert_eq!(
+            on_missing(K::CaseReceipt, None, false, true),
+            MissingPlan::MarkGone
+        );
+        assert_eq!(
+            on_missing(K::AppealPost, Some(ch), false, false),
             MissingPlan::Repost(ch)
         );
         assert_eq!(
-            on_missing(MessageKind::AppealPost, None),
-            MissingPlan::MarkGone { disable: None }
+            on_missing(K::AppealPost, None, false, false),
+            MissingPlan::WaitForChannel
         );
-        assert_eq!(
-            on_missing(MessageKind::TicketPanel, None),
-            MissingPlan::MarkGone {
-                disable: Some(ModuleName::Tickets)
-            }
-        );
-        assert_eq!(
-            on_missing(MessageKind::TicketPost, None),
-            MissingPlan::MarkGone { disable: None }
-        );
-        assert_eq!(
-            on_missing(MessageKind::HoneypotWarning, None),
-            MissingPlan::MarkGone {
-                disable: Some(ModuleName::Honeypot)
-            }
-        );
-        assert_eq!(
-            stale_cleanup(MessageKind::TicketPanel),
-            Some(StaleCleanup::EditToMoved)
-        );
-        assert_eq!(
-            stale_cleanup(MessageKind::HoneypotWarning),
-            Some(StaleCleanup::Delete)
-        );
-        assert_eq!(stale_cleanup(MessageKind::CaseReceipt), None);
+        for kind in [K::TicketPanel, K::TicketPost, K::HoneypotWarning] {
+            assert_eq!(
+                on_missing(kind, Some(ch), false, false),
+                MissingPlan::Repost(ch)
+            );
+            assert_eq!(on_missing(kind, None, false, false), MissingPlan::MarkGone);
+        }
+        assert_eq!(stale_cleanup(K::TicketPanel), StaleCleanup::EditToMoved);
+        assert_eq!(stale_cleanup(K::AppealPost), StaleCleanup::EditToMoved);
+        for kind in [K::HoneypotWarning, K::CaseReceipt, K::TicketPost] {
+            assert_eq!(stale_cleanup(kind), StaleCleanup::Delete);
+        }
+        assert_eq!(MAX_STALE, 5);
     }
 }

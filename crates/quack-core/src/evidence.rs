@@ -45,21 +45,34 @@ str_enum! {
         UnsupportedType = "unsupported_type",
         /// Download or upload failed, or the channel is not staff-only.
         CopyFailed = "copy_failed",
-        /// Over 10 files on the message or 100 on the case.
-        LimitReached = "limit_reached",
     }
 }
 
-/// An event that settles an evidence item.
+/// An event on an evidence item.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EvidenceEvent {
     /// The snapshot was saved.
     Saved,
     /// Capture failed.
     Failed(EvidenceFailure),
+    /// Staff added the message again after its capture failed: capture it
+    /// again (§7.1).
+    CaptureAgain,
 }
 
-/// Settles an item: only `saving` can move, to `saved` or `failed`.
+impl EvidenceEvent {
+    /// The event's name, for errors and logs.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Saved => "saved",
+            Self::Failed(_) => "failed",
+            Self::CaptureAgain => "capture_again",
+        }
+    }
+}
+
+/// Moves an item: `saving` settles to `saved` or `failed`, and a `failed`
+/// item added again goes back to `saving` with a new job.
 pub fn transition(
     state: EvidenceState,
     event: EvidenceEvent,
@@ -67,25 +80,45 @@ pub fn transition(
     match (state, event) {
         (EvidenceState::Saving, EvidenceEvent::Saved) => Ok(EvidenceState::Saved),
         (EvidenceState::Saving, EvidenceEvent::Failed(_)) => Ok(EvidenceState::Failed),
+        (EvidenceState::Failed, EvidenceEvent::CaptureAgain) => Ok(EvidenceState::Saving),
         (_, event) => Err(InvalidTransition {
             machine: "evidence",
             from: state.as_str(),
-            event: match event {
-                EvidenceEvent::Saved => "saved",
-                EvidenceEvent::Failed(_) => "failed",
-            },
+            event: event.name(),
         }),
+    }
+}
+
+/// What adding a message that already has an evidence row on the case does
+/// (§4.9, §7.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AddAgain {
+    /// It is `saving` or `saved`: reported as already saved.
+    AlreadySaved,
+    /// Its capture `failed`: capture it again.
+    CaptureAgain,
+}
+
+/// Decides what adding an existing item again does.
+pub const fn add_again(state: EvidenceState) -> AddAgain {
+    match state {
+        EvidenceState::Failed => AddAgain::CaptureAgain,
+        EvidenceState::Saving | EvidenceState::Saved => AddAgain::AlreadySaved,
     }
 }
 
 /// Whether Quack copies a file of `size_bytes` with `content_type` to the
 /// evidence channel (§7.3): at most 10 MiB and an image, video, audio,
-/// plain text, or PDF type (lowercased, parameters ignored). The error is
-/// the copy state to record instead.
-pub fn copy_eligibility(size_bytes: u64, content_type: &str) -> Result<(), FileCopyState> {
+/// plain text, or PDF type (lowercased, parameters ignored). A file with no
+/// content type is not eligible. The error is the copy state to record
+/// instead.
+pub fn copy_eligibility(size_bytes: u64, content_type: Option<&str>) -> Result<(), FileCopyState> {
     if size_bytes > limits::MAX_COPY_BYTES {
         return Err(FileCopyState::TooLarge);
     }
+    let Some(content_type) = content_type else {
+        return Err(FileCopyState::UnsupportedType);
+    };
     let essence = content_type
         .split(';')
         .next()
@@ -123,8 +156,10 @@ pub fn check_room(
     Ok(())
 }
 
-/// How many of a message's `files` get rows that may be copied, given the
-/// case already has `case_files`; the rest are recorded `limit_reached`.
+/// How many of a message's `files` are admitted (get `evidence_files`
+/// rows), given the case already has `case_files`: at most 10 per message
+/// and 100 per case. The rest are only counted in
+/// `evidence.files_not_saved`.
 pub fn files_within_caps(case_files: u32, files: u32) -> u32 {
     let room = limits::MAX_EVIDENCE_FILES.saturating_sub(case_files);
     files.min(limits::MAX_FILES_PER_EVIDENCE).min(room)
@@ -135,32 +170,67 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_saving_moves() {
+    fn every_pair_matches_the_table() {
+        use EvidenceEvent as E;
+        use EvidenceState as S;
         let events = [
-            EvidenceEvent::Saved,
-            EvidenceEvent::Failed(EvidenceFailure::MessageDeleted),
+            E::Saved,
+            E::Failed(EvidenceFailure::MessageDeleted),
+            E::CaptureAgain,
         ];
-        assert_eq!(
-            transition(EvidenceState::Saving, events[0]),
-            Ok(EvidenceState::Saved)
-        );
-        assert_eq!(
-            transition(EvidenceState::Saving, events[1]),
-            Ok(EvidenceState::Failed)
-        );
-        for state in [EvidenceState::Saved, EvidenceState::Failed] {
+        for &state in S::ALL {
             for event in events {
-                assert!(transition(state, event).is_err(), "{state:?} {event:?}");
+                let want = match (state, event) {
+                    (S::Saving, E::Saved) => Some(S::Saved),
+                    (S::Saving, E::Failed(_)) => Some(S::Failed),
+                    (S::Failed, E::CaptureAgain) => Some(S::Saving),
+                    _ => None,
+                };
+                assert_eq!(transition(state, event).ok(), want, "{state:?} {event:?}");
             }
         }
+        assert_eq!(add_again(S::Failed), AddAgain::CaptureAgain);
+        assert_eq!(add_again(S::Saving), AddAgain::AlreadySaved);
+        assert_eq!(add_again(S::Saved), AddAgain::AlreadySaved);
+    }
+
+    #[test]
+    fn enum_names_match_the_database() {
+        let names: Vec<&str> = FileCopyState::ALL.iter().map(|s| s.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "pending",
+                "copied",
+                "link_only",
+                "too_large",
+                "unsupported_type",
+                "copy_failed"
+            ]
+        );
+        let names: Vec<&str> = EvidenceFailure::ALL.iter().map(|s| s.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "message_deleted",
+                "moderator_no_access",
+                "quack_no_access",
+                "other_server",
+                "discord_error"
+            ]
+        );
     }
 
     #[test]
     fn copy_rules() {
-        assert_eq!(copy_eligibility(10_485_760, "image/png"), Ok(()));
+        assert_eq!(copy_eligibility(10_485_760, Some("image/png")), Ok(()));
         assert_eq!(
-            copy_eligibility(10_485_761, "image/png"),
+            copy_eligibility(10_485_761, Some("image/png")),
             Err(FileCopyState::TooLarge)
+        );
+        assert_eq!(
+            copy_eligibility(1, None),
+            Err(FileCopyState::UnsupportedType)
         );
         for ok in [
             "IMAGE/PNG",
@@ -169,11 +239,11 @@ mod tests {
             "text/plain; charset=utf-8",
             "application/pdf",
         ] {
-            assert_eq!(copy_eligibility(1, ok), Ok(()), "{ok}");
+            assert_eq!(copy_eligibility(1, Some(ok)), Ok(()), "{ok}");
         }
         for bad in ["text/html", "application/zip", "", "imagex/png"] {
             assert_eq!(
-                copy_eligibility(1, bad),
+                copy_eligibility(1, Some(bad)),
                 Err(FileCopyState::UnsupportedType),
                 "{bad}"
             );
@@ -184,6 +254,8 @@ mod tests {
     fn caps() {
         assert_eq!(check_room(0, 10, 10), Ok(()));
         assert_eq!(check_room(0, 1, 11), Err(DomainError::TooManyLinks));
+        assert_eq!(DomainError::TooManyLinks.code(), "too_many_links");
+        assert_eq!(DomainError::TooManyLinks.http_status(), 422);
         assert_eq!(check_room(45, 5, 5), Ok(()));
         assert_eq!(
             check_room(45, 6, 6),
