@@ -282,7 +282,9 @@ pub(crate) fn private(post: &ActivityPost, s: &ActivityLogSettings) -> ActivityP
             hide(content);
         }
         ActivityPost::MessagesBulkDeleted { known, .. } => {
-            known.iter_mut().for_each(|(_, c)| hide(c));
+            for (_, c) in known {
+                hide(c);
+            }
         }
         _ => {}
     }
