@@ -10,16 +10,25 @@ import { Segmented } from "~/ui/Segmented";
 
 import { Banner } from "./Banner";
 import { NumberInput } from "./controls";
-import { decayLabel, type Draft, fingerprint, ladder, limits, slugify, validate } from "./draft";
+import {
+  apiIssues,
+  type Draft,
+  fingerprint,
+  type Issues,
+  ladder,
+  limits,
+  validate,
+  windowLabel,
+} from "./draft";
 import { FieldsEditor } from "./FieldsEditor";
 import { Ladder } from "./Ladder";
 import { LevelsEditor } from "./LevelsEditor";
 import s from "./RuleEditor.module.css";
 
 /**
- * RuleEditor is the form for one rule: basics, the context moderators fill
- * in, and the escalation ladder, with a live preview of what each case
- * number does. It keeps its own draft; remount it (change its key) to load a
+ * RuleEditor is the form for one rule: basics, the case context moderators
+ * fill in, and the levels, with a live preview of what each case count
+ * does. It keeps its own draft; remount it (change its key) to load a
  * new saved version. Saving goes through onSave, and onSaved runs once the
  * editor is clean, so navigating from it never trips the unsaved-changes
  * guard.
@@ -47,11 +56,12 @@ export function RuleEditor<T>({
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState(false);
+  const [serverIssues, setServerIssues] = useState<Issues>({});
+  const [conflict, setConflict] = useState<string | null>(null);
   const [saved, setSaved] = useState<{ result: T } | null>(null);
 
   const issues = useMemo(() => validate(draft), [draft]);
-  const shown = submitted ? issues : {};
+  const shown: Issues = { ...(submitted ? issues : {}), ...serverIssues };
   const problems = Object.keys(issues).length;
   const dirty = useMemo(() => fingerprint(draft) !== fingerprint(baseline), [draft, baseline]);
   const steps = useMemo(() => ladder(draft.levels), [draft.levels]);
@@ -68,6 +78,7 @@ export function RuleEditor<T>({
   const set = (change: Partial<Draft>) => {
     setDraft((d) => ({ ...d, ...change }));
     setError(null);
+    setServerIssues({});
   };
 
   const save = async () => {
@@ -94,11 +105,17 @@ export function RuleEditor<T>({
       setSubmitted(false);
       setSaved({ result });
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
-        setConflict(true);
-        setError("Someone else saved this rule while you were editing.");
+      if (e instanceof ApiError && e.code === "rule_changed") {
+        setConflict(e.message);
+        setError(e.message);
+      } else if (e instanceof ApiError && e.fields.length > 0) {
+        const mapped = apiIssues(e, draft);
+        setServerIssues(mapped);
+        setError(mapped.form ? `${e.message} ${mapped.form}` : e.message);
+      } else if (e instanceof ApiError) {
+        setError(e.unexpected && e.traceId ? `${e.message} (Trace ID ${e.traceId})` : e.message);
       } else {
-        setError(e instanceof ApiError ? e.message : "Couldn't save the rule. Try again.");
+        setError("Quack couldn't save the rule. Try again in a moment.");
       }
     } finally {
       setSaving(false);
@@ -109,6 +126,7 @@ export function RuleEditor<T>({
     setDraft(baseline);
     setSubmitted(false);
     setError(null);
+    setServerIssues({});
   };
 
   return (
@@ -127,8 +145,7 @@ export function RuleEditor<T>({
             ) : null
           }
         >
-          Someone else saved a newer version. Reload to see it; your changes here will be discarded,
-          so copy anything you want to keep first.
+          {conflict} Reloading discards your changes here, so copy anything you want to keep first.
         </Banner>
       ) : null}
 
@@ -136,50 +153,29 @@ export function RuleEditor<T>({
         <fieldset disabled={readOnly} className={s.form}>
           <Section title="Basics">
             <Panel className={s.stack}>
-              <div className={s.pair}>
-                <Field label="Name" required error={shown.name} className={s.grow}>
-                  {(id) => (
-                    <TextInput
-                      id={id}
-                      value={draft.name}
-                      maxLength={limits.name}
-                      placeholder="Spam"
-                      invalid={Boolean(shown.name)}
-                      onChange={(e) => {
-                        const name = e.currentTarget.value;
-                        set(draft.slugEdited ? { name } : { name, slug: slugify(name, "-") });
-                      }}
-                    />
-                  )}
-                </Field>
-                <Field label="Rule ID" required error={shown.slug} className={s.slug}>
-                  {(id) => (
-                    <TextInput
-                      id={id}
-                      value={draft.slug}
-                      maxLength={64}
-                      spellCheck={false}
-                      placeholder="spam"
-                      invalid={Boolean(shown.slug)}
-                      className={s.mono}
-                      onChange={(e) =>
-                        set({
-                          slug: e.currentTarget.value.toLowerCase().replace(/[^a-z0-9_-]/g, "-"),
-                          slugEdited: true,
-                        })
-                      }
-                    />
-                  )}
-                </Field>
-              </div>
+              <Field label="Name" required error={shown.name}>
+                {(id) => (
+                  <TextInput
+                    id={id}
+                    value={draft.name}
+                    maxLength={limits.name}
+                    placeholder="Spam"
+                    invalid={Boolean(shown.name)}
+                    onChange={(e) => set({ name: e.currentTarget.value })}
+                  />
+                )}
+              </Field>
               <Field
                 label="Description"
+                error={shown.description}
                 hint="Helps moderators pick the right rule. Members don't see it."
               >
                 {(id) => (
                   <TextArea
                     id={id}
                     rows={2}
+                    maxLength={limits.description}
+                    invalid={Boolean(shown.description)}
                     value={draft.description}
                     placeholder="Repeated messages, mass mentions, or unsolicited ads."
                     onChange={(e) => set({ description: e.currentTarget.value })}
@@ -187,15 +183,16 @@ export function RuleEditor<T>({
                 )}
               </Field>
               <Field
-                label="Official reason"
+                label="Reason"
                 required
                 error={shown.reason}
-                hint="Members see this in their DM and on their case. Moderators can't change it; the context they add shows separately."
+                hint="Members see this in their DM and on their case. Moderators can't change it; the case context they add shows separately."
               >
                 {(id) => (
                   <TextArea
                     id={id}
                     rows={3}
+                    maxLength={limits.reason}
                     value={draft.reason}
                     placeholder="Spamming in the server."
                     invalid={Boolean(shown.reason)}
@@ -206,7 +203,7 @@ export function RuleEditor<T>({
               <div className={s.divided}>
                 <SwitchRow
                   title="Members can appeal"
-                  description="Adds an appeal button to their DM and case page."
+                  description="Members can appeal each case under this rule once, from their DM or the dashboard."
                   checked={draft.appealable}
                   disabled={readOnly}
                   onChange={(appealable) => set({ appealable })}
@@ -230,25 +227,26 @@ export function RuleEditor<T>({
                       <NumberInput
                         aria-label="Days"
                         min={1}
-                        max={limits.decayDays}
-                        value={draft.decayDays}
-                        invalid={Boolean(shown.decay)}
-                        onChange={(decayDays) => set({ decayDays })}
+                        max={limits.windowDays}
+                        value={draft.windowDays}
+                        invalid={Boolean(shown.window)}
+                        onChange={(windowDays) => set({ windowDays })}
                       />
                       days
                     </span>
                   ) : null}
                 </div>
-                {shown.decay ? (
+                {shown.window ? (
                   <p role="alert" className={s.error}>
-                    {shown.decay}
+                    {shown.window}
                   </p>
                 ) : (
                   <p className={s.hint}>
-                    Quack counts the member's earlier cases under this rule to pick a level.
+                    Quack counts the member's cases under this rule, including the new one, to pick
+                    a level. Voided cases never count.
                     {draft.windowed
-                      ? " Older cases stay on record but stop counting."
-                      : " Every case counts, however old."}
+                      ? " Older cases stay in the history but stop counting."
+                      : " Every other case counts, however old."}
                   </p>
                 )}
               </div>
@@ -256,8 +254,8 @@ export function RuleEditor<T>({
           </Section>
 
           <Section
-            title="Context"
-            description="What moderators fill in when they apply this rule. It's shown with the case, separate from the official reason."
+            title="Case context"
+            description="What moderators fill in when they apply this rule. The member sees it with the case, separate from the reason. Message links stay staff-only."
           >
             <FieldsEditor
               fields={draft.fields}
@@ -268,8 +266,8 @@ export function RuleEditor<T>({
           </Section>
 
           <Section
-            title="Escalation"
-            description="Quack counts the member's cases under this rule, including the new one, and uses the highest level reached."
+            title="Levels"
+            description="Quack counts the member's cases under this rule, including the new one, and uses the highest level that case count reached."
           >
             <LevelsEditor
               levels={draft.levels}
@@ -289,9 +287,9 @@ export function RuleEditor<T>({
                 {draft.appealable ? "Appealable" : "No appeals"}
               </Badge>
               <Badge tone="neutral">
-                {draft.windowed && Number.isFinite(draft.decayDays)
-                  ? decayLabel(draft.decayDays)
-                  : decayLabel(0)}
+                {windowLabel(
+                  draft.windowed && Number.isFinite(draft.windowDays) ? draft.windowDays : null,
+                )}
               </Badge>
             </div>
           </Panel>

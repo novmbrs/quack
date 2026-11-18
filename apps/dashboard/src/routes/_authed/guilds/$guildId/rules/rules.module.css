@@ -172,3 +172,8 @@
 .archivedList {
   margin-top: 8px;
 }
+
+.levels {
+  font-size: 13px;
+  color: var(--text);
+}

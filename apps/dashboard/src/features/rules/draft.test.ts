@@ -1,266 +1,266 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { Template } from "~/api/types";
+import { ApiError } from "~/api/client";
+import type { RuleDefinition } from "~/api/types";
 
 import {
+  apiIssues,
   emptyDraft,
   fingerprint,
-  fromPolicy,
-  fromTemplate,
+  fromDefinition,
   ladder,
   newField,
   newLevel,
   outcome,
-  parsePolicy,
+  parseRuleFile,
   range,
   slugify,
   summarize,
-  toInput,
-  toPolicy,
-  uniqueSlug,
+  toDefinition,
+  uniqueName,
   validate,
+  windowLabel,
   type Draft,
 } from "./draft";
 
-const starter: Template = {
-  id: "t1",
-  guild_id: "g1",
-  slug: "general-rule-violation",
+// The starter rule from design §3.7, with a field added.
+const starter: RuleDefinition = {
   name: "General rule violation",
-  description: "A starter rule.",
-  reason_template: "General rule violation",
+  description: "A starter rule for general violations. Review it and change it for this server.",
+  reason: "General rule violation",
   appealable: true,
-  case_decay_days: 0,
-  version: 2,
-  archived_at: null,
-  created_by_discord_user_id: "0",
-  updated_by_discord_user_id: "0",
-  context_fields: [
-    { id: "f2", key: "where", label: "Where", type: "short_text", position: 2, required: false },
-    {
-      id: "f1",
-      key: "link",
-      label: "Link",
-      type: "discord_message_link",
-      position: 1,
-      required: true,
-    },
-  ],
+  counting_window_days: null,
+  fields: [{ key: "link", label: "Message link", kind: "message_link", required: true }],
   levels: [
-    {
-      id: "l3",
-      name: "Ban",
-      position: 3,
-      is_default: false,
-      trigger_case_count: 5,
-      notify_user: true,
-      actions: [
-        { id: "a2", action_type: "ban_user", delete_message_seconds: 86400, max_retries: 0 },
-      ],
-    },
-    {
-      id: "l1",
-      name: "Default",
-      position: 1,
-      is_default: true,
-      trigger_case_count: 0,
-      notify_user: true,
-      actions: [],
-    },
-    {
-      id: "l2",
-      name: "24-hour timeout",
-      position: 2,
-      is_default: false,
-      trigger_case_count: 3,
-      notify_user: true,
-      actions: [
-        { id: "a1", action_type: "timeout_user", timeout_duration_seconds: 86400, max_retries: 2 },
-      ],
-    },
+    { from_case_count: 5, action: { kind: "ban", delete_message_seconds: 86400 }, send_dm: true },
+    { from_case_count: 1, action: null, send_dm: true },
+    { from_case_count: 3, action: { kind: "timeout", duration_seconds: 86400 }, send_dm: false },
   ],
 };
 
-function valid(): Draft {
-  return { ...emptyDraft(), name: "Spam", slug: "spam", reason: "Spamming" };
-}
-
-describe("slugify", () => {
-  it("makes keys from labels", () => {
-    expect(slugify("Message link")).toBe("message_link");
-    expect(slugify("  What happened?! ")).toBe("what_happened");
-    expect(slugify("Café rules", "-")).toBe("cafe-rules");
-    expect(slugify("---")).toBe("");
-  });
-  it("caps the length at 64 without a trailing separator", () => {
-    const key = slugify(`${"a".repeat(63)} b`);
-    expect(key.length).toBeLessThanOrEqual(64);
-    expect(key.endsWith("_")).toBe(false);
-  });
-});
-
-describe("fromTemplate and toInput", () => {
-  it("sorts fields by position and levels by trigger", () => {
-    const d = fromTemplate(starter);
-    expect(d.fields.map((f) => f.key)).toEqual(["link", "where"]);
-    expect(d.levels.map((l) => l.name)).toEqual(["Default", "24-hour timeout", "Ban"]);
-    expect(d.windowed).toBe(false);
-  });
-  it("round-trips to a request body with fresh positions", () => {
-    const input = toInput(fromTemplate(starter), 2);
-    expect(input.expected_version).toBe(2);
-    expect(input.case_decay_days).toBe(0);
-    expect(input.context_fields?.map((f) => [f.key, f.position])).toEqual([
-      ["link", 1],
-      ["where", 2],
-    ]);
-    expect(input.levels?.map((l) => [l.name, l.position, l.trigger_case_count])).toEqual([
-      ["Default", 1, 0],
-      ["24-hour timeout", 2, 3],
-      ["Ban", 3, 5],
-    ]);
-    expect(input.levels?.[1]?.actions).toEqual([
-      {
-        action_type: "timeout_user",
-        timeout_duration_seconds: 86400,
-        delete_message_seconds: undefined,
-        max_retries: 2,
-      },
-    ]);
-    expect(input.levels?.[0]?.actions).toEqual([]);
-  });
-  it("only sends the setting that belongs to the action", () => {
-    const d = valid();
-    d.levels[0] = { ...d.levels[0]!, action: "kick_user", timeoutSeconds: 3600, deleteSeconds: 60 };
-    expect(toInput(d).levels?.[0]?.actions?.[0]).toEqual({
-      action_type: "kick_user",
-      max_retries: 3,
-      timeout_duration_seconds: undefined,
-      delete_message_seconds: undefined,
+describe("fromDefinition and toDefinition", () => {
+  it("round-trips a definition with levels in order", () => {
+    const def = toDefinition(fromDefinition(starter));
+    expect(def.levels.map((l) => l.from_case_count)).toEqual([1, 3, 5]);
+    expect(def.levels[1]).toEqual({
+      from_case_count: 3,
+      action: { kind: "timeout", duration_seconds: 86400 },
+      send_dm: false,
     });
+    expect(def.levels[2]?.action).toEqual({ kind: "ban", delete_message_seconds: 86400 });
+    expect(def.fields).toEqual(starter.fields);
+    expect(def.counting_window_days).toBeNull();
   });
-  it("sends zero decay days unless windowed", () => {
-    const d = { ...valid(), decayDays: 30 };
-    expect(toInput(d).case_decay_days).toBe(0);
-    expect(toInput({ ...d, windowed: true }).case_decay_days).toBe(30);
+
+  it("sends the counting window only when windowed", () => {
+    const draft = fromDefinition({ ...starter, counting_window_days: 30 });
+    expect(draft.windowed).toBe(true);
+    expect(toDefinition(draft).counting_window_days).toBe(30);
+    expect(toDefinition({ ...draft, windowed: false }).counting_window_days).toBeNull();
   });
-  it("fingerprints ignore editor-only state", () => {
-    const a = fromTemplate(starter);
-    const b = fromTemplate(starter);
-    expect(fingerprint(a)).toBe(fingerprint(b));
-    expect(fingerprint({ ...a, name: "Other" })).not.toBe(fingerprint(b));
+
+  it("trims text and ignores editor-only state in the fingerprint", () => {
+    const draft = fromDefinition(starter);
+    expect(fingerprint({ ...draft, name: ` ${draft.name} ` })).toBe(fingerprint(draft));
+    expect(fingerprint({ ...draft, reason: "Other" })).not.toBe(fingerprint(draft));
   });
 });
 
 describe("validate", () => {
-  it("accepts a minimal rule", () => {
+  const valid = (): Draft => ({ ...fromDefinition(starter) });
+
+  it("accepts the starter rule", () => {
     expect(validate(valid())).toEqual({});
   });
-  it("requires a name, slug, and reason", () => {
-    const issues = validate(emptyDraft());
-    expect(Object.keys(issues).sort()).toEqual(["name", "reason", "slug"]);
+
+  it("needs a name and a reason", () => {
+    const issues = validate({ ...emptyDraft() });
+    expect(issues.name).toBeTruthy();
+    expect(issues.reason).toBeTruthy();
   });
-  it("checks slug and key shapes", () => {
-    expect(validate({ ...valid(), slug: "Spam!" }).slug).toBeTruthy();
-    expect(validate({ ...valid(), slug: "a" }).slug).toBeTruthy();
-    expect(validate({ ...valid(), slug: "-spam" }).slug).toBeTruthy();
-    const f = { ...newField(), label: "Link", key: "x" };
-    expect(validate({ ...valid(), fields: [f] })[`fields.${f.id}.key`]).toBe(
-      "At least 2 characters",
+
+  it("checks lengths in characters", () => {
+    expect(validate({ ...valid(), name: "🦆".repeat(100) }).name).toBeUndefined();
+    expect(validate({ ...valid(), name: "a".repeat(101) }).name).toBeTruthy();
+    expect(validate({ ...valid(), description: "a".repeat(501) }).description).toBeTruthy();
+  });
+
+  it("makes the first level start at 1 and later ones strictly higher", () => {
+    const d = valid();
+    const [first, second, third] = d.levels;
+    expect(validate({ ...d, levels: [{ ...first!, from: 2 }, second!, third!] })).toHaveProperty(
+      `levels.${first!.id}.from`,
+    );
+    const dup = { ...third!, from: 3 };
+    expect(validate({ ...d, levels: [first!, second!, dup] })).toHaveProperty(
+      `levels.${dup.id}.from`,
     );
   });
-  it("rejects duplicate keys and too many fields", () => {
-    const a = { ...newField(), label: "A", key: "same" };
-    const b = { ...newField(), label: "B", key: "same" };
-    expect(validate({ ...valid(), fields: [a, b] })[`fields.${b.id}.key`]).toBeTruthy();
-    const many = Array.from({ length: 11 }, (_, i) => ({
-      ...newField(),
-      label: `F${i}`,
-      key: `f${i}x`,
-    }));
-    expect(validate({ ...valid(), fields: many }).fields).toBeTruthy();
-  });
-  it("needs distinct positive triggers", () => {
-    const a = { ...newLevel(3), name: "A" };
-    const b = { ...newLevel(3), name: "B" };
-    const c = { ...newLevel(0), name: "C" };
-    const issues = validate({ ...valid(), levels: [...valid().levels, a, b, c] });
-    expect(issues[`levels.${a.id}.trigger`]).toBeUndefined();
-    expect(issues[`levels.${b.id}.trigger`]).toBeTruthy();
-    expect(issues[`levels.${c.id}.trigger`]).toBeTruthy();
-  });
-  it("needs exactly one default level", () => {
-    expect(validate({ ...valid(), levels: [{ ...newLevel(2), name: "A" }] }).levels).toBeTruthy();
-  });
-  it("bounds action settings like Discord does", () => {
-    const t = {
-      ...newLevel(2),
-      name: "T",
-      action: "timeout_user" as const,
-      timeoutSeconds: 29 * 86400,
-    };
-    const b = { ...newLevel(3), name: "B", action: "ban_user" as const, deleteSeconds: 8 * 86400 };
-    const r = { ...newLevel(4), name: "R", action: "kick_user" as const, retries: 11 };
-    const issues = validate({ ...valid(), levels: [...valid().levels, t, b, r] });
+
+  it("limits timeouts to 28 days and ban deletion to 7 days", () => {
+    const d = valid();
+    const t = { ...newLevel(2), action: "timeout" as const, timeoutSeconds: 29 * 86400 };
+    const b = { ...newLevel(9), action: "ban" as const, deleteSeconds: 8 * 86400 };
+    const issues = validate({ ...d, levels: [...d.levels, t, b] });
     expect(issues[`levels.${t.id}.timeout`]).toBeTruthy();
     expect(issues[`levels.${b.id}.delete`]).toBeTruthy();
-    expect(issues[`levels.${r.id}.retries`]).toBeTruthy();
   });
-  it("bounds the decay window", () => {
-    expect(validate({ ...valid(), windowed: true, decayDays: 0 }).decay).toBeTruthy();
-    expect(validate({ ...valid(), windowed: true, decayDays: 36501 }).decay).toBeTruthy();
-    expect(validate({ ...valid(), windowed: true, decayDays: 90 }).decay).toBeUndefined();
-    expect(validate({ ...valid(), windowed: false, decayDays: Number.NaN }).decay).toBeUndefined();
+
+  it("checks field keys and the counting window", () => {
+    const a = { ...newField(), label: "Where", key: "where" };
+    const b = { ...newField(), label: "Where again", key: "where" };
+    const c = { ...newField(), label: "Bad", key: "A" };
+    const issues = validate({ ...valid(), fields: [a, b, c] });
+    expect(issues[`fields.${a.id}.key`]).toBeUndefined();
+    expect(issues[`fields.${b.id}.key`]).toBeTruthy();
+    expect(issues[`fields.${c.id}.key`]).toBeTruthy();
+    expect(validate({ ...valid(), windowed: true, windowDays: 0 }).window).toBeTruthy();
+    expect(validate({ ...valid(), windowed: true, windowDays: 30 }).window).toBeUndefined();
+  });
+});
+
+describe("apiIssues", () => {
+  it("maps API field paths onto the editor", () => {
+    const draft = fromDefinition(starter);
+    const error = new ApiError(
+      400,
+      "validation_failed",
+      "Check the marked fields and save again.",
+      {
+        fields: [
+          { field: "name", code: "name_length", message: "Too long." },
+          { field: "levels[1].from_case_count", code: "level_order", message: "Out of order." },
+          {
+            field: "levels[2].action.delete_message_seconds",
+            code: "ban_delete_window",
+            message: "7 days.",
+          },
+          { field: "fields[0].key", code: "field_key", message: "Bad key." },
+          { field: "counting_window_days", code: "counting_window", message: "Window." },
+          { field: "something_else", code: "x", message: "Other." },
+        ],
+      },
+    );
+    const issues = apiIssues(error, draft);
+    const [, second, third] = draft.levels;
+    expect(issues.name).toBe("Too long.");
+    expect(issues[`levels.${second!.id}.from`]).toBe("Out of order.");
+    expect(issues[`levels.${third!.id}.delete`]).toBe("7 days.");
+    expect(issues[`fields.${draft.fields[0]!.id}.key`]).toBe("Bad key.");
+    expect(issues.window).toBe("Window.");
+    expect(issues.form).toBe("Other.");
   });
 });
 
 describe("ladder", () => {
-  it("reads like the starter policy", () => {
-    const steps = ladder(fromTemplate(starter).levels);
-    expect(steps.map((s) => range(s))).toEqual(["Cases 1–2", "Cases 3–4", "Cases 5+"]);
+  it("covers case counts from each level to the next", () => {
+    const steps = ladder(fromDefinition(starter).levels);
+    expect(steps.map((s) => range(s))).toEqual([
+      "Case count 1–2",
+      "Case count 3–4",
+      "Case count 5+",
+    ]);
     expect(steps.map(outcome)).toEqual([
       "Warning",
       "Timeout for 1 day",
-      "Ban, deleting 1 day of messages",
+      "Ban and delete the last day of messages",
     ]);
-    expect(summarize(steps)).toBe("Cases 1–2 · Warning → 3–4 · Timeout 1 day → 5+ · Ban");
+    expect(steps.map((s) => s.index)).toEqual([1, 2, 3]);
+    expect(summarize(steps)).toBe("1–2 · Warning → 3–4 · Timeout for 1 day → 5+ · Ban");
   });
-  it("handles a single case range and a default that never applies", () => {
-    const d = valid();
-    const one = { ...newLevel(1), name: "Kick", action: "kick_user" as const };
-    const steps = ladder([...d.levels, one]);
-    expect(steps[0]?.unreachable).toBe(true);
-    expect(range(steps[0]!)).toBe("Never reached");
-    expect(summarize(steps)).toBe("Cases 1+ · Kick");
-    const two = ladder([...d.levels, { ...newLevel(2), name: "X" }]);
-    expect(range(two[0]!)).toBe("Case 1");
-  });
-  it("is only the default level when there is nothing else", () => {
-    expect(summarize(ladder(valid().levels))).toBe("Cases 1+ · Warning");
+
+  it("marks a level that shares a case count as never reached", () => {
+    const a = newLevel(1);
+    const b = newLevel(3);
+    const c = { ...newLevel(3), action: "kick" as const };
+    const steps = ladder([a, b, c]);
+    expect(steps[1]?.unreachable).toBe(true);
+    expect(range(steps[1]!)).toBe("Never reached");
+    expect(range(steps[0]!)).toBe("Case count 1–2");
   });
 });
 
-describe("parsePolicy", () => {
-  const policy = toPolicy(fromTemplate(starter));
-  it("accepts the bare policy and the API envelope", () => {
-    expect(parsePolicy(JSON.stringify(policy)).name).toBe("General rule violation");
-    expect(parsePolicy(JSON.stringify({ policy })).levels).toHaveLength(3);
-    expect(fromPolicy(parsePolicy(JSON.stringify(policy))).reason).toBe("General rule violation");
+describe("parseRuleFile", () => {
+  it("reads a rule file", () => {
+    const text = JSON.stringify({
+      format: "quack-rule",
+      format_version: 1,
+      exported_at: "2026-11-17T18:00:00Z",
+      rule: starter,
+    });
+    expect(parseRuleFile(text).rule.name).toBe("General rule violation");
   });
-  it("explains what's wrong", () => {
-    expect(() => parsePolicy("{")).toThrow(/valid JSON/);
-    expect(() => parsePolicy("[]")).toThrow(/exported Quack rule/);
-    expect(() => parsePolicy(JSON.stringify({ ...policy, schema_version: 2 }))).toThrow(/version/);
+
+  it("converts a file from the earlier dashboard", () => {
+    const legacy = {
+      schema_version: 1,
+      slug: "spam",
+      name: "Spam",
+      description: "",
+      official_reason: "Spamming.",
+      case_decay_days: 30,
+      appealable: true,
+      context_fields: [
+        { key: "where", label: "Where", type: "short_text", position: 2, required: false },
+        { key: "link", label: "Link", type: "discord_message_link", position: 1, required: true },
+      ],
+      levels: [
+        {
+          name: "Ban",
+          is_default: false,
+          trigger_case_count: 5,
+          notify_user: true,
+          actions: [{ action_type: "ban_user", delete_message_seconds: 3600, max_retries: 0 }],
+        },
+        {
+          name: "Default",
+          is_default: true,
+          trigger_case_count: 0,
+          notify_user: false,
+          actions: [],
+        },
+      ],
+    };
+    const file = parseRuleFile(
+      JSON.stringify({ policy: legacy }),
+      new Date("2026-11-18T00:00:00Z"),
+    );
+    expect(file.format).toBe("quack-rule");
+    expect(file.rule.reason).toBe("Spamming.");
+    expect(file.rule.counting_window_days).toBe(30);
+    expect(file.rule.fields.map((f) => [f.key, f.kind])).toEqual([
+      ["link", "message_link"],
+      ["where", "short_text"],
+    ]);
+    expect(file.rule.levels).toEqual([
+      { from_case_count: 1, action: null, send_dm: false },
+      { from_case_count: 5, action: { kind: "ban", delete_message_seconds: 3600 }, send_dm: true },
+    ]);
+  });
+
+  it("explains what's wrong with other text", () => {
+    expect(() => parseRuleFile("not json")).toThrow(/rule file/);
+    expect(() => parseRuleFile('{"hello":1}')).toThrow(/rule file/);
+    expect(() => parseRuleFile('{"format":"quack-rule","format_version":2,"rule":{}}')).toThrow(
+      /newer version/,
+    );
   });
 });
 
-describe("uniqueSlug", () => {
-  it("keeps a free slug and numbers a taken one", () => {
-    expect(uniqueSlug("spam", ["ads"])).toBe("spam");
-    expect(uniqueSlug("spam", ["spam", "spam-2"])).toBe("spam-3");
+describe("helpers", () => {
+  it("slugifies labels into keys", () => {
+    expect(slugify("Message link")).toBe("message_link");
+    expect(slugify("  Où?  ")).toBe("ou");
   });
-  it("stays within 64 characters", () => {
-    const long = "a".repeat(64);
-    expect(uniqueSlug(long, [long])).toHaveLength(64);
+
+  it("finds a free rule name, ignoring case", () => {
+    expect(uniqueName("Spam", ["Harassment"])).toBe("Spam");
+    expect(uniqueName("Spam", ["spam", "Spam (2)"])).toBe("Spam (3)");
+  });
+
+  it("labels the counting window", () => {
+    expect(windowLabel(null)).toBe("Counts every case");
+    expect(windowLabel(1)).toBe("Counts the last day");
+    expect(windowLabel(90)).toBe("Counts the last 90 days");
   });
 });

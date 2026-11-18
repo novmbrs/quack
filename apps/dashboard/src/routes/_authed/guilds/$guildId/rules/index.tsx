@@ -1,27 +1,24 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, ChevronRight, FileDown, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { templatesQuery } from "~/api/queries";
-import type { Template } from "~/api/types";
-import { decayLabel, fromTemplate, ladder } from "~/features/rules/draft";
+import { rulesQuery } from "~/api/queries";
+import type { RuleSummary } from "~/api/types";
 import { ImportDialog } from "~/features/rules/ImportDialog";
-import { LadderInline } from "~/features/rules/Ladder";
 import { StarterNotice } from "~/features/rules/StarterNotice";
-import { ago, fullDate, plural } from "~/lib/format";
+import { ago, capitalize, fullDate, plural } from "~/lib/format";
 import { cx } from "~/lib/cx";
 import { useCan } from "~/lib/permissions";
 import { Badge } from "~/ui/Badge";
 import { Button, ButtonLink } from "~/ui/Button";
 import { Page } from "~/ui/Page";
-import { Empty, ErrorState } from "~/ui/States";
+import { Empty, ErrorState, SkeletonRows } from "~/ui/States";
 
 import s from "./rules.module.css";
 
 export const Route = createFileRoute("/_authed/guilds/$guildId/rules/")({
-  loader: ({ context, params }) =>
-    context.queryClient.ensureQueryData(templatesQuery(params.guildId)),
+  loader: ({ context, params }) => context.queryClient.ensureQueryData(rulesQuery(params.guildId)),
   component: Rules,
   errorComponent: ({ error, reset }) => (
     <Page icon={<BookOpen size={22} />} title="Rules">
@@ -32,22 +29,25 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/rules/")({
 
 function Rules() {
   const { guildId } = Route.useParams();
-  const { data: templates } = useSuspenseQuery(templatesQuery(guildId));
+  const { data: rules } = useSuspenseQuery(rulesQuery(guildId));
   const can = useCan(guildId);
   const [importing, setImporting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  // Archived rules load when someone opens the list.
+  const archivedRules = useQuery({ ...rulesQuery(guildId, true), enabled: showArchived });
 
-  const [active, archived] = useMemo(() => {
-    const byName = [...templates].sort((a, b) => a.name.localeCompare(b.name));
-    return [byName.filter((t) => !t.archived_at), byName.filter((t) => t.archived_at)];
-  }, [templates]);
-  const write = can("case_template.write");
+  const active = useMemo(() => [...rules].sort((a, b) => a.name.localeCompare(b.name)), [rules]);
+  const archived = useMemo(
+    () => [...(archivedRules.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    [archivedRules.data],
+  );
+  const write = can("manage_rules");
 
   return (
     <Page
       icon={<BookOpen size={22} />}
       title="Rules"
-      topic="What moderators apply. Each rule decides the reason, the context, and how it escalates."
+      topic="What moderators apply. Each rule sets the reason, the case context, and the action at each level."
       actions={
         write ? (
           <>
@@ -85,8 +85,8 @@ function Rules() {
             ) : null
           }
         >
-          Moderators open cases by applying a rule, so this server needs at least one. Name rules
-          after the problem, like Spam or Harassment, not the punishment.
+          Moderators add cases by applying a rule, so this server needs at least one. Name rules
+          after the problem, like Spam or Harassment, not the action.
         </Empty>
       ) : (
         <ul className={s.list}>
@@ -96,7 +96,7 @@ function Rules() {
         </ul>
       )}
 
-      {archived.length > 0 ? (
+      {
         <details
           open={showArchived}
           onToggle={(e) => setShowArchived(e.currentTarget.open)}
@@ -104,32 +104,40 @@ function Rules() {
         >
           <summary className={s.summary}>
             <ChevronRight size={16} className={s.chevron} />
-            Archived ({archived.length})
-            <span className={s.summaryHint}>Can't be applied. Their cases stay on record.</span>
+            Archived rules
+            <span className={s.summaryHint}>
+              Moderators can't apply them. Their cases stay in the history and keep counting.
+            </span>
           </summary>
-          <ul className={cx(s.list, s.archivedList)}>
-            {archived.map((t) => (
-              <RuleCard key={t.id} guildId={guildId} rule={t} />
-            ))}
-          </ul>
+          {archivedRules.isPending ? (
+            <SkeletonRows rows={2} />
+          ) : archivedRules.isError ? (
+            <ErrorState error={archivedRules.error} retry={() => void archivedRules.refetch()} />
+          ) : archived.length === 0 ? (
+            <p className={s.summaryHint}>No archived rules.</p>
+          ) : (
+            <ul className={cx(s.list, s.archivedList)}>
+              {archived.map((t) => (
+                <RuleCard key={t.id} guildId={guildId} rule={t} />
+              ))}
+            </ul>
+          )}
         </details>
-      ) : null}
+      }
 
       {write ? (
         <ImportDialog
           guildId={guildId}
           open={importing}
           onClose={() => setImporting(false)}
-          takenSlugs={templates.map((t) => t.slug)}
+          takenNames={rules.map((t) => t.name)}
         />
       ) : null}
     </Page>
   );
 }
 
-function RuleCard({ guildId, rule }: { guildId: string; rule: Template }) {
-  const steps = useMemo(() => ladder(fromTemplate(rule).levels), [rule]);
-  const fields = rule.context_fields?.length ?? 0;
+function RuleCard({ guildId, rule }: { guildId: string; rule: RuleSummary }) {
   return (
     <li>
       <Link
@@ -145,19 +153,19 @@ function RuleCard({ guildId, rule }: { guildId: string; rule: Template }) {
           </div>
           <ChevronRight size={20} className={s.go} />
         </div>
-        <LadderInline steps={steps} />
+        <p className={s.levels}>{capitalize(rule.levels_text)}</p>
         <div className={s.badges}>
           {rule.archived_at ? (
             <Badge tone="neutral" dot>
               <span title={fullDate(rule.archived_at)}>Archived {ago(rule.archived_at)}</span>
             </Badge>
           ) : null}
-          <Badge tone={rule.appealable ? "success" : "neutral"} dot>
-            {rule.appealable ? "Appealable" : "No appeals"}
-          </Badge>
-          <Badge tone="neutral">{decayLabel(rule.case_decay_days)}</Badge>
-          {fields ? <Badge tone="neutral">{plural(fields, "context field")}</Badge> : null}
-          <span className={s.version}>Version {rule.version}</span>
+          {rule.is_starter ? <Badge tone="brand">Starter rule</Badge> : null}
+          {rule.used_by_honeypot ? <Badge tone="neutral">Used by the honeypot</Badge> : null}
+          {rule.field_count ? (
+            <Badge tone="neutral">{plural(rule.field_count, "case context field")}</Badge>
+          ) : null}
+          <span className={s.version}>Version {rule.current_version}</span>
         </div>
       </Link>
     </li>
