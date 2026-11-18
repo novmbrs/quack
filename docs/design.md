@@ -1868,10 +1868,11 @@ Enabling from `/setup` without a rule creates "Honeypot"
       rule; the rest wait (`Continue`).
    2. Not installed → `quack_not_in_server`. Poster now staff or a bot →
       `exempt` (not logged); a departed poster is not exempt.
-   3. A valid case from this member's hits, same version, first hit under
-      30 s older → attach (a burst is one case), if under the `FOR SHARE`
-      settings lock the module is still on with the hits' version,
-      channel, and rule; else `policy_changed`.
+   3. A valid case from this member's hits, same version, whose first hit
+      is under 30 s older than the batch's (measured from the case's first
+      hit, so a slow drip can't stretch a burst) → attach (a burst is one
+      case), if under the `FOR SHARE` settings lock the module is still on
+      with the hits' version, channel, and rule; else `policy_changed`.
    4. Else apply the rule (§4.2): source `honeypot`, actor Quack, key
       `honeypot:<first message ID>`, version and channel checked under lock
       (§4.2 step 8), the first message as evidence.

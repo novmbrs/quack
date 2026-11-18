@@ -307,9 +307,14 @@ pub async fn members_with_pending_hits(
         .collect()
 }
 
+/// How long after a case's first hit the member's later hits still join
+/// that case (§13.4.2 step 3.3). Measured from the first hit, so a slow
+/// drip of posts can't stretch one burst.
+pub const BURST_WINDOW: std::time::Duration = std::time::Duration::from_secs(30);
+
 /// A burst (§13.4.2 step 3.3): a valid case created from this member's hits
-/// under the same settings version whose first hit is less than 30 seconds
-/// older than `first_hit_at`.
+/// under the same settings version whose first hit is less than
+/// [`BURST_WINDOW`] older than `first_hit_at`.
 pub async fn burst_case(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -324,15 +329,15 @@ pub async fn burst_case(
             r#"SELECT h.case_id AS "case_id!" FROM honeypot_hits h
                JOIN cases c ON c.guild_id = h.guild_id AND c.id = h.case_id
                WHERE h.guild_id = $1 AND h.member_id = $2 AND h.state = 'case_created'
-                 AND h.created_at >= $4::timestamptz - interval '30 seconds' AND h.settings_version = $3
-                 AND c.voided_at IS NULL
+                 AND h.settings_version = $3 AND c.voided_at IS NULL
                GROUP BY h.case_id
-               HAVING min(h.created_at) > $4::timestamptz - interval '30 seconds'
+               HAVING min(h.created_at) > $4::timestamptz - make_interval(secs => $5)
                ORDER BY min(h.created_at) DESC LIMIT 1"#,
             i64::from(guild),
             i64::from(member),
             int::<u64, i64>(settings_version)?,
             first_hit_at,
+            BURST_WINDOW.as_secs_f64(),
         )
         .fetch_optional(conn),
     )

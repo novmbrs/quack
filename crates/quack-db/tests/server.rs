@@ -449,6 +449,47 @@ async fn honeypot_hits_batch_and_burst(_: PgPoolOptions, options: PgConnectOptio
 }
 
 #[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn a_burst_is_measured_from_its_first_hit(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (trap, _) = rule(&db, g, "Honeypot").await?;
+    let m = member_id(40);
+    let msg = |n: u64| MessageId::new(n).unwrap_or_else(|| unreachable!());
+    let mut conn = db.conn().await?;
+    // Hits at 0 s and 20 s are one case; a hit at 40 s is 40 s after the
+    // case's first hit, so it starts a new burst even though the 20 s hit
+    // is recent.
+    let t0 = OffsetDateTime::now_utc() - time::Duration::minutes(5);
+    let at = |n: i64, seconds: i64| {
+        sqlx::query("UPDATE honeypot_hits SET created_at = $1 WHERE message_id = $2")
+            .bind(t0 + time::Duration::seconds(seconds))
+            .bind(n)
+    };
+    honeypot::insert_hit(&mut conn, g, channel(5), msg(20), m, 1, Some(trap)).await?;
+    at(20, 0).execute(&mut *conn).await?;
+    let c = case(&db, g, m, trap, None).await?;
+    honeypot::mark_case_created(&mut conn, g, &[msg(20)], c.id).await?;
+    honeypot::insert_hit(&mut conn, g, channel(5), msg(21), m, 1, Some(trap)).await?;
+    at(21, 20).execute(&mut *conn).await?;
+    let second = t0 + time::Duration::seconds(20);
+    assert_eq!(
+        honeypot::burst_case(&mut conn, g, m, 1, second).await?,
+        Some(c.id)
+    );
+    honeypot::mark_case_created(&mut conn, g, &[msg(21)], c.id).await?;
+    let third = t0 + time::Duration::seconds(40);
+    assert_eq!(
+        honeypot::burst_case(&mut conn, g, m, 1, third).await?,
+        None,
+        "a new burst"
+    );
+    Ok(())
+}
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
 async fn statistics_and_housekeeping(_: PgPoolOptions, options: PgConnectOptions) -> Result<()> {
     let db = db(options).await?;
     let g = guild(&db, 1).await?;
