@@ -125,6 +125,12 @@ pub enum UnknownReason {
     UnknownCommand,
     /// The payload had no user.
     MissingUser,
+    /// The payload had an id, token, and type, but Quack couldn't read the
+    /// rest; `autocomplete` says it must be answered with choices.
+    Malformed {
+        /// It is an autocomplete request (type 4).
+        autocomplete: bool,
+    },
 }
 
 /// Everything Quack handles, decoded.

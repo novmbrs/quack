@@ -8161,3 +8161,9 @@ folds these into the sections (or changes the code) and removes them here.
     session disconnected until it resumes; the shard stopping untrusts the
     cache too. (A transport EOF that Twilight resumes on its own is not
     visible to Quack; the resume replays what was missed.)
+67. §11.3, §11.5 (Discord review MAJOR 8) → an interaction Twilight can't
+    read even with defaults for missing fields is answered from its
+    envelope (id, token, type, server, channel) as
+    `UnknownReason::Malformed`: the expired-button answer, or for an
+    autocomplete an empty choice list (type 8), instead of never being
+    acknowledged.

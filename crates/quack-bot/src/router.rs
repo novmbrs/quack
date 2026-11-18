@@ -55,6 +55,8 @@ pub(crate) async fn route(p: Pending<'_>) -> Finish {
             p.fail(Failure::refused(error::legacy_button(), Reason::Invalid))
                 .await
         }
+        // An autocomplete Quack couldn't read still needs choices (none).
+        Request::Unknown(UnknownReason::Malformed { autocomplete: true }) => p.choices(&[]).await,
         Request::Unknown(_) => p.fail(expired()).await,
     }
 }

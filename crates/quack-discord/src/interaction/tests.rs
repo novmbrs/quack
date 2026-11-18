@@ -369,3 +369,32 @@ fn pings_dms_and_payloads_twilight_rejects() {
     assert!(decode_json("{").is_none());
     assert!(decode_json(r#"{"id": "1"}"#).is_none());
 }
+
+#[test]
+fn an_interaction_with_unreadable_data_is_still_answerable() {
+    // A nested modal component Twilight can't read, and a wrong-typed
+    // option: the id, token, and type are enough to answer.
+    let modal = fixtures::interaction(
+        5,
+        &json!({"custom_id": "1:x", "components": [{"type": "?"}]}),
+    );
+    let ix = decode_json(&modal.to_string()).expect("answerable");
+    assert_eq!(ix.id, 1_310_000_000_000_000_000);
+    assert_eq!(
+        ix.request,
+        Request::Unknown(UnknownReason::Malformed {
+            autocomplete: false
+        })
+    );
+    assert_eq!(ix.guild_id.map(|g| g.get()), Some(1));
+    let auto = fixtures::interaction(
+        4,
+        &json!({"id": "101", "name": "case", "type": 1, "options": [{"name": "add", "type": "x"}]}),
+    );
+    let ix = decode_json(&auto.to_string()).expect("answerable");
+    assert_eq!(
+        ix.request,
+        Request::Unknown(UnknownReason::Malformed { autocomplete: true })
+    );
+    assert!(decode_json(r#"{"type": 2}"#).is_none(), "no id or token");
+}
