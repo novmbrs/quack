@@ -31,11 +31,7 @@ impl OpKey {
     }
 
     /// The key scoped to a server and account (`None` = Quack).
-    pub fn scoped(
-        &self,
-        guild: Option<GuildId>,
-        account: Option<AccountId>,
-    ) -> OperationKey {
+    pub fn scoped(&self, guild: Option<GuildId>, account: Option<AccountId>) -> OperationKey {
         OperationKey {
             guild,
             account,
@@ -77,11 +73,7 @@ pub enum KeyError {
 
 /// Looks the key up, and when it is new, opens a transaction holding its
 /// reservation (§4.2 steps 2 and 7).
-pub async fn begin_keyed(
-    db: &Db,
-    key: &OperationKey,
-    hash: &[u8; 32],
-) -> Result<Keyed, KeyError> {
+pub async fn begin_keyed(db: &Db, key: &OperationKey, hash: &[u8; 32]) -> Result<Keyed, KeyError> {
     // A reservation lost to a concurrent request means that request
     // committed; the second lookup finds it.
     for _ in 0..3 {
