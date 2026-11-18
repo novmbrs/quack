@@ -14,6 +14,7 @@
 //! inside fenced transactions.
 
 pub mod actions;
+pub mod appeals;
 pub mod cache;
 pub mod cases;
 mod channels;

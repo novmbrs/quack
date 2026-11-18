@@ -39,6 +39,7 @@ pub use view_member::{
     MemberAppeal, MemberAppealEvent, MemberCaseView, MemberContextLine, MemberEmbed,
     MemberEvidence, MemberEvidenceFile, member_case,
 };
+pub(crate) use void::{VoidBy, void_in_tx, voided_metrics};
 pub use void::{VoidEffects, Voided, void_case};
 
 /// Who applies a rule.
