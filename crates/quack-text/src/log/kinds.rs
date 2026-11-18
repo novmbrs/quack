@@ -6,7 +6,7 @@ use quack_core::modlog::ModLogEntry;
 use quack_core::modules::{
     ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
 };
-use quack_core::permissions::{MemberRefusal, MemberRefusalCode};
+use quack_core::permissions::{DiscordPermission, MemberRefusal, MemberRefusalCode};
 
 use super::LogFacts;
 use crate::action::permission;
@@ -51,7 +51,7 @@ fn lower_first(mut t: Text) -> Text {
     t
 }
 
-fn refusal_from_code(code: MemberRefusalCode, kind: Option<ActionKind>) -> MemberRefusal {
+fn refusal_from_code(code: MemberRefusalCode, permission: DiscordPermission) -> MemberRefusal {
     match code {
         MemberRefusalCode::QuackNotInServer => MemberRefusal::QuackNotInServer,
         MemberRefusalCode::ActorNotInServer => MemberRefusal::ActorNotInServer,
@@ -62,7 +62,7 @@ fn refusal_from_code(code: MemberRefusalCode, kind: Option<ActionKind>) -> Membe
         MemberRefusalCode::MemberRoleTooHigh => MemberRefusal::MemberRoleTooHigh,
         MemberRefusalCode::QuackRoleTooLow => MemberRefusal::QuackRoleTooLow,
         MemberRefusalCode::QuackMissingPermission => {
-            MemberRefusal::QuackMissingPermission(kind.unwrap_or(ActionKind::Ban).permission())
+            MemberRefusal::QuackMissingPermission(permission)
         }
         MemberRefusalCode::MemberIsAdministrator => MemberRefusal::MemberIsAdministrator,
     }
@@ -77,6 +77,13 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
     let actor = || Text::new().actor(&f.actor);
     let member = |t: Text| f.member(t);
     let case = |t: Text, n: u64| f.case(t, n);
+    // The permission a refusal names: the recorded one, else the level's
+    // action's, else Ban Members (§12.10).
+    let needed = |recorded: Option<DiscordPermission>| {
+        recorded
+            .or(f.action.map(ActionKind::permission))
+            .unwrap_or(DiscordPermission::BanMembers)
+    };
     match entry {
         ModLogEntry::CaseCreated(d) => super::actions::case_created(d, f),
         ModLogEntry::CaseCreateRefused(d) => {
@@ -87,16 +94,13 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
                 }
                 MemberRefusalCode::QuackMissingPermission => t.s(format!(
                     ": Quack needs the {} permission.",
-                    permission(d.permission.map_or(
-                        quack_core::permissions::Permission::BanMembers,
-                        quack_core::permissions::DiscordPermission::permission
-                    ))
+                    permission(needed(d.permission).permission())
                 )),
                 MemberRefusalCode::QuackNotInServer => t.s(" because Quack isn't in the server."),
                 other => t.s(": ").then(lower_first(refusal_reason(
-                    refusal_from_code(other, None),
+                    refusal_from_code(other, needed(d.permission)),
                     f.member.as_ref(),
-                    None,
+                    f.action,
                 ))),
             }
         }
@@ -286,9 +290,9 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::HoneypotCaseFailed(d) => {
             let why = match d.refusal {
                 HoneypotRefusal::Member(code) => lower_first(refusal_reason(
-                    refusal_from_code(code, None),
+                    refusal_from_code(code, needed(None)),
                     f.member.as_ref(),
-                    None,
+                    f.action,
                 )),
                 HoneypotRefusal::RuleUnavailable => Text::fixed(
                     "the honeypot's rule is archived or no longer exists. Choose another rule in ",
@@ -313,22 +317,49 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
 }
 
 /// A Go-era action name in today's words: separators become spaces and the
-/// old vocabulary becomes the glossary's ("template" is "rule").
-fn legacy_action(name: &str) -> String {
-    name.split(['_', '.', ':', '-', ' '])
+/// old vocabulary becomes the glossary's ("template" is "rule",
+/// "templates" is "rules"; "audit log" and "audit" are "moderation log").
+pub(crate) fn legacy_action(name: &str) -> String {
+    let words: Vec<String> = name
+        .split(['_', '.', ':', '-', ' '])
         .filter(|w| !w.is_empty())
-        .map(|w| match w.to_ascii_lowercase().as_str() {
-            "template" | "templates" | "policy" | "policies" => "rule",
-            "execution" | "executions" | "punishment" | "punishments" | "enforcement" => "action",
-            "infraction" | "infractions" | "incident" | "incidents" => "case",
-            "notification" | "notifications" | "notice" | "notices" => "DM",
+        .map(str::to_ascii_lowercase)
+        .collect();
+    let mut out: Vec<&str> = Vec::new();
+    let mut i = 0;
+    while i < words.len() {
+        let w = words[i].as_str();
+        let next = words.get(i + 1).map(String::as_str);
+        if w == "audit" && matches!(next, Some("log" | "logs")) {
+            out.push(if next == Some("logs") {
+                "moderation logs"
+            } else {
+                "moderation log"
+            });
+            i += 2;
+            continue;
+        }
+        out.push(match w {
+            "template" | "policy" => "rule",
+            "templates" | "policies" => "rules",
+            "execution" | "punishment" | "enforcement" => "action",
+            "executions" | "punishments" | "enforcements" => "actions",
+            "infraction" | "incident" => "case",
+            "infractions" | "incidents" => "cases",
+            "notification" | "notice" => "DM",
+            "notifications" | "notices" => "DMs",
             "audit" => "moderation log",
             "mirror" => "log channel",
-            "user" | "users" | "target" | "offender" => "member",
-            "mod" | "mods" => "moderator",
-            "admin" | "admins" => "administrator",
+            "mirrors" => "log channels",
+            "user" | "target" | "offender" => "member",
+            "users" | "targets" | "offenders" => "members",
+            "mod" => "moderator",
+            "mods" => "moderators",
+            "admin" => "administrator",
+            "admins" => "administrators",
             _ => w,
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+        });
+        i += 1;
+    }
+    out.join(" ")
 }

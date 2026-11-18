@@ -310,6 +310,15 @@ pub fn samples() -> Vec<Sample> {
             Out::Text(line.clone()),
         ));
     }
+    v.push(text(
+        "module.problem",
+        "honeypot_rule_required_fields, rule name unknown",
+        setup::module_problem(
+            &ModuleProblem::HoneypotRuleRequiredFields(rule_id()),
+            None,
+            None,
+        ),
+    ));
     for m in ModuleName::ALL {
         v.push(text(
             "setup.module.not_ready",

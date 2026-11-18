@@ -510,15 +510,21 @@ pub fn entries() -> Vec<(&'static str, String, ModLogEntry)> {
             ModLogEntry::HoneypotCaseFailed(HoneypotCaseFailedDetail { refusal: r }),
         );
     }
-    push(
-        "log.legacy",
-        "",
-        ModLogEntry::Legacy(LegacyDetail {
-            action: "case_execution.retry".to_owned(),
-            resource_type: "case".to_owned(),
-            resource_id: None,
-            failure_reason: None,
-        }),
-    );
+    for name in [
+        "case_execution.retry",
+        "audit_log.export",
+        "templates.notifications:mods-and-admins",
+    ] {
+        push(
+            "log.legacy",
+            name,
+            ModLogEntry::Legacy(LegacyDetail {
+                action: name.to_owned(),
+                resource_type: "case".to_owned(),
+                resource_id: None,
+                failure_reason: None,
+            }),
+        );
+    }
     v
 }

@@ -181,13 +181,24 @@ pub fn samples() -> Vec<Sample> {
             Out::Text(action::member_sentence(&a)),
         ));
     }
-    let mut no_end = ActionView::new(ActionKind::Timeout, ActionState::Running, 12);
-    no_end.timeout_ends_at = None;
-    v.push(sample(
-        "action.sentence",
-        "Timeout Running without an end time",
-        Out::Text(action::sentence(&no_end, &sam(), Detail::Full)),
-    ));
+    for (name, state, no_change) in [
+        ("Running", ActionState::Running, false),
+        ("Done", ActionState::Done, false),
+        ("Done no change", ActionState::Done, true),
+    ] {
+        let mut no_end = ActionView::new(ActionKind::Timeout, state, 12);
+        no_end.no_change = no_change;
+        v.push(sample(
+            "action.sentence",
+            format!("Timeout {name} without an end time"),
+            Out::Text(action::sentence(&no_end, &sam(), Detail::Full)),
+        ));
+        v.push(sample(
+            "member.action",
+            format!("Timeout {name} without an end time"),
+            Out::Text(action::member_sentence(&no_end)),
+        ));
+    }
     for kind in ActionKind::ALL {
         v.push(text(
             "action.retry.done",

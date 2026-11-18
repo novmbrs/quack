@@ -58,16 +58,10 @@ pub(super) fn case_created(d: &CaseCreatedDetail, f: &LogFacts) -> Text {
             d.ban_delete_message_seconds,
         ));
         let t = if d.source == CaseSource::Honeypot {
-            f.rule(
-                case(
-                    member(case(Text::fixed("Quack added "), d.case_number).s(" for ")),
-                    d.case_number,
-                )
-                .s(" under "),
-            )
-            .s(format!(
-                " because they posted in the honeypot channel: {outcome}."
-            ))
+            f.rule(member(case(Text::fixed("Quack added "), d.case_number).s(" for ")).s(" under "))
+                .s(format!(
+                    " because they posted in the honeypot channel: {outcome}."
+                ))
         } else {
             f.rule(member(case(actor().s(" added "), d.case_number).s(" for ")).s(" under "))
                 .s(format!(
@@ -94,12 +88,15 @@ pub(super) fn action_done(d: &ActionDoneDetail, f: &LogFacts) -> Text {
                 n,
             )
             .s("."),
-            (ActionKind::Timeout, true) => case(
-                ends(f, member(Text::new()).s(" was already timed out"))
-                    .s(" or later when Quack tried to time them out for "),
-                n,
-            )
-            .s("."),
+            (ActionKind::Timeout, true) => {
+                let t = ends(f, member(Text::new()).s(" was already timed out"));
+                let t = if f.timeout_ends_at.is_some() {
+                    t.s(" or later")
+                } else {
+                    t
+                };
+                case(t.s(" when Quack tried to time them out for "), n).s(".")
+            }
             (ActionKind::Kick, false) => case(
                 member(Text::fixed("Quack removed ")).s(" from the server for "),
                 n,

@@ -1,7 +1,8 @@
 //! §12.10 log channel entries: every entry kind and result, as a log
 //! channel post and as the dashboard's text.
 
-use quack_core::modlog::{ModLogEntry, TicketClosedDetail};
+use quack_core::action::ActionKind;
+use quack_core::modlog::{ActionDoneDetail, ModLogEntry, TicketClosedDetail};
 
 use super::{Out, Sample, covering, sample};
 use crate::log::{self, LogFacts};
@@ -66,6 +67,11 @@ pub fn samples() -> Vec<Sample> {
         if let ModLogEntry::TicketClosed(_) = e {
             f.actor = Actor::Person(sam());
         }
+        match e {
+            ModLogEntry::HoneypotCaseFailed(_) => f.action = Some(ActionKind::Timeout),
+            ModLogEntry::CaseCreateRefused(_) => f.action = Some(ActionKind::Kick),
+            _ => {}
+        }
         v.push(covering(
             id,
             covers,
@@ -90,6 +96,23 @@ pub fn samples() -> Vec<Sample> {
             Out::Text(log::text(&e, &bare)),
         ));
     }
+    v.push(sample(
+        "log.action_done",
+        "timeout, no change, end unknown · dashboard text",
+        Out::Text(log::text(
+            &ModLogEntry::ActionDone(ActionDoneDetail {
+                case_number: 12,
+                kind: ActionKind::Timeout,
+                attempts: 1,
+                no_change: true,
+            }),
+            &LogFacts {
+                case_url: None,
+                timeout_ends_at: None,
+                ..facts()
+            },
+        )),
+    ));
     v.push(sample(
         "log.ticket_closed",
         "closed by staff · post",

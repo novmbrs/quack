@@ -36,11 +36,16 @@ plain:   Sam was already banned when Quack tried to ban them for case #12.
 model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was already banned when Quack tried to ban them for case #12.")]
 
 ## Timeout no_change=true · no names known
-discord: A member was already timed out or later when Quack tried to time them out for case #12.
-plain:   A member was already timed out or later when Quack tried to time them out for case #12.
-model:   [Fixed("A member was already timed out or later when Quack tried to time them out for case #12.")]
+discord: A member was already timed out when Quack tried to time them out for case #12.
+plain:   A member was already timed out when Quack tried to time them out for case #12.
+model:   [Fixed("A member was already timed out when Quack tried to time them out for case #12.")]
 
 ## Ban no_change=true · no names known
 discord: A member was already banned when Quack tried to ban them for case #12.
 plain:   A member was already banned when Quack tried to ban them for case #12.
 model:   [Fixed("A member was already banned when Quack tried to ban them for case #12.")]
+
+## timeout, no change, end unknown · dashboard text
+discord: <@222> was already timed out when Quack tried to time them out for case #12.
+plain:   Sam was already timed out when Quack tried to time them out for case #12.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was already timed out when Quack tried to time them out for case #12.")]

@@ -235,17 +235,18 @@ pub fn failure_reason(
     })
 }
 
-fn ends(a: &ActionView, t: Text) -> Text {
+/// Appends " until" and the end time, or nothing when the end isn't known.
+fn until(a: &ActionView, t: Text) -> Text {
     match a.timeout_ends_at {
-        Some(at) => t.time(at, TimeStyle::FullRelative),
-        None => t.s("its end time"),
+        Some(at) => t.s(" until ").time(at, TimeStyle::FullRelative),
+        None => t,
     }
 }
 
 fn in_progress(a: &ActionView, m: &Person) -> Text {
     let t = Text::new();
     match a.kind {
-        ActionKind::Timeout => ends(a, t.s("Quack is timing out ").person(m).s(" until ")).s("."),
+        ActionKind::Timeout => until(a, t.s("Quack is timing out ").person(m)).s("."),
         ActionKind::Kick => t.s("Quack is removing ").person(m).s(" from the server."),
         ActionKind::Ban => t.s("Quack is banning ").person(m).s("."),
         ActionKind::RemoveTimeout => t.s("Quack is removing ").person(m).s("'s timeout."),
@@ -256,9 +257,24 @@ fn in_progress(a: &ActionView, m: &Person) -> Text {
 fn done(a: &ActionView, m: &Person) -> Text {
     let t = Text::new();
     match (a.kind, a.no_change) {
-        (ActionKind::Timeout, false) => ends(a, t.person(m).s(" is timed out until ")).s("."),
-        (ActionKind::Timeout, true) => ends(a, t.person(m).s(" was already timed out until "))
-            .s(" or later, so Quack left that timeout as it was."),
+        (ActionKind::Timeout, false) => match a.timeout_ends_at {
+            Some(at) => t
+                .person(m)
+                .s(" is timed out until ")
+                .time(at, TimeStyle::FullRelative)
+                .s("."),
+            None => t.s("Quack timed out ").person(m).s("."),
+        },
+        (ActionKind::Timeout, true) => match a.timeout_ends_at {
+            Some(at) => t
+                .person(m)
+                .s(" was already timed out until ")
+                .time(at, TimeStyle::FullRelative)
+                .s(" or later, so Quack left that timeout as it was."),
+            None => t
+                .person(m)
+                .s(" was already timed out, so Quack left that timeout as it was."),
+        },
         (ActionKind::Kick, false) => t.s("Quack removed ").person(m).s(" from the server."),
         (ActionKind::Kick, true) => t
             .person(m)

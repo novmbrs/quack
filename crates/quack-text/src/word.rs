@@ -31,6 +31,26 @@ pub const fn action_noun(kind: ActionKind) -> &'static str {
     }
 }
 
+/// `case.button.retry`: "Retry ban"; a remove timeout is "Retry timeout
+/// removal", since "Retry remove timeout" doesn't read.
+pub fn retry_label(kind: ActionKind) -> String {
+    format!("Retry {}", button_noun(kind))
+}
+
+/// `case.button.dismiss`: "Dismiss ban", "Dismiss timeout removal".
+pub fn dismiss_label(kind: ActionKind) -> String {
+    format!("Dismiss {}", button_noun(kind))
+}
+
+const fn button_noun(kind: ActionKind) -> &'static str {
+    match kind {
+        ActionKind::RemoveTimeout => "timeout removal",
+        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban | ActionKind::Unban => {
+            action(kind)
+        }
+    }
+}
+
 /// The outcome of an action or DM, as shown in lists and badges.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Outcome {

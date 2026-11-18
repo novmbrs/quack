@@ -220,17 +220,16 @@ fn buttons(c: &CaseCard) -> Vec<Button> {
         ));
     }
     for a in c.action.iter().chain(c.undo.iter()) {
-        let what = word::action(a.view.kind);
         if a.can_retry {
             b.push(Button::new(
-                format!("Retry {what}"),
+                word::retry_label(a.view.kind),
                 ButtonStyle::Primary,
                 ButtonAction::RetryAction(a.id),
             ));
         }
         if a.can_dismiss {
             b.push(Button::new(
-                format!("Dismiss {what}"),
+                word::dismiss_label(a.view.kind),
                 ButtonStyle::Secondary,
                 ButtonAction::DismissAction(a.id),
             ));

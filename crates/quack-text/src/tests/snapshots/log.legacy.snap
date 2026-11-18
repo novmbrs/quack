@@ -1,7 +1,7 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-##  · post
+## case_execution.retry · post
 tone: Neutral
 --- discord ---
 Imported from the previous version of Quack: case action retry.
@@ -13,7 +13,46 @@ Imported from the previous version of Quack: case action retry.
 Text [Fixed("Imported from the previous version of Quack: "), User("case action retry"), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
-##  · dashboard text
+## case_execution.retry · dashboard text
 discord: Imported from the previous version of Quack: case action retry.
 plain:   Imported from the previous version of Quack: case action retry.
 model:   [Fixed("Imported from the previous version of Quack: "), User("case action retry"), Fixed(".")]
+
+## audit_log.export · post
+tone: Neutral
+--- discord ---
+Imported from the previous version of Quack: moderation log export.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Imported from the previous version of Quack: moderation log export.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Imported from the previous version of Quack: "), User("moderation log export"), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## audit_log.export · dashboard text
+discord: Imported from the previous version of Quack: moderation log export.
+plain:   Imported from the previous version of Quack: moderation log export.
+model:   [Fixed("Imported from the previous version of Quack: "), User("moderation log export"), Fixed(".")]
+
+## templates.notifications:mods-and-admins · post
+tone: Neutral
+--- discord ---
+Imported from the previous version of Quack: rules DMs moderators and administrators.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Imported from the previous version of Quack: rules DMs moderators and administrators.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Imported from the previous version of Quack: "), User("rules DMs moderators and administrators"), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## templates.notifications:mods-and-admins · dashboard text
+discord: Imported from the previous version of Quack: rules DMs moderators and administrators.
+plain:   Imported from the previous version of Quack: rules DMs moderators and administrators.
+model:   [Fixed("Imported from the previous version of Quack: "), User("rules DMs moderators and administrators"), Fixed(".")]
+
+## audit_log.export · no names known
+discord: Imported from the previous version of Quack: moderation log export.
+plain:   Imported from the previous version of Quack: moderation log export.
+model:   [Fixed("Imported from the previous version of Quack: "), User("moderation log export"), Fixed(".")]

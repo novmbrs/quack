@@ -50,3 +50,8 @@ model:   [Fixed("Quack needs Manage Messages and Read Message History in "), Cha
 discord: <#444> isn't staff-only.
 plain:   #staff isn't staff-only.
 model:   [Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" isn't staff-only.")]
+
+## honeypot_rule_required_fields, rule name unknown
+discord: The rule the honeypot uses has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
+plain:   The rule the honeypot uses has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
+model:   [Fixed("The rule the honeypot uses has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.")]

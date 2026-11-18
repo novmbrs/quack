@@ -492,7 +492,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack isn't in this server anymore.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Quack isn't in this server anymore.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -510,7 +510,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -528,7 +528,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -546,7 +546,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -564,7 +564,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> isn't in the server, so there's no one to time out.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Sam isn't in the server, so there's no one to time out.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -582,7 +582,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -600,7 +600,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout would already have ended by now, so Quack didn't apply it.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -618,7 +618,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
@@ -636,7 +636,7 @@ tone: Danger
 --- discord ---
 Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
-buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+buttons: [Retry timeout removal · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
 --- plain ---
 Quack couldn't remove Sam's timeout for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
 17 Nov 2026 at 14:05 UTC · Open in dashboard

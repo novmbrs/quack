@@ -482,6 +482,16 @@ plain:   Quack left Sam's ban in place because it didn't come from a voided Quac
 model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ban in place because it didn't come from a voided Quack case. Check it in Discord.")]
 
 ## Timeout Running without an end time
-discord: Quack is timing out <@222> until its end time.
-plain:   Quack is timing out Sam until its end time.
-model:   [Fixed("Quack is timing out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" until its end time.")]
+discord: Quack is timing out <@222>.
+plain:   Quack is timing out Sam.
+model:   [Fixed("Quack is timing out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Timeout Done without an end time
+discord: Quack timed out <@222>.
+plain:   Quack timed out Sam.
+model:   [Fixed("Quack timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Timeout Done no change without an end time
+discord: <@222> was already timed out, so Quack left that timeout as it was.
+plain:   Sam was already timed out, so Quack left that timeout as it was.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was already timed out, so Quack left that timeout as it was.")]

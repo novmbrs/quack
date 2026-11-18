@@ -2441,8 +2441,10 @@ trailing fields and paragraphs, and ends with `render.trimmed`.
 `{action}` inside a sentence is `word.action.*`, except that "remove
 timeout" reads "remove timeout action" where the action is a noun ("the
 failed remove timeout action", "This remove timeout action can't be
-retried"). Button labels ("Retry {action}", "Dismiss {action}") use the
-plain word.
+retried"). Button labels ("Retry {action}", "Dismiss {action}",
+`quack_text::word::retry_label` and `dismiss_label`) use the plain word,
+except that a remove timeout is "timeout removal" ("Retry timeout
+removal").
 
 ### 12.3 Errors and refusals
 
@@ -2607,8 +2609,8 @@ Buttons (labels), in this order: `case.button.edit_context` "Edit
 context", `case.button.add_evidence` "Add evidence",
 `case.button.view_evidence` "View evidence" (when the case has evidence),
 `case.button.history` "History", `case.button.void` "Void case" (when not
-voided), `case.button.retry` "Retry {action}", `case.button.dismiss`
-"Dismiss {action}", `case.button.remove_timeout` "Remove timeout",
+voided), `case.button.retry` "Retry {action}" ("Retry timeout removal"),
+`case.button.dismiss` "Dismiss {action}" ("Dismiss timeout removal"), `case.button.remove_timeout` "Remove timeout",
 `case.button.unban` "Unban", `button.failed_actions` (when an action needs
 a decision), `button.open_in_dashboard`. The public receipt's only button
 is `button.open_case`.
@@ -2667,8 +2669,11 @@ channel. `{retry}` appends `action.retry_scheduled` when the action is
 uses `action.<kind>.failed` with its `{reason}`, except `unconfirmed`,
 which uses `action.unconfirmed` alone (so one sentence never says both
 "couldn't" and "couldn't confirm"). A failure someone dismissed appends
-`action.dismissed_suffix` (staff views only). `{ends_at}` reads "its end
-time" when the end isn't known.
+`action.dismissed_suffix` (staff views only). `{ends_at}` reads is left out
+when the end isn't known: a timeout reads "Quack is timing out {member}."
+in progress, "Quack timed out {member}." when done, and "{member} was
+already timed out, so Quack left that timeout as it was." when done with no
+change.
 
 | Id | Text |
 | --- | --- |
@@ -3007,7 +3012,7 @@ Discord unbanned {member}").
 | `log.case_created.honeypot` | `case_created` ok, source honeypot | Quack added {case} for {member} under {rule} because they posted in the honeypot channel: {level outcome}. |
 | `log.case_created.replaces` | (appended) | It replaces case #{other}. |
 | `log.case_create_refused.quack_role_too_low` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule}: their highest role is at or above Quack's. Move Quack's role above it. |
-| `log.case_create_refused.quack_missing_permission` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule}: Quack needs the {permission} permission. (Ban Members when the permission isn't recorded) |
+| `log.case_create_refused.quack_missing_permission` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule}: Quack needs the {permission} permission. (the level's action's permission when the permission isn't recorded, else Ban Members) |
 | `log.case_create_refused.quack_not_in_server` | `case_create_refused` refused | Quack couldn't add a case for {member} under {rule} because Quack isn't in the server. |
 | `log.case_create_refused` | `case_create_refused` refused, any other refusal | Quack couldn't add a case for {member} under {rule}: {refusal} |
 | `log.case_voided` | `case_voided` ok, cause staff | {actor} voided {case} for {member}.\n> {void_reason} |
@@ -3015,7 +3020,7 @@ Discord unbanned {member}").
 | `log.case_context_edited` | `case_context_edited` ok | {actor} edited the case context of {case}. |
 | `log.evidence_added` | `evidence_added` ok (not posted) | one: {actor} added 1 evidence item to {case}. / other: {actor} added {count} evidence items to {case}. |
 | `log.action_done.timeout` | `action_done` ok | Quack timed out {member} until {ends_at} for {case}. (" until {ends_at}" left out when unknown) |
-| `log.action_done` (timeout, no change) | `action_done` ok | {member} was already timed out until {ends_at} or later when Quack tried to time them out for {case}. |
+| `log.action_done` (timeout, no change) | `action_done` ok | {member} was already timed out until {ends_at} or later when Quack tried to time them out for {case}. ("{member} was already timed out when …" when the end isn't known) |
 | `log.action_done.kick` | `action_done` ok | Quack removed {member} from the server for {case}. |
 | `log.action_done.kick_no_change` | `action_done` ok | {member} had already left when Quack tried to remove them for {case}. |
 | `log.action_done.ban` | `action_done` ok | Quack banned {member} for {case}. |
@@ -3081,18 +3086,20 @@ Discord unbanned {member}").
 
 `{refusal}` reuses the §12.3 refusal texts without their first sentence
 ("No case was added."), with the first letter lowercased unless the text
-starts with "Quack" or "Discord"; its own period ends the entry.
+starts with "Quack" or "Discord"; its own period ends the entry. Its
+`{action_verb}` and `{permission}` come from the level's action, which the
+poster passes as `LogFacts.action` (Ban Members when unknown).
 `{level outcome}` is
 `level.outcome.*`.
 
 `{legacy action}` is the v4 action name in today's words: `_`, `.`, `:`,
-`-`, and spaces become single spaces, and old words are replaced (template,
-templates, policy, policies → rule; execution, executions, punishment,
-punishments, enforcement → action; infraction, infractions, incident,
-incidents → case; notification, notifications, notice, notices → DM;
-audit → moderation log; mirror → log channel; user, users, target,
-offender → member; mod, mods → moderator; admin, admins → administrator).
-Example: the v4 name case_execution.retry reads "case action retry".
+`-`, and spaces become single spaces, and old words are replaced, keeping
+plurals plural (template, policy → rule; execution, punishment,
+enforcement → action; infraction, incident → case; notification, notice →
+DM; audit log, audit → moderation log; mirror → log channel; user, target,
+offender → member; mod → moderator; admin → administrator; "templates" →
+"rules" and so on). Example: the v4 name case_execution.retry reads "case
+action retry", and audit_log.export reads "moderation log export".
 
 `{fields}` names each changed setting once, joined with commas and "and"
 ("log channel, appeal channel, and DM footer"). A key without a name reads
@@ -3219,7 +3226,7 @@ server activity channel.
 | `module.problem.ticket_same_channel` | The entry channel and the staff channel must be different. |
 | `module.problem.honeypot_channel_missing` | Choose the honeypot channel. |
 | `module.problem.honeypot_rule_missing` | Choose the rule the honeypot applies. |
-| `module.problem.honeypot_rule_required_fields` | The rule {rule} has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional. ({rule} reads "the honeypot uses" when the name isn't known) |
+| `module.problem.honeypot_rule_required_fields` | The rule {rule} has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional. ("The rule the honeypot uses has …", not bold, when the name isn't known) |
 | `module.problem.activity_no_route` | Choose a channel for server activity. |
 | `module.problem.activity_needs_audit_log` | Quack needs the View Audit Log permission to show who banned or unbanned a member. |
 | `module.problem.channel_permissions` | Quack needs {permissions} in {channel}. |
@@ -4398,7 +4405,7 @@ pure domain check can make; `DomainError::code()` and
 carries no case number, rule name, action kind, or member, so the message
 comes from `quack_text::error::for_domain(&err, &ErrorFacts)`: the caller
 passes what it knows (`scene` — staff, adding a case, editing a rule, or a
-member's own view — `case_number`, `rule`, `action`, `member`, `module`),
+member's own view — `case_number`, `rule`, `action`, `member`),
 and a message whose facts are missing falls back to a sentence that says
 "this case", "that rule", or "this action" (§12.3). Refusals that only the
 engine can detect are variants of the engine's own error type, not of

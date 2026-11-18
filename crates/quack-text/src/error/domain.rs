@@ -6,7 +6,6 @@
 
 use quack_core::DomainError;
 use quack_core::action::ActionKind;
-use quack_core::modules::ModuleName;
 
 use crate::model::{Person, Text};
 use crate::{api, appeal, ticket};
@@ -38,8 +37,6 @@ pub struct ErrorFacts<'a> {
     pub action: Option<ActionKind>,
     /// The member the case is about.
     pub member: Option<&'a Person>,
-    /// The module being turned on.
-    pub module: Option<ModuleName>,
 }
 
 fn case_or(f: &ErrorFacts<'_>, numbered: impl FnOnce(u64) -> Text, fallback: &str) -> Text {

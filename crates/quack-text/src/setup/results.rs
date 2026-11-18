@@ -253,9 +253,11 @@ pub fn module_problem(p: &ModuleProblem, rule: Option<&str>, channel: Option<&Ch
         }
         ModuleProblem::HoneypotChannelMissing => Text::fixed("Choose the honeypot channel."),
         ModuleProblem::HoneypotRuleMissing => Text::fixed("Choose the rule the honeypot applies."),
-        ModuleProblem::HoneypotRuleRequiredFields(_) => Text::fixed("The rule ")
-            .bold_user(rule.unwrap_or("the honeypot uses"))
-            .s(" has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional."),
+        ModuleProblem::HoneypotRuleRequiredFields(_) => match rule {
+            Some(r) => Text::fixed("The rule ").bold_user(r),
+            None => Text::fixed("The rule the honeypot uses"),
+        }
+        .s(" has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional."),
         ModuleProblem::ActivityNoRoute => Text::fixed("Choose a channel for server activity."),
         ModuleProblem::ActivityNeedsAuditLog => Text::fixed(
             "Quack needs the View Audit Log permission to show who banned or unbanned a member.",

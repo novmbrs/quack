@@ -9,6 +9,7 @@
 mod actions;
 mod kinds;
 
+use quack_core::action::ActionKind;
 use quack_core::ids::ActionId;
 use quack_core::modlog::{ModLogEntry, ModLogResult};
 use quack_core::modules::ModuleName;
@@ -46,6 +47,9 @@ pub struct LogFacts {
     pub dashboard_url: Option<String>,
     /// For a retryable failed action: the action the Retry button retries.
     pub retry_action: Option<ActionId>,
+    /// The level's action, for refusals that name it (a missing permission
+    /// on a honeypot case or a refused case).
+    pub action: Option<ActionKind>,
 }
 
 impl LogFacts {
@@ -63,6 +67,7 @@ impl LogFacts {
             thread: None,
             dashboard_url: None,
             retry_action: None,
+            action: None,
         }
     }
 
@@ -123,9 +128,8 @@ pub fn post(entry: &ModLogEntry, f: &LogFacts) -> Msg {
     }
     msg = msg.block(Block::Subtext(sub));
     if let (ModLogEntry::ActionFailed(d), Some(id)) = (entry, f.retry_action) {
-        let label = format!("Retry {}", crate::word::action(d.kind));
         msg = msg.buttons(vec![Button::new(
-            label,
+            crate::word::retry_label(d.kind),
             ButtonStyle::Primary,
             ButtonAction::RetryAction(id),
         )]);

@@ -480,3 +480,18 @@ model:   [Fixed("Your ban stays because another case still applies.")]
 discord: Your ban stays. The moderators can see why.
 plain:   Your ban stays. The moderators can see why.
 model:   [Fixed("Your ban stays. The moderators can see why.")]
+
+## Timeout Running without an end time
+discord: Quack is timing you out.
+plain:   Quack is timing you out.
+model:   [Fixed("Quack is timing you out.")]
+
+## Timeout Done without an end time
+discord: You're timed out.
+plain:   You're timed out.
+model:   [Fixed("You're timed out.")]
+
+## Timeout Done no change without an end time
+discord: You're timed out.
+plain:   You're timed out.
+model:   [Fixed("You're timed out.")]

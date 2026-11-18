@@ -230,7 +230,6 @@ pub fn samples() -> Vec<Sample> {
         rule: Some("Spam"),
         action: Some(ActionKind::Ban),
         member: None,
-        module: Some(ModuleName::Tickets),
     };
     let s = sam();
     for err in domain_errors() {
