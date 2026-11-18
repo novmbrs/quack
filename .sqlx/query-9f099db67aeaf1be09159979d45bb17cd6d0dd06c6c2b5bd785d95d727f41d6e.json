@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,\n                             closed_at, closed_by, close_reason, journal_gaps, welcome_started_at, welcome_posted_at,\n                             frozen_at, transcript_saved_at, thread_deleted_at, thread_delete_failed, created_at\n                      FROM tickets WHERE guild_id = $1 AND ($2::ticket_state IS NULL OR state = $2)\n               AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))\n             ORDER BY created_at DESC, id DESC LIMIT $5",
+  "query": "SELECT id, guild_id, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,\n                             closed_at, closed_by, close_reason, journal_gaps, welcome_started_at, welcome_posted_at,\n                             frozen_at, transcript_saved_at, thread_deleted_at, thread_delete_failed, created_at\n                      FROM tickets WHERE guild_id = $1 AND (cardinality($2::text[]) = 0 OR state::text = ANY($2))\n               AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))\n             ORDER BY created_at DESC, id DESC LIMIT $5",
   "describe": {
     "columns": [
       {
@@ -237,19 +237,7 @@
     "parameters": {
       "Left": [
         "Int8",
-        {
-          "Custom": {
-            "name": "ticket_state",
-            "kind": {
-              "Enum": [
-                "opening",
-                "open",
-                "closing",
-                "closed"
-              ]
-            }
-          }
-        },
+        "TextArray",
         "Timestamptz",
         "Uuid",
         "Int8"
@@ -277,5 +265,5 @@
       false
     ]
   },
-  "hash": "e234228f6052a1a19bda037a9f1edbd9eb909a2715f2c617ca6ba27b1ad03400"
+  "hash": "9f099db67aeaf1be09159979d45bb17cd6d0dd06c6c2b5bd785d95d727f41d6e"
 }

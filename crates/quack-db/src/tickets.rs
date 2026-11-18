@@ -363,24 +363,26 @@ pub async fn by_thread(
     row.map(Ticket::try_from).transpose()
 }
 
-/// A server's tickets (optionally in one state), newest first.
+/// A server's tickets in any of `states` (empty: every state), newest
+/// first.
 pub async fn list(
     conn: &mut PgConnection,
     guild: GuildId,
-    state: Option<TicketState>,
+    states: &[TicketState],
     cursor: Option<TimeCursor>,
     page: u32,
 ) -> Result<Page<Ticket>, DbError> {
     let (after_time, after_id) = cursor_parts(cursor);
+    let states: Vec<String> = states.iter().map(|s| s.as_str().to_owned()).collect();
     let rows = obs::run(
         Select,
         "tickets",
         query_ticket!(
-            "WHERE guild_id = $1 AND ($2::ticket_state IS NULL OR state = $2)
+            "WHERE guild_id = $1 AND (cardinality($2::text[]) = 0 OR state::text = ANY($2))
                AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))
              ORDER BY created_at DESC, id DESC LIMIT $5",
             i64::from(guild),
-            state.map(Pg),
+            &states,
             after_time,
             after_id,
             fetch_limit(page, 100),

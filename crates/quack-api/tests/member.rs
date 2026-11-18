@@ -245,4 +245,40 @@ async fn appeal_flow_from_both_sides() {
         .await;
     assert!(after.json["voided_at"].is_string());
     assert_member_projection(&after.json);
+    let events = after.json["appeal"]["events"].as_array().unwrap();
+    assert!(events.iter().all(|e| e["closed_by_void"] == false));
+}
+
+/// Dashboard review C1: a member's appeal closed because staff voided the
+/// case says so, instead of the page guessing from an empty text.
+#[tokio::test]
+async fn an_appeal_closed_by_a_void_says_so() {
+    let app = App::new().await;
+    let rule = app.h.rule(rules_for_tests::warning("Spam")).await.unwrap();
+    let case = app.h.apply(MEMBER, rule).await.unwrap();
+    let case_id = case.case.id.get().to_string();
+    let member = app.login(MEMBER, true).await;
+    let moderator = app.login(MODERATOR, true).await;
+    let submitted = app
+        .send(
+            app.post(&format!("/api/me/cases/{case_id}/appeal"))
+                .by(&member)
+                .json(json!({"statement": "Not me."})),
+        )
+        .await;
+    assert_eq!(submitted.status, StatusCode::CREATED, "{}", submitted.json);
+    let void = app
+        .send(
+            app.post(&g("/cases/1/void"))
+                .by(&moderator)
+                .json(json!({"reason": "Wrong member."})),
+        )
+        .await;
+    assert_eq!(void.status, StatusCode::OK, "{}", void.json);
+    let after = app
+        .send(app.get(&format!("/api/me/cases/{case_id}")).by(&member))
+        .await;
+    let events = after.json["appeal"]["events"].as_array().unwrap();
+    let closed = events.iter().find(|e| e["kind"] == "closed").unwrap();
+    assert_eq!(closed["closed_by_void"], true, "{}", after.json);
 }

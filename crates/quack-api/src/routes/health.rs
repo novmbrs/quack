@@ -120,8 +120,14 @@ async fn readyz(State(state): State<ApiState>) -> (StatusCode, Json<Readiness>) 
 /// One configured staff channel's problems.
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct ChannelHealth {
-    /// The setting's API name, such as `log_channel_id`.
-    setting: &'static str,
+    /// The setting's API name: `log_channel_id`, `appeal_channel_id`,
+    /// `evidence_channel_id`, or a module's (`tickets.queue_channel_id`,
+    /// `tickets.entry_channel_id`, `activity_log.routes`,
+    /// `honeypot.channel_id`).
+    setting: String,
+    /// Whether it must be staff-only; the ticket entry and honeypot
+    /// channels are for members, so only Quack's access is checked.
+    staff_only: bool,
     #[schema(value_type = schema::Snowflake)]
     channel_id: ChannelId,
     /// Each problem's code and how to fix it.
@@ -146,7 +152,8 @@ pub(crate) struct Health {
     /// Server permissions Quack needs and lacks.
     #[schema(value_type = Vec<schema::Permission>)]
     missing_permissions: Vec<Permission>,
-    /// Each configured staff channel.
+    /// Each configured channel: the core staff channels, then the channels
+    /// of the modules that are on.
     channels: Vec<ChannelHealth>,
     /// Each module's state.
     modules: ModulesState,
@@ -171,6 +178,7 @@ async fn guild_health(
             .channels
             .into_iter()
             .map(|c| ChannelHealth {
+                staff_only: c.staff_only,
                 setting: c.setting,
                 channel_id: c.channel_id,
                 problems: c

@@ -493,3 +493,32 @@ async fn a_draft_whose_rule_changed_is_dropped() -> Result<()> {
     assert_eq!(h.db.count("SELECT count(*) FROM case_drafts").await?, 0);
     Ok(())
 }
+
+/// Dashboard review C4: server health lists the channels of the modules
+/// that are on; the ticket entry channel is for members, so only Quack's
+/// access is checked there.
+#[tokio::test]
+async fn health_lists_the_module_channels() -> Result<()> {
+    let h = Harness::new().await?;
+    let queue = h.fake.world(|w| w.add_text_channel(h.guild, true));
+    let entry = h.fake.world(|w| w.add_text_channel(h.guild, false));
+    h.db.execute(&format!(
+        "UPDATE ticket_settings SET entry_channel_id = {entry}, queue_channel_id = {queue}, \
+         enabled = true WHERE guild_id = {GUILD}"
+    ))
+    .await?;
+    let report = quack_engine::settings::health(&h.engine, &admin(&h)).await?;
+    let find = |setting: &str| report.channels.iter().find(|c| c.setting == setting);
+    let q = find("tickets.queue_channel_id").context("queue listed")?;
+    assert!(q.staff_only);
+    assert_eq!(q.problems, Vec::<&str>::new());
+    let e = find("tickets.entry_channel_id").context("entry listed")?;
+    assert!(!e.staff_only);
+    assert!(
+        !e.problems.contains(&"everyone_can_view"),
+        "{:?}",
+        e.problems
+    );
+    assert!(find("honeypot.channel_id").is_none(), "the honeypot is off");
+    Ok(())
+}

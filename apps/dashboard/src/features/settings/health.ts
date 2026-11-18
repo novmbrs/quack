@@ -42,6 +42,10 @@ export const settingNames: Record<string, string> = {
   log_channel_id: "Log channel",
   appeal_channel_id: "Appeal channel",
   evidence_channel_id: "Evidence channel",
+  "tickets.queue_channel_id": "Ticket queue channel",
+  "tickets.entry_channel_id": "Ticket entry channel",
+  "activity_log.routes": "Server activity log channel",
+  "honeypot.channel_id": "Honeypot channel",
 };
 
 const moduleNames: Record<ModuleName, string> = {
@@ -79,7 +83,7 @@ export function healthChecklist(health: Health): HealthCheck[] {
 
   for (const channel of health.channels) {
     checks.push({
-      key: `channel:${channel.setting}`,
+      key: `channel:${channel.setting}:${channel.channel_id}`,
       label: settingNames[channel.setting] ?? channel.setting,
       state: channel.problems.length ? "problem" : "ok",
       detail: channel.problems.length

@@ -140,13 +140,9 @@ export function AddEvidenceDialog({
 
   const add = useMutation({
     mutationFn: () => addEvidence(guildId, String(caseNumber), links),
-    onSuccess: () => {
+    onSuccess: (added) => {
       void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
-      toast.success(
-        links.length === 1
-          ? `Quack is saving 1 message as evidence for case #${caseNumber}.`
-          : `Quack is saving ${links.length} messages as evidence for case #${caseNumber}.`,
-      );
+      toast.success(added.message);
       setText("");
       onClose();
     },

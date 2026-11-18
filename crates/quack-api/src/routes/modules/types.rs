@@ -53,7 +53,24 @@ impl From<quack_engine::settings::ModulesView> for ModulesState {
     }
 }
 
-/// Ticket settings (route 42 body, part of route 41).
+/// Route 42's body: the settings and the version they were read at.
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TicketSettingsUpdate {
+    /// The `version` the page was read at; a newer one is refused with
+    /// `settings_changed`.
+    pub expected_version: u64,
+    /// Where members open tickets.
+    #[schema(value_type = Option<schema::Snowflake>)]
+    pub entry_channel_id: Option<ChannelId>,
+    /// The staff channel new tickets are announced in.
+    #[schema(value_type = Option<schema::Snowflake>)]
+    pub queue_channel_id: Option<ChannelId>,
+    /// Days transcripts are kept (1–365).
+    pub transcript_retention_days: u16,
+}
+
+/// Ticket settings (part of route 41).
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct TicketSettings {
@@ -73,12 +90,32 @@ pub(crate) struct TicketSettings {
 pub(crate) struct TicketsModule {
     #[serde(flatten)]
     pub state: ModuleState,
+    /// The settings' version: send it back as `expected_version`.
+    pub version: u64,
     pub settings: TicketSettings,
     /// Tickets open now.
     pub open_tickets: u64,
 }
 
-/// Server activity log settings (route 44 body, part of route 43).
+/// Route 44's body: the settings and the version they were read at.
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ActivityLogSettingsUpdate {
+    /// The `version` the page was read at; a newer one is refused with
+    /// `settings_changed`.
+    pub expected_version: u64,
+    /// The channel each event type posts to (absent: not logged).
+    #[schema(value_type = std::collections::HashMap<schema::ActivityEvent, schema::Snowflake>)]
+    pub routes: std::collections::BTreeMap<quack_core::modules::ActivityEvent, ChannelId>,
+    /// Include message text.
+    pub include_message_content: bool,
+    /// Include file names.
+    pub include_file_names: bool,
+    /// Include embed types.
+    pub include_embed_types: bool,
+}
+
+/// Server activity log settings (part of route 43).
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ActivityLogSettings {
@@ -100,6 +137,8 @@ pub(crate) struct ActivityLogSettings {
 pub(crate) struct ActivityLogModule {
     #[serde(flatten)]
     pub state: ModuleState,
+    /// The settings' version: send it back as `expected_version`.
+    pub version: u64,
     pub settings: ActivityLogSettings,
     /// Events posted since Quack started.
     pub posted_since_start: u64,
@@ -107,7 +146,24 @@ pub(crate) struct ActivityLogModule {
     pub dropped_since_start: u64,
 }
 
-/// Honeypot settings (route 46 body, part of route 45).
+/// Route 46's body: the settings and the version they were read at.
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct HoneypotSettingsUpdate {
+    /// The `version` the page was read at; a newer one is refused with
+    /// `settings_changed`.
+    pub expected_version: u64,
+    /// The honeypot channel.
+    #[schema(value_type = Option<schema::Snowflake>)]
+    pub channel_id: Option<ChannelId>,
+    /// The rule applied to members who post there.
+    #[schema(value_type = Option<uuid::Uuid>)]
+    pub rule_id: Option<RuleId>,
+    /// The warning posted in the channel (up to 1,500 characters).
+    pub warning_text: Option<String>,
+}
+
+/// Honeypot settings (part of route 45).
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct HoneypotSettings {
@@ -128,6 +184,10 @@ pub(crate) struct EligibleRule {
     #[schema(value_type = uuid::Uuid)]
     pub id: RuleId,
     pub name: String,
+    /// Its levels, for the warning's default wording (anyone who can read
+    /// the honeypot settings sees them, without reading rules).
+    #[schema(value_type = Vec<schema::Level>)]
+    pub levels: Vec<quack_core::rule::Level>,
 }
 
 /// The honeypot module (route 45).
@@ -136,6 +196,8 @@ pub(crate) struct EligibleRule {
 pub(crate) struct HoneypotModule {
     #[serde(flatten)]
     pub state: ModuleState,
+    /// The settings' version: send it back as `expected_version`.
+    pub version: u64,
     pub settings: HoneypotSettings,
     /// Active rules without required fields.
     pub eligible_rules: Vec<EligibleRule>,

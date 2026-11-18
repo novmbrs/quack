@@ -147,6 +147,8 @@ pub(crate) struct MemberAppealEvent {
     at: OffsetDateTime,
     /// The member wrote it.
     by_you: bool,
+    /// Quack closed the appeal because its case was voided.
+    closed_by_void: bool,
 }
 
 /// The member's appeal.
@@ -259,6 +261,7 @@ impl MemberCase {
                         text: e.text,
                         at: e.at,
                         by_you: e.by_you,
+                        closed_by_void: e.closed_by_void,
                     })
                     .collect(),
             }),

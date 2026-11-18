@@ -259,7 +259,7 @@ pub async fn on_guild_create(
             loop {
                 let page = {
                     let mut conn = engine.db().conn().await?;
-                    tickets::list(&mut conn, guild, Some(state), cursor, 100).await?
+                    tickets::list(&mut conn, guild, &[state], cursor, 100).await?
                 };
                 for t in &page.rows {
                     let Some(thread) = t.thread.filter(|th| !active_threads.contains(th)) else {

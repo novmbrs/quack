@@ -154,12 +154,46 @@ pub(crate) struct Case {
     dm: Option<Dm>,
     evidence: Vec<Evidence>,
     appeal: Option<CaseAppeal>,
-    #[schema(value_type = Option<Object>)]
-    imported: Option<serde_json::Value>,
+    /// What Quack v4 recorded, for an imported case.
+    imported: Option<ImportedCase>,
     /// Moderation log entries about the case, oldest first.
     timeline: Vec<CaseLogEntry>,
     member_timeline: Vec<TimelineText>,
     timeline_truncated: bool,
+}
+
+/// What Quack v4 recorded about an imported case (`cases.imported`).
+#[expect(
+    clippy::struct_field_names,
+    reason = "the stored object's keys, `v4_*`, are the wire names"
+)]
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub(crate) struct ImportedCase {
+    /// v4's action type.
+    v4_action: Option<String>,
+    /// The v4 moderator's display name.
+    v4_moderator: Option<String>,
+    /// v4's reason text.
+    v4_reason: Option<String>,
+    /// v4's id for the case.
+    v4_source_id: Option<String>,
+}
+
+impl ImportedCase {
+    /// Reads the stored object; a missing or non-text value is null.
+    fn from_json(v: &serde_json::Value) -> Self {
+        let text = |key: &str| match v.get(key) {
+            Some(serde_json::Value::String(s)) => Some(s.clone()),
+            Some(serde_json::Value::Number(n)) => Some(n.to_string()),
+            _ => None,
+        };
+        Self {
+            v4_action: text("v4_action"),
+            v4_moderator: text("v4_moderator"),
+            v4_reason: text("v4_reason"),
+            v4_source_id: text("v4_source_id"),
+        }
+    }
 }
 
 impl From<CaseView> for Case {
@@ -200,7 +234,7 @@ impl From<CaseView> for Case {
                 version: a.version,
                 created_at: a.created_at,
             }),
-            imported: v.imported,
+            imported: v.imported.as_ref().map(ImportedCase::from_json),
             timeline: v
                 .timeline
                 .into_iter()
@@ -254,4 +288,30 @@ impl From<PreviewView> for CasePreview {
             at: p.at,
         }
     }
+}
+
+/// Route 23's answer: the voided case and what the void did, in the
+/// sentence the bot answers with (`case.void_done`).
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct CaseVoided {
+    /// The case after the void.
+    pub case: Case,
+    /// What the void did, as a sentence.
+    pub message: String,
+}
+
+/// Route 25's answer: the case and what adding the links did, in the
+/// sentence the bot answers with (`evidence.added`).
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct EvidenceAdded {
+    /// The case after the links were added.
+    pub case: Case,
+    /// New messages Quack is saving.
+    pub new: u32,
+    /// Messages whose earlier save failed, being saved again.
+    pub retrying: u32,
+    /// Messages that were already saved (or being saved) for the case.
+    pub already_saved: u32,
+    /// What adding the links did, as a sentence.
+    pub message: String,
 }

@@ -211,6 +211,14 @@ async fn rules_create_edit_archive_restore_export_import() {
         .await;
     assert_eq!(list.json["rules"][0]["name"], "Spam and ads");
     assert_eq!(list.json["rules"][0]["field_count"], 1);
+    // Dashboard review C3: the list has what the rules page shows.
+    assert!(list.json["rules"][0]["appealable"].is_boolean());
+    assert!(list.json["rules"][0].get("counting_window_days").is_some());
+    assert!(
+        list.json["rules"][0]["levels"][0]["from_case_count"].is_number(),
+        "{}",
+        list.json
+    );
     let restored = app
         .send(app.post(&g(&format!("/rules/{id}/restore"))).by(&manager))
         .await;

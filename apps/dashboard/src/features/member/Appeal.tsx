@@ -187,7 +187,7 @@ function AppealThread({
               key={`${e.at}-${i}`}
               author={e.by_you ? "you" : "moderators"}
               created={e.at}
-              title={memberEventTitle(e, c)}
+              title={memberEventTitle(e)}
               body={e.text}
               memberCase={c}
             />

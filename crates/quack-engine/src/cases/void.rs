@@ -3,7 +3,7 @@
 //! its unsent DM, and close its open appeal.
 
 use quack_core::DomainError;
-use quack_core::action::{AttemptOutcome, VoidFacts, on_void};
+use quack_core::action::{ActionKind, ActionState, AttemptOutcome, VoidFacts, on_void};
 use quack_core::appeal::{AppealEventKind, AppealRow, CLOSED_BECAUSE_VOIDED, close_by_void};
 use quack_core::case::VoidCause;
 use quack_core::dm::{DmKind, DmState};
@@ -24,7 +24,9 @@ use quack_telemetry::spans::SpanEvent;
 use serde::Serialize;
 use time::OffsetDateTime;
 
-use super::CaseError;
+use quack_text::case::VoidResult;
+
+use super::{CaseError, CaseView};
 use crate::modlog::{self, By};
 use crate::obs::{self, event, kv};
 use crate::opkey::{Keyed, begin_keyed, complete, request_hash, stored_id};
@@ -378,4 +380,63 @@ async fn close_open_appeal(
     )
     .await?;
     Ok(Some(appeal.id))
+}
+
+/// What the void did, from its effects: the sentence parts of
+/// `case.void_done` (the bot and the API say the same).
+pub fn void_results(effects: &VoidEffects) -> Vec<VoidResult> {
+    let mut out = Vec::new();
+    if let Some(kind) = effects.cancelled_kind {
+        out.push(VoidResult::Cancelled(kind));
+    } else if let Some((kind, state)) = effects.original {
+        match (kind, state) {
+            (ActionKind::Kick, ActionState::Running) => out.push(VoidResult::RunningKick),
+            (ActionKind::Kick, ActionState::Done) => out.push(VoidResult::DoneKick),
+            (kind, ActionState::Running) => out.push(VoidResult::Running(kind)),
+            _ => {}
+        }
+    }
+    for kind in &effects.undo_kinds {
+        out.push(match kind {
+            ActionKind::Unban => VoidResult::Unbanning,
+            _ => VoidResult::RemovingTimeout,
+        });
+    }
+    out
+}
+
+/// What a void did, read back from the case (a replayed void): the
+/// sentence parts of `case.void_done` and whether its appeal is closed.
+pub fn void_results_of(view: &CaseView) -> (Vec<VoidResult>, bool) {
+    let closed = view
+        .appeal
+        .as_ref()
+        .is_some_and(|ap| ap.state == quack_core::appeal::AppealState::Closed);
+    (read_back(view), closed)
+}
+
+fn read_back(view: &CaseView) -> Vec<VoidResult> {
+    let mut out = Vec::new();
+    if let Some(original) = view.actions.iter().find(|a| a.undo_of_action_id.is_none()) {
+        match (original.kind, original.state) {
+            (kind, ActionState::Cancelled) => out.push(VoidResult::Cancelled(kind)),
+            (ActionKind::Kick, ActionState::Running) => out.push(VoidResult::RunningKick),
+            (ActionKind::Kick, ActionState::Done) => out.push(VoidResult::DoneKick),
+            (kind, ActionState::Running) => out.push(VoidResult::Running(kind)),
+            _ => {}
+        }
+    }
+    for undo in view
+        .actions
+        .iter()
+        .filter(|a| a.undo_of_action_id.is_some())
+    {
+        if matches!(undo.state, ActionState::Pending | ActionState::Running) {
+            out.push(match undo.kind {
+                ActionKind::Unban => VoidResult::Unbanning,
+                _ => VoidResult::RemovingTimeout,
+            });
+        }
+    }
+    out
 }

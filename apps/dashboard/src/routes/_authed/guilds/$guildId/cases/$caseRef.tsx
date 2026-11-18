@@ -47,8 +47,6 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/cases/$caseRef")(
 });
 
 /** Imported is what Quack v4 recorded for a case brought over from it. */
-type Imported = { v4_action?: string; v4_moderator?: string | null; v4_reason?: string };
-
 function CasePage() {
   const { guildId, caseRef } = Route.useParams();
   const { data: c } = useSuspenseQuery(caseQuery(guildId, caseRef));
@@ -62,14 +60,12 @@ function CasePage() {
 
   const moderate = can("moderate");
   const voided = Boolean(c.voided_at);
-  const imported = c.imported as Imported | null | undefined;
+  const imported = c.imported;
   const voidIt = useMutation({
     mutationFn: (reason: string) => voidCase(guildId, String(c.number), reason),
-    onSuccess: () => {
+    onSuccess: (voided) => {
       setVoiding(false);
-      toast.success(
-        `Case #${c.number} is voided. It stays in the history and no longer counts toward ${c.rule_name}.`,
-      );
+      toast.success(voided.message);
       void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
       void queryClient.invalidateQueries({ queryKey: keys.appeals(guildId) });
       void queryClient.invalidateQueries({ queryKey: guildMeQuery(guildId).queryKey });

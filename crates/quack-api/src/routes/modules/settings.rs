@@ -1,10 +1,9 @@
 //! Routes 41–46: each module's settings page and its settings update,
 //! through the module crate's `settings` and `update_settings`.
 //!
-//! The wire bodies carry no version: an update reads the module's current
-//! version and saves over it (the dashboard shows the result), so only a
-//! change landing between that read and the write is refused with
-//! `settings_changed`.
+//! Each page carries its settings' `version`; an update sends it back as
+//! `expected_version`, and a change saved since is refused with
+//! `settings_changed` (as the core settings `PATCH` does).
 
 use axum::Json;
 use axum::extract::State;
@@ -14,8 +13,9 @@ use quack_engine::settings::SettingsError;
 use quack_text::error::Scene;
 
 use super::types::{
-    ActivityLogModule, ActivityLogSettings, EligibleRule, HoneypotModule, HoneypotSettings,
-    ModuleState, TicketSettings, TicketsModule,
+    ActivityLogModule, ActivityLogSettings, ActivityLogSettingsUpdate, EligibleRule,
+    HoneypotModule, HoneypotSettings, HoneypotSettingsUpdate, ModuleState, TicketSettings,
+    TicketSettingsUpdate, TicketsModule,
 };
 use crate::error::{ApiError, ApiResult, Facts, map};
 use crate::extract::{Body, IdempotencyKey, ManageSettings, Staff};
@@ -50,6 +50,7 @@ async fn tickets_page(
     };
     Ok(TicketsModule {
         state: state_of(view.enabled, view.disabled_reason),
+        version: view.version,
         settings: TicketSettings {
             entry_channel_id: view.entry_channel_id,
             queue_channel_id: view.queue_channel_id,
@@ -75,13 +76,13 @@ pub(super) async fn tickets_module(
 
 /// Changes ticket settings.
 #[utoipa::path(put, path = "/api/guilds/{guild_id}/modules/tickets/settings", tag = "modules",
-    params(("guild_id" = String, Path)), request_body = TicketSettings,
+    params(("guild_id" = String, Path)), request_body = TicketSettingsUpdate,
     responses((status = 200, body = TicketsModule)), security(("session" = [], "csrf" = [])))]
 pub(super) async fn update_ticket_settings(
     State(state): State<ApiState>,
     staff: Staff<ManageSettings>,
     key: IdempotencyKey,
-    Body(body): Body<TicketSettings>,
+    Body(body): Body<TicketSettingsUpdate>,
 ) -> ApiResult<Json<TicketsModule>> {
     let engine = state.engine();
     let channels: Vec<(&str, ChannelId)> = [
@@ -91,11 +92,8 @@ pub(super) async fn update_ticket_settings(
     .into_iter()
     .filter_map(|(f, c)| c.map(|c| (f, c)))
     .collect();
-    let current = quack_tickets::settings(engine, &staff.principal)
-        .await
-        .map_err(mapped(ModuleName::Tickets, &[]))?;
     let input = quack_tickets::TicketSettingsInput {
-        expected_version: current.version,
+        expected_version: body.expected_version,
         entry_channel_id: body.entry_channel_id,
         queue_channel_id: body.queue_channel_id,
         transcript_retention_days: body.transcript_retention_days,
@@ -118,6 +116,7 @@ fn activity_page(
         .map_or((0, 0), |log| log.counts(guild));
     ActivityLogModule {
         state: state_of(view.enabled, view.disabled_reason),
+        version: view.version,
         settings: ActivityLogSettings {
             routes: view.routes,
             include_message_content: view.include_message_content,
@@ -146,18 +145,15 @@ pub(super) async fn activity_log_module(
 
 /// Changes server activity log settings.
 #[utoipa::path(put, path = "/api/guilds/{guild_id}/modules/activity-log/settings", tag = "modules",
-    params(("guild_id" = String, Path)), request_body = ActivityLogSettings,
+    params(("guild_id" = String, Path)), request_body = ActivityLogSettingsUpdate,
     responses((status = 200, body = ActivityLogModule)), security(("session" = [], "csrf" = [])))]
 pub(super) async fn update_activity_log_settings(
     State(state): State<ApiState>,
     staff: Staff<ManageSettings>,
     key: IdempotencyKey,
-    Body(body): Body<ActivityLogSettings>,
+    Body(body): Body<ActivityLogSettingsUpdate>,
 ) -> ApiResult<Json<ActivityLogModule>> {
     let engine = state.engine();
-    let current = quack_activity_log::settings(engine, &staff.principal)
-        .await
-        .map_err(mapped(ModuleName::ActivityLog, &[]))?;
     let names: Vec<String> = body.routes.keys().map(|e| e.as_str().to_owned()).collect();
     let channels: Vec<(&str, ChannelId)> = body
         .routes
@@ -166,7 +162,7 @@ pub(super) async fn update_activity_log_settings(
         .map(|((_, c), name)| (name.as_str(), *c))
         .collect();
     let input = quack_activity_log::ActivitySettingsInput {
-        expected_version: current.version,
+        expected_version: body.expected_version,
         include_message_content: body.include_message_content,
         include_file_names: body.include_file_names,
         include_embed_types: body.include_embed_types,
@@ -192,6 +188,7 @@ async fn honeypot_page(
         .map(|r| EligibleRule {
             id: r.id,
             name: r.definition.name.clone(),
+            levels: r.definition.levels.clone(),
         })
         .collect();
     eligible_rules.sort_by_key(|r| r.name.to_lowercase());
@@ -201,6 +198,7 @@ async fn honeypot_page(
     };
     Ok(HoneypotModule {
         state: state_of(view.enabled, view.disabled_reason),
+        version: view.version,
         settings: HoneypotSettings {
             channel_id: view.channel_id,
             rule_id: view.rule_id,
@@ -229,25 +227,22 @@ pub(super) async fn honeypot_module(
 
 /// Changes honeypot settings.
 #[utoipa::path(put, path = "/api/guilds/{guild_id}/modules/honeypot/settings", tag = "modules",
-    params(("guild_id" = String, Path)), request_body = HoneypotSettings,
+    params(("guild_id" = String, Path)), request_body = HoneypotSettingsUpdate,
     responses((status = 200, body = HoneypotModule)), security(("session" = [], "csrf" = [])))]
 pub(super) async fn update_honeypot_settings(
     State(state): State<ApiState>,
     staff: Staff<ManageSettings>,
     key: IdempotencyKey,
-    Body(body): Body<HoneypotSettings>,
+    Body(body): Body<HoneypotSettingsUpdate>,
 ) -> ApiResult<Json<HoneypotModule>> {
     let engine = state.engine();
-    let current = quack_honeypot::settings(engine, &staff.principal)
-        .await
-        .map_err(mapped(ModuleName::Honeypot, &[]))?;
     let channels: Vec<(&str, ChannelId)> = body
         .channel_id
         .map(|c| ("channel_id", c))
         .into_iter()
         .collect();
     let input = quack_honeypot::HoneypotSettingsInput {
-        expected_version: current.version,
+        expected_version: body.expected_version,
         channel_id: body.channel_id,
         rule_id: body.rule_id,
         warning_text: body.warning_text,

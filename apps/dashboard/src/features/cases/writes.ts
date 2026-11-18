@@ -1,5 +1,5 @@
 import { api, write } from "~/api/client";
-import type { Action, Case, ContextInput } from "~/api/types";
+import type { Action, Case, CaseVoided, ContextInput, EvidenceAdded } from "~/api/types";
 
 // Writes for cases and their actions (design §14.2 routes 21–25, 29–31).
 // Each call is one thing the moderator asked for, with its own
@@ -42,8 +42,11 @@ export function undoAction(guildId: string, actionId: string): Promise<Action> {
   );
 }
 
-/** voidCase keeps the case in the history and stops it from counting. */
-export function voidCase(guildId: string, caseRef: string, reason: string): Promise<Case> {
+/**
+ * voidCase keeps the case in the history and stops it from counting; the
+ * answer says what the void did, in the bot's words.
+ */
+export function voidCase(guildId: string, caseRef: string, reason: string): Promise<CaseVoided> {
   return write((init) =>
     api.POST("/api/guilds/{guild_id}/cases/{case_ref}/void", {
       params: casePath(guildId, caseRef),
@@ -69,8 +72,15 @@ export function editContext(
   );
 }
 
-/** addEvidence saves up to 10 more message links as evidence. */
-export function addEvidence(guildId: string, caseRef: string, links: string[]): Promise<Case> {
+/**
+ * addEvidence saves up to 10 more message links as evidence; the answer
+ * says how many were new or already saved, in the bot's words.
+ */
+export function addEvidence(
+  guildId: string,
+  caseRef: string,
+  links: string[],
+): Promise<EvidenceAdded> {
   return write((init) =>
     api.POST("/api/guilds/{guild_id}/cases/{case_ref}/evidence", {
       params: casePath(guildId, caseRef),

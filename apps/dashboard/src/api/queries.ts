@@ -291,14 +291,23 @@ export const honeypotModuleQuery = (guildId: string) =>
 
 export type TicketListState = "open" | "closed";
 
-/** ticketsQuery is one page of tickets in a state. */
+/**
+ * The ticket states each tab lists: a ticket still opening or closing
+ * belongs with the open ones until it is closed.
+ */
+const ticketTabStates: Record<TicketListState, string> = {
+  open: "opening,open,closing",
+  closed: "closed",
+};
+
+/** ticketsQuery is one page of a tab's tickets. */
 export const ticketsQuery = (guildId: string, state: TicketListState, cursor?: string) =>
   queryOptions({
     queryKey: [...keys.modules(guildId), "tickets", "list", state, cursor ?? null],
     queryFn: () =>
       unwrap(
         api.GET("/api/guilds/{guild_id}/tickets", {
-          params: { ...guildPath(guildId), query: { state, cursor } },
+          params: { ...guildPath(guildId), query: { state: ticketTabStates[state], cursor } },
         }),
       ),
     placeholderData: keepPreviousData,

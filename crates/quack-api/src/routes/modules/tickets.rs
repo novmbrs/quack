@@ -73,7 +73,8 @@ fn wire(t: &TicketView, staff: bool, viewer: quack_core::ids::AccountId) -> Tick
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub(crate) struct TicketListQuery {
-    /// Only tickets in this state.
+    /// Only tickets in these states, comma-separated (`opening,open,closing`);
+    /// absent: every state.
     state: Option<String>,
     /// 1–100, default 50.
     limit: Option<u32>,
@@ -91,30 +92,38 @@ pub(super) async fn list_tickets(
     Query(query): Query<TicketListQuery>,
 ) -> ApiResult<Json<TicketPage>> {
     let limit = pagination::limit(query.limit)?;
-    let ticket_state = query
+    let mut states = Vec::new();
+    for s in query
         .state
         .as_deref()
-        .map(|s| {
-            s.parse::<TicketState>().map_err(|_| {
-                ApiError::field(
-                    "state",
-                    "invalid",
-                    quack_text::render::plain(&quack_text::api::value_invalid()),
-                )
-            })
-        })
-        .transpose()?;
-    let filters = format!("state={}", ticket_state.map_or("", TicketState::as_str));
+        .unwrap_or("")
+        .split(',')
+        .filter(|s| !s.is_empty())
+    {
+        let parsed = s.parse::<TicketState>().map_err(|_| {
+            ApiError::field(
+                "state",
+                "invalid",
+                quack_text::render::plain(&quack_text::api::value_invalid()),
+            )
+        })?;
+        if !states.contains(&parsed) {
+            states.push(parsed);
+        }
+    }
+    states.sort_by_key(|s| s.as_str());
+    let filters = format!(
+        "state={}",
+        states
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(",")
+    );
     let cursor = pagination::decode_time(query.cursor.as_deref(), &filters)?;
-    let rows = quack_tickets::list(
-        state.engine(),
-        &staff.principal,
-        ticket_state,
-        cursor,
-        limit,
-    )
-    .await
-    .map_err(mapped)?;
+    let rows = quack_tickets::list(state.engine(), &staff.principal, &states, cursor, limit)
+        .await
+        .map_err(mapped)?;
     let (rows, next_cursor) = pagination::split(rows, |t| {
         pagination::time_cursor(t.created_at, t.id.get(), &filters)
     });

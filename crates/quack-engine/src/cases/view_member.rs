@@ -149,6 +149,9 @@ pub struct MemberAppealEvent {
     pub at: OffsetDateTime,
     /// The member wrote it.
     pub by_you: bool,
+    /// Quack closed the appeal because its case was voided (a `closed`
+    /// event only).
+    pub closed_by_void: bool,
 }
 
 /// The member's own case. Someone else's case and a missing case are both
@@ -294,6 +297,7 @@ fn appeal(r: &CaseRecords) -> Option<MemberAppeal> {
                     text: format!("{lead}\n{}", e.text),
                     at: e.created_at,
                     by_you,
+                    closed_by_void: e.kind == AppealEventKind::Closed && e.closed_by_void,
                 }
             })
             .collect(),

@@ -34,7 +34,7 @@ pub(super) fn routes() -> OpenApiRouter<ApiState> {
 pub(crate) struct ModLogQuery {
     /// Entry kinds (repeatable).
     kind: Option<Vec<String>>,
-    /// `done`, `failed`, … (one result).
+    /// `ok`, `failed`, or `refused` (one result).
     result: Option<String>,
     actor_id: Option<String>,
     member_id: Option<String>,

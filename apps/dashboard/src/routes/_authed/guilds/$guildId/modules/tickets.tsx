@@ -133,6 +133,7 @@ function TicketsOverview({
               guildId={guildId}
               enabled={module.data.enabled}
               saved={module.data.settings}
+              version={module.data.version}
               onDirtyChange={setDirty}
             />
           )}
@@ -157,11 +158,14 @@ function TicketSettingsForm({
   guildId,
   enabled,
   saved,
+  version,
   onDirtyChange,
 }: {
   guildId: string;
   enabled: boolean;
   saved: TicketSettings;
+  /** The settings' version, sent back so a newer save isn't overwritten. */
+  version: number;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
@@ -207,6 +211,7 @@ function TicketSettingsForm({
         api.PUT("/api/guilds/{guild_id}/modules/tickets/settings", {
           params: { path: { guild_id: guildId } },
           body: {
+            expected_version: version,
             entry_channel_id: form.entry || null,
             queue_channel_id: form.queue || null,
             transcript_retention_days: days,

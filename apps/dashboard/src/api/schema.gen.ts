@@ -1011,7 +1011,7 @@ export interface components {
             state: components["schemas"]["ActionState"];
         };
         /** @enum {string} */
-        ActionFailure: "quack_not_in_server" | "quack_missing_permission" | "quack_role_too_low" | "member_is_owner" | "member_not_in_server" | "member_is_administrator" | "timeout_window_passed" | "discord_refused" | "retries_exhausted" | "unconfirmed";
+        ActionFailure: "quack_not_in_server" | "quack_missing_permission" | "quack_role_too_low" | "member_is_owner" | "member_not_in_server" | "member_is_administrator" | "timeout_window_passed" | "discord_refused" | "retries_exhausted" | "unconfirmed" | "original_unconfirmed";
         /** @enum {string} */
         ActionKind: "timeout" | "kick" | "ban" | "remove_timeout" | "unban";
         /** @description One row of the failed-actions page. */
@@ -1044,9 +1044,33 @@ export interface components {
              */
             posted_since_start: number;
             settings: components["schemas"]["ActivityLogSettings"];
+            /**
+             * Format: int64
+             * @description The settings' version: send it back as `expected_version`.
+             */
+            version: number;
         };
-        /** @description Server activity log settings (route 44 body, part of route 43). */
+        /** @description Server activity log settings (part of route 43). */
         ActivityLogSettings: {
+            /** @description Include embed types. */
+            include_embed_types: boolean;
+            /** @description Include file names. */
+            include_file_names: boolean;
+            /** @description Include message text. */
+            include_message_content: boolean;
+            /** @description The channel each event type posts to (absent: not logged). */
+            routes: {
+                [key: string]: components["schemas"]["Snowflake"];
+            };
+        };
+        /** @description Route 44's body: the settings and the version they were read at. */
+        ActivityLogSettingsUpdate: {
+            /**
+             * Format: int64
+             * @description The `version` the page was read at; a newer one is refused with
+             *     `settings_changed`.
+             */
+            expected_version: number;
             /** @description Include embed types. */
             include_embed_types: boolean;
             /** @description Include file names. */
@@ -1199,7 +1223,7 @@ export interface components {
             dm?: components["schemas"]["Dm"] | null;
             evidence: components["schemas"]["Evidence"][];
             fields: components["schemas"]["Field"][];
-            imported?: Record<string, never> | null;
+            imported?: components["schemas"]["ImportedCase"] | null;
             /** Format: int32 */
             level_from_case_count?: number | null;
             member_timeline: components["schemas"]["TimelineText"][];
@@ -1293,13 +1317,33 @@ export interface components {
             /** Format: date-time */
             voided_at?: string | null;
         };
+        /**
+         * @description Route 23's answer: the voided case and what the void did, in the
+         *     sentence the bot answers with (`case.void_done`).
+         */
+        CaseVoided: {
+            /** @description The case after the void. */
+            case: components["schemas"]["Case"];
+            /** @description What the void did, as a sentence. */
+            message: string;
+        };
         /** @description One configured staff channel's problems. */
         ChannelHealth: {
             channel_id: components["schemas"]["Snowflake"];
             /** @description Each problem's code and how to fix it. */
             problems: components["schemas"]["ChannelProblem"][];
-            /** @description The setting's API name, such as `log_channel_id`. */
+            /**
+             * @description The setting's API name: `log_channel_id`, `appeal_channel_id`,
+             *     `evidence_channel_id`, or a module's (`tickets.queue_channel_id`,
+             *     `tickets.entry_channel_id`, `activity_log.routes`,
+             *     `honeypot.channel_id`).
+             */
             setting: string;
+            /**
+             * @description Whether it must be staff-only; the ticket entry and honeypot
+             *     channels are for members, so only Quack's access is checked.
+             */
+            staff_only: boolean;
         };
         /**
          * @description A channel kind the dashboard shows.
@@ -1448,6 +1492,11 @@ export interface components {
         EligibleRule: {
             /** Format: uuid */
             id: string;
+            /**
+             * @description Its levels, for the warning's default wording (anyone who can read
+             *     the honeypot settings sees them, without reading rules).
+             */
+            levels: components["schemas"]["Level"][];
             name: string;
         };
         /** @description An embed of a saved message. */
@@ -1511,6 +1560,31 @@ export interface components {
             state: components["schemas"]["EvidenceState"];
             state_text: string;
             url: string;
+        };
+        /**
+         * @description Route 25's answer: the case and what adding the links did, in the
+         *     sentence the bot answers with (`evidence.added`).
+         */
+        EvidenceAdded: {
+            /**
+             * Format: int32
+             * @description Messages that were already saved (or being saved) for the case.
+             */
+            already_saved: number;
+            /** @description The case after the links were added. */
+            case: components["schemas"]["Case"];
+            /** @description What adding the links did, as a sentence. */
+            message: string;
+            /**
+             * Format: int32
+             * @description New messages Quack is saving.
+             */
+            new: number;
+            /**
+             * Format: int32
+             * @description Messages whose earlier save failed, being saved again.
+             */
+            retrying: number;
         };
         /** @enum {string} */
         EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error";
@@ -1604,7 +1678,10 @@ export interface components {
         };
         /** @description What a server is missing (route 7). */
         Health: {
-            /** @description Each configured staff channel. */
+            /**
+             * @description Each configured channel: the core staff channels, then the channels
+             *     of the modules that are on.
+             */
             channels: components["schemas"]["ChannelHealth"][];
             /** @description Server permissions Quack needs and lacks. */
             missing_permissions: components["schemas"]["Permission"][];
@@ -1624,10 +1701,32 @@ export interface components {
             /** Format: int64 */
             pending_hits: number;
             settings: components["schemas"]["HoneypotSettings"];
+            /**
+             * Format: int64
+             * @description The settings' version: send it back as `expected_version`.
+             */
+            version: number;
         };
-        /** @description Honeypot settings (route 46 body, part of route 45). */
+        /** @description Honeypot settings (part of route 45). */
         HoneypotSettings: {
             channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: uuid
+             * @description The rule applied to members who post there.
+             */
+            rule_id?: string | null;
+            /** @description The warning posted in the channel (up to 1,500 characters). */
+            warning_text?: string | null;
+        };
+        /** @description Route 46's body: the settings and the version they were read at. */
+        HoneypotSettingsUpdate: {
+            channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int64
+             * @description The `version` the page was read at; a newer one is refused with
+             *     `settings_changed`.
+             */
+            expected_version: number;
             /**
              * Format: uuid
              * @description The rule applied to members who post there.
@@ -1643,6 +1742,17 @@ export interface components {
             file: components["schemas"]["RuleFile"];
             /** @description A different name for the imported rule. */
             name?: string | null;
+        };
+        /** @description What Quack v4 recorded about an imported case (`cases.imported`). */
+        ImportedCase: {
+            /** @description v4's action type. */
+            v4_action?: string | null;
+            /** @description The v4 moderator's display name. */
+            v4_moderator?: string | null;
+            /** @description v4's reason text. */
+            v4_reason?: string | null;
+            /** @description v4's id for the case. */
+            v4_source_id?: string | null;
         };
         /** @description One rung of a rule. */
         Level: {
@@ -1728,6 +1838,8 @@ export interface components {
             at: string;
             /** @description The member wrote it. */
             by_you: boolean;
+            /** @description Quack closed the appeal because its case was voided. */
+            closed_by_void: boolean;
             kind: components["schemas"]["AppealEventKind"];
             text: string;
         };
@@ -1960,8 +2072,15 @@ export interface components {
         };
         /** @description A rule in a list. */
         RuleSummary: {
+            /** @description Members may appeal its cases. */
+            appealable: boolean;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * Format: int32
+             * @description Only cases from the last this many days count (null: all).
+             */
+            counting_window_days?: number | null;
             /** Format: int32 */
             current_version: number;
             description: string;
@@ -1969,6 +2088,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             is_starter: boolean;
+            /** @description Its levels, ascending by `from_case_count`. */
+            levels: components["schemas"]["Level"][];
             /** @description The levels in words. */
             levels_text: string;
             name: string;
@@ -2083,9 +2204,25 @@ export interface components {
             next_cursor?: string | null;
             tickets: components["schemas"]["Ticket"][];
         };
-        /** @description Ticket settings (route 42 body, part of route 41). */
+        /** @description Ticket settings (part of route 41). */
         TicketSettings: {
             entry_channel_id?: components["schemas"]["Snowflake"] | null;
+            queue_channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int32
+             * @description Days transcripts are kept (1–365).
+             */
+            transcript_retention_days: number;
+        };
+        /** @description Route 42's body: the settings and the version they were read at. */
+        TicketSettingsUpdate: {
+            entry_channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int64
+             * @description The `version` the page was read at; a newer one is refused with
+             *     `settings_changed`.
+             */
+            expected_version: number;
             queue_channel_id?: components["schemas"]["Snowflake"] | null;
             /**
              * Format: int32
@@ -2112,6 +2249,11 @@ export interface components {
              */
             open_tickets: number;
             settings: components["schemas"]["TicketSettings"];
+            /**
+             * Format: int64
+             * @description The settings' version: send it back as `expected_version`.
+             */
+            version: number;
         };
         /** @description One item of the member timeline. */
         TimelineText: {
@@ -2819,7 +2961,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Case"];
+                    "application/json": components["schemas"]["EvidenceAdded"];
                 };
             };
             400: {
@@ -2899,7 +3041,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Case"];
+                    "application/json": components["schemas"]["CaseVoided"];
                 };
             };
             404: {
@@ -3128,7 +3270,7 @@ export interface operations {
             query?: {
                 /** @description Entry kinds (repeatable). */
                 kind?: string[];
-                /** @description `done`, `failed`, … (one result). */
+                /** @description `ok`, `failed`, or `refused` (one result). */
                 result?: string;
                 actor_id?: string;
                 member_id?: string;
@@ -3209,7 +3351,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ActivityLogSettings"];
+                "application/json": components["schemas"]["ActivityLogSettingsUpdate"];
             };
         };
         responses: {
@@ -3255,7 +3397,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["HoneypotSettings"];
+                "application/json": components["schemas"]["HoneypotSettingsUpdate"];
             };
         };
         responses: {
@@ -3301,7 +3443,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TicketSettings"];
+                "application/json": components["schemas"]["TicketSettingsUpdate"];
             };
         };
         responses: {
@@ -3828,7 +3970,10 @@ export interface operations {
     list_tickets: {
         parameters: {
             query?: {
-                /** @description Only tickets in this state. */
+                /**
+                 * @description Only tickets in these states, comma-separated (`opening,open,closing`);
+                 *     absent: every state.
+                 */
                 state?: string;
                 /** @description 1–100, default 50. */
                 limit?: number;

@@ -7,7 +7,7 @@ type MemberAppealEvent = MemberAppeal["events"][number];
  * memberAppealLine says where the member's appeal stands, in the words of
  * the appeal DMs (design §12.8, §12.9).
  */
-export function memberAppealLine(c: Pick<MemberCase, "number" | "voided_at">, a: MemberAppeal) {
+export function memberAppealLine(c: Pick<MemberCase, "number">, a: MemberAppeal) {
   const n = c.number;
   switch (a.state) {
     case "pending":
@@ -19,7 +19,7 @@ export function memberAppealLine(c: Pick<MemberCase, "number" | "voided_at">, a:
     case "rejected":
       return `The moderators rejected your appeal. Case #${n} still counts.`;
     case "closed":
-      return c.voided_at
+      return a.events.some((e) => e.kind === "closed" && e.closed_by_void)
         ? `Your appeal was closed because case #${n} was voided. The case no longer counts.`
         : `The moderators closed your appeal. Case #${n} still counts.`;
   }
@@ -29,10 +29,7 @@ export function memberAppealLine(c: Pick<MemberCase, "number" | "voided_at">, a:
  * memberEventTitle is one appeal event in the member view (design §12.9
  * appeal.event, member column). The moderators are never named.
  */
-export function memberEventTitle(
-  e: Pick<MemberAppealEvent, "kind" | "text">,
-  c: Pick<MemberCase, "voided_at">,
-): string {
+export function memberEventTitle(e: Pick<MemberAppealEvent, "kind" | "closed_by_void">): string {
   switch (e.kind) {
     case "submitted":
       return "You appealed the case.";
@@ -45,8 +42,7 @@ export function memberEventTitle(
     case "rejected":
       return "The moderators rejected the appeal. The case still counts.";
     case "closed":
-      // Quack closes an open appeal without a message when the case is voided.
-      return c.voided_at && !e.text.trim()
+      return e.closed_by_void
         ? "The appeal was closed because the case was voided."
         : "The moderators closed the appeal.";
     case "reopened":

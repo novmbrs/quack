@@ -47,7 +47,7 @@ pub use view_member::{
     MemberEvidence, MemberEvidenceFile, member_case,
 };
 pub(crate) use void::{VoidBy, void_in_tx, voided_metrics};
-pub use void::{VoidEffects, Voided, void_case};
+pub use void::{VoidEffects, Voided, void_case, void_results, void_results_of};
 
 /// Who applies a rule.
 #[derive(Clone, Debug, PartialEq, Eq)]

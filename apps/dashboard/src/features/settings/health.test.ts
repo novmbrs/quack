@@ -39,10 +39,11 @@ describe("healthChecklist", () => {
       channels: [
         {
           setting: "log_channel_id",
+          staff_only: true,
           channel_id: "1",
           problems: [{ code: "everyone_can_view", message: "Everyone can view this channel." }],
         },
-        { setting: "evidence_channel_id", channel_id: "2", problems: [] },
+        { setting: "evidence_channel_id", staff_only: true, channel_id: "2", problems: [] },
       ],
       modules: {
         ...base.modules,

@@ -118,19 +118,19 @@ pub struct TranscriptView {
     pub expires_at: OffsetDateTime,
 }
 
-/// A server's tickets, newest first (`moderate` + 2FA): one page of at
-/// most `page`.
+/// A server's tickets in any of `states` (empty: all), newest first
+/// (`moderate` + 2FA): one page of at most `page`.
 pub async fn list(
     engine: &Engine,
     principal: &Principal,
-    state: Option<TicketState>,
+    states: &[TicketState],
     cursor: Option<TimeCursor>,
     page: u32,
 ) -> Result<Page<TicketView>, TicketError> {
     span("list_tickets", principal.guild, async {
         let mut conn = engine.db().conn().await?;
         principal.require(&mut conn, Capability::Moderate).await??;
-        let rows = tickets::list(&mut conn, principal.guild, state, cursor, page).await?;
+        let rows = tickets::list(&mut conn, principal.guild, states, cursor, page).await?;
         Ok(Page {
             more: rows.more,
             rows: views(&mut conn, principal.guild, rows.rows).await?,

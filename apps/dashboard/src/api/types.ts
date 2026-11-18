@@ -31,6 +31,9 @@ export type FieldKind = S["FieldKind"];
 
 export type CaseSummary = S["CaseSummary"];
 export type Case = S["Case"];
+export type CaseVoided = S["CaseVoided"];
+export type EvidenceAdded = S["EvidenceAdded"];
+export type ImportedCase = S["ImportedCase"];
 export type CasePreview = S["CasePreview"];
 export type CaseSource = S["CaseSource"];
 export type CaseLogEntry = S["CaseLogEntry"];

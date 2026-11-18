@@ -237,6 +237,7 @@ function ActivityLogForm({
         api.PUT("/api/guilds/{guild_id}/modules/activity-log/settings", {
           params: { path: { guild_id: guildId } },
           body: {
+            expected_version: data.version,
             routes: routesToSave(form.routes),
             include_message_content: form.content,
             include_file_names: form.files,

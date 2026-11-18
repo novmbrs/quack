@@ -127,7 +127,7 @@ async fn members_read_their_own_tickets_and_staff_read_all() -> Result<()> {
     assert_eq!(mine.id, t.id);
     let other = quack_tickets::get(&w.h.engine, &w.member_principal(MEMBER_2), t.id).await;
     assert!(matches!(other, Err(TicketError::NotAllowed)), "{other:?}");
-    let all = quack_tickets::list(&w.h.engine, &w.h.moderator(), None, None, 50).await?;
+    let all = quack_tickets::list(&w.h.engine, &w.h.moderator(), &[], None, 50).await?;
     assert_eq!((all.rows.len(), all.more), (1, false));
     let none = quack_tickets::transcript(&w.h.engine, &w.h.moderator(), t.id).await;
     assert!(matches!(none, Err(TicketError::TranscriptUnavailable)));
@@ -159,7 +159,7 @@ async fn other_servers_see_nothing() -> Result<()> {
     let read = quack_tickets::transcript(&w.h.engine, &moderator, t.id).await;
     assert!(matches!(read, Err(TicketError::NotFound)), "{read:?}");
     assert_eq!(
-        quack_tickets::list(&w.h.engine, &moderator, None, None, 50)
+        quack_tickets::list(&w.h.engine, &moderator, &[], None, 50)
             .await?
             .rows
             .len(),

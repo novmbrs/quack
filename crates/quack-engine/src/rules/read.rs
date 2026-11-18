@@ -35,6 +35,12 @@ pub struct RuleSummary {
     pub is_starter: bool,
     /// The honeypot uses it.
     pub used_by_honeypot: bool,
+    /// Members may appeal its cases.
+    pub appealable: bool,
+    /// Only cases from the last this many days count (none: all).
+    pub counting_window_days: Option<u16>,
+    /// Its levels, in order.
+    pub levels: Vec<quack_core::rule::Level>,
 }
 
 /// One rule with its current definition and version history.
@@ -126,6 +132,9 @@ pub async fn list(
                 field_count: r.definition.fields.len(),
                 is_starter: starter == Some(r.id),
                 used_by_honeypot: honeypot_rule == Some(r.id),
+                appealable: r.definition.appealable,
+                counting_window_days: r.definition.counting_window_days,
+                levels: r.definition.levels.clone(),
                 name: r.definition.name,
                 description: r.definition.description,
                 current_version: r.current_version,

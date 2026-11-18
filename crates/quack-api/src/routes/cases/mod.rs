@@ -20,7 +20,7 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use types::Case;
+use types::{Case, CaseVoided, EvidenceAdded};
 pub(crate) use types::{CaseSummary, TimelineText};
 
 use crate::error::{ApiError, ApiResult, ErrorEnvelope, Facts, map};
@@ -193,7 +193,7 @@ async fn number_of(state: &ApiState, staff: &Staff<Moderate>, case: CaseRef) -> 
 /// Voids a case: it stops counting and its timeout or ban is undone.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/cases/{case_ref}/void", tag = "cases",
     params(("guild_id" = String, Path), ("case_ref" = String, Path)), request_body = VoidCase,
-    responses((status = 200, body = Case), (status = 404, body = ErrorEnvelope),
+    responses((status = 200, body = CaseVoided), (status = 404, body = ErrorEnvelope),
               (status = 409, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn void_case(
@@ -202,7 +202,7 @@ async fn void_case(
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
     Body(body): Body<VoidCase>,
-) -> ApiResult<Json<Case>> {
+) -> ApiResult<Json<CaseVoided>> {
     let case = case_ref(&path.1)?;
     let voided = match cases::void_case(
         state.engine(),
@@ -223,7 +223,26 @@ async fn void_case(
         }
     };
     let view = read(&state, &staff, CaseRef::Id(voided.case)).await?;
-    Ok(Json(view.into()))
+    let (results, appeal_closed) = match &voided.effects {
+        Some(effects) => (
+            cases::void_results(effects),
+            effects.closed_appeal.is_some(),
+        ),
+        // A replay: what the first void did, read back from the case.
+        None => cases::void_results_of(&view),
+    };
+    let member = quack_text::Person::unnamed(voided.member.account());
+    let message = quack_text::render::plain(&quack_text::case::void_done(
+        voided.number,
+        &voided.rule_name,
+        &member,
+        &results,
+        appeal_closed,
+    ));
+    Ok(Json(CaseVoided {
+        case: view.into(),
+        message,
+    }))
 }
 
 /// Route 24's body.
@@ -287,7 +306,7 @@ pub(crate) struct AddEvidence {
 /// Saves more messages as a case's evidence.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/cases/{case_ref}/evidence", tag = "cases",
     params(("guild_id" = String, Path), ("case_ref" = String, Path)), request_body = AddEvidence,
-    responses((status = 200, body = Case), (status = 400, body = ErrorEnvelope),
+    responses((status = 200, body = EvidenceAdded), (status = 400, body = ErrorEnvelope),
               (status = 422, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn add_evidence(
@@ -296,7 +315,7 @@ async fn add_evidence(
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
     Body(body): Body<AddEvidence>,
-) -> ApiResult<Json<Case>> {
+) -> ApiResult<Json<EvidenceAdded>> {
     let case = case_ref(&path.1)?;
     if body.links.is_empty() {
         return Err(invalid("links"));
@@ -315,5 +334,17 @@ async fn add_evidence(
     };
     let id: CaseId = added.case;
     let view = read(&state, &staff, CaseRef::Id(id)).await?;
-    Ok(Json(view.into()))
+    let message = quack_text::render::plain(&quack_text::evidence::added(
+        added.number,
+        added.new,
+        added.retrying,
+        added.already_saved,
+    ));
+    Ok(Json(EvidenceAdded {
+        case: view.into(),
+        new: added.new,
+        retrying: added.retrying,
+        already_saved: added.already_saved,
+        message,
+    }))
 }

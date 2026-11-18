@@ -7857,10 +7857,11 @@ folds these into the sections (or changes the code) and removes them here.
 22. §14.3 → the timeline and appeal summary wire shapes are those of the
     committed `contracts/http/openapi.json`, which differ in detail from the
     TypeScript sketch in §14.3.
-23. §14.3 (routes 42, 44, 46) → module settings bodies carry no version:
-    an update reads the module's current version and saves over it, so only
-    a change landing between that read and the write is refused
-    (`settings_changed`). `ModuleState.problems` is empty on the module
+23. §14.3 (routes 41–46) → each module page carries its settings'
+    `version`, and the update bodies (`TicketSettingsUpdate`,
+    `ActivityLogSettingsUpdate`, `HoneypotSettingsUpdate`) require it back
+    as `expected_version`; a newer save is `409 settings_changed`, as with
+    the core settings `PATCH`. `ModuleState.problems` is empty on the module
     pages (it is filled only by `409 module_not_ready`).
 24. §14.3 (route 43) → `posted_since_start` and `dropped_since_start` are
     per server, in process.
@@ -7948,3 +7949,18 @@ folds these into the sections (or changes the code) and removes them here.
     ticket was created; hitting the 10-page cap first, or a page with more
     to come but no cursor, is `Unknown` and the job retries instead of
     creating a thread.
+38. §14.2, §14.3 (dashboard needs) → wire changes: `MemberAppealEvent`
+    has `closed_by_void`; route 47's `state` takes a comma-separated set
+    (`opening,open,closing`); `RuleSummary` has `appealable`,
+    `counting_window_days`, and `levels`; `Health.channels` lists the
+    channels of the modules that are on (`tickets.queue_channel_id`,
+    `tickets.entry_channel_id`, `activity_log.routes` once per channel,
+    `honeypot.channel_id`) with `staff_only` (the ticket entry and honeypot
+    channels are only checked for Quack's access); route 23 answers
+    `CaseVoided {case, message}` and route 25 `EvidenceAdded {case, new,
+    retrying, already_saved, message}`, whose `message` is the bot's
+    sentence (`case.void_done`, `evidence.added`); `Case.imported` is the
+    typed `ImportedCase {v4_action, v4_moderator, v4_reason,
+    v4_source_id}`; the honeypot page's `eligible_rules` carry each rule's
+    `levels`, so an administrator without rule access can preview the
+    warning.

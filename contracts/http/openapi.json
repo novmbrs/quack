@@ -1125,7 +1125,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Case"
+                  "$ref": "#/components/schemas/EvidenceAdded"
                 }
               }
             }
@@ -1260,7 +1260,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Case"
+                  "$ref": "#/components/schemas/CaseVoided"
                 }
               }
             }
@@ -1647,7 +1647,7 @@
           {
             "name": "result",
             "in": "query",
-            "description": "`done`, `failed`, … (one result).",
+            "description": "`ok`, `failed`, or `refused` (one result).",
             "required": false,
             "schema": {
               "type": "string"
@@ -1825,7 +1825,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ActivityLogSettings"
+                "$ref": "#/components/schemas/ActivityLogSettingsUpdate"
               }
             }
           },
@@ -1906,7 +1906,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HoneypotSettings"
+                "$ref": "#/components/schemas/HoneypotSettingsUpdate"
               }
             }
           },
@@ -1987,7 +1987,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TicketSettings"
+                "$ref": "#/components/schemas/TicketSettingsUpdate"
               }
             }
           },
@@ -2882,7 +2882,7 @@
           {
             "name": "state",
             "in": "query",
-            "description": "Only tickets in this state.",
+            "description": "Only tickets in these states, comma-separated (`opening,open,closing`);\nabsent: every state.",
             "required": false,
             "schema": {
               "type": "string"
@@ -3649,7 +3649,8 @@
           "timeout_window_passed",
           "discord_refused",
           "retries_exhausted",
-          "unconfirmed"
+          "unconfirmed",
+          "original_unconfirmed"
         ]
       },
       "ActionKind": {
@@ -3732,6 +3733,7 @@
           {
             "type": "object",
             "required": [
+              "version",
               "settings",
               "posted_since_start",
               "dropped_since_start"
@@ -3751,6 +3753,12 @@
               },
               "settings": {
                 "$ref": "#/components/schemas/ActivityLogSettings"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int64",
+                "description": "The settings' version: send it back as `expected_version`.",
+                "minimum": 0
               }
             }
           }
@@ -3759,7 +3767,7 @@
       },
       "ActivityLogSettings": {
         "type": "object",
-        "description": "Server activity log settings (route 44 body, part of route 43).",
+        "description": "Server activity log settings (part of route 43).",
         "required": [
           "routes",
           "include_message_content",
@@ -3767,6 +3775,59 @@
           "include_embed_types"
         ],
         "properties": {
+          "include_embed_types": {
+            "type": "boolean",
+            "description": "Include embed types."
+          },
+          "include_file_names": {
+            "type": "boolean",
+            "description": "Include file names."
+          },
+          "include_message_content": {
+            "type": "boolean",
+            "description": "Include message text."
+          },
+          "routes": {
+            "type": "object",
+            "description": "The channel each event type posts to (absent: not logged).",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Snowflake"
+            },
+            "propertyNames": {
+              "type": "string",
+              "enum": [
+                "message_edited",
+                "message_deleted",
+                "messages_bulk_deleted",
+                "member_joined",
+                "member_left",
+                "member_banned",
+                "member_unbanned",
+                "server_changed",
+                "channel_changed"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ActivityLogSettingsUpdate": {
+        "type": "object",
+        "description": "Route 44's body: the settings and the version they were read at.",
+        "required": [
+          "expected_version",
+          "routes",
+          "include_message_content",
+          "include_file_names",
+          "include_embed_types"
+        ],
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The `version` the page was read at; a newer one is refused with\n`settings_changed`.",
+            "minimum": 0
+          },
           "include_embed_types": {
             "type": "boolean",
             "description": "Include embed types."
@@ -4283,9 +4344,14 @@
                 }
               },
               "imported": {
-                "type": [
-                  "object",
-                  "null"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ImportedCase",
+                    "description": "What Quack v4 recorded, for an imported case."
+                  },
+                  {
+                    "type": "null"
+                  }
                 ]
               },
               "level_from_case_count": {
@@ -4614,11 +4680,30 @@
           }
         }
       },
+      "CaseVoided": {
+        "type": "object",
+        "description": "Route 23's answer: the voided case and what the void did, in the\nsentence the bot answers with (`case.void_done`).",
+        "required": [
+          "case",
+          "message"
+        ],
+        "properties": {
+          "case": {
+            "$ref": "#/components/schemas/Case",
+            "description": "The case after the void."
+          },
+          "message": {
+            "type": "string",
+            "description": "What the void did, as a sentence."
+          }
+        }
+      },
       "ChannelHealth": {
         "type": "object",
         "description": "One configured staff channel's problems.",
         "required": [
           "setting",
+          "staff_only",
           "channel_id",
           "problems"
         ],
@@ -4635,7 +4720,11 @@
           },
           "setting": {
             "type": "string",
-            "description": "The setting's API name, such as `log_channel_id`."
+            "description": "The setting's API name: `log_channel_id`, `appeal_channel_id`,\n`evidence_channel_id`, or a module's (`tickets.queue_channel_id`,\n`tickets.entry_channel_id`, `activity_log.routes`,\n`honeypot.channel_id`)."
+          },
+          "staff_only": {
+            "type": "boolean",
+            "description": "Whether it must be staff-only; the ticket entry and honeypot\nchannels are for members, so only Quack's access is checked."
           }
         }
       },
@@ -5064,12 +5153,20 @@
         "description": "A rule the honeypot may use.",
         "required": [
           "id",
-          "name"
+          "name",
+          "levels"
         ],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Level"
+            },
+            "description": "Its levels, for the warning's default wording (anyone who can read\nthe honeypot settings sees them, without reading rules)."
           },
           "name": {
             "type": "string"
@@ -5308,6 +5405,45 @@
           },
           "url": {
             "type": "string"
+          }
+        }
+      },
+      "EvidenceAdded": {
+        "type": "object",
+        "description": "Route 25's answer: the case and what adding the links did, in the\nsentence the bot answers with (`evidence.added`).",
+        "required": [
+          "case",
+          "new",
+          "retrying",
+          "already_saved",
+          "message"
+        ],
+        "properties": {
+          "already_saved": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Messages that were already saved (or being saved) for the case.",
+            "minimum": 0
+          },
+          "case": {
+            "$ref": "#/components/schemas/Case",
+            "description": "The case after the links were added."
+          },
+          "message": {
+            "type": "string",
+            "description": "What adding the links did, as a sentence."
+          },
+          "new": {
+            "type": "integer",
+            "format": "int32",
+            "description": "New messages Quack is saving.",
+            "minimum": 0
+          },
+          "retrying": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Messages whose earlier save failed, being saved again.",
+            "minimum": 0
           }
         }
       },
@@ -5601,7 +5737,7 @@
             "items": {
               "$ref": "#/components/schemas/ChannelHealth"
             },
-            "description": "Each configured staff channel."
+            "description": "Each configured channel: the core staff channels, then the channels\nof the modules that are on."
           },
           "missing_permissions": {
             "type": "array",
@@ -5628,6 +5764,7 @@
           {
             "type": "object",
             "required": [
+              "version",
               "settings",
               "eligible_rules",
               "cases_created",
@@ -5659,6 +5796,12 @@
               },
               "settings": {
                 "$ref": "#/components/schemas/HoneypotSettings"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int64",
+                "description": "The settings' version: send it back as `expected_version`.",
+                "minimum": 0
               }
             }
           }
@@ -5667,7 +5810,7 @@
       },
       "HoneypotSettings": {
         "type": "object",
-        "description": "Honeypot settings (route 46 body, part of route 45).",
+        "description": "Honeypot settings (part of route 45).",
         "properties": {
           "channel_id": {
             "oneOf": [
@@ -5679,6 +5822,48 @@
                 "type": "null"
               }
             ]
+          },
+          "rule_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The rule applied to members who post there."
+          },
+          "warning_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The warning posted in the channel (up to 1,500 characters)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "HoneypotSettingsUpdate": {
+        "type": "object",
+        "description": "Route 46's body: the settings and the version they were read at.",
+        "required": [
+          "expected_version"
+        ],
+        "properties": {
+          "channel_id": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Snowflake",
+                "description": "The honeypot channel."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expected_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The `version` the page was read at; a newer one is refused with\n`settings_changed`.",
+            "minimum": 0
           },
           "rule_id": {
             "type": [
@@ -5722,6 +5907,40 @@
           }
         },
         "additionalProperties": false
+      },
+      "ImportedCase": {
+        "type": "object",
+        "description": "What Quack v4 recorded about an imported case (`cases.imported`).",
+        "properties": {
+          "v4_action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "v4's action type."
+          },
+          "v4_moderator": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The v4 moderator's display name."
+          },
+          "v4_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "v4's reason text."
+          },
+          "v4_source_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "v4's id for the case."
+          }
+        }
       },
       "Level": {
         "type": "object",
@@ -5946,7 +6165,8 @@
           "kind",
           "text",
           "at",
-          "by_you"
+          "by_you",
+          "closed_by_void"
         ],
         "properties": {
           "at": {
@@ -5956,6 +6176,10 @@
           "by_you": {
             "type": "boolean",
             "description": "The member wrote it."
+          },
+          "closed_by_void": {
+            "type": "boolean",
+            "description": "Quack closed the appeal because its case was voided."
           },
           "kind": {
             "$ref": "#/components/schemas/AppealEventKind"
@@ -6782,15 +7006,30 @@
           "levels_text",
           "field_count",
           "is_starter",
-          "used_by_honeypot"
+          "used_by_honeypot",
+          "appealable",
+          "levels"
         ],
         "properties": {
+          "appealable": {
+            "type": "boolean",
+            "description": "Members may appeal its cases."
+          },
           "archived_at": {
             "type": [
               "string",
               "null"
             ],
             "format": "date-time"
+          },
+          "counting_window_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Only cases from the last this many days count (null: all).",
+            "minimum": 0
           },
           "current_version": {
             "type": "integer",
@@ -6810,6 +7049,13 @@
           },
           "is_starter": {
             "type": "boolean"
+          },
+          "levels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Level"
+            },
+            "description": "Its levels, ascending by `from_case_count`."
           },
           "levels_text": {
             "type": "string",
@@ -7278,7 +7524,7 @@
       },
       "TicketSettings": {
         "type": "object",
-        "description": "Ticket settings (route 42 body, part of route 41).",
+        "description": "Ticket settings (part of route 41).",
         "required": [
           "transcript_retention_days"
         ],
@@ -7293,6 +7539,51 @@
                 "type": "null"
               }
             ]
+          },
+          "queue_channel_id": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Snowflake",
+                "description": "The staff channel new tickets are announced in."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transcript_retention_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Days transcripts are kept (1–365).",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "TicketSettingsUpdate": {
+        "type": "object",
+        "description": "Route 42's body: the settings and the version they were read at.",
+        "required": [
+          "expected_version",
+          "transcript_retention_days"
+        ],
+        "properties": {
+          "entry_channel_id": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Snowflake",
+                "description": "Where members open tickets."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expected_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The `version` the page was read at; a newer one is refused with\n`settings_changed`.",
+            "minimum": 0
           },
           "queue_channel_id": {
             "oneOf": [
@@ -7363,6 +7654,7 @@
           {
             "type": "object",
             "required": [
+              "version",
               "settings",
               "open_tickets"
             ],
@@ -7375,6 +7667,12 @@
               },
               "settings": {
                 "$ref": "#/components/schemas/TicketSettings"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int64",
+                "description": "The settings' version: send it back as `expected_version`.",
+                "minimum": 0
               }
             }
           }

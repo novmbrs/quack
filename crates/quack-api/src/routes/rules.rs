@@ -57,6 +57,13 @@ pub(crate) struct RuleSummaryWire {
     field_count: usize,
     is_starter: bool,
     used_by_honeypot: bool,
+    /// Members may appeal its cases.
+    appealable: bool,
+    /// Only cases from the last this many days count (null: all).
+    counting_window_days: Option<u16>,
+    /// Its levels, ascending by `from_case_count`.
+    #[schema(value_type = Vec<schema::Level>)]
+    levels: Vec<quack_core::rule::Level>,
 }
 
 impl From<RuleSummary> for RuleSummaryWire {
@@ -71,6 +78,9 @@ impl From<RuleSummary> for RuleSummaryWire {
             field_count: r.field_count,
             is_starter: r.is_starter,
             used_by_honeypot: r.used_by_honeypot,
+            appealable: r.appealable,
+            counting_window_days: r.counting_window_days,
+            levels: r.levels,
         }
     }
 }

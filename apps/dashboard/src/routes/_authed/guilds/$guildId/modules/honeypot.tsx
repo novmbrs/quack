@@ -4,7 +4,7 @@ import { Radar } from "lucide-react";
 import { useState } from "react";
 
 import { ApiError, api, write } from "~/api/client";
-import { guildMeQuery, healthQuery, honeypotModuleQuery, keys, ruleQuery } from "~/api/queries";
+import { guildMeQuery, healthQuery, honeypotModuleQuery, keys } from "~/api/queries";
 import type { HoneypotModule } from "~/api/types";
 import { ChannelPicker } from "~/features/channels/ChannelPicker";
 import { MessageMarkdown, QuackMessage } from "~/features/discord/QuackMessage";
@@ -143,13 +143,10 @@ function HoneypotForm({
   const dirty = differs(form, base);
   const enabled = data.enabled;
 
-  // The preview words the warning from the rule's levels, which needs the
-  // rule itself; staff who can't read rules see the preview without it.
+  // The preview words the warning from the chosen rule's levels, which
+  // the honeypot page carries for every eligible rule; only the link to the
+  // rule needs a rule reader.
   const canReadRules = can("moderate") || can("manage_rules");
-  const rule = useQuery({
-    ...ruleQuery(guildId, form.rule),
-    enabled: Boolean(form.rule) && canReadRules,
-  });
 
   const set = (patch: Partial<Draft>) => {
     const next = { ...form, ...patch };
@@ -187,6 +184,7 @@ function HoneypotForm({
         api.PUT("/api/guilds/{guild_id}/modules/honeypot/settings", {
           params: { path: { guild_id: guildId } },
           body: {
+            expected_version: data.version,
             channel_id: form.channel || null,
             rule_id: form.rule || null,
             warning_text: form.warning.trim() || null,
@@ -204,7 +202,7 @@ function HoneypotForm({
     onError: setSaveError,
   });
 
-  const ruleDefinition = rule.data?.id === form.rule ? rule.data.definition : undefined;
+  const ruleDefinition = data.eligible_rules.find((r) => r.id === form.rule);
   const warning = enabled ? honeypotWarning(form.warning, ruleDefinition) : honeypotWarningOff;
   const currentName = eligible.find((r) => r.id === form.rule)?.name;
 

@@ -113,7 +113,7 @@ async fn adding_a_case_is_idempotent_per_account_and_operation() {
         )
         .await;
     assert_eq!(void.status, StatusCode::OK, "{}", void.json);
-    assert_eq!(void.json["void"]["cause"], "staff");
+    assert_eq!(void.json["case"]["void"]["cause"], "staff");
     assert_eq!(
         app.h.db.count("SELECT count(*) FROM cases").await.unwrap(),
         2
@@ -409,7 +409,30 @@ async fn read_void_edit_context_and_add_evidence() {
         )
         .await;
     assert_eq!(evidence.status, StatusCode::OK, "{}", evidence.json);
-    assert_eq!(evidence.json["evidence"][0]["state"], "saving");
+    assert_eq!(evidence.json["case"]["evidence"][0]["state"], "saving");
+    // The bot's sentence and counts (dashboard review C5).
+    assert_eq!(evidence.json["new"], 1);
+    assert_eq!(evidence.json["already_saved"], 0);
+    assert!(
+        evidence.json["message"]
+            .as_str()
+            .unwrap()
+            .starts_with("Quack is saving 1 message as evidence for case #1."),
+        "{}",
+        evidence.json
+    );
+    let repeat = app
+        .send(
+            app.post(&g("/cases/1/evidence"))
+                .by(&moderator)
+                .json(json!({"links": [format!("https://discord.com/channels/{GUILD}/5/6")]})),
+        )
+        .await;
+    assert_eq!(repeat.json["already_saved"], 1, "{}", repeat.json);
+    assert_eq!(
+        repeat.json["message"],
+        "1 message was already saved as evidence."
+    );
     let empty = app
         .send(
             app.post(&g("/cases/1/evidence"))
@@ -445,7 +468,12 @@ async fn read_void_edit_context_and_add_evidence() {
         )
         .await;
     assert_eq!(void.status, StatusCode::OK);
-    assert!(void.json["voided_at"].is_string());
+    assert!(void.json["case"]["voided_at"].is_string());
+    // What the void did, in the bot's words (dashboard review C5).
+    assert_eq!(
+        void.json["message"],
+        "Case #1 is voided. It stays in the history and no longer counts toward Spam."
+    );
     let again = app
         .send(
             app.post(&g("/cases/1/void"))

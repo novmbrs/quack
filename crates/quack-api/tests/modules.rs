@@ -42,22 +42,40 @@ async fn module_pages_settings_and_switches() {
     assert_eq!(on.code(), Some("module_not_ready"));
 
     // A setting without channels saves; the retention is validated.
+    let version = tickets.json["version"].clone();
     let saved = app
         .send(
             app.req(Method::PUT, &g("/modules/tickets/settings"))
                 .by(&admin)
-                .json(json!({"entry_channel_id": null, "queue_channel_id": null,
-                             "transcript_retention_days": 14})),
+                .json(
+                    json!({"expected_version": version, "entry_channel_id": null,
+                             "queue_channel_id": null, "transcript_retention_days": 14}),
+                ),
         )
         .await;
     assert_eq!(saved.status, StatusCode::OK, "{:?}", saved.json);
     assert_eq!(saved.json["settings"]["transcript_retention_days"], 14);
+    assert_ne!(saved.json["version"], version);
+    // A page read before that save can't overwrite it (dashboard review C9).
+    let stale = app
+        .send(
+            app.req(Method::PUT, &g("/modules/tickets/settings"))
+                .by(&admin)
+                .json(
+                    json!({"expected_version": version, "entry_channel_id": null,
+                             "queue_channel_id": null, "transcript_retention_days": 30}),
+                ),
+        )
+        .await;
+    assert_eq!(stale.code(), Some("settings_changed"), "{:?}", stale.json);
     let bad = app
         .send(
             app.req(Method::PUT, &g("/modules/tickets/settings"))
                 .by(&admin)
-                .json(json!({"entry_channel_id": null, "queue_channel_id": null,
-                             "transcript_retention_days": 0})),
+                .json(
+                    json!({"expected_version": saved.json["version"], "entry_channel_id": null,
+                             "queue_channel_id": null, "transcript_retention_days": 0}),
+                ),
         )
         .await;
     assert_eq!(bad.code(), Some("validation_failed"), "{:?}", bad.json);
@@ -67,11 +85,19 @@ async fn module_pages_settings_and_switches() {
     assert_eq!(honeypot.json["cases_created"], 0);
     assert_eq!(honeypot.json["pending_hits"], 0);
     assert!(honeypot.json["eligible_rules"].is_array());
+    // Dashboard review C8: each eligible rule carries its levels, so the
+    // warning preview needs no rule read.
+    let eligible = honeypot.json["eligible_rules"].as_array().unwrap();
+    assert!(
+        eligible.iter().all(|r| r["levels"].is_array()),
+        "{eligible:?}"
+    );
     let warned = app
         .send(
             app.req(Method::PUT, &g("/modules/honeypot/settings"))
                 .by(&admin)
-                .json(json!({"channel_id": null, "rule_id": null,
+                .json(json!({"expected_version": honeypot.json["version"],
+                             "channel_id": null, "rule_id": null,
                              "warning_text": "Please don't post here."})),
         )
         .await;
@@ -141,6 +167,19 @@ async fn tickets_for_their_member_and_for_staff() {
         .send(app.get(&g("/tickets?state=archived")).by(&moderator))
         .await;
     assert_eq!(bad_state.code(), Some("validation_failed"));
+    // Dashboard review C2: a tab asks for several states at once.
+    let live = app
+        .send(
+            app.get(&g("/tickets?state=opening,open,closing"))
+                .by(&moderator),
+        )
+        .await;
+    assert_eq!(live.status, StatusCode::OK, "{:?}", live.json);
+    assert_eq!(live.json["tickets"].as_array().unwrap().len(), 1);
+    let done = app
+        .send(app.get(&g("/tickets?state=closed")).by(&moderator))
+        .await;
+    assert_eq!(done.json["tickets"].as_array().unwrap().len(), 0);
 
     // The member's projection has no staff ids.
     let mine = app.send(app.get(&path).by(&member)).await;
