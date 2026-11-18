@@ -297,10 +297,90 @@ fn retry_schedule() {
 #[test]
 fn timeout_end_is_whole_seconds_and_the_window_is_exact() {
     let created = datetime!(2026-11-17 12:00:00.75 UTC);
-    let end = timeout_ends_at(created, 60);
+    let end = timeout_ends_at(created, 60).unwrap();
     assert_eq!(end, datetime!(2026-11-17 12:01 UTC));
     assert!(!timeout_window_passed(end - Duration::milliseconds(1), end));
     assert!(timeout_window_passed(end, end));
+}
+
+#[test]
+fn stored_extremes_never_panic() {
+    let max = time::PrimitiveDateTime::MAX.assume_utc();
+    let min = time::PrimitiveDateTime::MIN.assume_utc();
+    assert_eq!(timeout_ends_at(max, 1), None);
+    assert_eq!(saturating_add(max, Duration::MAX), max);
+    assert_eq!(saturating_add(min, -Duration::MAX), min);
+    // A start at the end of the calendar defers to the last instant.
+    for kind in [ActionKind::Ban, ActionKind::Kick] {
+        let late = StartFacts {
+            case_created_at: max,
+            now: max,
+            dm_waiting: true,
+            member_busy: false,
+            ..facts(kind, ActionState::Pending)
+        };
+        assert_eq!(start(&late), StartDecision::DeferUntil(max));
+    }
+    let busy = StartFacts {
+        member_busy: true,
+        now: max,
+        ..facts(ActionKind::Kick, ActionState::Pending)
+    };
+    assert_eq!(start(&busy), StartDecision::DeferUntil(max));
+    // A retry delay of Duration::MAX settles at the last instant.
+    let s = settle(
+        &SettleFacts {
+            kind: ActionKind::Ban,
+            case_valid: true,
+            attempt: 1,
+            earlier: &[],
+            now: max,
+        },
+        AttemptResult::NotSent {
+            retry_after: Some(Duration::MAX),
+        },
+    )
+    .unwrap();
+    assert_eq!(s.next_attempt_at, Some(max));
+    assert_eq!(
+        crate::escalation::counting_cutoff(min, Some(u16::MAX)),
+        Some(min)
+    );
+    assert_eq!(crate::messages::token_expires_at(max), None);
+}
+
+#[test]
+fn remove_timeout_compares_whole_seconds_at_expiry() {
+    let end = datetime!(2026-11-17 13:00 UTC);
+    let target = ActionTarget {
+        timeout_ends_at: Some(end),
+        ..target(ActionKind::RemoveTimeout)
+    };
+    let with = |until| MemberFacts {
+        timeout_until: Some(until),
+        ..member()
+    };
+    // Discord reports 13:00:00.750 at 13:00:00.500: in whole seconds the
+    // timeout already ended, so there is nothing to remove.
+    let now = end + Duration::milliseconds(500);
+    assert_eq!(
+        plan_from_member(&target, Some(&with(end + Duration::milliseconds(750))), now),
+        Ok(Plan::Finish(AttemptResult::NoChange))
+    );
+    // A live timeout whose whole-second end differs is someone else's.
+    let earlier = end - Duration::minutes(1);
+    assert_eq!(
+        plan_from_member(&target, Some(&with(end + Duration::seconds(5))), earlier),
+        Ok(Plan::Finish(AttemptResult::ChangedOutsideCase))
+    );
+    assert_eq!(
+        plan_from_member(
+            &target,
+            Some(&with(end + Duration::milliseconds(900))),
+            earlier
+        ),
+        Ok(Plan::Call)
+    );
 }
 
 fn facts(kind: ActionKind, state: ActionState) -> StartFacts {

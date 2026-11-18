@@ -158,7 +158,7 @@ async fn body(
     if let Some((action, kind)) = action {
         let waits = decision.sends_dm && matches!(kind, ActionKind::Kick | ActionKind::Ban);
         let at = if waits {
-            RunAt::At(created_at + DM_WAIT)
+            RunAt::At(quack_core::action::saturating_add(created_at, DM_WAIT))
         } else {
             RunAt::Now
         };

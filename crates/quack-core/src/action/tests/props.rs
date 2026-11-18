@@ -105,7 +105,7 @@ proptest! {
         now_offset in -3_000_000_i64..3_000_000,
     ) {
         let created = NOW + Duration::milliseconds(created_ms);
-        let end = timeout_ends_at(created, duration);
+        let end = timeout_ends_at(created, duration).unwrap();
         prop_assert_eq!(end.nanosecond(), 0);
         prop_assert!(end <= created + Duration::seconds(i64::from(duration)));
         prop_assert!(end > created + Duration::seconds(i64::from(duration) - 1));

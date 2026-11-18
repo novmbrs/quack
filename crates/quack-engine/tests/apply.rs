@@ -1,6 +1,6 @@
 //! Applying a rule (§4.2, §20.1.1 scenarios 1–4).
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use quack_core::DomainError;
 use quack_core::action::{ActionKind, ActionState};
 use quack_core::modlog::ModLogKind;
@@ -40,7 +40,8 @@ async fn a_timeout_runs_once_with_the_fixed_end() -> Result<()> {
     h.settle().await?;
     let timeouts = h.fake.calls_of(quack_testkit::fake::Call::Timeout);
     assert_eq!(timeouts.len(), 1);
-    let expected = quack_core::action::timeout_ends_at(created.case.created_at, 3600);
+    let expected =
+        quack_core::action::timeout_ends_at(created.case.created_at, 3600).context("in range")?;
     assert_eq!(timeouts[0].until, Some(expected));
     assert_eq!(timeouts[0].reason.as_deref(), Some("Quack case #1: Spam"));
     let mut conn = h.db.db.conn().await?;

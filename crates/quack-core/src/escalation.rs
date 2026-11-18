@@ -51,7 +51,9 @@ pub fn counting_cutoff(
     now: OffsetDateTime,
     counting_window_days: Option<u16>,
 ) -> Option<OffsetDateTime> {
-    counting_window_days.map(|days| now - Duration::seconds(i64::from(days) * 86_400))
+    counting_window_days.map(|days| {
+        crate::action::saturating_add(now, -Duration::seconds(i64::from(days) * 86_400))
+    })
 }
 
 /// Whether a past case created at `created_at` falls inside the window.

@@ -74,9 +74,10 @@ pub const SYNC_BACKOFF: [Duration; 5] = [
     Duration::minutes(30),
 ];
 
-/// When an interaction token received at `received_at` stops being used.
-pub fn token_expires_at(received_at: OffsetDateTime) -> OffsetDateTime {
-    received_at + INTERACTION_TOKEN_LIFETIME
+/// When an interaction token received at `received_at` stops being used;
+/// `None` (the token can't be used) when that can't be represented.
+pub fn token_expires_at(received_at: OffsetDateTime) -> Option<OffsetDateTime> {
+    received_at.checked_add(INTERACTION_TOKEN_LIFETIME)
 }
 
 /// Whether a sync is needed: Discord shows an older revision than wanted.
@@ -297,7 +298,7 @@ mod tests {
         assert!(needs_sync(2, 1));
         assert!(!needs_sync(1, 1));
         let at = datetime!(2026-11-17 12:00 UTC);
-        assert_eq!(token_expires_at(at), datetime!(2026-11-17 12:14 UTC));
+        assert_eq!(token_expires_at(at), Some(datetime!(2026-11-17 12:14 UTC)));
         let row = MessageRowId::from_uuid(Uuid::from_u128(0));
         assert_eq!(create_nonce(row, 1), "AAAAAAAAAAAAAAAAAAAAAA1");
         assert_eq!(create_nonce(row, 36), "AAAAAAAAAAAAAAAAAAAAAA10");

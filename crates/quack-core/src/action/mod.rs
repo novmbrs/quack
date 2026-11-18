@@ -21,8 +21,8 @@ pub use marker::{AUDIT_LOG_REASON_MAX_CHARS, case_marker, parse_case_marker, und
 pub use run::{
     ActionTarget, AttemptResult, CallOutcome, DiscordRefusal, MAX_ATTEMPTS, MEMBER_BUSY_DEFER,
     Plan, RETRY_BACKOFF, SettleFacts, Settlement, StartDecision, StartFacts, after_call,
-    after_read_failure, plan_after_marker, plan_from_ban, plan_from_member, retry_delay, settle,
-    start, timeout_ends_at, timeout_window_passed,
+    after_read_failure, plan_after_marker, plan_from_ban, plan_from_member, retry_delay,
+    saturating_add, settle, start, timeout_ends_at, timeout_window_passed,
 };
 
 str_enum! {

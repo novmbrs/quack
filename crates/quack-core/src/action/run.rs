@@ -39,10 +39,26 @@ const UNKNOWN_BAN: u32 = 10_026;
 
 /// A timeout's fixed end: the case's creation time plus the level's
 /// duration, truncated to whole seconds (§5.2). Computed once when the case
-/// is created and sent unchanged on every attempt.
-pub fn timeout_ends_at(case_created_at: OffsetDateTime, duration_seconds: u32) -> OffsetDateTime {
-    let end = case_created_at + Duration::seconds(i64::from(duration_seconds));
-    end.replace_nanosecond(0).unwrap_or(end)
+/// is created and sent unchanged on every attempt. `None` when the end
+/// can't be represented (a creation time at the end of the calendar).
+pub fn timeout_ends_at(
+    case_created_at: OffsetDateTime,
+    duration_seconds: u32,
+) -> Option<OffsetDateTime> {
+    let end = case_created_at.checked_add(Duration::seconds(i64::from(duration_seconds)))?;
+    Some(end.replace_nanosecond(0).unwrap_or(end))
+}
+
+/// `at + by`, or the last representable instant when that overflows:
+/// a wait that long never ends, and no stored time can make it panic.
+pub fn saturating_add(at: OffsetDateTime, by: Duration) -> OffsetDateTime {
+    at.checked_add(by).unwrap_or_else(|| {
+        if by.is_negative() {
+            time::PrimitiveDateTime::MIN.assume_offset(at.offset())
+        } else {
+            time::PrimitiveDateTime::MAX.assume_offset(at.offset())
+        }
+    })
 }
 
 /// Whether it is too late to apply a timeout ending at `ends_at`.
@@ -130,14 +146,13 @@ pub fn start(facts: &StartFacts) -> StartDecision {
         return StartDecision::RetryAt(due);
     }
     if facts.member_busy {
-        return StartDecision::DeferUntil(facts.now + MEMBER_BUSY_DEFER);
+        return StartDecision::DeferUntil(saturating_add(facts.now, MEMBER_BUSY_DEFER));
     }
-    let dm_deadline = facts.case_created_at + ACTION_WAIT;
     if matches!(facts.kind, ActionKind::Kick | ActionKind::Ban)
         && facts.dm_waiting
-        && facts.now < dm_deadline
+        && facts.now - facts.case_created_at < ACTION_WAIT
     {
-        return StartDecision::DeferUntil(dm_deadline);
+        return StartDecision::DeferUntil(saturating_add(facts.case_created_at, ACTION_WAIT));
     }
     if facts.kind.is_original() {
         if !facts.case_valid {
@@ -288,9 +303,9 @@ fn wrong_read(kind: ActionKind, event: &'static str) -> InvalidTransition {
 ///   case's end → `no_change` (Quack never shortens a timeout).
 /// - Kick: absent, or joined after the case's membership (they left and
 ///   rejoined) → `no_change`.
-/// - Remove timeout: no timeout, or one that has ended → `no_change`; one
-///   whose end differs from this case's (whole seconds) →
-///   `changed_outside_case`; equal → remove it.
+/// - Remove timeout: Discord's end is first cut to whole seconds (§5.2),
+///   then: no timeout, or one that has ended → `no_change`; one whose end
+///   differs from this case's → `changed_outside_case`; equal → remove it.
 pub fn plan_from_member(
     target: &ActionTarget,
     member: Option<&MemberFacts>,
@@ -322,7 +337,7 @@ pub fn plan_from_member(
                 _ => Plan::Finish(AttemptResult::NoChange),
             }
         }
-        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until) {
+        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until).map(seconds_only) {
             Some(current) if current > now => match target.timeout_ends_at {
                 Some(end) if whole_seconds(current) == whole_seconds(end) => Plan::Call,
                 _ => Plan::Finish(AttemptResult::ChangedOutsideCase),
@@ -516,10 +531,14 @@ pub fn settle(
         no_change: state == ActionState::Done && outcome == AttemptOutcome::NoChange,
         next_attempt_at: retry_in
             .filter(|_| state == ActionState::Pending)
-            .map(|wait| facts.now + wait),
+            .map(|wait| saturating_add(facts.now, wait)),
     })
 }
 
 fn whole_seconds(at: OffsetDateTime) -> i64 {
     at.unix_timestamp()
+}
+
+fn seconds_only(at: OffsetDateTime) -> OffsetDateTime {
+    at.replace_nanosecond(0).unwrap_or(at)
 }

@@ -10,7 +10,7 @@ use quack_core::modlog::{CaseCreatedDetail, ModLogEntry, ModLogLinks};
 use quack_core::rule::{LevelAction, RuleDefinition};
 use quack_db::evidence::{self, Admission};
 use quack_db::messages::{self, NewTrackedMessage, Owner};
-use quack_db::{Tx, actions};
+use quack_db::{DbError, Tx, actions};
 use time::OffsetDateTime;
 
 use super::apply::{Prepared, evidence_sources};
@@ -109,7 +109,9 @@ pub(super) async fn insert_action(
     let kind = level_action.kind();
     let (ends, delete) = match level_action {
         LevelAction::Timeout { duration_seconds } => {
-            (Some(timeout_ends_at(created_at, duration_seconds)), None)
+            let end = timeout_ends_at(created_at, duration_seconds)
+                .ok_or_else(|| DbError::Invalid("timeout end out of range".to_owned()))?;
+            (Some(end), None)
         }
         LevelAction::Kick => (None, None),
         LevelAction::Ban {

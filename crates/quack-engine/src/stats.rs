@@ -51,8 +51,10 @@ fn month_before(at: OffsetDateTime) -> OffsetDateTime {
         m => (at.year(), m.previous()),
     };
     let day = at.day().min(time::util::days_in_month(month, year));
-    time::Date::from_calendar_date(year, month, day)
-        .map_or(at - time::Duration::days(30), |d| at.replace_date(d))
+    time::Date::from_calendar_date(year, month, day).map_or_else(
+        |_| quack_core::action::saturating_add(at, -time::Duration::days(30)),
+        |d| at.replace_date(d),
+    )
 }
 
 /// The server's statistics for `[from, to)`, for staff with `moderate`.
