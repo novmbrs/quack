@@ -4,6 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use quack_core::case::MessageLink;
 use quack_core::limits;
 use quack_db::evidence::EmbedSummary;
 use serde_json::Value;
@@ -49,21 +50,30 @@ pub(crate) fn embeds(raw: &Value) -> (Vec<EmbedSummary>, usize) {
     (out, items.len().saturating_sub(limits::MAX_EVIDENCE_EMBEDS))
 }
 
-/// A file's copy columns: `copied` only when the preserved URL names the
-/// same message and attachment as the preserved ID columns.
+/// A file's copy columns `(channel, message, attachment)`: `copied` only
+/// when the preserved URL agrees with the preserved ID columns. Go wrote the
+/// copy's jump link (`…/channels/<server>/<channel>/<message>`, which must
+/// name this server and the preserved message); a CDN URL
+/// (`…/attachments/<channel>/<attachment>/…`) must name the preserved
+/// attachment.
 pub(crate) fn copy(
     outcome: &str,
     url: &str,
+    guild: i64,
     message: Snowflake,
     attachment: Snowflake,
 ) -> Option<(i64, i64, i64)> {
     if outcome != "preserved" {
         return None;
     }
-    let (channel, from_url) = convert::attachment_parts(url)?;
     let (Snowflake::Id(message), Snowflake::Id(attachment)) = (message, attachment) else {
         return None;
     };
+    if let Ok(link) = MessageLink::parse(url) {
+        return (link.guild_id.to_i64() == guild && link.message_id.to_i64() == message)
+            .then_some((link.channel_id.to_i64(), message, attachment));
+    }
+    let (channel, from_url) = convert::attachment_parts(url)?;
     (from_url == attachment).then_some((channel, message, attachment))
 }
 
@@ -190,6 +200,7 @@ async fn files_of(cx: &mut Ctx<'_>, owners: &[String]) -> Result<Vec<MySqlFile>,
         let copy = copy(
             &outcome,
             &c.text("preserved_url")?,
+            cx.g.id,
             c.snowflake("preserved_message_discord_id")?,
             c.snowflake("preserved_attachment_discord_id")?,
         );
@@ -236,15 +247,30 @@ async fn snapshot(cx: &mut Ctx<'_>, c: &Cols<'_>, files: &[&MySqlFile]) -> Resul
         skip_files(cx, files);
         return Ok(());
     }
-    let (Snowflake::Id(channel), Snowflake::Id(message)) = (
+    let raw_outcome = c.text("capture_outcome")?;
+    let coordinates = match (
         c.snowflake("channel_discord_id")?,
         c.snowflake("message_discord_id")?,
-    ) else {
+    ) {
+        (Snowflake::Id(channel), Snowflake::Id(message)) => Some((channel, message)),
+        // A file a moderator uploaded has no source message: it is kept as
+        // evidence of its copy's message in the evidence channel.
+        _ if raw_outcome == "uploaded" => {
+            files
+                .iter()
+                .find_map(|f| f.copy)
+                .map(|(channel, message, _)| {
+                    cx.f.derived("uploaded_file_as_copy_message", &key);
+                    (channel, message)
+                })
+        }
+        _ => None,
+    };
+    let Some((channel, message)) = coordinates else {
         cx.f.skip("case_evidence_snapshots", "invalid_snowflake", &key);
         skip_files(cx, files);
         return Ok(());
     };
-    let raw_outcome = c.text("capture_outcome")?;
     let (state, failure) = outcome(&raw_outcome).unwrap_or_else(|| {
         cx.f.derived("unknown_capture_outcome", &key);
         ("failed", Some("discord_error"))
@@ -417,20 +443,33 @@ mod tests {
     #[test]
     fn copies_must_agree() {
         let url = "https://cdn.discordapp.com/attachments/5/7/a.png";
+        let link = "https://discord.com/channels/9/5/6";
         assert_eq!(
-            copy("preserved", url, Snowflake::Id(6), Snowflake::Id(7)),
+            copy("preserved", link, 9, Snowflake::Id(6), Snowflake::Id(7)),
             Some((5, 6, 7))
         );
         assert_eq!(
-            copy("preserved", url, Snowflake::Id(6), Snowflake::Id(8)),
+            copy("preserved", link, 8, Snowflake::Id(6), Snowflake::Id(7)),
             None
         );
         assert_eq!(
-            copy("preserved", "", Snowflake::Id(6), Snowflake::Id(7)),
+            copy("preserved", link, 9, Snowflake::Id(4), Snowflake::Id(7)),
             None
         );
         assert_eq!(
-            copy("metadata_only", url, Snowflake::Id(6), Snowflake::Id(7)),
+            copy("preserved", url, 9, Snowflake::Id(6), Snowflake::Id(7)),
+            Some((5, 6, 7))
+        );
+        assert_eq!(
+            copy("preserved", url, 9, Snowflake::Id(6), Snowflake::Id(8)),
+            None
+        );
+        assert_eq!(
+            copy("preserved", "", 9, Snowflake::Id(6), Snowflake::Id(7)),
+            None
+        );
+        assert_eq!(
+            copy("metadata_only", url, 9, Snowflake::Id(6), Snowflake::Id(7)),
             None
         );
     }

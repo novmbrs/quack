@@ -1,5 +1,5 @@
-# Generates data.sql and broken.sql: python3 gen_fixture.py <this directory>
 #!/usr/bin/env python3
+# Generates data.sql and broken.sql: python3 gen_fixture.py <this directory>
 """Generates crates/quack-import/tests/fixtures/{data,broken}.sql.
 
 Every ID is a readable ULID: 01JA + 2-letter kind + zero padding + number.
@@ -279,6 +279,7 @@ notification(C[6], "failed", code="dm_permission_or_hierarchy_denied")
 notification(C[7], "failed", code="case_voided")
 notification(C[8], "prepared")
 notification(C[12], "failed", code="dm_prepare_failed")
+notification(C[13], "sent", message="700000000000000013", sent=t(713))  # Go never kept the DM channel
 notification(C[14], "pending")                          # its case is skipped
 notification(ulid("CS", 97), "pending")                 # orphan
 
@@ -310,21 +311,31 @@ def attachment(evidence, url_attachment, *, outcome="metadata_only", preserved=N
     url = f"https://cdn.discordapp.com/attachments/{CH[3]}/{url_attachment}/f{A[0]}.png?ex=1"
     p_url, p_msg, p_att = "", "", ""
     if preserved:
-        p_chan, p_msg, p_att, url_att = preserved
-        p_url = f"https://cdn.discordapp.com/attachments/{p_chan}/{url_att}/copy.png"
+        # Go stored the copy's jump link, not a CDN URL.
+        p_chan, p_msg, p_att, link_msg = preserved
+        p_url = f"https://discord.com/channels/{SA}/{p_chan}/{link_msg}"
     ins("case_evidence_attachments", id=ulid("AA", A[0]), evidence_id=evidence, filename=f"f{A[0]}.png", original_url=url,
         preserved_url=p_url, preserved_message_discord_id=p_msg, preserved_attachment_discord_id=p_att, copy_outcome=outcome,
         created_at=t(900 + A[0]))
 
 
-attachment(S[1], "900000000000000001", outcome="preserved", preserved=(CH[5], "910000000000000001", "920000000000000001", "920000000000000001"))
+attachment(S[1], "900000000000000001", outcome="preserved", preserved=(CH[5], "910000000000000001", "920000000000000001", "910000000000000001"))
 attachment(S[1], "900000000000000002")
-attachment(S[1], "900000000000000003", outcome="preserved", preserved=(CH[5], "910000000000000002", "920000000000000002", "920000000000000099"))
+attachment(S[1], "900000000000000003", outcome="preserved", preserved=(CH[5], "910000000000000002", "920000000000000002", "910000000000000099"))
 attachment(S[2], "900000000000000004")                  # merged into S1
 attachment(S[2], "900000000000000001")                  # same attachment as the first: duplicate
 for i in range(11):
     attachment(S[3], f"9300000000000000{i:02d}")
 attachment(ulid("SN", 97), "900000000000000009")        # orphan
+# A file a moderator uploaded to the command: no source channel, an
+# ephemeral CDN URL, and the file's ID as the message ID (as Go wrote it).
+ins("case_evidence_snapshots", id=S[9], case_id=C[4], guild_id=GA, channel_discord_id="", message_discord_id="940000000000000001",
+    author_discord_user_id=MOD, content="", message_created_at=t(57), capture_outcome="uploaded")
+A[0] += 1
+ins("case_evidence_attachments", id=ulid("AA", A[0]), evidence_id=S[9], filename="upload.png",
+    original_url=f"https://cdn.discordapp.com/ephemeral-attachments/{CH[13]}/940000000000000001/upload.png?ex=1",
+    preserved_url=f"https://discord.com/channels/{SA}/{CH[5]}/910000000000000009", preserved_message_discord_id="910000000000000009",
+    preserved_attachment_discord_id="920000000000000009", copy_outcome="preserved", created_at=t(990))
 
 ins("case_events", id=ulid("CE", 1), case_id=C[1], guild_id=GA, event_type="case_created", actor_type="staff")
 ins("case_events", id=ulid("CE", 2), case_id=C[2], guild_id=GA, event_type="action_succeeded")
@@ -373,6 +384,8 @@ appeal_notification(AP[1], AE[1], M[4], "staff", "sent", channel=CH[2], message=
 appeal(2, C[2], M[1], "pending")
 event(3, AP[2], "submitted", actor=M[1])
 appeal_notification(AP[2], AE[3], M[1], "staff", "sent", channel=CH[2], message="720000000000000002")
+event(12, AP[2], "information_requested", actor=MOD, actor_type="staff")
+appeal_notification(AP[2], AE[12], M[1], "staff", "failed", code="delivery_deferred")  # never delivered
 appeal(3, C[1], M[1], "needs_information")
 event(4, AP[3], "submitted", actor=M[1])
 event(5, AP[3], "information_requested", actor=MOD, actor_type="staff", body="more?")

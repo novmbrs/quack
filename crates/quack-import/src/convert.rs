@@ -125,12 +125,15 @@ pub(crate) fn icon_hash(url: &str) -> Option<String> {
     ok.then(|| hash.to_owned())
 }
 
-/// The attachment id from a Discord CDN attachment URL
-/// (`…/attachments/<channel>/<attachment>/<name>`).
+/// The channel and attachment IDs from a Discord CDN attachment URL
+/// (`…/attachments/<channel>/<attachment>/<name>`, or the
+/// `ephemeral-attachments` form of a file uploaded to a command).
 pub(crate) fn attachment_parts(url: &str) -> Option<(i64, i64)> {
     let path = url.split(['?', '#']).next()?;
     let parts: Vec<&str> = path.split('/').collect();
-    let at = parts.iter().position(|p| *p == "attachments")?;
+    let at = parts
+        .iter()
+        .position(|p| *p == "attachments" || *p == "ephemeral-attachments")?;
     let channel = snowflake(parts.get(at + 1).copied()).id()?;
     let attachment = snowflake(parts.get(at + 2).copied()).id()?;
     parts.get(at + 3).filter(|name| !name.is_empty())?;
@@ -230,6 +233,10 @@ mod tests {
     fn attachment_urls() {
         assert_eq!(
             attachment_parts("https://cdn.discordapp.com/attachments/11/22/a.png?ex=1"),
+            Some((11, 22))
+        );
+        assert_eq!(
+            attachment_parts("https://cdn.discordapp.com/ephemeral-attachments/11/22/a.png"),
             Some((11, 22))
         );
         assert_eq!(

@@ -125,7 +125,15 @@ fn staff_post(
         return Ok(());
     };
     let Snowflake::Id(message) = c.snowflake("delivery_message_id")? else {
-        cx.f.skip("appeal_notifications", "staff_row_without_message", &key);
+        // A staff post Go never delivered: the appeal's own post replaces it.
+        let status = c.text("status")?;
+        let undelivered = matches!(status.as_str(), "pending" | "claimed" | "sending")
+            || (status == "failed" && c.text("last_error_code")? == "delivery_deferred");
+        if undelivered {
+            cx.f.in_flight("appeal_staff_post_never_delivered", &key);
+        } else {
+            cx.f.skip("appeal_notifications", "staff_row_without_message", &key);
+        }
         return Ok(());
     };
     let at = c.time("created_at")?;

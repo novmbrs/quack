@@ -342,6 +342,7 @@ async fn dms_and_messages(s: &Scratch) -> Result<()> {
         (7, "not_needed|-"),
         (8, "pending|-"),
         (12, "failed|discord_unavailable"),
+        (13, "unknown|-"),
     ] {
         assert_eq!(s.text(&dm(n)).await?.as_deref(), Some(want), "case {n}");
     }
@@ -420,6 +421,17 @@ async fn evidence(s: &Scratch) -> Result<()> {
         .await?
         .as_deref(),
         Some("ctrl\u{FFFD}char")
+    );
+    // An uploaded file is evidence of its copy in the evidence channel.
+    assert_eq!(
+        s.text(&format!(
+            "SELECT concat_ws('|', e.state, e.channel_id, e.message_id, f.copy_state, f.copy_attachment_id, f.attachment_id)
+             FROM evidence e JOIN evidence_files f ON f.evidence_id = e.id WHERE e.id = '{}'",
+            id("SN", 9)
+        ))
+        .await?
+        .as_deref(),
+        Some("saved|400000000000000005|910000000000000009|copied|920000000000000009|940000000000000001")
     );
     Ok(())
 }
@@ -675,7 +687,9 @@ fn report_sections(r: &quack_import::Report) {
     assert_eq!(r.in_flight["dm_sending_unknown"].count, 1);
     assert_eq!(r.in_flight["honeypot_pending_failed"].count, 1);
     assert_eq!(r.in_flight["mirror_delivery_dropped"].count, 1);
-    assert_eq!(r.derived["unconfirmed_dm"].count, 1);
+    assert_eq!(r.derived["unconfirmed_dm"].count, 2);
+    assert_eq!(r.derived["uploaded_file_as_copy_message"].count, 1);
+    assert_eq!(r.in_flight["appeal_staff_post_never_delivered"].count, 1);
     assert_eq!(r.over_limit["evidence.content"].count, 1);
     assert_eq!(r.legacy_mod_log.values().sum::<u64>(), 9);
     assert_eq!(
