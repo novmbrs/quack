@@ -1,0 +1,63 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ticket_id, partial_cause, expires_at FROM ticket_transcripts\n             WHERE guild_id = $1 AND ticket_id = ANY($2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ticket_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ticket_transcripts",
+            "name": "ticket_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "partial_cause",
+        "type_info": {
+          "Custom": {
+            "name": "transcript_partial",
+            "kind": {
+              "Enum": [
+                "history",
+                "trimmed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "ticket_transcripts",
+            "name": "partial_cause"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ticket_transcripts",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "b6d35e9522778859aa6a3255ccd0968f96a539b7a0d80806ba1edddd88128c23"
+}

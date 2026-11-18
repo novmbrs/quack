@@ -12,8 +12,9 @@ use crate::obs::{self, Insert, Select, Update};
 use crate::pg::{Pg, TimeCursor, count, cursor_parts, id, int, limit, opt_id};
 
 pub use journal::{
-    JOURNAL_PAGE, JournalFile, JournalMessage, Transcript, add_journal_message, journal,
-    mark_journal_gaps, mark_live_journal_gaps, save_transcript, transcript,
+    JOURNAL_PAGE, JournalFile, JournalMessage, Transcript, TranscriptInfo, add_journal_message,
+    journal, mark_journal_gaps, mark_live_journal_gaps, save_transcript, transcript,
+    transcript_infos,
 };
 
 /// `ticket_settings`.

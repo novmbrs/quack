@@ -89,12 +89,14 @@ impl Modules {
         ]
     }
 
-    /// The modules' enable and disable hooks for the API (§13.1.7).
-    pub fn services() -> ModuleServices {
+    /// What the API's module routes call: the enable and disable hooks
+    /// (§13.1.7) and the activity log's counters.
+    pub fn services(&self) -> ModuleServices {
         ModuleServices {
             tickets: Some(quack_tickets::hooks()),
             activity_log: Some(quack_activity_log::hooks()),
             honeypot: Some(quack_honeypot::hooks()),
+            activity: Some(self.activity.clone()),
         }
     }
 
@@ -206,9 +208,10 @@ pub fn api_router(
     engine: &Engine,
     api: ApiConfig,
     ready: &Arc<Readiness>,
+    modules: &Modules,
 ) -> Result<axum::Router, ApiSetupError> {
     let readiness: Arc<dyn quack_api::ReadinessFacts> = Arc::clone(ready) as _;
-    let state = ApiState::new(engine.clone(), api, readiness)?.with_modules(Modules::services());
+    let state = ApiState::new(engine.clone(), api, readiness)?.with_modules(modules.services());
     Ok(quack_api::router(state))
 }
 

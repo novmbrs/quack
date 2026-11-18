@@ -44,6 +44,18 @@ pub struct TicketView {
     pub close_reason: Option<TicketCloseReason>,
     /// Quack couldn't delete its thread.
     pub thread_delete_failed: bool,
+    /// Its saved transcript, when it has one (expired or not).
+    pub transcript: Option<TranscriptSummary>,
+}
+
+/// A saved transcript, in brief (the ticket list).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub struct TranscriptSummary {
+    /// Why it may be missing messages; `None` when complete.
+    pub partial: Option<TranscriptPartial>,
+    /// When it is (or was) deleted.
+    #[serde(with = "time::serde::rfc3339")]
+    pub expires_at: OffsetDateTime,
 }
 
 impl From<Ticket> for TicketView {
@@ -61,8 +73,34 @@ impl From<Ticket> for TicketView {
             closed_by: t.closed_by,
             close_reason: t.close_reason,
             thread_delete_failed: t.thread_delete_failed,
+            transcript: None,
         }
     }
+}
+
+/// Views of `rows` with their transcript summaries.
+async fn views(
+    conn: &mut quack_db::PgConnection,
+    guild: quack_core::ids::GuildId,
+    rows: Vec<Ticket>,
+) -> Result<Vec<TicketView>, quack_db::DbError> {
+    let ids: Vec<TicketId> = rows.iter().map(|t| t.id).collect();
+    let infos = tickets::transcript_infos(conn, guild, &ids).await?;
+    Ok(rows
+        .into_iter()
+        .map(|t| {
+            let mut view = TicketView::from(t);
+            view.transcript =
+                infos
+                    .iter()
+                    .find(|i| i.ticket == view.id)
+                    .map(|i| TranscriptSummary {
+                        partial: i.partial,
+                        expires_at: i.expires_at,
+                    });
+            view
+        })
+        .collect())
 }
 
 /// A saved transcript (§13.2.5).
@@ -92,7 +130,7 @@ pub async fn list(
         let mut conn = engine.db().conn().await?;
         principal.require(&mut conn, Capability::Moderate).await??;
         let rows = tickets::list(&mut conn, principal.guild, state, cursor, page).await?;
-        Ok(rows.into_iter().map(TicketView::from).collect())
+        Ok(views(&mut conn, principal.guild, rows).await?)
     })
     .await
 }
@@ -109,7 +147,8 @@ pub async fn get(
             .await?
             .ok_or(TicketError::NotFound)?;
         authorize(&mut conn, principal, &t).await?;
-        Ok(TicketView::from(t))
+        let mut found = views(&mut conn, principal.guild, vec![t]).await?;
+        found.pop().ok_or(TicketError::NotFound)
     })
     .await
 }

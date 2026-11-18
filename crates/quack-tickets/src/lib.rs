@@ -45,5 +45,5 @@ pub use gateway::{
 pub use gauge::OpenGauge;
 pub use jobs::jobs;
 pub use open::{OpenAnswer, open};
-pub use read::{TicketView, TranscriptView, get, list, transcript};
+pub use read::{TicketView, TranscriptSummary, TranscriptView, get, list, transcript};
 pub use settings::{TicketSettingsInput, TicketSettingsView, hooks, settings, update_settings};

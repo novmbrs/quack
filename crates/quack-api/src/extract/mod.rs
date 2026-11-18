@@ -20,6 +20,7 @@ use crate::state::ApiState;
 pub(crate) use body::Body;
 pub(crate) use ids::{case_ref, member_case_id, snowflake, uuid_id};
 pub use staff::Staff;
+pub(crate) use staff::principal as staff_principal;
 pub use staff::{InServer, ManageRules, ManageSettings, Moderate, ReadRules, Requirement};
 
 /// The signed-in account (any route that needs a session).

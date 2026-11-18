@@ -227,6 +227,46 @@ pub async fn transcript(
     }))
 }
 
+/// A saved transcript's summary (the ticket list, §14.3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TranscriptInfo {
+    /// The ticket.
+    pub ticket: TicketId,
+    /// Why it may be missing messages; `None` when complete.
+    pub partial: Option<TranscriptPartial>,
+    /// When it is (or was) deleted.
+    pub expires_at: OffsetDateTime,
+}
+
+/// The transcript summaries of `tickets` that have one, expired or not.
+pub async fn transcript_infos(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    tickets: &[TicketId],
+) -> Result<Vec<TranscriptInfo>, DbError> {
+    let ids: Vec<uuid::Uuid> = tickets.iter().map(|t| t.get()).collect();
+    let rows = obs::run(
+        Select,
+        "ticket_transcripts",
+        sqlx::query!(
+            "SELECT ticket_id, partial_cause, expires_at FROM ticket_transcripts
+             WHERE guild_id = $1 AND ticket_id = ANY($2)",
+            i64::from(guild),
+            &ids,
+        )
+        .fetch_all(conn),
+    )
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|r| TranscriptInfo {
+            ticket: TicketId::from_uuid(r.ticket_id),
+            partial: r.partial_cause.map(|p| p.0),
+            expires_at: r.expires_at,
+        })
+        .collect())
+}
+
 /// Marks every live ticket whose journal is still open as possibly missing
 /// messages: the gateway session was invalidated, so events may have been
 /// missed (§11.9). Returns how many changed.

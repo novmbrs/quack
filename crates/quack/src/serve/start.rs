@@ -205,7 +205,7 @@ async fn http(
     config: &Config,
     options: &Options,
     ready: &Arc<Readiness>,
-    engine: &Engine,
+    parts: &Parts,
     stop: &CancellationToken,
 ) -> Result<JoinHandle<()>, ServeError> {
     let discord_base = match &options.discord {
@@ -214,7 +214,7 @@ async fn http(
     };
     let api =
         wiring::api_config(config, discord_base).map_err(|e| ServeError::Startup(e.to_string()))?;
-    let app = wiring::api_router(engine, api, ready)
+    let app = wiring::api_router(&parts.engine, api, ready, &parts.modules)
         .map_err(|e| ServeError::Startup(format!("couldn't start the API: {e}")))?;
     let listener = tokio::net::TcpListener::bind(config.listen_addr)
         .await
@@ -304,7 +304,7 @@ pub(super) async fn start(
     let mut tasks = vec![fence_watch];
     let client = rest(config, options).await?;
     let parts = Parts::new(config, &db, &client);
-    tasks.push(http(config, options, &ready, &parts.engine, &stop).await?);
+    tasks.push(http(config, options, &ready, &parts, &stop).await?);
     if options.discord == DiscordMode::Connect {
         parts.mentions.set(sync_commands(config, &client).await?);
     }

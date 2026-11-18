@@ -107,6 +107,9 @@ pub(crate) struct Inner {
     rx: tokio::sync::Mutex<mpsc::Receiver<Post>>,
     destinations: Mutex<HashMap<ChannelId, (Instant, bool)>>,
     next_nonce: AtomicU64,
+    /// Per server: posts delivered and posts dropped since start (the
+    /// module page's counters; one entry per server that posted).
+    counts: Mutex<HashMap<GuildId, (u64, u64)>>,
 }
 
 /// Locks a mutex, recovering from a poisoned one.
@@ -138,6 +141,7 @@ impl ActivityLog {
             rx: tokio::sync::Mutex::new(rx),
             destinations: Mutex::new(HashMap::new()),
             next_nonce: AtomicU64::new(0),
+            counts: Mutex::new(HashMap::new()),
         });
         let weak = Arc::downgrade(&inner);
         metrics().caches.observe_size(cache::NAME, move || {
@@ -153,6 +157,25 @@ impl ActivityLog {
     /// Posts waiting to be delivered.
     pub fn queued(&self) -> usize {
         self.inner.tx.max_capacity() - self.inner.tx.capacity()
+    }
+
+    /// Posts delivered and posts dropped (queue full, route gone) in
+    /// `guild` since this process started.
+    pub fn counts(&self, guild: GuildId) -> (u64, u64) {
+        lock(&self.inner.counts)
+            .get(&guild)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    fn count(&self, guild: GuildId, posted: bool) {
+        let mut counts = lock(&self.inner.counts);
+        let entry = counts.entry(guild).or_default();
+        if posted {
+            entry.0 += 1;
+        } else {
+            entry.1 += 1;
+        }
     }
 
     /// Messages in the cache.
@@ -215,6 +238,7 @@ impl ActivityLog {
             nonce,
         };
         if self.inner.tx.try_send(post).is_err() {
+            self.count(guild, false);
             metrics().activity_log.event(label, ActivityStage::Dropped);
             metrics().queues.dropped(QUEUE, 1);
             tracing::debug!(
@@ -259,6 +283,11 @@ impl ActivityLog {
             Delivered::Dropped => ActivityStage::Dropped,
             Delivered::Failed => ActivityStage::Failed,
         };
+        match delivered {
+            Delivered::Posted => self.count(post.guild, true),
+            Delivered::Dropped => self.count(post.guild, false),
+            Delivered::Failed => {}
+        }
         metrics().activity_log.event(label, stage);
         delivered
     }

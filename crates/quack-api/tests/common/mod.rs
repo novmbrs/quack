@@ -201,6 +201,19 @@ impl App {
         Self::finish(h).await
     }
 
+    /// The same app with the modules' services connected, as `serve` does.
+    pub fn with_modules(mut self) -> Self {
+        let log = quack_activity_log::ActivityLog::new(self.h.engine.clone());
+        self.state = self.state.clone().with_modules(quack_api::ModuleServices {
+            tickets: Some(quack_tickets::hooks()),
+            activity_log: Some(quack_activity_log::hooks()),
+            honeypot: Some(quack_honeypot::hooks()),
+            activity: Some(log),
+        });
+        self.router = quack_api::router(self.state.clone());
+        self
+    }
+
     async fn finish(h: Harness) -> Self {
         let discord = MockServer::start_async().await;
         let dashboard = dashboard_dir();
