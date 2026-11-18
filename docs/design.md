@@ -8173,3 +8173,11 @@ folds these into the sections (or changes the code) and removes them here.
     (the Go bot's appeal posts, re-rendered at cutover) is accepted.
     Interaction webhook edits are unchanged: they only ever edit Quack's
     own V2 responses.
+69. §11 REST (Discord review MAJOR 4, in part) → the rate limiter buckets
+    a route by its path with only the major ids (channel, server, webhook)
+    kept and every other id replaced, so after one message route's bucket
+    is learned, another message of the same channel waits in it instead
+    of going out through an unmapped endpoint. Publishing a shared or
+    body-only `retry_after` as a cooldown to queued peers is not done:
+    those requests still answer `RetryAfter` with the right delay, but a
+    peer queued behind them may be sent and get its own 429.

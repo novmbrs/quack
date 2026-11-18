@@ -79,6 +79,19 @@ fn token_tag(token: &str) -> String {
     format!("t{hash:016x}")
 }
 
+/// The path Discord buckets by: its major resource ids (a channel, a
+/// server, a webhook) kept, every other id (a message, a member, a role)
+/// replaced, so two messages of one channel share their bucket.
+fn limit_path(path: &str) -> String {
+    let mut out: Vec<&str> = Vec::new();
+    for segment in path.trim_start_matches('/').split('/') {
+        let major = matches!(out.last(), Some(&("channels" | "guilds" | "webhooks")));
+        let id = !segment.is_empty() && segment.bytes().all(|b| b.is_ascii_digit());
+        out.push(if id && !major { "{id}" } else { segment });
+    }
+    out.join("/")
+}
+
 /// Percent-encodes a query value (RFC 3986 unreserved characters pass).
 pub(crate) fn encode_component(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
@@ -97,7 +110,7 @@ impl Route {
         Self {
             method,
             template,
-            limit_path: path.trim_start_matches('/').to_owned(),
+            limit_path: limit_path(&path),
             path,
             query: None,
             auth: true,
@@ -325,6 +338,27 @@ mod tests {
         }
         assert_eq!(token_tag(token), token_tag(token));
         assert_ne!(token_tag(token), token_tag("other"));
+    }
+
+    #[test]
+    fn minor_ids_share_a_bucket_and_major_ones_dont() {
+        assert_eq!(
+            limit_path("/channels/5/messages/10"),
+            limit_path("/channels/5/messages/11")
+        );
+        assert_eq!(
+            limit_path("/channels/5/messages/10"),
+            "channels/5/messages/{id}"
+        );
+        assert_ne!(
+            limit_path("/channels/5/messages/10"),
+            limit_path("/channels/6/messages/10")
+        );
+        assert_eq!(
+            limit_path("/guilds/1/members/7/roles/9"),
+            "guilds/1/members/{id}/roles/{id}"
+        );
+        assert_eq!(limit_path("/users/@me"), "users/@me");
     }
 
     #[test]
