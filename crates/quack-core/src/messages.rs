@@ -241,9 +241,6 @@ mod tests {
     }
 
     #[test]
-    fn gone_is_final() {}
-
-    #[test]
     fn routes() {
         use SyncRoute as R;
         let cases = [
