@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages m SET channel_id = $2, message_id = NULL, attachment_id = NULL, generation = generation + 1, state = 'active',\n                                   create_started_at = NULL, wanted_revision = wanted_revision + 1,\n                                   wanted_at = now(), updated_at = now()\n             FROM appeals a\n             WHERE m.guild_id = $1 AND m.kind = 'appeal_post' AND (m.channel_id IS NULL OR m.state = 'gone')\n               AND a.id = m.appeal_id AND a.state IN ('pending', 'needs_information')\n             RETURNING m.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0bc9c8c5bb856a388ad3be301e1bb7bda8f50c2248e7ddaece2e76b82d46fb6a"
+}

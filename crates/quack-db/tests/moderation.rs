@@ -458,6 +458,8 @@ async fn tracked_messages_compare_the_generation(
     // The message moves while the sync is running.
     let mut tx = db.begin().await?;
     messages::record_posted(&mut tx, g, row, 1, 2, Some(message(100))).await?;
+    let attachment = quack_core::ids::AttachmentId::new(77).context("id")?;
+    assert!(messages::set_attachment(&mut tx, g, row, 1, attachment).await?);
     assert!(messages::relocate(&mut tx, g, row, 1, Some(channel(6))).await?);
     tx.commit().await?;
     assert!(
@@ -467,6 +469,9 @@ async fn tracked_messages_compare_the_generation(
     let moved = messages::get(&mut conn, g, row).await?.context("row")?;
     assert_eq!(moved.generation, 2);
     assert_eq!((moved.channel, moved.message), (Some(channel(6)), None));
+    // Engine review MAJOR 10: the old message's attachment isn't the new
+    // generation's.
+    assert_eq!(moved.attachment_id, None);
     let old = Location {
         channel_id: channel(5),
         message_id: message(100),

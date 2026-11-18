@@ -273,7 +273,7 @@ pub async fn relocate(
                         'channel_id', channel_id::text, 'message_id', message_id::text)))
                       WITH ORDINALITY AS t(e, n)
                  WHERE n > jsonb_array_length(stale) + 1 - 5) END,
-               channel_id = $3, message_id = NULL, generation = generation + 1, create_started_at = NULL,
+               channel_id = $3, message_id = NULL, attachment_id = NULL, generation = generation + 1, create_started_at = NULL,
                state = 'active', wanted_revision = wanted_revision + 1, wanted_at = now(), updated_at = now()
              WHERE guild_id = $1 AND id = $2 AND generation = $4",
             i64::from(guild),
@@ -308,7 +308,7 @@ pub async fn reactivate(
         Update,
         "messages",
         sqlx::query_scalar!(
-            "UPDATE messages SET state = 'active', channel_id = $3, message_id = NULL, generation = generation + 1,
+            "UPDATE messages SET state = 'active', channel_id = $3, message_id = NULL, attachment_id = NULL, generation = generation + 1,
                                  create_started_at = NULL, wanted_revision = wanted_revision + 1, wanted_at = now(),
                                  updated_at = now()
              WHERE guild_id = $1 AND kind = $2 AND state = 'gone' AND case_id IS NULL AND appeal_id IS NULL
@@ -340,7 +340,7 @@ pub async fn bind_waiting_appeal_posts(
         Update,
         "messages",
         sqlx::query_scalar!(
-            "UPDATE messages m SET channel_id = $2, message_id = NULL, generation = generation + 1, state = 'active',
+            "UPDATE messages m SET channel_id = $2, message_id = NULL, attachment_id = NULL, generation = generation + 1, state = 'active',
                                    create_started_at = NULL, wanted_revision = wanted_revision + 1,
                                    wanted_at = now(), updated_at = now()
              FROM appeals a
@@ -377,7 +377,7 @@ pub async fn move_open_appeal_posts(
                         'channel_id', m.channel_id::text, 'message_id', m.message_id::text)))
                       WITH ORDINALITY AS t(e, n)
                  WHERE n > jsonb_array_length(m.stale) + 1 - 5) END,
-               channel_id = $2, message_id = NULL, generation = m.generation + 1, create_started_at = NULL,
+               channel_id = $2, message_id = NULL, attachment_id = NULL, generation = m.generation + 1, create_started_at = NULL,
                state = 'active', wanted_revision = m.wanted_revision + 1, wanted_at = now(), updated_at = now()
              FROM appeals a
              WHERE m.guild_id = $1 AND m.kind = 'appeal_post' AND m.state = 'active'

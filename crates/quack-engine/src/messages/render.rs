@@ -163,7 +163,10 @@ async fn ticket_post(
     };
     let transcript = tickets::transcript(conn, guild, ticket).await?;
     let mut attach = None;
-    let place = match (&transcript, row.attachment_id) {
+    // A kept attachment belongs to the posted message; a post being made
+    // again (no message yet) uploads its own.
+    let kept = row.attachment_id.filter(|_| row.message.is_some());
+    let place = match (&transcript, kept) {
         (_, Some(_)) => TranscriptPlace::Attached,
         (Some(saved), None) => {
             attach = Some(OutgoingFile {
