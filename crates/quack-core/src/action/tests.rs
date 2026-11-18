@@ -1100,8 +1100,16 @@ fn void_effects_follow_the_table() {
         // A done ban found another case's ban: its undo is queued and the
         // provenance check decides.
         (Ban, Done, &[Some(O::NoChange)], effect(false, Some(Unban))),
-        // A no-change timeout found a longer one that was never its own.
-        (Timeout, Done, &[Some(O::NoChange)], effect(false, None)),
+        // A no-change timeout found an equal or longer one: its undo is
+        // queued too (§5.9). The provenance check removes an equal one
+        // (another case's that ends at the same second, now voided) and
+        // leaves a longer one in place as changed outside this case.
+        (
+            Timeout,
+            Done,
+            &[Some(O::NoChange)],
+            effect(false, Some(RemoveTimeout)),
+        ),
         (
             Timeout,
             Done,

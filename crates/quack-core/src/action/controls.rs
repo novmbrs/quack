@@ -172,8 +172,11 @@ pub fn on_void(facts: &VoidFacts<'_>) -> VoidEffect {
             queue_undo: None,
         };
     }
-    let reached_discord = may_have_applied(facts.attempts)
-        || (facts.kind == ActionKind::Ban && facts.state == ActionState::Done);
+    // A done timeout or ban gets its undo even when it was `no_change`
+    // (§5.9): the case that now owns what Discord shows (another case's
+    // equal timeout, an earlier ban) may be this one, and the undo's guard
+    // and provenance check decide whether anything is removed.
+    let reached_discord = may_have_applied(facts.attempts) || facts.state == ActionState::Done;
     let wants_undo = facts.state != ActionState::Cancelled
         && !facts.has_undo
         && reached_discord
