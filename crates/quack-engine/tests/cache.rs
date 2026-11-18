@@ -1,7 +1,7 @@
 //! The rules cache (§11.1, §17.3): autocomplete from memory, reloads on
 //! notification, and what Quack forgets when it leaves a server.
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use quack_db::notify::Notification;
 use quack_engine::Origin;
 use quack_engine::rules::{archive, create};
@@ -77,5 +77,39 @@ async fn a_notification_reloads_and_leaving_forgets() -> Result<()> {
     // A miss loads.
     let loaded = cache.get(&h.db.db, h.guild).await?;
     assert_eq!(loaded.active.len(), 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn the_config_cache_reloads_on_settings_and_never_goes_back() -> Result<()> {
+    let h = Harness::new().await?;
+    let cache = h.engine.config_cache();
+    let first = cache.get(&h.db.db, h.guild).await?.context("installed")?;
+    // Another instance changes the settings; this one hears about it.
+    h.db.execute(&format!(
+        "UPDATE guild_settings SET dm_footer = 'Be kind', version = version + 1 WHERE guild_id = {}",
+        h.guild
+    ))
+    .await?;
+    assert_eq!(
+        cache.cached(h.guild).map(|c| c.settings.version),
+        Some(first.settings.version),
+        "until notified"
+    );
+    cache
+        .on_notification(&h.db.db, Notification::Settings(h.guild))
+        .await?;
+    let reloaded = cache.cached(h.guild).context("cached")?;
+    assert_eq!(reloaded.settings.dm_footer.as_deref(), Some("Be kind"));
+    // A full reload after a reconnect keeps the newest rows.
+    cache
+        .on_notification(&h.db.db, Notification::Reconnected)
+        .await?;
+    assert_eq!(
+        cache.cached(h.guild).map(|c| c.settings.version),
+        Some(reloaded.settings.version)
+    );
+    cache.forget(h.guild);
+    assert!(cache.cached(h.guild).is_none());
     Ok(())
 }

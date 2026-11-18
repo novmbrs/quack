@@ -18,6 +18,7 @@ pub mod appeals;
 pub mod cache;
 pub mod cases;
 mod channels;
+pub mod config_cache;
 pub mod dms;
 pub mod drafts;
 mod engine;
@@ -36,6 +37,7 @@ pub mod settings;
 pub mod stats;
 
 pub use cases::CaseRef;
+pub use config_cache::{ConfigCache, GuildConfig};
 pub use engine::{Engine, EngineConfig, Links};
 pub use opkey::OpKey;
 pub use port::{BoxFuture, Discord, Outcome};

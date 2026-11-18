@@ -125,6 +125,7 @@ pub async fn left(engine: &Engine, guild: GuildId) -> Result<(), DbError> {
         notify::settings_changed(&mut tx, guild).await?;
         tx.commit().await?;
         engine.rules_cache().forget(guild);
+        engine.config_cache().forget(guild);
         Ok(())
     })
     .await

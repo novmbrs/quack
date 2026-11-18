@@ -6,6 +6,7 @@ use quack_core::ids::{AppealId, CaseId, GuildId, MemberId, RuleId};
 use quack_db::Db;
 
 use crate::cache::RulesCache;
+use crate::config_cache::ConfigCache;
 use crate::port::Discord;
 
 /// What the engine needs to know about its deployment.
@@ -30,6 +31,7 @@ struct Inner {
     db: Db,
     discord: Arc<dyn Discord>,
     rules: RulesCache,
+    guild_config: ConfigCache,
     config: EngineConfig,
 }
 
@@ -42,14 +44,16 @@ impl std::fmt::Debug for Engine {
 }
 
 impl Engine {
-    /// Builds the engine. The rules cache starts empty and fills per
-    /// server on first use; [`RulesCache::load_all`] warms it at startup.
+    /// Builds the engine. The rules and config caches start empty and fill
+    /// per server on first use; [`RulesCache::load_all`] and
+    /// [`ConfigCache::load_all`] warm them at startup.
     pub fn new(db: Db, discord: Arc<dyn Discord>, config: EngineConfig) -> Self {
         Self {
             inner: Arc::new(Inner {
                 db,
                 discord,
                 rules: RulesCache::new(),
+                guild_config: ConfigCache::new(),
                 config,
             }),
         }
@@ -68,6 +72,13 @@ impl Engine {
     /// The in-memory rules cache (autocomplete, pickers, early checks).
     pub fn rules_cache(&self) -> &RulesCache {
         &self.inner.rules
+    }
+
+    /// The in-memory config cache: each server's settings and module
+    /// settings (autocomplete checks, setup, honeypot filtering, activity
+    /// routing). Writes never rely on it.
+    pub fn config_cache(&self) -> &ConfigCache {
+        &self.inner.guild_config
     }
 
     /// The configuration.
