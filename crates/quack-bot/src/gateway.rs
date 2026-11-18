@@ -51,17 +51,22 @@ pub(crate) async fn handle(shared: &Shared, event: &Event) {
     }
 }
 
-/// `READY`: installed servers missing from its list are treated as left.
+/// `READY`: installed servers missing from its list are treated as left;
+/// one server failing doesn't stop the others.
 async fn ready(shared: &Shared, present: &[GuildId]) -> Result<(), quack_db::DbError> {
     let engine = &shared.engine;
     let installed = {
         let mut conn = engine.db().conn().await?;
         quack_db::guilds::installed(&mut conn).await?
     };
+    let mut failed = None;
     for guild in installed.into_iter().filter(|g| !present.contains(g)) {
-        left(engine, guild).await?;
+        if let Err(error) = left(engine, guild).await {
+            tracing::warn!(guild_id = guild.get(), %error, "couldn't mark a server left");
+            failed = Some(error);
+        }
     }
-    Ok(())
+    failed.map_or(Ok(()), Err)
 }
 
 /// `GUILD_CREATE`: bootstrap the server, reconcile its channel settings,

@@ -8071,3 +8071,10 @@ folds these into the sections (or changes the code) and removes them here.
     detached, and closing the pool and the fence connection gets only what
     is left of the 30-second deadline. Telemetry is flushed after that
     with at most 5 seconds (hence the 35-second grace period).
+54. §11.9 dispatch (application review MAJOR 3) → `READY`, `GUILD_CREATE`,
+    `GUILD_DELETE`, and `CHANNEL_DELETE` go to their own ordered queue of
+    4,096 (`quack.queue.*{gateway.lifecycle}`), so a flood of messages
+    never drops a server joining or leaving or a channel's removal; they
+    are ordered among themselves, not against a server's other events.
+    `READY`'s "missing servers left" pass goes on past a server it couldn't
+    update (logged).

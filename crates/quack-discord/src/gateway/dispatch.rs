@@ -2,7 +2,10 @@
 //!
 //! Interactions go to their own queue, drained into at most 256 concurrent
 //! handler tasks (the bot bounds the work after each acknowledgement on
-//! its own, so a slow handler never holds up another's acknowledgement). Other events go to 4 queues of 1,024 chosen by server id,
+//! its own, so a slow handler never holds up another's acknowledgement).
+//! Server lifecycle events (`READY`, `GUILD_CREATE`, `GUILD_DELETE`,
+//! `CHANNEL_DELETE`) have their own ordered queue of 4,096, so a flood of
+//! messages never drops them. Other events go to 4 queues of 1,024 chosen by server id,
 //! each handled in order, so one server's events stay ordered. The shard
 //! loop never waits: a full queue drops the event and counts
 //! `quack.queue.dropped`.
@@ -24,6 +27,9 @@ use super::event::Event;
 pub const EVENT_QUEUES: usize = 4;
 /// Each event queue's bound.
 pub const EVENT_QUEUE_LEN: usize = 1_024;
+/// The lifecycle queue's bound: room for a `GUILD_CREATE` from every
+/// server one shard can hold, and more.
+pub(crate) const LIFECYCLE_QUEUE_LEN: usize = 4_096;
 /// The interaction queue's bound.
 pub const INTERACTION_QUEUE_LEN: usize = 256;
 /// Most interaction handlers in flight at once, acknowledgement and work
@@ -31,6 +37,7 @@ pub const INTERACTION_QUEUE_LEN: usize = 256;
 pub const MAX_INTERACTION_HANDLERS: usize = 256;
 
 const EVENTS: QueueName = QueueName::new("gateway.events");
+const LIFECYCLE: QueueName = QueueName::new("gateway.lifecycle");
 const INTERACTIONS: QueueName = QueueName::new("gateway.interactions");
 
 /// One bounded queue with a depth counter (a tokio sender can't report its
@@ -42,6 +49,7 @@ struct Queue {
 
 pub(crate) struct Dispatcher {
     events: Vec<Queue>,
+    lifecycle: Queue,
     interactions: Queue,
     stopping: Arc<AtomicBool>,
     consumers: JoinSet<()>,
@@ -82,6 +90,16 @@ impl Dispatcher {
             depths.push(depth);
             events.push(q);
         }
+        let (lifecycle, rx, lifecycle_depth) = queue(LIFECYCLE_QUEUE_LEN);
+        consumers.spawn(ordered(
+            rx,
+            handler.clone(),
+            lifecycle_depth.clone(),
+            stopping.clone(),
+        ));
+        metrics().queues.observe_depth(LIFECYCLE, move || {
+            lifecycle_depth.load(Ordering::Relaxed) as u64
+        });
         let (interactions, rx, interaction_depth) = queue(INTERACTION_QUEUE_LEN);
         consumers.spawn(pooled(
             rx,
@@ -100,6 +118,7 @@ impl Dispatcher {
         });
         Self {
             events,
+            lifecycle,
             interactions,
             stopping,
             consumers,
@@ -111,6 +130,14 @@ impl Dispatcher {
     pub(crate) fn dispatch(&self, event: Event) -> Option<Event> {
         let (q, name) = if matches!(event, Event::Interaction(_)) {
             (&self.interactions, INTERACTIONS)
+        } else if matches!(
+            event,
+            Event::Ready { .. }
+                | Event::GuildCreate { .. }
+                | Event::GuildDelete { .. }
+                | Event::ChannelDelete(_)
+        ) {
+            (&self.lifecycle, LIFECYCLE)
         } else {
             let index = event.guild_id().map_or(0, |g| {
                 usize::try_from(g.get() % EVENT_QUEUES as u64).unwrap_or(0)
@@ -138,6 +165,7 @@ impl Dispatcher {
     pub(crate) async fn stop(mut self) {
         self.stopping.store(true, Ordering::Release);
         drop(self.events);
+        drop(self.lifecycle);
         drop(self.interactions);
         while self.consumers.join_next().await.is_some() {}
     }

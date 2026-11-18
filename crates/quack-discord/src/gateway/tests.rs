@@ -348,6 +348,39 @@ async fn slow_handlers_never_hold_back_a_later_interaction_past_64() {
 }
 
 #[tokio::test]
+async fn a_message_flood_never_drops_a_server_leaving() {
+    let gate = Arc::new(Semaphore::new(0));
+    let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let (held, log) = (gate.clone(), seen.clone());
+    let dispatcher = Dispatcher::start(Arc::new(move |event: Event| {
+        let (held, log) = (held.clone(), log.clone());
+        async move {
+            if matches!(event, Event::MemberRemove { .. }) {
+                let _ = held.acquire().await;
+            }
+            log.lock().unwrap().push(event.name());
+        }
+    }));
+    // Server 5's queue is full of held events.
+    let mut dropped = 0;
+    for user in 0..(EVENT_QUEUE_LEN as u64 + 10) {
+        dropped += usize::from(dispatcher.dispatch(member_remove(5, user + 1)).is_some());
+    }
+    assert!(dropped > 0, "the queue filled");
+    let leave = event("GUILD_DELETE", &json!({"id": "5", "unavailable": false})).unwrap();
+    assert!(dispatcher.dispatch(leave).is_none(), "never dropped");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !seen.lock().unwrap().contains(&"GUILD_DELETE") {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("handled while the flood waits");
+    gate.close();
+    dispatcher.stop().await;
+}
+
+#[tokio::test]
 async fn interactions_run_concurrently_up_to_the_limit() {
     let running = Arc::new(Semaphore::new(0));
     let gate = Arc::new(Semaphore::new(0));
