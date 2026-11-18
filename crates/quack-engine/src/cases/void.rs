@@ -287,7 +287,9 @@ async fn close_open_appeal(
         version: appeal.version,
         closed_by_void: false,
     };
-    let Some(change) = close_by_void(&row) else {
+    let Some(change) = close_by_void(&row)
+        .map_err(|_| DbError::Invalid("the appeal's version can't advance".to_owned()))?
+    else {
         return Ok(None);
     };
     appeals::transition(tx, guild, appeal.id, appeal.state, None, change.to, None)

@@ -88,6 +88,13 @@ fn unknown_json_fields_are_rejected() {
         json!({ "kind": "ban" }),
         json!({ "kind": "timeout", "duration_seconds": 1, "delete_message_seconds": 0 }),
         json!({ "kind": "kick", "duration_seconds": 1 }),
+        // A key that doesn't belong to the kind is refused even as null.
+        json!({ "kind": "kick", "duration_seconds": null }),
+        json!({ "kind": "kick", "delete_message_seconds": null }),
+        json!({ "kind": "timeout", "duration_seconds": 60, "delete_message_seconds": null }),
+        json!({ "kind": "ban", "delete_message_seconds": 0, "duration_seconds": null }),
+        json!({ "kind": "timeout", "duration_seconds": null }),
+        json!({ "kind": "ban", "delete_message_seconds": null }),
     ] {
         assert!(
             serde_json::from_value::<LevelAction>(bad.clone()).is_err(),
@@ -156,6 +163,16 @@ fn field_rules() {
         problems(&def),
         vec![RuleProblem::FieldKeyDuplicate { index: 2 }]
     );
+    // An invalid key used twice is both invalid and a duplicate.
+    def.fields = vec![field("!"), field("!")];
+    assert_eq!(
+        problems(&def),
+        vec![
+            RuleProblem::FieldKey { index: 0 },
+            RuleProblem::FieldKey { index: 1 },
+            RuleProblem::FieldKeyDuplicate { index: 1 }
+        ]
+    );
 
     let mut unlabeled = field("ab");
     unlabeled.label = " ".into();
@@ -181,10 +198,14 @@ fn level_rules() {
         problems(&def),
         vec![RuleProblem::LevelCaseCount { index: 1 }]
     );
+    // A later threshold of 1 is both out of range and out of order.
     def.levels = vec![level(1, None), level(1, None)];
     assert_eq!(
         problems(&def),
-        vec![RuleProblem::LevelCaseCount { index: 1 }]
+        vec![
+            RuleProblem::LevelCaseCount { index: 1 },
+            RuleProblem::LevelOrder { index: 1 }
+        ]
     );
     def.levels = vec![
         level(1, None),

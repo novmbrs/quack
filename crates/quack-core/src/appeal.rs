@@ -139,18 +139,34 @@ pub fn transition(
     Ok(AppealTransition { to, version })
 }
 
+/// The highest version an appeal can store (`appeals.version` is an
+/// `integer`).
+pub const MAX_APPEAL_VERSION: u32 = 2_147_483_647;
+
+/// The one version increment every appeal transition uses; `None` once the
+/// stored maximum is reached.
+pub const fn bump_version(current: u32) -> Option<u32> {
+    match current.checked_add(1) {
+        Some(next) if next <= MAX_APPEAL_VERSION => Some(next),
+        _ => None,
+    }
+}
+
 /// Quack closing an open appeal inside a direct void of its case (§4.7):
 /// the event is `closed` with `closed_by_void = true`, actor NULL, and text
-/// [`CLOSED_BECAUSE_VOIDED`]. `None` when the appeal is not open (nothing
-/// to close). Not used when the void is the appeal's own acceptance.
-pub const fn close_by_void(row: &AppealRow) -> Option<AppealTransition> {
-    if row.state.is_open() {
-        Some(AppealTransition {
+/// [`CLOSED_BECAUSE_VOIDED`]. `Ok(None)` when the appeal is not open
+/// (nothing to close); [`DomainError::AppealChanged`] when its version
+/// can't advance. Not used when the void is the appeal's own acceptance.
+pub const fn close_by_void(row: &AppealRow) -> Result<Option<AppealTransition>, DomainError> {
+    if !row.state.is_open() {
+        return Ok(None);
+    }
+    match bump_version(row.version) {
+        Some(version) => Ok(Some(AppealTransition {
             to: AppealState::Closed,
-            version: row.version.saturating_add(1),
-        })
-    } else {
-        None
+            version,
+        })),
+        None => Err(DomainError::AppealChanged),
     }
 }
 
@@ -158,7 +174,7 @@ pub const fn close_by_void(row: &AppealRow) -> Option<AppealTransition> {
 /// returns the version the transition writes (§8.2).
 pub fn next_version(current: u32, expected: u32) -> Result<u32, DomainError> {
     if current == expected {
-        current.checked_add(1).ok_or(DomainError::AppealChanged)
+        bump_version(current).ok_or(DomainError::AppealChanged)
     } else {
         Err(DomainError::AppealChanged)
     }
@@ -336,10 +352,10 @@ mod tests {
         for state in [AppealState::Pending, AppealState::NeedsInformation] {
             assert_eq!(
                 close_by_void(&row(state, false)),
-                Some(AppealTransition {
+                Ok(Some(AppealTransition {
                     to: AppealState::Closed,
                     version: 4
-                })
+                }))
             );
         }
         for state in [
@@ -347,7 +363,7 @@ mod tests {
             AppealState::Rejected,
             AppealState::Closed,
         ] {
-            assert_eq!(close_by_void(&row(state, false)), None);
+            assert_eq!(close_by_void(&row(state, false)), Ok(None));
         }
         // An appeal closed by a void can't be reopened.
         let closed = row(AppealState::Closed, true);
@@ -414,6 +430,16 @@ mod tests {
             next_version(u32::MAX, u32::MAX),
             Err(DomainError::AppealChanged)
         );
+        // The stored integer's maximum is the last version.
+        let last = MAX_APPEAL_VERSION;
+        assert_eq!(next_version(last - 1, last - 1), Ok(last));
+        assert_eq!(next_version(last, last), Err(DomainError::AppealChanged));
+        let full = AppealRow {
+            state: AppealState::Pending,
+            version: last,
+            closed_by_void: false,
+        };
+        assert_eq!(close_by_void(&full), Err(DomainError::AppealChanged));
     }
 
     #[test]
@@ -498,7 +524,7 @@ mod tests {
             for (event, actor, quack_void) in events {
                 let before = row;
                 if quack_void {
-                    if let Some(t) = close_by_void(&row) {
+                    if let Ok(Some(t)) = close_by_void(&row) {
                         prop_assert!(before.state.is_open());
                         row = AppealRow { state: t.to, version: t.version, closed_by_void: true };
                     }

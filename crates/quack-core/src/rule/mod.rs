@@ -125,13 +125,38 @@ pub enum LevelAction {
 }
 
 /// The JSON shape of a level action, read strictly: serde's tagged enums
-/// can't reject unknown fields on `{"kind": "kick"}`, so this does.
+/// can't reject unknown fields on `{"kind": "kick"}`, so this does. Each
+/// optional field records whether its key was present at all, so a key
+/// that doesn't belong to the kind is refused even when it is `null`.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawLevelAction {
     kind: String,
-    duration_seconds: Option<u32>,
-    delete_message_seconds: Option<u32>,
+    #[serde(default, deserialize_with = "present")]
+    duration_seconds: Key,
+    #[serde(default, deserialize_with = "present")]
+    delete_message_seconds: Key,
+}
+
+/// One optional key of a level action.
+#[derive(Clone, Copy, Default)]
+enum Key {
+    /// Not in the object.
+    #[default]
+    Missing,
+    /// Present, `null`.
+    Null,
+    /// Present with a value.
+    Value(u32),
+}
+
+/// Reads a present key; a missing one stays [`Key::Missing`] through
+/// `default`.
+fn present<'de, D>(deserializer: D) -> Result<Key, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<u32>::deserialize(deserializer).map(|v| v.map_or(Key::Null, Key::Value))
 }
 
 impl TryFrom<RawLevelAction> for LevelAction {
@@ -143,9 +168,11 @@ impl TryFrom<RawLevelAction> for LevelAction {
             raw.duration_seconds,
             raw.delete_message_seconds,
         ) {
-            ("timeout", Some(duration_seconds), None) => Ok(Self::Timeout { duration_seconds }),
-            ("kick", None, None) => Ok(Self::Kick),
-            ("ban", None, Some(delete_message_seconds)) => Ok(Self::Ban {
+            ("timeout", Key::Value(duration_seconds), Key::Missing) => {
+                Ok(Self::Timeout { duration_seconds })
+            }
+            ("kick", Key::Missing, Key::Missing) => Ok(Self::Kick),
+            ("ban", Key::Missing, Key::Value(delete_message_seconds)) => Ok(Self::Ban {
                 delete_message_seconds,
             }),
             (kind, ..) => Err(format!("invalid level action of kind {kind:?}")),

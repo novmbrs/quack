@@ -208,9 +208,11 @@ impl RuleDefinition {
         }
         let mut seen = HashSet::new();
         for (index, field) in self.fields.iter().enumerate() {
+            // Syntax and uniqueness are separate problems; both are reported.
             if !field.key.is_valid() {
                 problems.push(RuleProblem::FieldKey { index });
-            } else if !seen.insert(field.key.as_str()) {
+            }
+            if !seen.insert(field.key.as_str()) {
                 problems.push(RuleProblem::FieldKeyDuplicate { index });
             }
             if !limits::FIELD_LABEL.allows(&field.label) {
@@ -227,10 +229,14 @@ impl RuleDefinition {
                 if count != 1 {
                     problems.push(RuleProblem::FirstLevelNotOne);
                 }
-            } else if !(2..=limits::MAX_LEVEL_CASE_COUNT).contains(&count) {
-                problems.push(RuleProblem::LevelCaseCount { index });
-            } else if previous.is_some_and(|p| count <= p) {
-                problems.push(RuleProblem::LevelOrder { index });
+            } else {
+                // Range and order are separate problems; both are reported.
+                if !(2..=limits::MAX_LEVEL_CASE_COUNT).contains(&count) {
+                    problems.push(RuleProblem::LevelCaseCount { index });
+                }
+                if previous.is_some_and(|p| count <= p) {
+                    problems.push(RuleProblem::LevelOrder { index });
+                }
             }
             previous = Some(count);
             check_action(index, level.action, true, problems);
