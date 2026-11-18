@@ -2,7 +2,7 @@ name: Dashboard
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "rust-rewrite"]
   pull_request:
     branches: ["main"]
 
@@ -21,10 +21,6 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: apps/dashboard/go.mod
-
       - name: Install
         run: bun install --frozen-lockfile
 
@@ -41,9 +37,3 @@ jobs:
 
       - name: Build
         run: bun run build
-
-      - name: Server
-        run: |
-          go vet ./...
-          go test ./...
-          go build -o /dev/null .
