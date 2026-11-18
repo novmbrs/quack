@@ -86,15 +86,39 @@ pub async fn run(
     signal: impl Future<Output = ()> + Send,
 ) -> Result<(), ServeError> {
     let stop = CancellationToken::new();
-    let started = start::start(config, options, Arc::clone(&ready), stop.clone()).await?;
+    // A signal during startup (waiting for the fence, say) stops it too.
+    let mut signal = std::pin::pin!(signal);
+    let mut starting = std::pin::pin!(start::start(
+        config,
+        options,
+        Arc::clone(&ready),
+        stop.clone()
+    ));
+    let (started, signalled) = tokio::select! {
+        started = &mut starting => (started?, false),
+        () = &mut signal => {
+            stop.cancel();
+            match starting.await {
+                Ok(started) => (started, true),
+                Err(error) => {
+                    tracing::info!(%error, "stopped during startup");
+                    return Ok(());
+                }
+            }
+        }
+    };
     // A fence or gateway lost during startup has already cancelled `stop`
     // (and, for the fence, closed the Discord client); it ends the wait at
     // once.
-    let cause = tokio::select! {
-        biased;
-        () = started.fence_lost.cancelled() => Err(ServeError::FenceLost),
-        () = started.gateway_lost.cancelled() => Err(ServeError::GatewayStopped),
-        () = signal => Ok(()),
+    let cause = if signalled {
+        Ok(())
+    } else {
+        tokio::select! {
+            biased;
+            () = started.fence_lost.cancelled() => Err(ServeError::FenceLost),
+            () = started.gateway_lost.cancelled() => Err(ServeError::GatewayStopped),
+            () = signal => Ok(()),
+        }
     };
     tracing::info!(ok = cause.is_ok(), "shutting down");
     shut_down(started, &ready, &stop).await;
@@ -116,22 +140,34 @@ async fn shut_down(s: start::Started, ready: &Readiness, stop: &CancellationToke
         }
     };
     let modules = s.modules.shutdown(drain);
-    let tasks = async {
-        for task in s.tasks {
+    let mut tasks = s.tasks;
+    let joined = async {
+        for task in &mut tasks {
             let _ = task.await;
         }
     };
-    if tokio::time::timeout(drain, async { tokio::join!(runner, modules, tasks) })
+    if tokio::time::timeout(drain, async { tokio::join!(runner, modules, joined) })
         .await
         .is_err()
     {
         tracing::warn!("shutdown drain hit its deadline; dropping what is left");
     }
+    // What is still running is stopped, not left detached.
+    for task in &tasks {
+        task.abort();
+    }
     s.client.close();
-    s.db.close().await;
-    if let Some(fence) = s.fence.lock().await.take()
-        && let Err(error) = fence.release().await
-    {
-        tracing::warn!(%error, "couldn't release the fence cleanly");
+    // The pool and the fence get what is left of the deadline.
+    let close = async {
+        s.db.close().await;
+        if let Some(fence) = s.fence.lock().await.take()
+            && let Err(error) = fence.release().await
+        {
+            tracing::warn!(%error, "couldn't release the fence cleanly");
+        }
+    };
+    let left = deadline.saturating_duration_since(Instant::now());
+    if tokio::time::timeout(left, close).await.is_err() {
+        tracing::warn!("closing the pool and the fence hit the shutdown deadline");
     }
 }

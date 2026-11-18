@@ -110,6 +110,52 @@ async fn serve_becomes_ready_runs_a_job_and_shuts_down_cleanly() {
     assert_eq!(fence, 0, "the fence was released");
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_signal_while_waiting_for_the_fence_stops_serve() {
+    let test = TestDb::new().await.unwrap();
+    // Another Quack holds the fence.
+    let _other = quack_db::Fence::try_acquire(test.db.connect_options())
+        .await
+        .unwrap()
+        .unwrap();
+    let dashboard = std::env::temp_dir().join(format!("quack-serve-fence-{}", std::process::id()));
+    std::fs::create_dir_all(&dashboard).unwrap();
+    std::fs::write(dashboard.join("index.html"), "<html></html>").unwrap();
+    let vars = [
+        ("database_url", url_of(&test)),
+        ("discord_token", "token".to_owned()),
+        ("discord_application_id", "42".to_owned()),
+        ("discord_client_secret", "secret".to_owned()),
+        ("public_url", "http://localhost:5173".to_owned()),
+        (
+            "session_secret",
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_owned(),
+        ),
+        ("dashboard_dir", dashboard.to_str().unwrap().to_owned()),
+        ("listen_addr", format!("127.0.0.1:{}", free_port())),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_owned(), v))
+    .collect();
+    let config = validate(Need::Serve, &vars).unwrap();
+    let options = Options {
+        migrate: true,
+        discord: DiscordMode::Off {
+            api_base: "http://127.0.0.1:9".to_owned(),
+        },
+    };
+    let ready = Arc::new(Readiness::default());
+    let signal = tokio::time::sleep(Duration::from_millis(300));
+    let result = tokio::time::timeout(
+        Duration::from_secs(10),
+        run(&config, &options, Arc::clone(&ready), signal),
+    )
+    .await
+    .expect("serve stopped on the signal while waiting for the fence");
+    assert!(result.is_ok(), "{result:?}");
+    assert!(!ready.is_ready());
+}
+
 /// Waits for readiness, runs a job, then signals shutdown; returns when
 /// the signal was sent.
 async fn checks(

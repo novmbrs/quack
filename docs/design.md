@@ -8065,3 +8065,9 @@ folds these into the sections (or changes the code) and removes them here.
     `appeal_post` with no channel and no job even while it is open
     (reported `appeal_post_unposted`); it is bound when the appeal channel
     is next saved. Only a known existing post is re-rendered at cutover.
+53. §17.5 shutdown (application review MAJOR 16) → a signal during startup
+    (while waiting for the fence, say) stops it and `serve` exits 0. At
+    the drain cutoff, tasks still running are aborted rather than left
+    detached, and closing the pool and the fence connection gets only what
+    is left of the 30-second deadline. Telemetry is flushed after that
+    with at most 5 seconds (hence the 35-second grace period).
