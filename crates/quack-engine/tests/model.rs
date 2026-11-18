@@ -288,7 +288,9 @@ async fn run(ops: Vec<Op>) -> Result<()> {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 24, ..ProptestConfig::default() })]
+    // About 0.6–0.8 seconds per case against a real database: 150 keeps the
+    // whole engine suite near two minutes.
+    #![proptest_config(ProptestConfig { cases: 150, ..ProptestConfig::default() })]
     #[test]
     fn invariants_hold_under_any_interleaving(ops in prop::collection::vec(op(), 1..30)) {
         let rt = tokio::runtime::Builder::new_multi_thread()
