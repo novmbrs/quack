@@ -311,11 +311,6 @@ impl FakeDiscord {
         n
     }
 
-    /// How many [`Script::Late`] changes are still waiting to land.
-    pub fn late_count(&self) -> usize {
-        lock(&self.late).len()
-    }
-
     /// Discord's nonce memory ends: a create repeating an earlier nonce now
     /// makes a new message (what happens once the window has passed).
     pub fn expire_nonces(&self) {

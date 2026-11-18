@@ -211,11 +211,6 @@ impl World {
         );
     }
 
-    /// Quack leaves (or is removed from) a server.
-    pub fn quack_leaves(&mut self, guild: GuildId) {
-        self.guilds.remove(&guild);
-    }
-
     /// Adds a role to a server.
     pub fn add_role(&mut self, guild: GuildId, role: RoleFacts) {
         if let Some(g) = self.guilds.get_mut(&guild) {
@@ -241,13 +236,6 @@ impl World {
                 bot: setup.bot,
             },
         );
-    }
-
-    /// The member leaves the server.
-    pub fn remove_member(&mut self, guild: GuildId, member: MemberId) {
-        if let Some(g) = self.guilds.get_mut(&guild) {
-            g.members.remove(&member);
-        }
     }
 
     /// A member, mutably.

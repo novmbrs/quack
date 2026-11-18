@@ -216,11 +216,6 @@ impl Harness {
         settle_with(&self.engine, &self.modules()).await
     }
 
-    /// Jobs that are neither dead nor claimed.
-    pub async fn waiting_jobs(&self) -> Result<i64> {
-        waiting_jobs_with(&self.engine).await
-    }
-
     /// "Time passes" (see [`fast_forward_with`]).
     pub async fn fast_forward(&self) -> Result<()> {
         fast_forward_with(&self.engine).await
