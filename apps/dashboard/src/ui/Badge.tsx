@@ -20,14 +20,17 @@ export function Badge({
   dot,
   children,
   icon,
+  title,
 }: {
   tone?: Tone;
   dot?: boolean;
   children: ReactNode;
   icon?: ReactNode;
+  /** A longer explanation shown on hover. */
+  title?: string;
 }) {
   return (
-    <span className={cx(s.badge, s[tone])}>
+    <span className={cx(s.badge, s[tone])} title={title}>
       {dot ? <span className={s.dot} /> : null}
       {icon}
       {children}

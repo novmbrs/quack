@@ -1,12 +1,12 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, LifeBuoy, Lock, Plus, Server } from "lucide-react";
+import { BookOpen, LifeBuoy, Lock, Plus, Server, UserRound } from "lucide-react";
 
 import { guildsQuery } from "~/api/queries";
 import { useSignInAgain } from "~/api/session";
-import type { UserGuild } from "~/api/types";
-import { guildRole, staffGuilds } from "~/features/shell/guilds";
+import type { GuildSummary } from "~/api/types";
+import { guildRole, installableGuilds, staffGuilds } from "~/features/shell/guilds";
 import { NavExternal, NavGroup, NavItem, Sidebar } from "~/features/shell/Sidebar";
 import { inviteTo, inviteUrl, supportUrl } from "~/lib/links";
 import { Avatar } from "~/ui/Avatar";
@@ -24,9 +24,9 @@ export const Route = createFileRoute("/_authed/guilds/")({
 function Servers() {
   const { data } = useSuspenseQuery(guildsQuery);
   const staff = staffGuilds(data);
-  const ready = staff.filter((g) => !g.mfa_required);
-  const locked = staff.filter((g) => g.mfa_required);
-  const missing = data.filter((g) => !g.quack_in_guild && g.can_manage_guild);
+  const ready = staff.filter((g) => !g.mfa_blocked);
+  const locked = staff.filter((g) => g.mfa_blocked);
+  const missing = installableGuilds(data);
 
   return (
     <>
@@ -34,6 +34,9 @@ function Servers() {
         <NavGroup>
           <NavItem to="/guilds" icon={<Server size={18} />} activeOptions={{ exact: true }}>
             Your servers
+          </NavItem>
+          <NavItem to="/cases" icon={<UserRound size={18} />}>
+            Your cases
           </NavItem>
         </NavGroup>
         <NavGroup title="Help">
@@ -54,7 +57,7 @@ function Servers() {
             <Section title="Staff">
               <ul className={s.grid}>
                 {ready.map((g, i) => (
-                  <GuildTile key={g.discord_guild_id} guild={g} index={i} />
+                  <GuildTile key={g.guild_id} guild={g} index={i} />
                 ))}
               </ul>
             </Section>
@@ -64,6 +67,9 @@ function Servers() {
               action={
                 <div className={s.emptyActions}>
                   <ExternalButton href={inviteUrl}>Add Quack to a server</ExternalButton>
+                  <ButtonLink to="/cases" variant="secondary">
+                    Your cases
+                  </ButtonLink>
                   <ButtonLink to="/docs/getting-started" variant="secondary">
                     Setup guide
                   </ButtonLink>
@@ -71,28 +77,37 @@ function Servers() {
               }
             >
               Servers show up here once Quack is in them and you're a moderator, rules manager, or
-              manager there. Looking for one of your own cases? Open the link Quack sent you in
-              Discord.
+              administrator there. Looking for cases about you? Open Your cases.
             </Empty>
           ) : null}
 
           {locked.length > 0 ? <NeedsMfa guilds={locked} /> : null}
 
+          {ready.length > 0 || locked.length > 0 ? (
+            <Section
+              title="Your cases"
+              description="Cases about you in any server with Quack, and your appeals."
+              actions={
+                <ButtonLink to="/cases" size="sm" variant="secondary">
+                  Open Your cases
+                </ButtonLink>
+              }
+            >
+              {null}
+            </Section>
+          ) : null}
+
           {missing.length > 0 ? (
             <Section
               title="Add Quack"
-              description="You manage these servers, but Quack isn't in them yet."
+              description="You have Manage Server in these servers, but Quack isn't in them yet."
             >
               <ul className={s.list}>
                 {missing.map((g) => (
-                  <li key={g.discord_guild_id} className={s.row}>
+                  <li key={g.guild_id} className={s.row}>
                     <Avatar src={g.icon_url} name={g.name} size={36} square />
                     <span className={s.rowName}>{g.name}</span>
-                    <ExternalButton
-                      href={inviteTo(g.discord_guild_id)}
-                      variant="secondary"
-                      size="sm"
-                    >
+                    <ExternalButton href={inviteTo(g.guild_id)} variant="secondary" size="sm">
                       Add Quack
                     </ExternalButton>
                   </li>
@@ -108,15 +123,15 @@ function Servers() {
 
 /**
  * NeedsMfa lists servers that require 2FA for moderation where Quack hasn't
- * confirmed the user's. They can't open until the user signs in again.
+ * confirmed the account's. They can't open until the member signs in again.
  */
-function NeedsMfa({ guilds }: { guilds: UserGuild[] }) {
+function NeedsMfa({ guilds }: { guilds: GuildSummary[] }) {
   const signInAgain = useSignInAgain();
   const [pending, setPending] = useState(false);
   return (
     <Section
       title="Needs 2FA"
-      description="These servers require two-factor authentication for moderation, so Quack does too. Turn on two-factor authentication in Discord, then sign out and back in."
+      description="These servers require two-factor authentication (2FA) for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in again here."
       actions={
         <Button
           size="sm"
@@ -133,9 +148,9 @@ function NeedsMfa({ guilds }: { guilds: UserGuild[] }) {
     >
       <ul className={s.list}>
         {guilds.map((g) => {
-          const name = g.quack_guild_name || g.name;
+          const name = g.name;
           return (
-            <li key={g.discord_guild_id} className={s.row} data-locked>
+            <li key={g.guild_id} className={s.row} data-locked>
               <Avatar src={g.icon_url} name={name} size={36} square />
               <span className={s.rowName}>{name}</span>
               <span className={s.locked}>
@@ -149,11 +164,11 @@ function NeedsMfa({ guilds }: { guilds: UserGuild[] }) {
   );
 }
 
-function GuildTile({ guild, index }: { guild: UserGuild; index: number }) {
-  const name = guild.quack_guild_name || guild.name;
+function GuildTile({ guild, index }: { guild: GuildSummary; index: number }) {
+  const name = guild.name;
   return (
     <li style={{ animationDelay: `${index * 30}ms` }} className={s.item}>
-      <Link to="/guilds/$guildId" params={{ guildId: guild.discord_guild_id }} className={s.tile}>
+      <Link to="/guilds/$guildId" params={{ guildId: guild.guild_id }} className={s.tile}>
         <Avatar src={guild.icon_url} name={name} size={56} square />
         <span className={s.text}>
           <span className={s.name}>{name}</span>

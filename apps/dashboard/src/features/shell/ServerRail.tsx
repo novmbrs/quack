@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { guildsQuery } from "~/api/queries";
-import type { UserGuild } from "~/api/types";
+import type { GuildSummary } from "~/api/types";
 import { cx } from "~/lib/cx";
 import { Logo } from "~/ui/Logo";
 import { Tooltip } from "~/ui/Tooltip";
@@ -33,17 +33,13 @@ export function ServerRail() {
       <div className={s.separator} />
       {guilds.map((g) => (
         <RailItem
-          key={g.discord_guild_id}
-          label={
-            g.mfa_required
-              ? `${g.quack_guild_name || g.name} · Needs 2FA`
-              : g.quack_guild_name || g.name
-          }
+          key={g.guild_id}
+          label={g.mfa_blocked ? `${g.name} · Needs 2FA` : g.name}
           to="/guilds/$guildId"
-          guildId={g.discord_guild_id}
-          active={activeId === g.discord_guild_id}
+          guildId={g.guild_id}
+          active={activeId === g.guild_id}
           icon={<GuildIcon guild={g} />}
-          locked={g.mfa_required}
+          locked={g.mfa_blocked}
         />
       ))}
     </nav>
@@ -92,14 +88,13 @@ function RailItem({
   );
 }
 
-function GuildIcon({ guild }: { guild: UserGuild }) {
+function GuildIcon({ guild }: { guild: GuildSummary }) {
   if (guild.icon_url) {
     return <img src={`${guild.icon_url}?size=96`} alt="" className={s.img} />;
   }
-  const name = guild.quack_guild_name || guild.name;
-  const acronym = name
+  const acronym = guild.name
     .split(/\s+/)
-    .map((w) => w[0])
+    .map((w: string) => w[0])
     .join("")
     .slice(0, 4);
   return <span className={s.acronym}>{acronym}</span>;

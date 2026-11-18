@@ -1,27 +1,25 @@
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { ChevronRight, LayoutGrid } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
-  appealsQuery,
   casesQuery,
-  failuresQuery,
   guildMeQuery,
-  guildOpsQuery,
+  healthQuery,
   settingsQuery,
   statisticsQuery,
-  templatesQuery,
 } from "~/api/queries";
-import type { StatBucket } from "~/api/types";
-import { Outcome } from "~/features/cases/Outcome";
+import { acknowledgeStarterNotice } from "~/api/rules";
+import type { ActionKind, Bucket, CaseSummary, Health } from "~/api/types";
 import { ActivityChart } from "~/features/overview/ActivityChart";
-import { fillDays } from "~/features/overview/days";
+import { fillDays, total } from "~/features/overview/days";
 import { showsOverview } from "~/features/shell/guilds";
 import { UserChip } from "~/features/people/User";
-import { actionMeta, ago, plural } from "~/lib/format";
+import { actionMeta, actionOutcome, ago, plural } from "~/lib/format";
 import { useCan } from "~/lib/permissions";
-import { ButtonLink } from "~/ui/Button";
+import { Badge } from "~/ui/Badge";
+import { Button, ButtonLink } from "~/ui/Button";
 import { Heading, Page, Panel } from "~/ui/Page";
 import { QuackIcon, type QuackIconName } from "~/ui/QuackIcon";
 import { Empty, Skeleton } from "~/ui/States";
@@ -49,10 +47,12 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/")({
     if (!showsOverview(me)) throw redirect({ to: "/guilds/$guildId/rules", params });
     const { fromIso, toIso } = statsWindow();
     // Start every panel's data together; the page renders as each arrives.
-    if (me.permissions["audit.read"])
+    if (me.capabilities.moderate) {
       void context.queryClient.prefetchQuery(statisticsQuery(params.guildId, fromIso, toIso));
-    if (me.permissions["case.read"])
       void context.queryClient.prefetchQuery(casesQuery(params.guildId, { limit: 6 }));
+    }
+    if (me.capabilities.manage_settings)
+      void context.queryClient.prefetchQuery(healthQuery(params.guildId));
   },
   component: Overview,
 });
@@ -63,99 +63,64 @@ function Overview() {
   const can = useCan(guildId);
   const range = statsWindow();
 
+  const moderates = can("moderate");
+  const manages = can("manage_settings");
   const stats = useQuery({
     ...statisticsQuery(guildId, range.fromIso, range.toIso),
-    enabled: can("audit.read"),
+    enabled: moderates,
   });
-  const recent = useQuery({ ...casesQuery(guildId, { limit: 6 }), enabled: can("case.read") });
-  const appeals = useQuery({
-    ...appealsQuery(guildId, { status: "pending", limit: 1 }),
-    enabled: can("appeal.review"),
-  });
-  const failures = useQuery({ ...failuresQuery(guildId), enabled: can("case.read") });
-  const templates = useQuery({ ...templatesQuery(guildId), enabled: can("case_template.read") });
-  const settings = useQuery({ ...settingsQuery(guildId), enabled: can("guild_settings.read") });
-  const ops = useQuery({ ...guildOpsQuery(guildId), enabled: me.staff.is_admin, retry: false });
+  const recent = useQuery({ ...casesQuery(guildId, { limit: 6 }), enabled: moderates });
+  const settings = useQuery({ ...settingsQuery(guildId), enabled: manages });
+  const health = useQuery({ ...healthQuery(guildId), enabled: manages, retry: false });
 
-  const names = new Map((templates.data ?? []).map((t) => [t.id, t.name]));
   const st = stats.data;
-  const voided = st?.cases_by_validity?.find((b) => b.key === "voided")?.count ?? 0;
+  const voided = st?.cases_by_state.find((b) => b.key === "voided")?.count ?? 0;
   const starter =
-    settings.data?.starter_policy_review_required &&
-    !settings.data.starter_policy_notice_acknowledged_at &&
-    settings.data.starter_policy_template_id;
-  const degraded = ops.data?.guild_health.degraded;
+    settings.data?.starter_rule_id && !settings.data.starter_notice_acknowledged_at
+      ? settings.data.starter_rule_id
+      : null;
 
   return (
     <Page icon={<LayoutGrid size={22} />} title="Overview" topic={me.guild.name}>
-      {starter ? (
-        <Banner
-          icon="spark"
-          title="Review your starter rule"
-          action={
-            <ButtonLink
-              size="sm"
-              to="/guilds/$guildId/rules/$ruleId"
-              params={{ guildId, ruleId: settings.data!.starter_policy_template_id! }}
-            >
-              Review rule
-            </ButtonLink>
-          }
-        >
-          Quack added a General rule violation rule when it joined: a warning, then a 24-hour
-          timeout at 3 cases, then a ban at 5. Make sure it fits your server.
-        </Banner>
-      ) : null}
+      {starter ? <StarterReminder guildId={guildId} ruleId={starter} /> : null}
 
       <div className={s.tiles}>
-        {can("appeal.review") ? (
+        {moderates ? (
           <AttentionTile
             to="/guilds/$guildId/appeals"
             guildId={guildId}
             icon="appeal"
-            label="Appeals waiting"
-            value={appeals.data?.total}
-            calm="No appeals waiting"
+            label="Appeals waiting for a decision"
+            value={me.counts?.pending_appeals}
+            calm="No appeals waiting for a decision"
           />
         ) : null}
-        {can("case.read") ? (
+        {moderates ? (
           <AttentionTile
             to="/guilds/$guildId/failures"
             guildId={guildId}
             icon="error"
             label="Failed actions"
-            value={failures.data?.total}
-            calm="Every action went through"
+            value={me.counts?.failed_actions}
+            calm="No failed actions"
           />
         ) : null}
-        {me.staff.is_admin && ops.data ? (
-          <Panel className={s.tile}>
-            <QuackIcon name={degraded ? "warn" : "shield"} size={32} />
-            <div className={s.tileText}>
-              <span className={s.tileValueSmall}>{degraded ? "Needs a fix" : "All good"}</span>
-              <span className={s.tileLabel}>
-                {degraded
-                  ? (ops.data.guild_health.reasons?.[0] ?? "Quack is missing something it needs")
-                  : "Quack has the permissions and channels it needs"}
-              </span>
-            </div>
-          </Panel>
-        ) : null}
+        {manages && health.data ? <HealthTile guildId={guildId} health={health.data} /> : null}
       </div>
 
-      {can("audit.read") ? (
+      {moderates ? (
         <section className={s.section}>
           <Heading>Last 30 days</Heading>
           <div className={s.stats}>
-            <Stat label="Cases" value={st?.case_total} />
-            <Stat label="Discord actions" value={st?.action_total} />
-            <Stat label="Appeals" value={st?.appeal_total} />
+            <Stat label="Cases" value={st?.cases_total} />
+            <Stat label="Actions" value={st ? total(st.actions_by_kind) : undefined} />
+            <Stat label="Appeals" value={st ? total(st.appeals_by_state) : undefined} />
             <Stat label="Voided" value={st ? voided : undefined} />
           </div>
           <Panel>
             <p className={s.chartTitle}>Cases per day</p>
             {st ? (
-              <ActivityChart data={fillDays(st.cases_by_day ?? [], range.from, DAYS)} />
+              <ActivityChart data={fillDays(st.cases_by_day, range.from, DAYS)} />
             ) : (
               <Skeleton height={160} />
             )}
@@ -163,22 +128,13 @@ function Overview() {
           <div className={s.split}>
             <Panel>
               <p className={s.chartTitle}>Most used rules</p>
-              <Breakdown
-                buckets={st?.cases_by_template}
-                label={(key) =>
-                  key === "historical_or_deleted"
-                    ? "Imported or deleted"
-                    : (names.get(key) ?? "Rule")
-                }
-                empty="No cases in the last 30 days."
-              />
+              <Breakdown buckets={st?.cases_by_rule} empty="No cases in the last 30 days." />
             </Panel>
             <Panel>
-              <p className={s.chartTitle}>Discord actions</p>
+              <p className={s.chartTitle}>Actions</p>
               <Breakdown
-                buckets={st?.actions_by_type?.filter((b) => b.key !== "send_dm")}
-                label={(key) => actionMeta[key as keyof typeof actionMeta]?.label ?? key}
-                icon={(key) => actionMeta[key as keyof typeof actionMeta]?.icon}
+                buckets={st?.actions_by_kind}
+                icon={(key) => actionMeta[key as ActionKind]?.icon}
                 empty="No timeouts, kicks, or bans."
               />
             </Panel>
@@ -186,7 +142,7 @@ function Overview() {
         </section>
       ) : null}
 
-      {can("case.read") ? (
+      {moderates ? (
         <section className={s.section}>
           <Heading
             actions={
@@ -202,19 +158,19 @@ function Overview() {
               <div className={s.recentPad}>
                 <Skeleton height={120} />
               </div>
-            ) : recent.data?.cases?.length ? (
+            ) : recent.data?.cases.length ? (
               <ul className={s.recent}>
                 {recent.data.cases.map((c) => (
                   <li key={c.id}>
                     <Link
                       to="/guilds/$guildId/cases/$caseRef"
-                      params={{ guildId, caseRef: String(c.case_number) }}
+                      params={{ guildId, caseRef: String(c.number) }}
                       className={s.recentRow}
                     >
-                      <span className={s.caseNo}>#{c.case_number}</span>
-                      <UserChip guildId={guildId} userId={c.target_discord_user_id} link={false} />
+                      <span className={s.caseNo}>#{c.number}</span>
+                      <UserChip guildId={guildId} userId={c.member_id} link={false} />
                       <span className={s.ruleName}>{c.rule_name}</span>
-                      <Outcome actions={c.actions} compact />
+                      <CaseAction c={c} />
                       <span className={s.when}>{ago(c.created_at)}</span>
                     </Link>
                   </li>
@@ -222,7 +178,7 @@ function Overview() {
               </ul>
             ) : (
               <Empty icon="case" title="No cases yet" compact>
-                Use /case add in Discord, or open one from the Cases page.
+                Use /case add in Discord, or add one from the Cases page.
               </Empty>
             )}
           </Panel>
@@ -230,6 +186,97 @@ function Overview() {
       ) : null}
     </Page>
   );
+}
+
+/**
+ * CaseAction is a recent case's action and its outcome word, or "Warning"
+ * for a case with no action.
+ */
+function CaseAction({ c }: { c: CaseSummary }) {
+  if (c.voided_at) return <Badge tone="neutral">Voided</Badge>;
+  if (!c.action) return <Badge tone="neutral">Warning</Badge>;
+  const outcome = actionOutcome(c.action);
+  return (
+    <Badge tone={outcome.tone} dot title={c.action.outcome_text}>
+      {actionMeta[c.action.kind].label} · {outcome.label}
+    </Badge>
+  );
+}
+
+/**
+ * StarterReminder asks administrators to review the rule Quack created when
+ * it joined, until one of them dismisses it.
+ */
+function StarterReminder({ guildId, ruleId }: { guildId: string; ruleId: string }) {
+  const queryClient = useQueryClient();
+  const dismiss = useMutation({
+    mutationFn: () => acknowledgeStarterNotice(guildId),
+    onSuccess: (settings) => queryClient.setQueryData(settingsQuery(guildId).queryKey, settings),
+  });
+  return (
+    <Banner
+      icon="spark"
+      title="Review your starter rule"
+      action={
+        <div className={s.bannerActions}>
+          <ButtonLink size="sm" to="/guilds/$guildId/rules/$ruleId" params={{ guildId, ruleId }}>
+            Review rule
+          </ButtonLink>
+          <Button
+            size="sm"
+            variant="ghost"
+            pending={dismiss.isPending}
+            onClick={() => dismiss.mutate()}
+          >
+            Dismiss
+          </Button>
+        </div>
+      }
+    >
+      Quack added a General rule violation rule when it joined: a warning, then a timeout for 1 day
+      at 3 cases, then a ban at 5 cases. Make sure it fits your server.
+    </Banner>
+  );
+}
+
+/**
+ * HealthTile sums up server health (GET …/health) for administrators: what
+ * Quack is missing, with the details on the settings page.
+ */
+function HealthTile({ guildId, health }: { guildId: string; health: Health }) {
+  const problems = healthProblems(health);
+  const ok = problems.length === 0;
+  return (
+    <Link
+      to="/guilds/$guildId/settings"
+      params={{ guildId }}
+      className={cx(s.tile, s.tileLink, !ok && s.tileHot)}
+    >
+      <QuackIcon name={ok ? "shield" : "warn"} size={32} />
+      <div className={s.tileText}>
+        <span className={s.tileValueSmall}>{ok ? "All good" : "Needs a fix"}</span>
+        <span className={s.tileLabel}>
+          {ok ? "Quack has the permissions and channels it needs." : problems[0]}
+        </span>
+      </div>
+      <ChevronRight size={18} className={s.tileChevron} />
+    </Link>
+  );
+}
+
+/** healthProblems lists what Quack needs fixed in a server, most important first. */
+function healthProblems(health: Health): string[] {
+  const out: string[] = [];
+  if (!health.quack_in_server) out.push("Quack isn't in this server anymore.");
+  if (health.missing_permissions.length > 0)
+    out.push(
+      `Quack is missing ${plural(health.missing_permissions.length, "Discord permission")}.`,
+    );
+  for (const channel of health.channels)
+    for (const problem of channel.problems) out.push(problem.message);
+  for (const module of Object.values(health.modules))
+    for (const problem of module.problems) out.push(problem.message);
+  return out;
 }
 
 function Banner({
@@ -302,12 +349,10 @@ function Stat({ label, value }: { label: string; value: number | undefined }) {
 
 function Breakdown({
   buckets,
-  label,
   icon,
   empty,
 }: {
-  buckets: StatBucket[] | null | undefined;
-  label: (key: string) => string;
+  buckets: Bucket[] | undefined;
   icon?: (key: string) => QuackIconName | undefined;
   empty: string;
 }) {
@@ -323,7 +368,7 @@ function Breakdown({
           <li key={b.key} className={s.breakRow}>
             <div className={s.breakHead}>
               {name ? <QuackIcon name={name} size={16} /> : null}
-              <span className={s.breakLabel}>{label(b.key)}</span>
+              <span className={s.breakLabel}>{b.label}</span>
               <span className={s.breakValue} title={plural(b.count, "time")}>
                 {b.count.toLocaleString()}
               </span>
