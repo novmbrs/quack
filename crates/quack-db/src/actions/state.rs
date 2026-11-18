@@ -12,6 +12,27 @@ use crate::DbError;
 use crate::obs::{self, Select, Update};
 use crate::pg::{Pg, count, int};
 
+/// The state a settlement expects the action to be in. A running action
+/// is matched with the attempt the caller opened, so a stale run can never
+/// settle a newer round that is running again.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Expected {
+    /// `pending`.
+    Pending,
+    /// `running`, with this attempt (1-based, across rounds) its latest.
+    Running(u32),
+}
+
+impl Expected {
+    /// The state and the attempt number the SQL compares.
+    fn sql(self) -> Result<(Pg<ActionState>, Option<i32>), DbError> {
+        Ok(match self {
+            Self::Pending => (Pg(ActionState::Pending), None),
+            Self::Running(attempt) => (Pg(ActionState::Running), Some(int::<u32, i32>(attempt)?)),
+        })
+    }
+}
+
 /// Takes the member's transaction-scoped advisory lock (§5.4 step 1.1).
 /// Every action start for one (server, member) takes it first, so their
 /// starts are serialized; it is released when the transaction ends.
@@ -112,11 +133,13 @@ pub async fn voided_ban_case(
     .await
 }
 
-/// `running` → `done` (`no_change` when the desired state already held).
+/// `running` at `attempt` → `done` (`no_change` when the desired state
+/// already held).
 pub async fn mark_done(
     conn: &mut PgConnection,
     guild: GuildId,
     action: ActionId,
+    attempt: u32,
     no_change: bool,
 ) -> Result<bool, DbError> {
     let done = obs::run(
@@ -124,10 +147,12 @@ pub async fn mark_done(
         "actions",
         sqlx::query!(
             "UPDATE actions SET state = 'done', done_at = now(), no_change = $3, updated_at = now()
-             WHERE guild_id = $1 AND id = $2 AND state = 'running'",
+             WHERE guild_id = $1 AND id = $2 AND state = 'running'
+               AND (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4",
             i64::from(guild),
             action.get(),
             no_change,
+            int::<u32, i32>(attempt)?,
         )
         .execute(conn),
     )
@@ -135,25 +160,29 @@ pub async fn mark_done(
     Ok(done.rows_affected() == 1)
 }
 
-/// `from` (`pending` or `running`) → `failed` with the failure's details.
+/// `from` → `failed` with the failure's details.
 pub async fn mark_failed(
     conn: &mut PgConnection,
     guild: GuildId,
     action: ActionId,
-    from: ActionState,
+    from: Expected,
     failure: &Failure,
 ) -> Result<bool, DbError> {
+    let (state, attempt) = from.sql()?;
     let done = obs::run(
         Update,
         "actions",
         sqlx::query!(
-            "UPDATE actions SET state = 'failed', failure_reason = $4, failure_permission = $5,
-                                failure_http_status = $6, failure_discord_code = $7, next_attempt_at = NULL,
+            "UPDATE actions SET state = 'failed', failure_reason = $5, failure_permission = $6,
+                                failure_http_status = $7, failure_discord_code = $8, next_attempt_at = NULL,
                                 updated_at = now()
-             WHERE guild_id = $1 AND id = $2 AND state = $3",
+             WHERE guild_id = $1 AND id = $2 AND state = $3
+               AND ($4::int IS NULL
+                    OR (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4)",
             i64::from(guild),
             action.get(),
-            Pg(from) as _,
+            state as _,
+            attempt,
             Pg(failure.reason) as _,
             failure.permission.map(Pg) as _,
             failure.http_status.map(int::<u16, i16>).transpose()?,
@@ -165,22 +194,26 @@ pub async fn mark_failed(
     Ok(done.rows_affected() == 1)
 }
 
-/// `from` (`pending` or `running`) → `cancelled` (originals only).
+/// `from` → `cancelled` (originals only).
 pub async fn mark_cancelled(
     conn: &mut PgConnection,
     guild: GuildId,
     action: ActionId,
-    from: ActionState,
+    from: Expected,
 ) -> Result<bool, DbError> {
+    let (state, attempt) = from.sql()?;
     let done = obs::run(
         Update,
         "actions",
         sqlx::query!(
             "UPDATE actions SET state = 'cancelled', next_attempt_at = NULL, updated_at = now()
-             WHERE guild_id = $1 AND id = $2 AND state = $3",
+             WHERE guild_id = $1 AND id = $2 AND state = $3
+               AND ($4::int IS NULL
+                    OR (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4)",
             i64::from(guild),
             action.get(),
-            Pg(from) as _,
+            state as _,
+            attempt,
         )
         .execute(conn),
     )
@@ -188,26 +221,30 @@ pub async fn mark_cancelled(
     Ok(done.rows_affected() == 1)
 }
 
-/// `from` (`pending` or `running`) → `skipped` (undos only), with the case
+/// `from` → `skipped` (undos only), with the case
 /// that still applies for `other_case_applies`.
 pub async fn mark_skipped(
     conn: &mut PgConnection,
     guild: GuildId,
     action: ActionId,
-    from: ActionState,
+    from: Expected,
     reason: ActionSkipReason,
     because: Option<CaseId>,
 ) -> Result<bool, DbError> {
+    let (state, attempt) = from.sql()?;
     let done = obs::run(
         Update,
         "actions",
         sqlx::query!(
-            "UPDATE actions SET state = 'skipped', skip_reason = $4, skipped_because_case_id = $5,
+            "UPDATE actions SET state = 'skipped', skip_reason = $5, skipped_because_case_id = $6,
                                 next_attempt_at = NULL, updated_at = now()
-             WHERE guild_id = $1 AND id = $2 AND state = $3",
+             WHERE guild_id = $1 AND id = $2 AND state = $3
+               AND ($4::int IS NULL
+                    OR (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4)",
             i64::from(guild),
             action.get(),
-            Pg(from) as _,
+            state as _,
+            attempt,
             Pg(reason) as _,
             because.map(CaseId::get),
         )
@@ -217,11 +254,13 @@ pub async fn mark_skipped(
     Ok(done.rows_affected() == 1)
 }
 
-/// `running` → `pending` with the next attempt due after `delay` (§5.7).
+/// `running` at `attempt` → `pending` with the next attempt due after
+/// `delay` (§5.7).
 pub async fn back_to_pending(
     conn: &mut PgConnection,
     guild: GuildId,
     action: ActionId,
+    attempt: u32,
     delay: Duration,
 ) -> Result<bool, DbError> {
     let done = obs::run(
@@ -230,10 +269,12 @@ pub async fn back_to_pending(
         sqlx::query!(
             "UPDATE actions SET state = 'pending', next_attempt_at = now() + make_interval(secs => $3),
                                 updated_at = now()
-             WHERE guild_id = $1 AND id = $2 AND state = 'running'",
+             WHERE guild_id = $1 AND id = $2 AND state = 'running'
+               AND (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4",
             i64::from(guild),
             action.get(),
             secs(delay),
+            int::<u32, i32>(attempt)?,
         )
         .execute(conn),
     )

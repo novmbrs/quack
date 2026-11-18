@@ -5,7 +5,7 @@ use quack_core::action::{ActionKind, ActionState, StartDecision, StartFacts, Sti
 use quack_core::dm::DmKind;
 use quack_core::ids::{ActionId, GuildId};
 use quack_core::permissions::action_precheck;
-use quack_db::actions::{self, Action};
+use quack_db::actions::{self, Action, Expected};
 use quack_db::cases::{self, Case};
 use quack_db::jobs::{ClaimedJob, Handled, JobResult, RunAt, settle as settle_job};
 use quack_db::messages::{self, Owner};
@@ -131,7 +131,7 @@ async fn begin(
                 JobResult::Done
             }
             StartDecision::Fail(failure) => {
-                if actions::mark_failed(&mut tx, guild, current.id, ActionState::Pending, &failure)
+                if actions::mark_failed(&mut tx, guild, current.id, Expected::Pending, &failure)
                     .await?
                 {
                     log_failed(&mut tx, &case, &current, &failure, current.attempts).await?;
@@ -195,7 +195,7 @@ async fn start_facts(
 }
 
 async fn cancel(tx: &mut Tx, case: &Case, action: &Action) -> Result<Option<Recorded>, DbError> {
-    if !actions::mark_cancelled(tx, case.guild, action.id, ActionState::Pending).await? {
+    if !actions::mark_cancelled(tx, case.guild, action.id, Expected::Pending).await? {
         return Ok(None);
     }
     messages::bump(tx, case.guild, Owner::Case(case.id)).await?;
@@ -218,7 +218,7 @@ async fn skip(
         tx,
         case.guild,
         action.id,
-        ActionState::Pending,
+        Expected::Pending,
         reason,
         Some(still.case_id),
     )

@@ -140,18 +140,24 @@ async fn settings_write_only_sent_fields_and_compare_versions(
         dm_footer: Some(Some("Be kind".to_owned())),
         ..SettingsPatch::default()
     };
-    let version =
-        settings::update(&mut conn, g, &patch, Some(before.version), account_id(3)).await?;
+    let version = settings::update(&mut conn, g, &patch, before.version, account_id(3)).await?;
     assert_eq!(version, Some(before.version + 1));
     assert_eq!(
-        settings::update(&mut conn, g, &patch, Some(before.version), account_id(3)).await?,
+        settings::update(&mut conn, g, &patch, before.version, account_id(3)).await?,
         None
     );
     let clear_footer = SettingsPatch {
         dm_footer: Some(None),
         ..SettingsPatch::default()
     };
-    settings::update(&mut conn, g, &clear_footer, None, account_id(3)).await?;
+    settings::update(
+        &mut conn,
+        g,
+        &clear_footer,
+        before.version + 1,
+        account_id(3),
+    )
+    .await?;
     let after = settings::get(&mut conn, g).await?.context("settings")?;
     assert_eq!(after.moderator_role_ids, vec![role]);
     assert_eq!(
@@ -480,5 +486,20 @@ async fn statistics_and_housekeeping(_: PgPoolOptions, options: PgConnectOptions
         .fetch_one(&mut *conn)
         .await?;
     assert_eq!(left, 1);
+    Ok(())
+}
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn the_starter_rule_is_recorded_once(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (first, _) = rule(&db, g, "Spam").await?;
+    let (second, _) = rule(&db, g, "Raids").await?;
+    let mut conn = db.conn().await?;
+    assert!(settings::set_starter_rule(&mut conn, g, first).await?);
+    assert!(!settings::set_starter_rule(&mut conn, g, second).await?);
     Ok(())
 }

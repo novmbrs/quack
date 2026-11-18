@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actions SET state = 'done', done_at = now(), no_change = $3, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'running'\n               AND (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ce4cbaefdbd3837d894304d58fff9ae4baebd27ce3fc3b6579de10a3e7c8b528"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE actions SET state = 'failed', failure_reason = $4, failure_permission = $5,\n                                failure_http_status = $6, failure_discord_code = $7, next_attempt_at = NULL,\n                                updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3",
+  "query": "UPDATE actions SET state = 'failed', failure_reason = $5, failure_permission = $6,\n                                failure_http_status = $7, failure_discord_code = $8, next_attempt_at = NULL,\n                                updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3\n               AND ($4::int IS NULL\n                    OR (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -22,6 +22,7 @@
             }
           }
         },
+        "Int4",
         {
           "Custom": {
             "name": "action_failure",
@@ -59,5 +60,5 @@
     },
     "nullable": []
   },
-  "hash": "872859d2fecfcff1cdd9f2e1642511a15221878274b183fbb8ecac8b4c57d83e"
+  "hash": "5b217efaf213c634f81cfe1bfb2b67df7b7d06fcb7840a4556bcd6fda68e1d61"
 }

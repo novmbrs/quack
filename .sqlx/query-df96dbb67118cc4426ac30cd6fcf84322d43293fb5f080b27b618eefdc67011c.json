@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE actions SET state = 'skipped', skip_reason = $4, skipped_because_case_id = $5,\n                                next_attempt_at = NULL, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3",
+  "query": "UPDATE actions SET state = 'skipped', skip_reason = $5, skipped_because_case_id = $6,\n                                next_attempt_at = NULL, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3\n               AND ($4::int IS NULL\n                    OR (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4)",
   "describe": {
     "columns": [],
     "parameters": {
@@ -22,6 +22,7 @@
             }
           }
         },
+        "Int4",
         {
           "Custom": {
             "name": "action_skip_reason",
@@ -38,5 +39,5 @@
     },
     "nullable": []
   },
-  "hash": "8bc81dcc89821a26d0017f9ba17418fba47ddf7c40c3f448bfcfff18e6a61af9"
+  "hash": "df96dbb67118cc4426ac30cd6fcf84322d43293fb5f080b27b618eefdc67011c"
 }

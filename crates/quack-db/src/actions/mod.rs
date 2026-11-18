@@ -20,8 +20,8 @@ use crate::pg::{Pg, count, id, int, opt_id};
 pub use attempts::{Attempt, attempts, attempts_for_case, finish_attempt, open_attempt, start};
 pub use list::{ActionListItem, count_failed, failed_by_kind, list};
 pub use state::{
-    back_to_pending, cancel_pending_original, dismiss, guard, lock_member, mark_cancelled,
-    mark_done, mark_failed, mark_skipped, member_running, retry, voided_ban_case,
+    Expected, back_to_pending, cancel_pending_original, dismiss, guard, lock_member,
+    mark_cancelled, mark_done, mark_failed, mark_skipped, member_running, retry, voided_ban_case,
 };
 
 /// An action row.

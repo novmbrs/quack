@@ -174,13 +174,13 @@ fn roles(ids: Option<&Vec<RoleId>>) -> Option<Vec<i64>> {
 }
 
 /// Writes the patch's fields if the settings are still at
-/// `expected_version` (`None`: any version), `version + 1`. Returns the
-/// new version, or `None` when the settings changed.
+/// `expected_version`, `version + 1`. Returns the new version, or `None`
+/// when the settings changed.
 pub async fn update(
     conn: &mut PgConnection,
     guild: GuildId,
     patch: &SettingsPatch,
-    expected_version: Option<u64>,
+    expected_version: u64,
     by: AccountId,
 ) -> Result<Option<u64>, DbError> {
     let p = patch;
@@ -200,10 +200,10 @@ pub async fn update(
                dm_intro               = CASE WHEN $13 THEN $14 ELSE dm_intro END,
                dm_footer              = CASE WHEN $15 THEN $16 ELSE dm_footer END,
                version = version + 1, updated_at = now(), updated_by = $17
-             WHERE guild_id = $1 AND ($2::bigint IS NULL OR version = $2)
+             WHERE guild_id = $1 AND version = $2
              RETURNING version",
             i64::from(guild),
-            expected_version.map(int::<u64, i64>).transpose()?,
+            int::<u64, i64>(expected_version)?,
             moderators.as_deref(),
             managers.as_deref(),
             p.log_channel.is_some(),
@@ -226,24 +226,25 @@ pub async fn update(
     version.map(count).transpose()
 }
 
-/// Records the starter rule at the first join.
+/// Records the starter rule at the first join; an existing one is kept.
+/// Returns whether it was recorded.
 pub async fn set_starter_rule(
     conn: &mut PgConnection,
     guild: GuildId,
     rule: RuleId,
-) -> Result<(), DbError> {
-    obs::run(
+) -> Result<bool, DbError> {
+    let done = obs::run(
         Update,
         "guild_settings",
         sqlx::query!(
-            "UPDATE guild_settings SET starter_rule_id = $2 WHERE guild_id = $1",
+            "UPDATE guild_settings SET starter_rule_id = $2 WHERE guild_id = $1 AND starter_rule_id IS NULL",
             i64::from(guild),
             rule.get()
         )
         .execute(conn),
     )
     .await?;
-    Ok(())
+    Ok(done.rows_affected() == 1)
 }
 
 /// Acknowledges the starter notice; the first time is kept. Returns

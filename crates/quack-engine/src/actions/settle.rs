@@ -8,7 +8,7 @@ use quack_core::action::{
     SettleFacts, may_have_applied, settle,
 };
 use quack_core::ids::ActionId;
-use quack_db::actions::{self, Action};
+use quack_db::actions::{self, Action, Expected};
 use quack_db::cases::{self, Case};
 use quack_db::jobs::{ClaimedJob, Handled, JobResult, RunAt, settle as settle_job};
 use quack_db::messages::{self, Owner};
@@ -221,7 +221,7 @@ async fn write_state(
     let mut next = None;
     let changed = match s.state {
         ActionState::Done => {
-            let done = actions::mark_done(tx, guild, action.id, s.no_change).await?;
+            let done = actions::mark_done(tx, guild, action.id, number, s.no_change).await?;
             if done {
                 log_done(tx, case, action, number, s.no_change).await?;
             }
@@ -232,22 +232,29 @@ async fn write_state(
                 .failure
                 .unwrap_or(Failure::new(ActionFailure::RetriesExhausted));
             let failed =
-                actions::mark_failed(tx, guild, action.id, ActionState::Running, &failure).await?;
+                actions::mark_failed(tx, guild, action.id, Expected::Running(number), &failure)
+                    .await?;
             if failed {
                 log_failed(tx, case, action, &failure, number).await?;
             }
             failed
         }
         ActionState::Cancelled => {
-            actions::mark_cancelled(tx, guild, action.id, ActionState::Running).await?
+            actions::mark_cancelled(tx, guild, action.id, Expected::Running(number)).await?
         }
         ActionState::Skipped => {
             let reason = s
                 .skip_reason
                 .unwrap_or(ActionSkipReason::ChangedOutsideCase);
-            let skipped =
-                actions::mark_skipped(tx, guild, action.id, ActionState::Running, reason, None)
-                    .await?;
+            let skipped = actions::mark_skipped(
+                tx,
+                guild,
+                action.id,
+                Expected::Running(number),
+                reason,
+                None,
+            )
+            .await?;
             if skipped {
                 log_skipped(tx, case, action, reason, None).await?;
             }
@@ -258,7 +265,7 @@ async fn write_state(
                 .next_attempt_at
                 .map_or(Duration::ZERO, |at| obs::since(now, at));
             next = Some(delay);
-            actions::back_to_pending(tx, guild, action.id, delay).await?
+            actions::back_to_pending(tx, guild, action.id, number, delay).await?
         }
         ActionState::Running => false,
     };
@@ -298,8 +305,13 @@ pub(super) async fn write_finalized(
         attempt = Some((AttemptOutcome::Interrupted, None, false));
     }
     let outcomes = round(tx, action).await?;
+    let from = if action.state == ActionState::Running {
+        Expected::Running(number)
+    } else {
+        Expected::Pending
+    };
     let state = if action.kind.is_original() && !case.is_valid() {
-        actions::mark_cancelled(tx, guild, action.id, action.state).await?;
+        actions::mark_cancelled(tx, guild, action.id, from).await?;
         ActionState::Cancelled
     } else {
         let failure = Failure::new(if may_have_applied(&outcomes) {
@@ -307,7 +319,7 @@ pub(super) async fn write_finalized(
         } else {
             ActionFailure::RetriesExhausted
         });
-        if actions::mark_failed(tx, guild, action.id, action.state, &failure).await? {
+        if actions::mark_failed(tx, guild, action.id, from, &failure).await? {
             log_failed(tx, case, action, &failure, number).await?;
         }
         ActionState::Failed

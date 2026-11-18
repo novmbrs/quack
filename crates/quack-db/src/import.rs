@@ -54,24 +54,29 @@ pub async fn start_run(
     Ok(id)
 }
 
-/// Records the end of a run with its validation report.
+/// Records the end of a run with its validation report, once;
+/// [`DbError::Stale`] when the run is unknown or already finished.
 pub async fn finish_run(
     conn: &mut PgConnection,
     run: uuid::Uuid,
     report: &serde_json::Value,
 ) -> Result<(), DbError> {
-    obs::run(
+    let done = obs::run(
         Update,
         "import_runs",
         sqlx::query!(
-            "UPDATE import_runs SET finished_at = now(), report = $2 WHERE id = $1",
+            "UPDATE import_runs SET finished_at = now(), report = $2 WHERE id = $1 AND finished_at IS NULL",
             run,
             report
         )
         .execute(conn),
     )
     .await?;
-    Ok(())
+    if done.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(DbError::Stale)
+    }
 }
 
 /// The source fingerprint a server was imported from, if it was.

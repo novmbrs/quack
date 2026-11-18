@@ -18,7 +18,7 @@ use quack_core::ids::{
 };
 use quack_core::messages::MessageState;
 use quack_core::rule::LevelAction;
-use quack_db::actions::{self, NewAction};
+use quack_db::actions::{self, Expected, NewAction};
 use quack_db::appeals::{self, AppealEvent, Decision};
 use quack_db::dms::{self, DmOwner};
 use quack_db::evidence::{self, Admission, NewFile, Snapshot};
@@ -111,10 +111,11 @@ async fn action_attempts_follow_the_state_table(
             .await?
     );
     assert!(
-        actions::back_to_pending(&mut conn, g, action, std::time::Duration::from_secs(5)).await?
+        actions::back_to_pending(&mut conn, g, action, 1, std::time::Duration::from_secs(5))
+            .await?
     );
     assert!(
-        !actions::mark_done(&mut conn, g, action, false).await?,
+        !actions::mark_done(&mut conn, g, action, 1, false).await?,
         "only from running"
     );
     assert_eq!(
@@ -139,7 +140,11 @@ async fn action_attempts_follow_the_state_table(
         discord_code: Some(50013),
         ..Failure::new(ActionFailure::DiscordRefused)
     };
-    assert!(actions::mark_failed(&mut conn, g, action, ActionState::Running, &failure).await?);
+    assert!(
+        !actions::mark_failed(&mut conn, g, action, Expected::Running(1), &failure).await?,
+        "a stale run of attempt 1 can't settle attempt 2's round"
+    );
+    assert!(actions::mark_failed(&mut conn, g, action, Expected::Running(2), &failure).await?);
     let failed = actions::get(&mut conn, g, action)
         .await?
         .context("action")?;
@@ -192,8 +197,8 @@ async fn the_undo_guard_finds_another_case_still_in_force(
     let other = ban_action(&db, g, applies.id, 7).await?;
     let mut conn = db.conn().await?;
     for a in [original, other] {
-        actions::start(&mut conn, g, a).await?;
-        actions::mark_done(&mut conn, g, a, false).await?;
+        let n = actions::start(&mut conn, g, a).await?.context("started")?;
+        actions::mark_done(&mut conn, g, a, n, false).await?;
     }
     cases::void(&mut conn, g, voided.id, VoidCause::Staff, None, "wrong").await?;
     let found = actions::guard(&mut conn, g, member_id(7), ActionKind::Ban, voided.id).await?;
@@ -223,7 +228,7 @@ async fn the_undo_guard_finds_another_case_still_in_force(
             &mut conn,
             g,
             undo,
-            ActionState::Pending,
+            Expected::Pending,
             ActionSkipReason::OtherCaseApplies,
             Some(applies.id)
         )

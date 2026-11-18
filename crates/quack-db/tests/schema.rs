@@ -202,7 +202,7 @@ async fn an_action_has_one_open_attempt_one_original_and_one_undo(
     assert!(
         !actions::finish_attempt(&mut conn, g, action, 1, AttemptOutcome::Done, None, None).await?
     );
-    assert!(actions::mark_done(&mut conn, g, action, false).await?);
+    assert!(actions::mark_done(&mut conn, g, action, 1, false).await?);
 
     let undo = NewAction {
         id: ActionId::from_uuid(Uuid::now_v7()),
@@ -289,6 +289,13 @@ async fn operation_keys_are_unique_per_scope(
     let mut tx = db.begin().await?;
     assert!(operation_keys::reserve(&mut tx, &key, &hash).await?);
     operation_keys::complete(&mut tx, &key, 201, &serde_json::json!({ "case_id": "x" })).await?;
+    assert!(
+        matches!(
+            operation_keys::complete(&mut tx, &key, 500, &serde_json::json!({})).await,
+            Err(DbError::NotFound)
+        ),
+        "a stored result is never overwritten"
+    );
     tx.commit().await?;
 
     let mut conn = db.conn().await?;

@@ -141,15 +141,9 @@ pub async fn patch(
         // 4. Validate every sent field.
         let db_patch = validate(guild, patch, &locked, &server_roles, &channels)?;
         // 5. Write, move or bind appeal posts, log, notify.
-        settings::update(
-            &mut tx,
-            guild,
-            &db_patch,
-            Some(locked.version),
-            principal.account,
-        )
-        .await?
-        .ok_or(DomainError::SettingsChanged)?;
+        settings::update(&mut tx, guild, &db_patch, locked.version, principal.account)
+            .await?
+            .ok_or(DomainError::SettingsChanged)?;
         appeal_posts(&mut tx, guild, &locked, patch).await?;
         modlog::write(
             &mut tx,

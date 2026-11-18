@@ -96,6 +96,8 @@ pub async fn reserve(
 }
 
 /// Stores the result of the reserved operation before commit.
+/// [`DbError::NotFound`] when there is no unfinished reservation (a stored
+/// result is never overwritten).
 pub async fn complete(
     conn: &mut PgConnection,
     key: &OperationKey,
@@ -108,7 +110,8 @@ pub async fn complete(
         "operation_keys",
         sqlx::query!(
             "UPDATE operation_keys SET response_status = $5, response = $6
-             WHERE guild_id = $1 AND account_id = $2 AND operation = $3 AND key = $4",
+             WHERE guild_id = $1 AND account_id = $2 AND operation = $3 AND key = $4
+               AND response_status = 0",
             guild,
             account,
             key.operation,
