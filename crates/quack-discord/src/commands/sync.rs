@@ -171,7 +171,14 @@ pub async fn sync(
             ids: command_ids(&remote),
         });
     }
-    match client.overwrite_commands(scope.guild(), definitions).await {
+    // The canonical form also leaves out what Twilight fills in but Discord
+    // may reject, such as an empty `choices` next to `autocomplete`.
+    let body: Vec<Value> = definitions
+        .iter()
+        .filter_map(|c| serde_json::to_value(c).ok())
+        .map(|c| canonical(&c))
+        .collect();
+    match client.overwrite_commands(scope.guild(), &body).await {
         Outcome::Done(registered) => {
             tracing::info!(count = registered.len(), "registered commands");
             Ok(SyncReport {

@@ -2,7 +2,6 @@
 
 use quack_core::ids::GuildId;
 use serde::Deserialize;
-use twilight_model::application::command::Command;
 
 use super::route::{Method, Route};
 use super::transport::Request;
@@ -62,12 +61,13 @@ impl DiscordClient {
         .map(registered)
     }
 
-    /// Replaces every registered command with `commands` (one bulk
-    /// overwrite, which also removes commands not listed).
+    /// Replaces every registered command with `commands`, given as JSON
+    /// definitions (one bulk overwrite, which also removes commands not
+    /// listed).
     pub async fn overwrite_commands(
         &self,
         guild: Option<GuildId>,
-        commands: &[Command],
+        commands: &[serde_json::Value],
     ) -> Outcome<Vec<RegisteredCommand>> {
         let route = Route::commands(Method::Put, self.application_id(), guild);
         self.json::<Vec<serde_json::Value>>(with_json(route, &commands))
