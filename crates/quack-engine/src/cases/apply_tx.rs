@@ -95,7 +95,12 @@ async fn body(
         .await?;
     still_allowed(tx, request).await?;
     // 9. The case number; its row lock serializes creation per server.
-    let number = guilds::next_case_number(tx, guild).await?;
+    let number = guilds::next_case_number(tx, guild)
+        .await
+        .map_err(|e| match e {
+            DbError::Rejected { .. } => ApplyError::CaseNumbersExhausted,
+            other => other.into(),
+        })?;
     // 10–13. The rule under lock, the count, the level, checks 9 and 10.
     let created_at = now_micros();
     let (def, values, decision) = decide(tx, request, prepared, created_at).await?;

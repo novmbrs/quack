@@ -58,6 +58,8 @@ pub async fn handle(engine: &Engine, job: &ClaimedJob, phase: Phase) -> Result<H
     match (job.kind, phase) {
         (JobKind::RunAction, Phase::Run) => crate::actions::run(engine, job).await,
         (JobKind::RunAction, Phase::Finalize) => crate::actions::finalize(engine, job).await,
+        (JobKind::SendDm, Phase::Run) => crate::dms::send(engine, job).await,
+        (JobKind::SendDm, Phase::Finalize) => crate::dms::finalize(engine, job).await,
         _ => Ok(dead("no_handler")),
     }
 }

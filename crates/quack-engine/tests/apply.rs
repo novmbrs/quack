@@ -129,7 +129,7 @@ async fn the_same_operation_key_creates_one_case() -> Result<()> {
 #[tokio::test]
 async fn concurrent_requests_with_one_key_create_one_case() -> Result<()> {
     let h = std::sync::Arc::new(Harness::with_connections(30).await?);
-    let rule = h.rule(one("Spam", BAN, false)).await?;
+    let rule = h.rule(one("Spam", BAN, true)).await?;
     let request = h.request(MEMBER, rule);
     let mut tasks = Vec::new();
     for _ in 0..12 {
@@ -147,8 +147,10 @@ async fn concurrent_requests_with_one_key_create_one_case() -> Result<()> {
     assert_eq!(ids.len(), 1);
     assert_eq!(h.db.count("SELECT count(*) FROM cases").await?, 1);
     assert_eq!(h.db.count("SELECT count(*) FROM actions").await?, 1);
+    assert_eq!(h.db.count("SELECT count(*) FROM dms").await?, 1);
     h.settle().await?;
     assert_eq!(h.fake.count(quack_testkit::fake::Call::Ban), 1);
+    assert_eq!(h.fake.world(|w| w.dms_to(sf(MEMBER)).len()), 1);
     Ok(())
 }
 

@@ -157,6 +157,9 @@ pub enum ApplyError {
     /// The operation key was used for a different request.
     #[error("operation key reused")]
     OperationKeyReused,
+    /// The server reached the highest case number (2^53 − 1).
+    #[error("case numbers exhausted")]
+    CaseNumbersExhausted,
     /// The honeypot's settings changed after the hits were admitted.
     #[error("honeypot policy changed")]
     HoneypotPolicyChanged,

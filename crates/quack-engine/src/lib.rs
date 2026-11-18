@@ -16,6 +16,7 @@
 pub mod actions;
 pub mod cache;
 pub mod cases;
+pub mod dms;
 mod engine;
 pub mod jobs;
 pub mod modlog;
