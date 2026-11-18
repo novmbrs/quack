@@ -3,11 +3,11 @@ import { Fragment } from "react";
 
 import { QuackIcon, type QuackIconName } from "~/ui/QuackIcon";
 
-import { type Enforcement, outcome, range, shortOutcome, type Step, summarize } from "./draft";
+import { type ActionChoice, outcome, range, shortOutcome, type Step, summarize } from "./draft";
 import s from "./Ladder.module.css";
 
-/** enforcementIcon is the Signals icon for a level's action. */
-export const enforcementIcon: Record<Enforcement, QuackIconName> = {
+/** actionIcon is the Signals icon for a level's action. */
+export const actionIcon: Record<ActionChoice, QuackIconName> = {
   none: "warn",
   timeout: "timeout",
   kick: "kick",
@@ -30,7 +30,7 @@ export function Ladder({ steps }: { steps: Step[] }) {
         >
           <div className={s.rail}>
             <span className={s.node}>
-              <QuackIcon name={enforcementIcon[step.action]} size={18} />
+              <QuackIcon name={actionIcon[step.action]} size={18} />
             </span>
             <span className={s.line} />
           </div>
@@ -61,7 +61,7 @@ export function LadderInline({ steps }: { steps: Step[] }) {
         <Fragment key={step.id}>
           {i > 0 ? <ChevronRight size={14} aria-hidden className={s.arrow} /> : null}
           <span className={s.chip} data-action={step.action} aria-hidden>
-            <QuackIcon name={enforcementIcon[step.action]} size={16} />
+            <QuackIcon name={actionIcon[step.action]} size={16} />
             <span className={s.chipRange}>{range(step, true)}</span>
             <span>{shortOutcome(step)}</span>
           </span>

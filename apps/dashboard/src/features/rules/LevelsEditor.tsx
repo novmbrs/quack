@@ -10,17 +10,17 @@ import { InlineError } from "~/ui/States";
 
 import { DurationPicker, IconButton, NumberInput } from "./controls";
 import {
-  type Enforcement,
+  type ActionChoice,
   type Issues,
   type LevelDraft,
   limits,
   newLevel,
   sortLevels,
 } from "./draft";
-import { enforcementIcon } from "./Ladder";
+import { actionIcon } from "./Ladder";
 import s from "./LevelsEditor.module.css";
 
-const actions: { value: Enforcement; label: string }[] = [
+const actions: { value: ActionChoice; label: string }[] = [
   { value: "none", label: "Warning" },
   { value: "timeout", label: "Timeout" },
   { value: "kick", label: "Kick" },
@@ -127,7 +127,7 @@ function LevelCard({
     <div className={s.card} data-default={first || undefined} data-action={level.action}>
       <div className={s.head}>
         <span className={s.badge}>
-          <QuackIcon name={enforcementIcon[level.action]} size={20} />
+          <QuackIcon name={actionIcon[level.action]} size={20} />
         </span>
         <div className={s.kicker}>Level {index}</div>
         {readOnly || first ? null : (

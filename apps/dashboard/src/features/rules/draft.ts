@@ -21,8 +21,8 @@ export const limits = {
 /** keyPattern is the shape of case context field keys. */
 export const keyPattern = /^[a-z0-9][a-z0-9_-]{1,63}$/;
 
-/** Enforcement is a level's action, or none for a warning. */
-export type Enforcement = "none" | LevelAction["kind"];
+/** ActionChoice is a level's action, or none for a warning. */
+export type ActionChoice = "none" | LevelAction["kind"];
 
 /** FieldDraft is a case context field being edited. id is local to the editor. */
 export type FieldDraft = {
@@ -41,7 +41,7 @@ export type LevelDraft = {
   /** The case count the level starts at. The first level always starts at 1. */
   from: number;
   sendDm: boolean;
-  action: Enforcement;
+  action: ActionChoice;
   timeoutSeconds: number;
   deleteSeconds: number;
 };
@@ -327,7 +327,7 @@ export type Step = {
   /** Whether another level starts at the same case count, so this one never applies. */
   unreachable: boolean;
   sendDm: boolean;
-  action: Enforcement;
+  action: ActionChoice;
   timeoutSeconds: number;
   deleteSeconds: number;
 };

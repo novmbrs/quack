@@ -90,7 +90,7 @@ export function RuleEditor<T>({
           ? "Fix the highlighted problem first."
           : `Fix the ${problems} highlighted problems first.`,
       );
-      // Wait a frame for the errors to render, then take the admin to the first.
+      // Wait a frame for the errors to render, then take the rules manager to the first.
       requestAnimationFrame(() => {
         const first = document.querySelector<HTMLElement>("[aria-invalid='true']");
         first?.focus();
