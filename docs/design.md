@@ -7417,7 +7417,7 @@ touches other Compose projects or their containers):
 
 | Service | Image | Ports | Profile |
 | --- | --- | --- | --- |
-| `postgres` | `postgres:18` (pinned digest), database `quack`, user `quack`, password `quack`, named volume | `55432:5432` | default |
+| `postgres` | `postgres:18` (pinned digest), database `quack`, user `quack`, password `quack`, named volume | `54418:5432` | default |
 | `otel` | `grafana/otel-lgtm` (pinned digest): OTLP receiver, Tempo, Prometheus, Loki, Grafana | `4318:4318`, `3001:3000` | `otel` |
 
 `.env` (not committed; `.env.example` is). Quack does not read it; export it
@@ -7425,7 +7425,7 @@ into the shell first (`set -a; . ./.env; set +a`) or use a tool such as
 direnv:
 
 ```
-QUACK_DATABASE_URL=postgres://quack:quack@localhost:55432/quack
+QUACK_DATABASE_URL=postgres://quack:quack@localhost:54418/quack
 QUACK_DISCORD_TOKEN=…
 QUACK_DISCORD_APPLICATION_ID=…
 QUACK_DISCORD_CLIENT_SECRET=…
@@ -7793,10 +7793,10 @@ folds these into the sections (or changes the code) and removes them here.
 7. §17.1 → `quack serve --discord-offline <url>` runs without the gateway
    or any startup call to Discord and sends REST calls to `<url>` (tests and
    smoke runs; the image's smoke run uses it).
-8. §17.2 (`quack-testkit`) → `TestDb` uses a PostgreSQL server named by
-   `QUACK_TEST_DATABASE_URL` (or `DATABASE_URL`, default
-   `127.0.0.1:55432`) and copies a migrated template database per test, not
-   Testcontainers. The testkit also has an engine-agnostic queue driver
+8. §17.2 (`quack-testkit`) → `TestDb` uses the PostgreSQL server named by
+   `QUACK_TEST_DATABASE_URL`, which must be set (no fallback, so tests never
+   create databases on a server they guessed), and copies a migrated
+   template database per test, not Testcontainers. The testkit also has an engine-agnostic queue driver
    (`settle_with` and friends).
 9. §17.2 → the engine exposes `cases::staff_card` (the one staff card
    builder for receipts, `/case view`, and Open case),

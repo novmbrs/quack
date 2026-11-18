@@ -78,12 +78,13 @@ built files. Its README has the frontend conventions.
 
 ## Verification
 
-Tests need PostgreSQL 18. `docker compose up -d` starts one on port 55432
-(the default of `quack-testkit`); point elsewhere with
-`QUACK_TEST_DATABASE_URL`. Run from the repository root:
+Tests need PostgreSQL 18. `docker compose up -d` starts one on port 54418.
+`QUACK_TEST_DATABASE_URL` must name the server: the tests create and drop
+databases there and never fall back to a default. Run from the repository
+root:
 
 ```sh
-export QUACK_TEST_DATABASE_URL=postgres://quack:quack@127.0.0.1:55432/quack
+export QUACK_TEST_DATABASE_URL=postgres://quack:quack@127.0.0.1:54418/quack
 export DATABASE_URL=$QUACK_TEST_DATABASE_URL
 export SQLX_OFFLINE=true
 

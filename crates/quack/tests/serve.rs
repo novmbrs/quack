@@ -21,9 +21,7 @@ use quack_testkit::db::TestDb;
 
 /// The test database's URL: the server's URL with the test database's name.
 fn url_of(test: &TestDb) -> String {
-    let base = std::env::var("QUACK_TEST_DATABASE_URL")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .unwrap_or_else(|_| quack_testkit::db::DEFAULT_URL.to_owned());
+    let base = quack_testkit::db::server_url().unwrap();
     let mut url = reqwest::Url::parse(&base).unwrap();
     let name = test.db.connect_options().get_database().unwrap().to_owned();
     url.set_path(&format!("/{name}"));

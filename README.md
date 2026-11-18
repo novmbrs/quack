@@ -58,7 +58,7 @@ with Grafana on <http://localhost:3001> (set
 For development, run only the database in Docker:
 
 ```sh
-docker compose up -d                                  # PostgreSQL 18 on :55432
+docker compose up -d                                  # PostgreSQL 18 on :54418
 (cd apps/dashboard && bun install && bun run build)   # the dashboard's files
 set -a; . ./.env; set +a
 cargo run -p quack -- serve --migrate
@@ -87,7 +87,7 @@ quack commands sync              register the slash commands
 
 ```sh
 docker compose up -d
-export QUACK_TEST_DATABASE_URL=postgres://quack:quack@127.0.0.1:55432/quack SQLX_OFFLINE=true
+export QUACK_TEST_DATABASE_URL=postgres://quack:quack@127.0.0.1:54418/quack SQLX_OFFLINE=true
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

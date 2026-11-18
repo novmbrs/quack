@@ -20,7 +20,7 @@ services:
       POSTGRES_PASSWORD: quack
       POSTGRES_DB: quack
     ports:
-      - "${QUACK_POSTGRES_PORT:-55432}:5432"
+      - "${QUACK_POSTGRES_PORT:-54418}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:

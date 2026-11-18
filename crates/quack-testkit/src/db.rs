@@ -1,9 +1,10 @@
 //! A fresh, migrated PostgreSQL database per test.
 //!
-//! The server comes from `QUACK_TEST_DATABASE_URL` (or `DATABASE_URL`),
-//! defaulting to the development database of `compose.yaml`
-//! (`postgres://quack:quack@localhost:55432/quack`). Any PostgreSQL 18
-//! works, for example a throwaway container:
+//! The server comes from `QUACK_TEST_DATABASE_URL`, which must be set: the
+//! tests create and drop databases there, so they never pick a server on
+//! their own (another project's on a common port, say). `docker compose up
+//! -d` starts one at `postgres://quack:quack@127.0.0.1:54418/quack`; any
+//! PostgreSQL 18 works, for example a throwaway container:
 //!
 //! ```text
 //! docker run -d --name quack-test-pg -e POSTGRES_USER=quack -e POSTGRES_PASSWORD=quack \
@@ -22,8 +23,8 @@ use quack_db::Db;
 use sqlx::postgres::PgConnectOptions;
 use sqlx::{AssertSqlSafe, Connection as _, PgConnection};
 
-/// The default server: the development database of `compose.yaml`.
-pub const DEFAULT_URL: &str = "postgres://quack:quack@localhost:55432/quack";
+/// The variable naming the test server.
+pub const URL_VAR: &str = "QUACK_TEST_DATABASE_URL";
 
 /// A migrated database of its own, dropped on drop.
 #[derive(Debug)]
@@ -102,11 +103,26 @@ impl Drop for TestDb {
     }
 }
 
+/// The test server's URL from [`URL_VAR`], or a clear error when it is not
+/// set.
+pub fn server_url() -> Result<String> {
+    url_from(std::env::var(URL_VAR).ok())
+}
+
+fn url_from(value: Option<String>) -> Result<String> {
+    match value {
+        Some(url) if !url.trim().is_empty() => Ok(url),
+        _ => anyhow::bail!(
+            "{URL_VAR} is not set. Database tests create and drop databases on the PostgreSQL 18 \
+             server it names; start one with `docker compose up -d` and set \
+             {URL_VAR}=postgres://quack:quack@127.0.0.1:54418/quack (see AGENTS.md)"
+        ),
+    }
+}
+
 fn admin_options() -> Result<PgConnectOptions> {
-    let url = std::env::var("QUACK_TEST_DATABASE_URL")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .unwrap_or_else(|_| DEFAULT_URL.to_owned());
-    PgConnectOptions::from_str(&url).context("QUACK_TEST_DATABASE_URL is not a PostgreSQL URL")
+    PgConnectOptions::from_str(&server_url()?)
+        .with_context(|| format!("{URL_VAR} is not a PostgreSQL URL"))
 }
 
 /// The migrated template database, created once (under an advisory lock,
@@ -153,4 +169,24 @@ async fn template(admin: &PgConnectOptions) -> Result<String> {
         .await?;
     conn.close().await?;
     Ok(name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::url_from;
+
+    #[test]
+    fn an_unset_server_is_an_error_not_a_guess() {
+        for unset in [None, Some(String::new())] {
+            let message = format!("{:#}", url_from(unset).unwrap_err());
+            assert!(
+                message.contains("QUACK_TEST_DATABASE_URL is not set"),
+                "{message}"
+            );
+        }
+        assert_eq!(
+            url_from(Some("postgres://h/db".to_owned())).unwrap(),
+            "postgres://h/db"
+        );
+    }
 }
