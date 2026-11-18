@@ -1,0 +1,11 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Appeals
+Rejoin invite saved: https://discord.gg/quack. Quack includes it in DMs about accepted appeals for kicks and bans.
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
+Appeals: Not set, rejoin invite set
+{select: Choose a channel}
+[Create #appeals] [Set rejoin invite] [Remove invite] [Back]

@@ -1,0 +1,11 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Log channel
+Quack will post moderation log entries in an unknown channel (ID [id]).
+Quack posts moderation log entries in this staff-only channel.
+Log channel: An unknown channel (ID [id])
+{select: Choose a channel}
+[Create #moderation-log] [Stop posting log entries] [Back]

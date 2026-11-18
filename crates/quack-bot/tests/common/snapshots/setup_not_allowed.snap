@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles.

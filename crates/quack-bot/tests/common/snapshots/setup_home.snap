@@ -1,0 +1,15 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Set up Quack
+Choose what to set up. Changes save right away and also show on the dashboard.
+Log channel: Not set
+Appeals: Not set
+Evidence copies: Off
+Tickets: Off
+Honeypot: Off
+Server activity log: Off
+[Log channel] [Appeals] [Evidence copies] [Tickets] [Honeypot]
+[Server activity log] <Open server settings>

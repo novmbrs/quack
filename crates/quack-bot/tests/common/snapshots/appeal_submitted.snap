@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Your appeal for case #1 is saved. It's waiting for a decision. Open your appeal on the dashboard to see updates.

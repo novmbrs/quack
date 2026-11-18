@@ -1,0 +1,11 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Log channel
+Quack stopped posting entries to Discord. You can still read them in the moderation log on the dashboard.
+Quack posts moderation log entries in this staff-only channel.
+Log channel: Not set
+{select: Choose a channel}
+[Create #moderation-log] [Back]
