@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
-import { authQuery, keys, memberAppealQuery } from "~/api/queries";
-import type { Appeal, AppealEvent, MemberCase } from "~/api/types";
+import { ApiError, api, write } from "~/api/client";
+import { authQuery, keys, memberCaseQuery } from "~/api/queries";
+import type { MemberCase } from "~/api/types";
 import { cx } from "~/lib/cx";
 import { appealMeta, fullDate, stamp } from "~/lib/format";
 import { Avatar } from "~/ui/Avatar";
@@ -12,46 +12,51 @@ import { Button } from "~/ui/Button";
 import { Field, TextArea } from "~/ui/Field";
 import { Heading, Panel } from "~/ui/Page";
 import { QuackIcon, type QuackIconName } from "~/ui/QuackIcon";
-import { ErrorState, SkeletonRows } from "~/ui/States";
 
+import { memberAppealLine, memberEventTitle, notAppealableLine } from "./copy";
 import s from "./Appeal.module.css";
 
-/** APPEAL_LIMIT matches the backend's statement and reply limit. */
+/** APPEAL_LIMIT matches the backend's statement and reply limit (design §3.9). */
 const APPEAL_LIMIT = 4000;
 
-/** The one question every appeal asks. Guilds can't change it. */
-const QUESTION = "Why should staff reconsider this case?";
+type MemberAppeal = NonNullable<MemberCase["appeal"]>;
 
 /**
  * AppealSection is the member's side of an appeal: the form when they can
- * still appeal, otherwise the appeal's status and conversation, with a reply
- * box while staff are waiting on them. Staff are never named.
+ * still appeal, otherwise the appeal's state and conversation, with a reply
+ * box while the moderators wait on them. Staff are never named.
  */
 export function AppealSection({ memberCase: c }: { memberCase: MemberCase }) {
-  const [sent, setSent] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  if (c.appeal_id) {
+  if (c.appeal) {
     return (
       <section className={s.block}>
         <Heading>Your appeal</Heading>
-        {sent ? (
-          <Callout icon="success" title="Appeal sent" tone="success">
-            Staff will review it here. Quack will DM you when they decide, if your DMs are open.
+        {notice ? (
+          <Callout icon="success" title="Saved" tone="success">
+            {notice}
           </Callout>
         ) : null}
-        <AppealThread appealId={c.appeal_id} memberCase={c} />
+        <AppealThread
+          appeal={c.appeal}
+          memberCase={c}
+          onReplied={() =>
+            setNotice(
+              `Your reply was added to the appeal for case #${c.number}. It's waiting for a decision.`,
+            )
+          }
+        />
       </section>
     );
   }
 
-  if (!c.appealable) {
+  if (!c.can_appeal) {
     return (
       <section className={s.block}>
         <Heading>Appeal</Heading>
         <Callout icon="lock" title="This case can't be appealed">
-          {c.validity === "voided"
-            ? "It was voided, so there's nothing left to appeal."
-            : "This server's rule doesn't allow appeals for it."}
+          {notAppealableLine(c)}
         </Callout>
       </section>
     );
@@ -59,31 +64,49 @@ export function AppealSection({ memberCase: c }: { memberCase: MemberCase }) {
 
   return (
     <section className={s.block}>
-      <Heading>Appeal</Heading>
-      <AppealForm caseId={c.id ?? ""} onSent={() => setSent(true)} />
+      <Heading>Appeal this case</Heading>
+      <AppealForm
+        memberCase={c}
+        onSent={() =>
+          setNotice(`Your appeal for case #${c.number} is saved. It's waiting for a decision.`)
+        }
+      />
     </section>
   );
 }
 
-function AppealForm({ caseId, onSent }: { caseId: string; onSent: () => void }) {
+/** errorText is the API's message, with the trace of an unexpected failure. */
+function errorText(e: unknown, fallback: string): string {
+  if (!(e instanceof ApiError)) return fallback;
+  return e.unexpected && e.traceId ? `${e.message} (Trace ID ${e.traceId})` : e.message;
+}
+
+function AppealForm({ memberCase: c, onSent }: { memberCase: MemberCase; onSent: () => void }) {
   const queryClient = useQueryClient();
   const [statement, setStatement] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const submit = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.POST("/members/me/cases/{caseID}/appeal", {
-          params: { path: { caseID: caseId } },
+      write((init) =>
+        api.POST("/api/me/cases/{case_id}/appeal", {
+          params: { path: { case_id: c.id } },
           body: { statement: statement.trim() },
+          ...init,
         }),
       ),
-    onSuccess: ({ appeal }) => {
-      queryClient.setQueryData(memberAppealQuery(appeal.id).queryKey, appeal);
+    onSuccess: (updated) => {
+      queryClient.setQueryData(memberCaseQuery(c.id).queryKey, updated);
       void queryClient.invalidateQueries({ queryKey: keys.member });
       onSent();
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "Couldn't send your appeal."),
+    onError: (e) => {
+      setError(errorText(e, "Quack couldn't save your appeal. Try again."));
+      // Already appealed, voided, or no longer appealable: show where it stands.
+      if (e instanceof ApiError && e.status === 409) {
+        void queryClient.invalidateQueries({ queryKey: memberCaseQuery(c.id).queryKey });
+      }
+    },
   });
 
   const length = statement.trim().length;
@@ -98,10 +121,9 @@ function AppealForm({ caseId, onSent }: { caseId: string; onSent: () => void }) 
         }}
       >
         <p className={s.intro}>
-          You get one appeal per case, so include everything staff should know. They'll see your
-          answer along with the case.
+          Explain what you want the moderators to review. You can appeal this case once.
         </p>
-        <Field label={QUESTION} required error={error}>
+        <Field label="Why should moderators reconsider this case?" required error={error}>
           {(id) => (
             <TextArea
               id={id}
@@ -125,14 +147,19 @@ function AppealForm({ caseId, onSent }: { caseId: string; onSent: () => void }) 
   );
 }
 
-function AppealThread({ appealId, memberCase: c }: { appealId: string; memberCase: MemberCase }) {
-  const appeal = useQuery(memberAppealQuery(appealId));
-  if (appeal.isPending) return <SkeletonRows rows={3} />;
-  if (appeal.isError) {
-    return <ErrorState error={appeal.error} retry={() => void appeal.refetch()} />;
-  }
-  const a = appeal.data;
-  const meta = appealMeta[a.status];
+function AppealThread({
+  appeal: a,
+  memberCase: c,
+  onReplied,
+}: {
+  appeal: MemberAppeal;
+  memberCase: MemberCase;
+  onReplied: () => void;
+}) {
+  const meta = appealMeta[a.state];
+  const events = a.events
+    .filter((e) => e.kind !== "submitted")
+    .sort((x, y) => x.at.localeCompare(y.at));
   return (
     <>
       <Panel className={s.status}>
@@ -140,10 +167,10 @@ function AppealThread({ appealId, memberCase: c }: { appealId: string; memberCas
         <div className={s.statusText}>
           <div className={s.statusTitle}>
             <Badge tone={meta.tone} dot>
-              {meta.label}
+              {a.state === "needs_information" ? "Waiting for your reply" : meta.label}
             </Badge>
           </div>
-          <p className={s.statusBody}>{statusCopy(a)}</p>
+          <p className={s.statusBody}>{memberAppealLine(c, a)}</p>
         </div>
       </Panel>
       <Panel>
@@ -151,62 +178,30 @@ function AppealThread({ appealId, memberCase: c }: { appealId: string; memberCas
           <Message
             author="you"
             created={a.created_at}
-            title="You appealed"
+            title="You appealed the case."
             body={a.statement}
             memberCase={c}
           />
-          {(a.events ?? [])
-            .filter((e) => e.type !== "submitted")
-            .sort((x, y) => x.created_at.localeCompare(y.created_at))
-            .map((e) => (
-              <Message
-                key={e.id}
-                author={e.actor_type === "member" ? "you" : "staff"}
-                created={e.created_at}
-                title={eventTitle(e)}
-                body={e.body}
-                memberCase={c}
-              />
-            ))}
+          {events.map((e, i) => (
+            <Message
+              key={`${e.at}-${i}`}
+              author={e.by_you ? "you" : "moderators"}
+              created={e.at}
+              title={memberEventTitle(e, c)}
+              body={e.text}
+              memberCase={c}
+            />
+          ))}
         </ol>
       </Panel>
-      {a.status === "needs_information" ? <Reply appealId={a.id} /> : null}
+      {a.can_reply ? <Reply memberCase={c} appeal={a} onReplied={onReplied} /> : null}
     </>
   );
 }
 
-function statusCopy(a: Appeal): string {
-  switch (a.status) {
-    case "pending":
-      return "Staff haven't decided yet. You'll see their answer here.";
-    case "needs_information":
-      return "Staff need more from you before they decide. Reply below.";
-    case "accepted":
-      return "Staff accepted your appeal and voided the case, so it no longer counts against you.";
-    case "rejected":
-      return "Staff reviewed your appeal and kept the case.";
-    case "closed":
-      return "Staff closed this appeal without a decision.";
-  }
-}
-
-const eventTitles: Record<AppealEvent["type"], string> = {
-  submitted: "You appealed",
-  information_requested: "Staff asked for more information",
-  information_submitted: "You replied",
-  reopened: "Staff reopened your appeal",
-  accepted: "Staff accepted your appeal",
-  rejected: "Staff rejected your appeal",
-  closed: "Staff closed your appeal",
-};
-
-function eventTitle(e: AppealEvent): string {
-  return eventTitles[e.type] ?? (e.actor_type === "member" ? "You" : "Staff");
-}
-
 /**
- * Message is one turn in the appeal, in Discord's message layout. Staff
- * turns show the server, never the person.
+ * Message is one turn in the appeal, in Discord's message layout. The
+ * moderators' turns show the server, never the person.
  */
 function Message({
   author,
@@ -215,25 +210,25 @@ function Message({
   body,
   memberCase: c,
 }: {
-  author: "you" | "staff";
+  author: "you" | "moderators";
   created: string;
   title: string;
   body: string;
   memberCase: MemberCase;
 }) {
   const { data: me } = useQuery(authQuery);
-  const you = me ? me.user.global_name || me.user.username : "You";
-  const guild = c.guild_name || "Server";
+  const you = me ? me.account.global_name || me.account.username : "You";
+  const guild = c.guild.name || "Server";
   return (
-    <li className={cx(s.message, author === "staff" && s.staff)}>
+    <li className={cx(s.message, author === "moderators" && s.staff)}>
       {author === "you" ? (
-        <Avatar src={me?.user.avatar_url} name={you} size={40} />
+        <Avatar src={me?.account.avatar_url} name={you} size={40} />
       ) : (
-        <Avatar src={c.guild_icon_url} name={guild} size={40} square />
+        <Avatar src={c.guild.icon_url} name={guild} size={40} square />
       )}
       <div className={s.messageBody}>
         <header className={s.messageMeta}>
-          <span className={s.author}>{author === "you" ? you : `${guild} staff`}</span>
+          <span className={s.author}>{author === "you" ? you : `The moderators of ${guild}`}</span>
           <time dateTime={created} title={fullDate(created)} className={s.time}>
             {stamp(created)}
           </time>
@@ -245,28 +240,44 @@ function Message({
   );
 }
 
-function Reply({ appealId }: { appealId: string }) {
+function Reply({
+  memberCase: c,
+  appeal: a,
+  onReplied,
+}: {
+  memberCase: MemberCase;
+  appeal: MemberAppeal;
+  onReplied: () => void;
+}) {
   const queryClient = useQueryClient();
-  const [body, setBody] = useState("");
+  const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const send = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.POST("/members/me/appeals/{appealID}/information", {
-          params: { path: { appealID: appealId } },
-          body: { body: body.trim() },
+      write((init) =>
+        api.POST("/api/me/cases/{case_id}/appeal/information", {
+          params: { path: { case_id: c.id } },
+          body: { text: text.trim(), expected_version: a.version },
+          ...init,
         }),
       ),
-    onSuccess: ({ appeal }) => {
-      queryClient.setQueryData(memberAppealQuery(appealId).queryKey, appeal);
+    onSuccess: (updated) => {
+      queryClient.setQueryData(memberCaseQuery(c.id).queryKey, updated);
       void queryClient.invalidateQueries({ queryKey: keys.member });
-      setBody("");
+      setText("");
+      onReplied();
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "Couldn't send your reply."),
+    onError: (e) => {
+      setError(errorText(e, "Quack couldn't save your reply. Try again."));
+      // The appeal changed while they wrote: load the latest question, keep the draft.
+      if (e instanceof ApiError && e.status === 409) {
+        void queryClient.invalidateQueries({ queryKey: memberCaseQuery(c.id).queryKey });
+      }
+    },
   });
 
-  const length = body.trim().length;
+  const length = text.trim().length;
   return (
     <Panel>
       <form
@@ -277,21 +288,21 @@ function Reply({ appealId }: { appealId: string }) {
           if (length > 0 && length <= APPEAL_LIMIT) send.mutate();
         }}
       >
-        <Field label="Your reply" required error={error}>
+        <Field label="Reply to the moderators" required error={error}>
           {(id) => (
             <TextArea
               id={id}
               rows={5}
               maxLength={APPEAL_LIMIT}
-              value={body}
+              value={text}
               invalid={Boolean(error)}
-              placeholder="Answer what staff asked."
-              onChange={(e) => setBody(e.currentTarget.value)}
+              placeholder="Answer what the moderators asked."
+              onChange={(e) => setText(e.currentTarget.value)}
             />
           )}
         </Field>
         <div className={s.formFooter}>
-          <Counter length={body.length} />
+          <Counter length={text.length} />
           <Button type="submit" disabled={length === 0} pending={send.isPending}>
             Send reply
           </Button>
