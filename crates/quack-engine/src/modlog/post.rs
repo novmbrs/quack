@@ -1,8 +1,6 @@
 //! The `post_mod_log` handler (§9.4): one entry posted to the log channel
 //! it was pinned to when it was written.
 
-use std::time::Duration;
-
 use quack_core::ids::{ChannelId, GuildId, ModLogId};
 use quack_core::modlog::{
     ChannelSettingClearedDetail, LogChannelFailedDetail, ModLogEntry, ModLogLinks,
@@ -20,14 +18,6 @@ use crate::channels::{ChannelCheck, staff_channel};
 use crate::jobs::{dead, retry};
 use crate::port::{Nonce, Outcome, RefusalKind};
 use crate::{Engine, obs};
-
-/// How long one `log_channel_failed` entry stands for an outage.
-///
-/// The design (§9.4) bounds an outage by the server's last successful
-/// post (`guild_settings.log_channel_posted_at`, migration 0002), which
-/// `quack-db` does not have yet; until it does, an outage is taken to be
-/// the post job's own retry horizon.
-const OUTAGE: Duration = Duration::from_hours(1);
 
 #[derive(Clone, Copy, Debug, serde::Deserialize)]
 struct Payload {
@@ -88,8 +78,12 @@ pub async fn post(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError>
             .await
         {
             Outcome::Done(_) => {
+                let mut tx = engine.db().begin().await?;
+                settings::mark_log_channel_posted(&mut tx, guild).await?;
+                settle_job(&mut tx, job, &JobResult::Done).await?;
+                tx.commit().await?;
                 metrics().modlog.posted(Label::Done);
-                Ok(Handled::Settle(JobResult::Done))
+                Ok(Handled::Settled(JobResult::Done))
             }
             Outcome::Refused(r) if r.kind == RefusalKind::UnknownChannel => {
                 channel_gone(engine, job, guild, payload).await
@@ -179,9 +173,9 @@ async fn failed_once(
     reason: LogChannelFailure,
     code: Option<u32>,
 ) -> Result<(), DbError> {
-    let last = db::last_log_channel_failure(tx, guild).await?;
-    let recent = last.is_some_and(|at| obs::since(at, OffsetDateTime::now_utc()) < OUTAGE);
-    if recent {
+    let failed = db::last_log_channel_failure(tx, guild).await?;
+    let posted = settings::log_channel_posted_at(tx, guild).await?;
+    if !failure_is_new_outage(failed, posted) {
         return Ok(());
     }
     write(
@@ -199,6 +193,17 @@ async fn failed_once(
     Ok(())
 }
 
+/// The "once per outage" rule (§9.4): a failure is written when there is
+/// no earlier one, or the newest is older than the last successful post.
+/// With no successful post yet, only the first failure is written.
+fn failure_is_new_outage(failed: Option<OffsetDateTime>, posted: Option<OffsetDateTime>) -> bool {
+    match (failed, posted) {
+        (None, _) => true,
+        (Some(failed), Some(posted)) => failed < posted,
+        (Some(_), None) => false,
+    }
+}
+
 /// Settles a `post_mod_log` job whose budget is spent: no post, and
 /// `log_channel_failed` once per outage.
 pub async fn finalize_post(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError> {
@@ -214,4 +219,27 @@ pub async fn finalize_post(engine: &Engine, job: &ClaimedJob) -> Result<Handled,
         None,
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::failure_is_new_outage;
+    use time::{Duration, OffsetDateTime};
+
+    #[test]
+    fn a_failure_is_written_once_per_outage() {
+        let early = OffsetDateTime::UNIX_EPOCH;
+        let late = early + Duration::hours(1);
+        assert!(failure_is_new_outage(None, None), "the first failure");
+        assert!(failure_is_new_outage(None, Some(early)));
+        assert!(!failure_is_new_outage(Some(early), None), "no post since");
+        assert!(
+            !failure_is_new_outage(Some(late), Some(early)),
+            "same outage"
+        );
+        assert!(
+            failure_is_new_outage(Some(early), Some(late)),
+            "a post came between"
+        );
+    }
 }

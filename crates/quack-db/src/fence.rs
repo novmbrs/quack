@@ -3,8 +3,8 @@
 
 use std::time::Duration;
 
+use sqlx::Connection as _;
 use sqlx::postgres::{PgConnectOptions, PgConnection};
-use sqlx::{Connection as _, Executor as _};
 
 use crate::DbError;
 use crate::obs::{self, Select};
@@ -14,6 +14,9 @@ pub const FENCE_KEY: i64 = 0x0051_7561_636B;
 
 /// How often [`Fence::lost`] checks the connection.
 pub const FENCE_CHECK_INTERVAL: Duration = Duration::from_secs(5);
+
+/// How long one check may take before the fence counts as lost.
+pub const FENCE_CHECK_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// A held singleton lock on its own connection, outside the pool. The lock
 /// lasts as long as this connection: dropping the fence (or losing the
@@ -47,16 +50,38 @@ impl Fence {
         }
     }
 
-    /// Whether the fence connection still answers. A `false` means the lock
-    /// may already be someone else's: stop all work and exit.
+    /// Whether this connection still answers, within
+    /// [`FENCE_CHECK_TIMEOUT`], and still holds the lock. A `false` means
+    /// the lock may already be someone else's: stop starting Discord calls
+    /// and exit. A half-open connection counts as lost, since PostgreSQL
+    /// may already have ended the session and granted the lock elsewhere.
     pub async fn check(&mut self) -> bool {
-        obs::run(Select, "pg_advisory_lock", self.conn.execute("SELECT 1"))
-            .await
-            .is_ok()
+        let held = tokio::time::timeout(
+            FENCE_CHECK_TIMEOUT,
+            obs::run(
+                Select,
+                "pg_locks",
+                sqlx::query_scalar!(
+                    r#"SELECT EXISTS (
+                         SELECT 1 FROM pg_locks
+                         WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+                           AND objsubid = 1
+                           AND ((classid::bigint << 32) | objid::bigint) = $1
+                       ) AS "held!""#,
+                    FENCE_KEY
+                )
+                .fetch_one(&mut self.conn),
+            ),
+        )
+        .await;
+        matches!(held, Ok(Ok(true)))
     }
 
-    /// Resolves when the fence connection stops answering, checking every
-    /// [`FENCE_CHECK_INTERVAL`].
+    /// Resolves when a [`Fence::check`] fails, checking every
+    /// [`FENCE_CHECK_INTERVAL`]. Loss is noticed up to one interval plus
+    /// one timeout late, and Discord calls already in flight can outlive
+    /// it; the caller then stops admitting new ones and drops the fence,
+    /// which closes its connection.
     pub async fn lost(&mut self) {
         let mut interval = tokio::time::interval(FENCE_CHECK_INTERVAL);
         loop {

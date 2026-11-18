@@ -112,3 +112,27 @@ async fn only_one_process_holds_the_fence(
     assert!(second.is_some());
     Ok(())
 }
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn a_fence_whose_session_ended_is_lost(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let mut fence = Fence::try_acquire(&options)
+        .await?
+        .ok_or_else(|| anyhow::anyhow!("fence"))?;
+    let db = db(options.clone()).await?;
+    let mut conn = db.conn().await?;
+    sqlx::query(
+        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+         WHERE application_name = 'quack-fence' AND datname = current_database()",
+    )
+    .execute(&mut *conn)
+    .await?;
+    assert!(!fence.check().await, "the lock went with its session");
+    assert!(
+        Fence::try_acquire(&options).await?.is_some(),
+        "a successor can take it"
+    );
+    Ok(())
+}

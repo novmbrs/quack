@@ -316,3 +316,42 @@ pub async fn clear_channel(
 mod modules;
 
 pub use modules::{disable_modules_on_leave, set_module_enabled};
+
+/// Records that the log channel accepted a post (§9.4): sets
+/// `log_channel_posted_at` in the `post_mod_log` job's settle transaction.
+/// Not part of `version` and sends no notification.
+pub async fn mark_log_channel_posted(
+    conn: &mut PgConnection,
+    guild: GuildId,
+) -> Result<(), DbError> {
+    obs::run(
+        Update,
+        "guild_settings",
+        sqlx::query!(
+            "UPDATE guild_settings SET log_channel_posted_at = now() WHERE guild_id = $1",
+            i64::from(guild)
+        )
+        .execute(conn),
+    )
+    .await?;
+    Ok(())
+}
+
+/// When the log channel last accepted a post; `None` before the first
+/// (and for imported servers).
+pub async fn log_channel_posted_at(
+    conn: &mut PgConnection,
+    guild: GuildId,
+) -> Result<Option<OffsetDateTime>, DbError> {
+    let at = obs::run(
+        Select,
+        "guild_settings",
+        sqlx::query_scalar!(
+            "SELECT log_channel_posted_at FROM guild_settings WHERE guild_id = $1",
+            i64::from(guild)
+        )
+        .fetch_optional(conn),
+    )
+    .await?;
+    Ok(at.flatten())
+}

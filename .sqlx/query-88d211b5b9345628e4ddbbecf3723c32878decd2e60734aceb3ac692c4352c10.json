@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (\n                         SELECT 1 FROM pg_locks\n                         WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted\n                           AND objsubid = 1\n                           AND ((classid::bigint << 32) | objid::bigint) = $1\n                       ) AS \"held!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "held!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "88d211b5b9345628e4ddbbecf3723c32878decd2e60734aceb3ac692c4352c10"
+}

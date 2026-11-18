@@ -89,6 +89,34 @@ async fn a_refused_post_is_not_retried() -> Result<()> {
 }
 
 #[tokio::test]
+async fn a_second_outage_after_a_successful_post_is_logged_again() -> Result<()> {
+    let h = Harness::new().await?;
+    set_log_channel(&h, true).await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    let refuse = || {
+        h.fake
+            .script(Call::Send, Script::refuse(RefusalKind::MissingPermissions));
+    };
+    refuse();
+    h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    assert_eq!(logged(&h, ModLogKind::LogChannelFailed).await?, 1);
+    // The log channel works again: the next post succeeds and is recorded.
+    h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    let mut conn = h.db.db.conn().await?;
+    let posted = quack_db::settings::log_channel_posted_at(&mut conn, h.guild).await?;
+    assert!(posted.is_some(), "a successful post is recorded");
+    drop(conn);
+    // A new outage is logged once more.
+    refuse();
+    h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    assert_eq!(logged(&h, ModLogKind::LogChannelFailed).await?, 2);
+    Ok(())
+}
+
+#[tokio::test]
 async fn the_staff_view_has_everything() -> Result<()> {
     let h = Harness::new().await?;
     let rule = h.rule(one("Spam", BAN, true)).await?;
