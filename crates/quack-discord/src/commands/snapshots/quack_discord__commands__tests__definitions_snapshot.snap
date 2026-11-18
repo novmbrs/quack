@@ -8,14 +8,14 @@ expression: local_json()
       0
     ],
     "default_member_permissions": null,
-    "description": "Add, view, and void cases.",
+    "description": "Add, find, and void moderation cases.",
     "integration_types": [
       0
     ],
     "name": "case",
     "options": [
       {
-        "description": "Apply a rule to a member.",
+        "description": "Add a case by applying a rule to a member.",
         "name": "add",
         "options": [
           {
@@ -43,13 +43,13 @@ expression: local_json()
         "type": 1
       },
       {
-        "description": "Show a case.",
+        "description": "Open a case by number and see its action and DM outcomes.",
         "name": "view",
         "options": [
           {
             "autocomplete": false,
             "choices": [],
-            "description": "The case number.",
+            "description": "The case number shown on its receipt.",
             "min_value": 1,
             "name": "number",
             "required": true,
@@ -80,13 +80,13 @@ expression: local_json()
         "type": 1
       },
       {
-        "description": "Void a case so it stops counting.",
+        "description": "Keep a case in the history and stop it from counting.",
         "name": "void",
         "options": [
           {
             "autocomplete": false,
             "choices": [],
-            "description": "The case number.",
+            "description": "The case number shown on its receipt.",
             "min_value": 1,
             "name": "number",
             "required": true,
@@ -95,7 +95,7 @@ expression: local_json()
           {
             "autocomplete": false,
             "choices": [],
-            "description": "Why the case is wrong. The member can see this reason.",
+            "description": "Why you're voiding the case. The member can see this reason.",
             "max_length": 1000,
             "min_length": 1,
             "name": "reason",
@@ -141,7 +141,7 @@ expression: local_json()
       0
     ],
     "default_member_permissions": null,
-    "description": "List this server's rules.",
+    "description": "List active rules and open them on the dashboard.",
     "integration_types": [
       0
     ],

@@ -6,7 +6,7 @@ expression: "json(&render(&quack_text::help::help(Some(Topic::Setup),\n\"https:/
   {
     "components": [
       {
-        "content": "### Setup\nRun </setup:1000000000000000002> to choose the log channel, the appeal channel, and the evidence channel, and to turn on tickets, the honeypot, and the server activity log. Quack can create each channel for you with staff-only permissions. Everything in </setup:1000000000000000002> is also in the dashboard settings.",
+        "content": "### Setup\nUse </setup:1000000000000000002> to pick channels or let Quack create them, and to turn on tickets, the honeypot, and the server activity log. Keep the log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members need access to the ticket entry and honeypot channels. You can also change these settings on the dashboard.",
         "type": 10
       },
       {

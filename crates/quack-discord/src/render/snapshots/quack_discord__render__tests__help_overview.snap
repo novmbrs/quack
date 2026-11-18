@@ -6,7 +6,7 @@ expression: "json(&render(&quack_text::help::help(None, \"https://quack.example\
   {
     "components": [
       {
-        "content": "### Quack\nQuack keeps track of moderation cases. Rules managers set up rules on the dashboard, moderators apply them, and Quack picks the outcome and carries it out.\n**Moderators:** `/case add`, </case view:1000000000000000001>, `/case list`, `/case history`, `/case void`, `/appeals`\n**Rules:** `/rules` (rules are edited on the dashboard)\n**Setup:** </setup:1000000000000000002> (needs Manage Server)\nUse `/help` with a topic for more.",
+        "content": "### Quack\nQuack keeps track of moderation cases. Rules managers define the rules on the dashboard, moderators apply them, and Quack carries out the rule's action.\n**Moderators:** `/case add`, </case view:1000000000000000001>, `/case list`, `/case history`, `/case void`, `/appeals`\n**Rules:** `/rules` (rules are edited on the dashboard)\n**Setup:** </setup:1000000000000000002> (needs Manage Server)\nUse `/help` with a topic for more.",
         "type": 10
       },
       {
