@@ -7986,3 +7986,10 @@ folds these into the sections (or changes the code) and removes them here.
     is gone; any other refusal keeps it in `stale`, writes
     `last_error = stale_cleanup_<code>`, and goes on with the others, so a
     later sync tries again (for example once access is back).
+43. §11 REST, §17.3 (Discord review MAJOR 3) → a 429 whose scope is global
+    (`X-RateLimit-Scope: global`, `X-RateLimit-Global`, or `"global": true`
+    in the body) holds every bot-authenticated request back until its
+    `retry_after` has passed: each such request checks before and after its
+    route permit, waits when the end is within the rate-limit budget, and
+    otherwise answers `RetryAfter` without sending. Interaction callbacks
+    and webhooks are not held.

@@ -136,6 +136,7 @@ impl DiscordClient {
                     request_timeout: config.request_timeout,
                     file_timeout: config.file_timeout,
                     rate_limit_budget: config.rate_limit_budget,
+                    global_until: std::sync::Mutex::new(None),
                 },
                 downloader,
                 downloads: config.downloads,

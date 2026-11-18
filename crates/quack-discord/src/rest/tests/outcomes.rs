@@ -358,3 +358,54 @@ async fn unexpected_statuses_and_unreadable_successes_are_unknown() {
         Outcome::Unknown(UnknownCause::Malformed)
     );
 }
+
+/// Discord review MAJOR 3: a global 429 on one route holds every other
+/// bot-authenticated route back for its `retry_after` (here past the
+/// budget, so they answer `RetryAfter` without sending), while interaction
+/// callbacks, which aren't under the global limit, still go.
+#[tokio::test]
+async fn a_global_limit_holds_other_routes_back() {
+    let server = MockServer::start_async().await;
+    let ban = server
+        .mock_async(|when, then| {
+            when.method("PUT").path("/api/v10/guilds/1/bans/2");
+            then.status(429)
+                .header("retry-after", "5")
+                .json_body(json!({"message": "You are being rate limited.", "retry_after": 5.0, "global": true}));
+        })
+        .await;
+    let kick = server
+        .mock_async(|when, then| {
+            when.method("DELETE").path("/api/v10/guilds/1/members/2");
+            then.status(204);
+        })
+        .await;
+    let callback = server
+        .mock_async(|when, then| {
+            when.method("POST")
+                .path("/api/v10/interactions/1/tok/callback");
+            then.status(204);
+        })
+        .await;
+    let client = client(&server.base_url());
+    assert!(matches!(
+        client.ban_member(g(), m(), 0, "r").await,
+        Outcome::RetryAfter(_)
+    ));
+    match client.kick(g(), m(), "r").await {
+        Outcome::RetryAfter(left) => assert!(left > Duration::from_secs(3), "{left:?}"),
+        other => panic!("expected the global wait, got {other:?}"),
+    }
+    assert_eq!(
+        kick.calls_async().await,
+        0,
+        "nothing sent during the cooldown"
+    );
+    assert_eq!(ban.calls_async().await, 1);
+    let interaction = crate::model::InteractionRef {
+        id: 1,
+        token: crate::model::InteractionToken::new("tok"),
+    };
+    assert!(client.defer(&interaction, true).await.is_done());
+    assert_eq!(callback.calls_async().await, 1);
+}

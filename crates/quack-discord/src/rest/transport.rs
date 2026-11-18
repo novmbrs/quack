@@ -75,6 +75,10 @@ pub(crate) struct Transport {
     pub(crate) request_timeout: Duration,
     pub(crate) file_timeout: Duration,
     pub(crate) rate_limit_budget: Duration,
+    /// Until when Discord's global limit holds every bot-authenticated
+    /// request back (the latest global 429's `retry_after`). Interaction
+    /// callbacks and webhooks aren't under it.
+    pub(crate) global_until: std::sync::Mutex<Option<tokio::time::Instant>>,
 }
 
 /// What Discord answered, before classification.
@@ -139,6 +143,17 @@ fn limit_scope(headers: &HeaderMap) -> RateLimitScope {
     }
 }
 
+/// Whether a 429 body says the global limit was hit (`"global": true`),
+/// for answers without the scope header.
+fn says_global(body: &[u8]) -> bool {
+    #[derive(serde::Deserialize)]
+    struct Flag {
+        #[serde(default)]
+        global: bool,
+    }
+    serde_json::from_slice::<Flag>(body).is_ok_and(|f| f.global)
+}
+
 impl Transport {
     /// Sends one request and classifies the answer. `Done` carries the
     /// response body.
@@ -167,10 +182,18 @@ impl Transport {
         if self.closed.load(Ordering::Acquire) {
             return Answer::without_status(Outcome::NotSent(NotSentCause::ShuttingDown));
         }
+        let global = request.route.auth;
+        if global && let Err(outcome) = self.global_wait().await {
+            return Answer::without_status(outcome);
+        }
         let permit = match self.permit(&request.route, span).await {
             Ok(permit) => permit,
             Err(outcome) => return Answer::without_status(outcome),
         };
+        // A global limit learned while this request waited for its permit.
+        if global && let Err(outcome) = self.global_wait().await {
+            return Answer::without_status(outcome);
+        }
         let deadline = tokio::time::Instant::now()
             + if request.files {
                 self.file_timeout
@@ -215,12 +238,16 @@ impl Transport {
             // A failure status is definite even without its body.
             Err(_) | Ok(Err(_)) => Vec::new(),
         };
+        let global_hit = status == 429 && (scope == RateLimitScope::Global || says_global(&body));
         let outcome = if success {
             Outcome::Done(body)
         } else {
             classify_failure(status, &body, retry_after.as_deref())
         };
         if let Outcome::RetryAfter(delay) = outcome {
+            if global && global_hit {
+                self.hold_global(delay);
+            }
             // A 429 is counted by its status on the request metric; the hit
             // is also counted by scope, so global limits can be alerted on.
             metrics().discord.rate_limited(route_template, scope, delay);
@@ -232,6 +259,38 @@ impl Transport {
         Answer {
             status: Some(status),
             outcome,
+        }
+    }
+
+    /// Waits out Discord's global limit when it ends within the budget;
+    /// otherwise answers `RetryAfter` with what is left, sending nothing.
+    async fn global_wait(&self) -> Result<(), Outcome<Vec<u8>>> {
+        let until = *self
+            .global_until
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let Some(until) = until else { return Ok(()) };
+        let left = until.saturating_duration_since(tokio::time::Instant::now());
+        if left.is_zero() {
+            return Ok(());
+        }
+        if left > self.rate_limit_budget {
+            return Err(Outcome::RetryAfter(left));
+        }
+        tokio::time::sleep_until(until).await;
+        Ok(())
+    }
+
+    /// Holds every bot-authenticated request back for `delay` (keeping a
+    /// later end already known).
+    fn hold_global(&self, delay: Duration) {
+        let until = tokio::time::Instant::now() + delay;
+        let mut held = self
+            .global_until
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if held.is_none_or(|h| h < until) {
+            *held = Some(until);
         }
     }
 
