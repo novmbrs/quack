@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Your session has ended. Sign in again.
-plain:   Your session has ended. Sign in again.
-model:   [Fixed("Your session has ended. Sign in again.")]
+discord: Your session has ended. Sign in with Discord again.
+plain:   Your session has ended. Sign in with Discord again.
+model:   [Fixed("Your session has ended. Sign in with Discord again.")]

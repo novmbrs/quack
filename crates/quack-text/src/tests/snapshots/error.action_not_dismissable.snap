@@ -2,26 +2,26 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## timeout
-discord: This timeout isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This timeout isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This timeout isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The timeout failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The timeout failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The timeout failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## kick
-discord: This kick isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This kick isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This kick isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The kick failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The kick failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The kick failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## ban
-discord: This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## remove timeout
-discord: This remove timeout action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This remove timeout action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This remove timeout action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The failed attempt to remove the timeout can no longer be dismissed. Open the case to see its current outcome.
+plain:   The failed attempt to remove the timeout can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The failed attempt to remove the timeout can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## unban
-discord: This unban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This unban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This unban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The failed attempt to unban the member can no longer be dismissed. Open the case to see its current outcome.
+plain:   The failed attempt to unban the member can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The failed attempt to unban the member can no longer be dismissed. Open the case to see its current outcome.")]

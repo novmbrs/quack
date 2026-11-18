@@ -2,26 +2,26 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## timeout
-discord: This timeout can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This timeout can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This timeout can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The timeout can no longer be retried. Open the case to see its current outcome.
+plain:   The timeout can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The timeout can no longer be retried. Open the case to see its current outcome.")]
 
 ## kick
-discord: This kick can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This kick can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This kick can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The kick can no longer be retried. Open the case to see its current outcome.
+plain:   The kick can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The kick can no longer be retried. Open the case to see its current outcome.")]
 
 ## ban
-discord: This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
 
 ## remove timeout
-discord: This remove timeout action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This remove timeout action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This remove timeout action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: Removing the timeout can no longer be retried. Open the case to see its current outcome.
+plain:   Removing the timeout can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("Removing the timeout can no longer be retried. Open the case to see its current outcome.")]
 
 ## unban
-discord: This unban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This unban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This unban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: Unbanning the member can no longer be retried. Open the case to see its current outcome.
+plain:   Unbanning the member can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("Unbanning the member can no longer be retried. Open the case to see its current outcome.")]

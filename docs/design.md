@@ -2458,39 +2458,39 @@ matching error code (§14.6).
 
 | Id | Text |
 | --- | --- |
-| `error.missing_capability.moderate` | Only moderators can do this. Ask a server administrator to give you a moderator role. |
-| `error.missing_capability.manage_rules` | You need the Manage Server permission or a rules manager role to manage rules. |
-| `error.missing_capability.manage_settings` | You need the Manage Server permission to change Quack's settings. |
-| `error.missing_capability.manage_staff_roles` | Only the server owner and administrators can change the moderator roles. |
-| `error.mfa_required` | This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it. |
+| `error.missing_capability.moderate` | Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings. |
+| `error.missing_capability.manage_rules` | To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings. |
+| `error.missing_capability.manage_settings` | To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles. |
+| `error.missing_capability.manage_staff_roles` | Only the server owner or a member with Administrator can change Quack's moderator roles. Ask one of them to change them in the Quack dashboard's server settings. |
+| `error.mfa_required` | This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again. |
 | `error.actor_not_in_server` | You're not in this server anymore. |
 | `error.quack_not_in_server` | `access.quack_not_in_server` |
 | `error.discord_unavailable` | Quack couldn't reach Discord, so nothing changed. Try again in a moment. |
-| `error.internal` | Something went wrong inside Quack, so nothing was saved. Try again in a moment. |
-| `error.unconfirmed` | Quack couldn't confirm whether that was saved. Check before you try again. |
-| `error.render_failed` | Case #{number} is saved, but Quack couldn't show it here. Use /case view number:{number} to see it. |
-| `error.case_not_found` | There's no case #{number} in this server. |
+| `error.internal` | Something went wrong inside Quack, so nothing changed. Try again in a moment. (Only for failures that changed nothing, such as a rollback; an outstanding commit is `error.unconfirmed`.) |
+| `error.unconfirmed` | Quack couldn't confirm whether that was saved. Open it again to check before you try again. |
+| `error.render_failed` | Case #{number} is saved. Quack couldn't show it here. Run /case view and enter {number} as the number. |
+| `error.case_not_found` | Case #{number} wasn't found in this server. Check the number or use /case list. |
 | `error.action_not_found` | Quack couldn't find that action in this server. Open the case again to see its actions. |
-| `error.context_changed` | Someone else changed this case's context. Open it again before you save. |
-| `error.rule_changed` | The rule {rule} changed while you were adding the case. Open the form again to use the new version. |
+| `error.context_changed` | Someone else changed this case's context. Open it again to see their changes before you save. |
+| `error.rule_changed` | The rule {rule} changed while you were adding the case. Run /case add again to use the new version. |
 | `error.rule_not_found` | That rule doesn't exist anymore. Choose another rule. |
 | `error.rule_archived` | The rule {rule} is archived, so it can't be applied. Choose an active rule. |
-| `error.case_already_voided` | Case #{number} is already voided. |
-| `error.case_voided` | Case #{number} is voided, so Quack won't run its {action}. Add a new case if it still applies. |
-| `error.action_not_retryable` | This {action} can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands. |
-| `error.action_not_dismissable` | This {action} isn't failed anymore, or it was already dismissed, so there's nothing to dismiss. |
-| `error.action_not_undoable` | There's nothing to undo: the {action} isn't in place, or Quack is already undoing it. Open the case to see where it stands. |
-| `error.timeout_window_passed` | The timeout's end time has passed. Add a new case if {member} still needs a timeout. |
-| `error.appeal_not_found` | That appeal doesn't exist in this server. |
-| `error.appeal_changed` | This appeal changed since you opened it. Open it again to see where it stands. |
+| `error.case_already_voided` | Case #{number} is already voided and no longer counts. |
+| `error.case_voided` | Case #{number} is voided. Quack won't retry its {timeout / kick / ban}. (an undo: "Quack won't retry this action.") |
+| `error.action_not_retryable` | {The timeout / The kick / The ban / Removing the timeout / Unbanning the member} can no longer be retried. Open the case to see its current outcome. |
+| `error.action_not_dismissable` | {The timeout / kick / ban failure; The failed attempt to remove the timeout / unban the member} can no longer be dismissed. Open the case to see its current outcome. |
+| `error.action_not_undoable` | kick: A kick can't be undone. Open the case to see what happened. / timeout, ban: This {timeout / ban} can't be undone from the case now. Open the case to see its current outcome. / an undo: This action can't be undone from the case. Open the case to see its current outcome. |
+| `error.timeout_window_passed` | The timeout's end time has passed, so Quack won't retry it. Check {member}'s case history before adding another case. |
+| `error.appeal_not_found` | Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision. |
+| `error.appeal_changed` | This appeal changed since you opened it. Open it again to see the latest update. |
 | `error.evidence_limit_reached` | Case #{number} would have more than 50 evidence items. Add fewer message links. |
 | `error.too_many_links` | Add at most 10 message links at a time. |
-| `error.replacement_invalid` | Case #{number} can't be replaced: only a voided case in this server that has no replacement yet can be. |
+| `error.replacement_invalid` | Case #{number} can't be replaced. Choose a voided case in this server that doesn't already have a replacement. |
 | `error.honeypot_policy_changed` | The honeypot settings changed, so Quack didn't add a case for this post. |
 | `error.case_numbers_exhausted` | No case was added. This server has reached the highest case number Quack can store. |
 | `interaction.busy` | Quack is busy right now. Try again in a moment. |
-| `interaction.expired_button` | This button has expired. Run the command again. |
-| `interaction.legacy_button` | This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead. |
+| `interaction.expired_button` | This button no longer works. Run the command again, or use the dashboard. |
+| `interaction.legacy_button` | This button is from an older version of Quack and no longer works. Run the command again, or use the dashboard. |
 
 `error.action_not_found`, `error.context_changed`,
 `error.case_numbers_exhausted`, and `error.honeypot_policy_changed` are
@@ -2512,21 +2512,21 @@ none):
 | missing capability | — | `error.missing_capability.*` | — |
 | MFA required | — | `error.mfa_required` | — |
 | member refused | member, action | `refusal.*` | see below |
-| case not found | scene, case number | member scene: `api.not_found`; else `error.case_not_found` | That case doesn't exist in this server. |
+| case not found | scene, case number | member scene: `api.not_found`; else `error.case_not_found` | Quack couldn't find that case in this server. |
 | case already voided | case number | `error.case_already_voided` | This case is already voided. |
-| case voided | scene, case number, action | member scene: `appeal.submit.voided`; else `error.case_voided` (needs both number and action) | member scene: This case was voided, so there's nothing to appeal. Else: This case is voided, so Quack won't run its action. Add a new case if it still applies. |
-| replacement invalid | case number | `error.replacement_invalid` | That case can't be replaced: only a voided case in this server that has no replacement yet can be. |
+| case voided | scene, case number, action | member scene: `appeal.submit.voided`; else `error.case_voided` (needs both number and action) | member scene: This case was voided and no longer counts. You can still review it on the dashboard. Else: This case is voided. Quack won't retry its action. |
+| replacement invalid | case number | `error.replacement_invalid` | That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement. |
 | rule not found | — | `error.rule_not_found` | — |
 | rule archived | rule | `error.rule_archived` | That rule is archived, so it can't be applied. Choose an active rule. |
-| rule changed | scene, rule | adding a case: `error.rule_changed`; any other scene: `api.rule_changed` | adding a case: The rule changed while you were adding the case. Open the form again to use the new version. |
+| rule changed | scene, rule | adding a case: `error.rule_changed`; any other scene: `api.rule_changed` | adding a case: The rule changed while you were adding the case. Run /case add again to use the new version. |
 | rule name taken | rule | `api.rule_name_taken` | Another active rule already has this name. Choose a different name. |
 | too many rules | — | `api.too_many_rules` | — |
 | rule used by honeypot | — | `api.rule_used_by_honeypot` | — |
 | required field on honeypot rule | — | `api.required_field_on_honeypot_rule` | — |
-| action not retryable | action | `error.action_not_retryable` | This action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands. |
-| action not dismissable | action | `error.action_not_dismissable` | This action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss. |
-| action not undoable | action | `error.action_not_undoable` | There's nothing to undo: the action isn't in place, or Quack is already undoing it. Open the case to see where it stands. |
-| timeout window passed | member | `error.timeout_window_passed` | The timeout's end time has passed. Add a new case if the member still needs a timeout. |
+| action not retryable | action | `error.action_not_retryable` | This action can no longer be retried. Open the case to see its current outcome. |
+| action not dismissable | action | `error.action_not_dismissable` | This failure can no longer be dismissed. Open the case to see its current outcome. |
+| action not undoable | action | `error.action_not_undoable` | This action can't be undone from the case. Open the case to see its current outcome. |
+| timeout window passed | member | `error.timeout_window_passed` | The timeout's end time has passed, so Quack won't retry it. |
 | appeal not found | scene | member scene: `api.not_found`; else `error.appeal_not_found` | — |
 | appeal changed | scene | member scene: `appeal.information.outdated`; else `error.appeal_changed` | — |
 | appeal exists | case number | `appeal.submit.exists` | `api.appeal_exists` |
@@ -2648,8 +2648,8 @@ is `button.open_case`.
 | --- | --- |
 | `case.receipt.posted` | Case #{number} is saved. Quack posted the receipt in this channel. |
 | `case.receipt.post_failed` | Case #{number} is saved. Quack couldn't post the receipt in this channel, so here it is privately. |
-| `case.receipt.replayed` | Case #{number} was already saved by this command. |
-| `case.saved_unconfirmed` | Quack couldn't confirm whether the case was saved. Use Try again: if it was saved, Quack shows it instead of adding another. |
+| `case.receipt.replayed` | Case #{number} is already saved. Run /case view and enter {number} as the number to see it. |
+| `case.saved_unconfirmed` | Quack couldn't confirm whether the case was saved. Select Try again. If the case was already saved, Quack will open it. (The button reuses the operation key, §11.6.) |
 
 ### 12.5 Adding a case: picker, form, drafts, context problems
 
@@ -2663,26 +2663,26 @@ is `button.open_case`.
 | `case.form.boolean_placeholder` | Choose Yes or No |
 | `case.form.number_placeholder` | A number, like 3 or 2.5 |
 | `case.form.link_placeholder` | https://discord.com/channels/… |
-| `case.draft.page_saved` | Page {page} of {pages} is saved in your draft. Continue to finish the case. |
+| `case.draft.page_saved` | Page {page} of {pages} is saved. Select Continue to finish adding the case. |
 | `case.draft.button.continue` | Continue |
 | `case.draft.button.fill_form` | Fill in the form |
 | `case.draft.button.try_again` | Try again |
-| `case.draft.page_invalid` | Some answers need fixing, so this page isn't saved yet:\n{problems, one per line}\nUse Try again to correct them. |
-| `case.draft.page_already_saved` (the draft is on a later page) | This form page was already saved. Continue with the next page. (button `case.draft.button.continue`) |
-| `case.draft.page_already_saved` (the draft already became a case) | This form page was already saved. (button `button.open_case`) |
-| `case.draft.expired` | This form expired after 15 minutes. Run /case add again. |
+| `case.draft.page_invalid` | Some answers need fixing, so this page isn't saved yet:\n{problems, one per line}\nSelect Try again to fix your answers. |
+| `case.draft.page_already_saved` (the draft is on a later page) | This page is already saved. Select Continue to open the next page. (button `case.draft.button.continue`) |
+| `case.draft.page_already_saved` (the draft already became a case) | The case is already saved. Select Open case to see it. (button `button.open_case`) |
+| `case.draft.expired` | This form expired after 15 minutes. Run /case add again to open a new form. |
 | `case.draft.rule_changed` | The rule {rule} changed while you were filling in the form. Run /case add again to use the new version. |
 | `case.draft.save_failed` | {the error, §12.3} (button `case.draft.button.try_again`, which saves the completed draft again) |
-| `context.required` | {label}: an answer is required. |
-| `context.too_long` | {label}: use at most {max} characters. ({max} is 500 for short text, 4,000 for long text and message links) |
-| `context.not_text` | {label}: enter text. |
-| `context.not_yes_no` | {label}: choose Yes or No. |
-| `context.not_a_number` | {label}: enter a number, like 3 or 2.5. |
-| `context.number_out_of_range` | {label}: enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places. |
-| `context.not_a_message_link` | {label}: paste a Discord message link. Right-click the message and choose Copy Message Link. |
-| `context.other_server` | {label}: that message is in another server. Use a message from this server. |
-| `context.unknown_field` | {key} isn't a field of this rule. |
-| `context.duplicate_field` | {key} is answered more than once. |
+| `context.required` | {label} — Enter an answer. |
+| `context.too_long` | {label} — Use at most {max} characters. ({max} is 500 for short text, 4,000 for long text and message links) |
+| `context.not_text` | {label} — Enter text. |
+| `context.not_yes_no` | {label} — Choose Yes or No. |
+| `context.not_a_number` | {label} — Enter a number, like 3 or 2.5. |
+| `context.number_out_of_range` | {label} — Enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places. |
+| `context.not_a_message_link` | {label} — Paste a Discord message link. Right-click or press and hold the message, then choose Copy Message Link. |
+| `context.other_server` | {label} — That message is in another server. Use a message from this server. |
+| `context.unknown_field` | One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there. (the key stays in the API error's details) |
+| `context.duplicate_field` | {label} has two answers. Keep one answer and save again. (label unknown: "One field has two answers. Open the form again and enter one answer per field.") |
 | `context.details_label` | Details |
 | `member.context.link_saved` | A message saved as evidence |
 
@@ -2845,8 +2845,8 @@ Context and evidence:
 | Id | Text |
 | --- | --- |
 | `case.context.modal.title` | Edit context · case #{number} |
-| `case.context.saved` | The context of case #{number} is saved. |
-| `case.context.saved_new_evidence` | The context of case #{number} is saved. one: Quack is saving 1 new evidence item. / other: Quack is saving {count} new evidence items. |
+| `case.context.saved` | Case context saved for case #{number}. |
+| `case.context.saved_new_evidence` | Case context saved for case #{number}. one: Quack is saving 1 new message as evidence. / other: Quack is saving {count} new messages as evidence. |
 | `case.context.too_many_fields` | Case #{number} has more context fields than fit in a Discord form. Edit it on the dashboard. (button `button.open_in_dashboard`) |
 | `case.context.details_label` | Details |
 | `evidence.modal.title` | Add evidence · case #{number} |
@@ -3507,31 +3507,31 @@ id fits, the API uses it (domain errors through
 | Id | Text |
 | --- | --- |
 | `api.sign_in_required` | Sign in with Discord to continue. |
-| `api.session_expired` | Your session has ended. Sign in again. |
+| `api.session_expired` | Your session has ended. Sign in with Discord again. |
 | `api.origin_rejected` | Quack only accepts changes made from its own dashboard. Open the dashboard and try again there. |
-| `api.csrf_rejected` | Quack couldn't verify this came from your session. Reload the page and try again. |
-| `api.not_found` | Quack couldn't find that. |
-| `api.server_not_found` | Quack isn't in that server, or you're not a member of it. |
-| `api.file_unavailable` | That file isn't available anymore. |
-| `api.validation_failed` | Some fields need fixing. |
-| `api.invalid_json` | Quack couldn't read what was sent. Reload the dashboard and try again. |
-| `api.body_too_large` | That's too much to save at once. The limit is 256 KB. |
-| `api.unsupported_media_type` | Quack couldn't read what was sent. Reload the dashboard and try again. |
-| `api.idempotency_key_required` | Quack couldn't tell whether this was already saved. Reload the dashboard and try again. |
-| `api.idempotency_key_reused` | This looks like a repeat of an earlier, different change. Reload the dashboard and try again. |
-| `api.rate_limited` | one: You're doing that too often. Try again in 1 second. / other: You're doing that too often. Try again in {seconds} seconds. |
+| `api.csrf_rejected` | Quack couldn't verify your sign-in. Reload this page and try again. |
+| `api.not_found` | Quack couldn't find what you opened. Go back to the list and open it again. |
+| `api.server_not_found` | Quack couldn't open that server. Choose a server from your dashboard. (It doesn't say whether Quack left or the reader isn't a member.) |
+| `api.file_unavailable` | This file is no longer available. Go back to the page where you opened it to check for another copy. |
+| `api.validation_failed` | Check the marked fields and save again. (the field messages are in `details`) |
+| `api.invalid_json` | Quack couldn't read your changes. Reload this page and try again. |
+| `api.body_too_large` | Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once. |
+| `api.unsupported_media_type` | Quack couldn't read your changes. Reload this page and try again. |
+| `api.idempotency_key_required` | Quack didn't save this change. Reload the dashboard and try again. |
+| `api.idempotency_key_reused` | Quack didn't save this change because it conflicts with an earlier save. Reload the dashboard, check what's saved, and try again. |
+| `api.rate_limited` | one: Please wait 1 second before trying again. / other: Please wait {seconds} seconds before trying again. |
 | `api.rule_changed` | Someone else saved this rule. Reload it to see the latest version before you save. |
 | `api.rule_name_taken` | Another active rule is already called {name}. Choose a different name. |
 | `api.rule_used_by_honeypot` | The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first. |
 | `api.required_field_on_honeypot_rule` | The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot. |
 | `api.too_many_rules` | A server can have at most 100 active rules. Archive one first. |
-| `api.settings_changed` | Someone else changed the staff roles. Reload the settings and try again. |
-| `api.appeal_exists` | You already appealed this case. |
-| `api.appeal_not_allowed` | This case can't be appealed. |
-| `api.module_not_ready` | {Module} can't be turned on yet. |
+| `api.settings_changed` | Someone else changed the staff roles. Reload the server settings and check the current roles before saving again. |
+| `api.appeal_exists` | You already appealed this case. Open your appeal to see the latest update. |
+| `api.appeal_not_allowed` | This case can't be appealed. You can still review it on the dashboard. |
+| `api.module_not_ready` | {Module} can't be turned on yet. Open its settings on the dashboard to see what needs fixing. |
 | `api.discord_unavailable` | Quack couldn't reach Discord, so nothing changed. Try again in a moment. |
 | `api.unavailable` | Quack is having trouble right now, so nothing changed. Try again in a moment. |
-| `api.internal_error` | Something went wrong inside Quack. If you changed something, check whether it was saved before you try again. |
+| `api.internal_error` | Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again. |
 
 `{name}` in `api.rule_name_taken` is bold on Discord, like `{rule}`.
 Transport codes that reuse another text (snapshot `api.code`):
@@ -3545,8 +3545,8 @@ Sign-in pages (`/login?error=…`, route 2), not API errors:
 
 | Id | Text |
 | --- | --- |
-| `api.sign_in_failed` | Discord sign-in didn't finish. Start again. |
-| `api.sign_in_denied` | You cancelled the Discord sign-in. |
+| `api.sign_in_failed` | Discord sign-in didn't finish. Choose Sign in with Discord to try again. |
+| `api.sign_in_denied` | Discord sign-in was cancelled. Choose Sign in with Discord when you're ready. |
 
 ---
 

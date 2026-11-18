@@ -11,6 +11,7 @@ pub use domain::{ErrorFacts, Scene, for_domain};
 pub(crate) use refusal::{Voice, refusal_in};
 pub use refusal::{refusal, refusal_reason};
 
+use crate::fmt;
 use crate::model::{Command, Person, Text};
 use crate::word;
 
@@ -18,16 +19,16 @@ use crate::word;
 pub fn missing_capability(c: Capability) -> Text {
     Text::fixed(match c {
         Capability::Moderate => {
-            "Only moderators can do this. Ask a server administrator to give you a moderator role."
+            "Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings."
         }
         Capability::ManageRules => {
-            "You need the Manage Server permission or a rules manager role to manage rules."
+            "To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings."
         }
         Capability::ManageSettings => {
-            "You need the Manage Server permission to change Quack's settings."
+            "To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles."
         }
         Capability::ManageStaffRoles => {
-            "Only the server owner and administrators can change the moderator roles."
+            "Only the server owner or a member with Administrator can change Quack's moderator roles. Ask one of them to change them in the Quack dashboard's server settings."
         }
     })
 }
@@ -35,7 +36,7 @@ pub fn missing_capability(c: Capability) -> Text {
 /// `error.mfa_required`.
 pub fn mfa_required() -> Text {
     Text::fixed(
-        "This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.",
+        "This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.",
     )
 }
 
@@ -56,26 +57,32 @@ pub fn discord_unavailable() -> Text {
 
 /// `error.internal`.
 pub fn internal() -> Text {
-    Text::fixed("Something went wrong inside Quack, so nothing was saved. Try again in a moment.")
+    Text::fixed("Something went wrong inside Quack, so nothing changed. Try again in a moment.")
 }
 
 /// `error.unconfirmed`.
 pub fn unconfirmed() -> Text {
-    Text::fixed("Quack couldn't confirm whether that was saved. Check before you try again.")
+    Text::fixed(
+        "Quack couldn't confirm whether that was saved. Open it again to check before you try again.",
+    )
 }
 
 /// `error.render_failed`.
 pub fn render_failed(number: u64) -> Text {
     Text::fixed(format!(
-        "Case #{number} is saved, but Quack couldn't show it here. Use "
+        "Case #{number} is saved. Quack couldn't show it here. Run "
     ))
     .command(Command::CaseView)
-    .s(format!(" number:{number} to see it."))
+    .s(format!(" and enter {number} as the number."))
 }
 
 /// `error.case_not_found`.
 pub fn case_not_found(number: u64) -> Text {
-    Text::fixed(format!("There's no case #{number} in this server."))
+    Text::fixed(format!(
+        "Case #{number} wasn't found in this server. Check the number or use "
+    ))
+    .command(Command::CaseList)
+    .s(".")
 }
 
 /// `error.action_not_found`.
@@ -87,14 +94,18 @@ pub fn action_not_found() -> Text {
 
 /// `error.context_changed`.
 pub fn context_changed() -> Text {
-    Text::fixed("Someone else changed this case's context. Open it again before you save.")
+    Text::fixed(
+        "Someone else changed this case's context. Open it again to see their changes before you save.",
+    )
 }
 
 /// `error.rule_changed`: the rule changed while a case was being added.
 pub fn rule_changed(rule: &str) -> Text {
     Text::fixed("The rule ")
         .bold_user(rule)
-        .s(" changed while you were adding the case. Open the form again to use the new version.")
+        .s(" changed while you were adding the case. Run ")
+        .command(Command::CaseAdd)
+        .s(" again to use the new version.")
 }
 
 /// `error.rule_not_found`.
@@ -111,56 +122,73 @@ pub fn rule_archived(rule: &str) -> Text {
 
 /// `error.case_already_voided`.
 pub fn case_already_voided(number: u64) -> Text {
-    Text::fixed(format!("Case #{number} is already voided."))
+    Text::fixed(format!(
+        "Case #{number} is already voided and no longer counts."
+    ))
 }
 
 /// `error.case_voided`: a retry of an original action on a voided case.
 pub fn case_voided(number: u64, kind: ActionKind) -> Text {
-    Text::fixed(format!(
-        "Case #{number} is voided, so Quack won't run its {}. Add a new case if it still applies.",
-        word::action_noun(kind)
-    ))
+    match kind {
+        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban => Text::fixed(format!(
+            "Case #{number} is voided. Quack won't retry its {}.",
+            word::action(kind)
+        )),
+        ActionKind::RemoveTimeout | ActionKind::Unban => Text::fixed(format!(
+            "Case #{number} is voided. Quack won't retry this action."
+        )),
+    }
 }
 
 /// `error.action_not_retryable`.
 pub fn action_not_retryable(kind: ActionKind) -> Text {
     Text::fixed(format!(
-        "This {} can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.",
-        word::action_noun(kind)
+        "{} can no longer be retried. Open the case to see its current outcome.",
+        fmt::upper_first(crate::action::retry_noun(kind))
     ))
 }
 
 /// `error.action_not_dismissable`.
 pub fn action_not_dismissable(kind: ActionKind) -> Text {
     Text::fixed(format!(
-        "This {} isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.",
-        word::action_noun(kind)
+        "{} can no longer be dismissed. Open the case to see its current outcome.",
+        fmt::upper_first(&crate::action::failure_noun(kind))
     ))
 }
 
 /// `error.action_not_undoable`.
 pub fn action_not_undoable(kind: ActionKind) -> Text {
-    Text::fixed(format!(
-        "There's nothing to undo: the {} isn't in place, or Quack is already undoing it. Open the case to see where it stands.",
-        word::action_noun(kind)
-    ))
+    Text::fixed(match kind {
+        ActionKind::Kick => "A kick can't be undone. Open the case to see what happened.",
+        ActionKind::Timeout => {
+            "This timeout can't be undone from the case now. Open the case to see its current outcome."
+        }
+        ActionKind::Ban => {
+            "This ban can't be undone from the case now. Open the case to see its current outcome."
+        }
+        ActionKind::RemoveTimeout | ActionKind::Unban => {
+            "This action can't be undone from the case. Open the case to see its current outcome."
+        }
+    })
 }
 
 /// `error.timeout_window_passed`.
 pub fn timeout_window_passed(member: &Person) -> Text {
-    Text::fixed("The timeout's end time has passed. Add a new case if ")
+    Text::fixed("The timeout's end time has passed, so Quack won't retry it. Check ")
         .person(member)
-        .s(" still needs a timeout.")
+        .s("'s case history before adding another case.")
 }
 
 /// `error.appeal_not_found`.
 pub fn appeal_not_found() -> Text {
-    Text::fixed("That appeal doesn't exist in this server.")
+    Text::fixed("Quack couldn't find this appeal. Open the case, or use ")
+        .command(Command::Appeals)
+        .s(" to see appeals waiting for a decision.")
 }
 
 /// `error.appeal_changed`.
 pub fn appeal_changed() -> Text {
-    Text::fixed("This appeal changed since you opened it. Open it again to see where it stands.")
+    Text::fixed("This appeal changed since you opened it. Open it again to see the latest update.")
 }
 
 /// `error.evidence_limit_reached`.
@@ -178,7 +206,7 @@ pub fn too_many_links() -> Text {
 /// `error.replacement_invalid`.
 pub fn replacement_invalid(number: u64) -> Text {
     Text::fixed(format!(
-        "Case #{number} can't be replaced: only a voided case in this server that has no replacement yet can be."
+        "Case #{number} can't be replaced. Choose a voided case in this server that doesn't already have a replacement."
     ))
 }
 
@@ -202,12 +230,12 @@ pub fn busy() -> Text {
 
 /// `interaction.expired_button`.
 pub fn expired_button() -> Text {
-    Text::fixed("This button has expired. Run the command again.")
+    Text::fixed("This button no longer works. Run the command again, or use the dashboard.")
 }
 
 /// `interaction.legacy_button`.
 pub fn legacy_button() -> Text {
     Text::fixed(
-        "This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead.",
+        "This button is from an older version of Quack and no longer works. Run the command again, or use the dashboard.",
     )
 }

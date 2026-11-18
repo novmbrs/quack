@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack couldn't confirm whether the case was saved. Use Try again: if it was saved, Quack shows it instead of adding another.
-plain:   Quack couldn't confirm whether the case was saved. Use Try again: if it was saved, Quack shows it instead of adding another.
-model:   [Fixed("Quack couldn't confirm whether the case was saved. Use Try again: if it was saved, Quack shows it instead of adding another.")]
+discord: Quack couldn't confirm whether the case was saved. Select Try again. If the case was already saved, Quack will open it.
+plain:   Quack couldn't confirm whether the case was saved. Select Try again. If the case was already saved, Quack will open it.
+model:   [Fixed("Quack couldn't confirm whether the case was saved. Select Try again. If the case was already saved, Quack will open it.")]

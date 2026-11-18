@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack couldn't verify this came from your session. Reload the page and try again.
-plain:   Quack couldn't verify this came from your session. Reload the page and try again.
-model:   [Fixed("Quack couldn't verify this came from your session. Reload the page and try again.")]
+discord: Quack couldn't verify your sign-in. Reload this page and try again.
+plain:   Quack couldn't verify your sign-in. Reload this page and try again.
+model:   [Fixed("Quack couldn't verify your sign-in. Reload this page and try again.")]

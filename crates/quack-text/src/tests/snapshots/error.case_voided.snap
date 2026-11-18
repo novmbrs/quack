@@ -2,26 +2,26 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## timeout
-discord: Case #12 is voided, so Quack won't run its timeout. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its timeout. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its timeout. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry its timeout.
+plain:   Case #12 is voided. Quack won't retry its timeout.
+model:   [Fixed("Case #12 is voided. Quack won't retry its timeout.")]
 
 ## kick
-discord: Case #12 is voided, so Quack won't run its kick. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its kick. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its kick. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry its kick.
+plain:   Case #12 is voided. Quack won't retry its kick.
+model:   [Fixed("Case #12 is voided. Quack won't retry its kick.")]
 
 ## ban
-discord: Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
 
 ## remove timeout
-discord: Case #12 is voided, so Quack won't run its remove timeout action. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its remove timeout action. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its remove timeout action. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry this action.
+plain:   Case #12 is voided. Quack won't retry this action.
+model:   [Fixed("Case #12 is voided. Quack won't retry this action.")]
 
 ## unban
-discord: Case #12 is voided, so Quack won't run its unban. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its unban. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its unban. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry this action.
+plain:   Case #12 is voided. Quack won't retry this action.
+model:   [Fixed("Case #12 is voided. Quack won't retry this action.")]

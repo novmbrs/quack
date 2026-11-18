@@ -12,10 +12,10 @@ use quack_core::action::{ActionFailure, ActionKind, ActionSkipReason, ActionStat
 use time::OffsetDateTime;
 
 pub use crate::access::permission;
-pub(crate) use controls::failure_noun;
 pub use controls::{
     Undo, dismiss_done, retry_done, undo_button, undo_confirm, undo_from_original, undo_queued,
 };
+pub(crate) use controls::{failure_noun, retry_noun};
 pub use member::{member_none, member_sentence};
 
 use crate::access::{self, Reader};

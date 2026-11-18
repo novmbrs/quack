@@ -36,6 +36,17 @@ const fn try_to(kind: ActionKind) -> &'static str {
     }
 }
 
+/// "the ban", "removing the timeout": what a retry tries again.
+pub(crate) const fn retry_noun(kind: ActionKind) -> &'static str {
+    match kind {
+        ActionKind::Timeout => "the timeout",
+        ActionKind::Kick => "the kick",
+        ActionKind::Ban => "the ban",
+        ActionKind::RemoveTimeout => "removing the timeout",
+        ActionKind::Unban => "unbanning the member",
+    }
+}
+
 /// "the ban failure", "the failed attempt to unban the member".
 pub(crate) fn failure_noun(kind: ActionKind) -> String {
     match kind {

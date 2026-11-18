@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: This form expired after 15 minutes. Run </case add:1001> again.
-plain:   This form expired after 15 minutes. Run /case add again.
-model:   [Fixed("This form expired after 15 minutes. Run "), Command(CaseAdd), Fixed(" again.")]
+discord: This form expired after 15 minutes. Run </case add:1001> again to open a new form.
+plain:   This form expired after 15 minutes. Run /case add again to open a new form.
+model:   [Fixed("This form expired after 15 minutes. Run "), Command(CaseAdd), Fixed(" again to open a new form.")]

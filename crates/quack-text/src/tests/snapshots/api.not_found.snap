@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack couldn't find that.
-plain:   Quack couldn't find that.
-model:   [Fixed("Quack couldn't find that.")]
+discord: Quack couldn't find what you opened. Go back to the list and open it again.
+plain:   Quack couldn't find what you opened. Go back to the list and open it again.
+model:   [Fixed("Quack couldn't find what you opened. Go back to the list and open it again.")]

@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack couldn't read what was sent. Reload the dashboard and try again.
-plain:   Quack couldn't read what was sent. Reload the dashboard and try again.
-model:   [Fixed("Quack couldn't read what was sent. Reload the dashboard and try again.")]
+discord: Quack couldn't read your changes. Reload this page and try again.
+plain:   Quack couldn't read your changes. Reload this page and try again.
+model:   [Fixed("Quack couldn't read your changes. Reload this page and try again.")]

@@ -2,6 +2,6 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## ShortText
-discord: what\_happened is answered more than once.
-plain:   what_happened is answered more than once.
-model:   [User("what_happened"), Fixed(" is answered more than once.")]
+discord: What happened? has two answers. Keep one answer and save again.
+plain:   What happened? has two answers. Keep one answer and save again.
+model:   [User("What happened?"), Fixed(" has two answers. Keep one answer and save again.")]

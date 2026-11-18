@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.
-plain:   Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.
-model:   [Fixed("Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.")]
+discord: Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.
+plain:   Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.
+model:   [Fixed("Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.")]

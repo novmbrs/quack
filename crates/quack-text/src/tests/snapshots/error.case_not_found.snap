@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: There's no case #12 in this server.
-plain:   There's no case #12 in this server.
-model:   [Fixed("There's no case #12 in this server.")]
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]

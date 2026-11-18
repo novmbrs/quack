@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: You cancelled the Discord sign-in.
-plain:   You cancelled the Discord sign-in.
-model:   [Fixed("You cancelled the Discord sign-in.")]
+discord: Discord sign-in was cancelled. Choose Sign in with Discord when you're ready.
+plain:   Discord sign-in was cancelled. Choose Sign in with Discord when you're ready.
+model:   [Fixed("Discord sign-in was cancelled. Choose Sign in with Discord when you're ready.")]

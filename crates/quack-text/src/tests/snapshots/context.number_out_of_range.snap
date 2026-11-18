@@ -2,6 +2,6 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Number
-discord: What happened?: enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.
-plain:   What happened?: enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.
-model:   [User("What happened?"), Fixed(": enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.")]
+discord: What happened? — Enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.
+plain:   What happened? — Enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.
+model:   [User("What happened?"), Fixed(" — Enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.")]

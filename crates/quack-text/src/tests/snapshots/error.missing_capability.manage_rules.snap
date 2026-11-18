@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: You need the Manage Server permission or a rules manager role to manage rules.
-plain:   You need the Manage Server permission or a rules manager role to manage rules.
-model:   [Fixed("You need the Manage Server permission or a rules manager role to manage rules.")]
+discord: To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings.
+plain:   To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings.
+model:   [Fixed("To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings.")]

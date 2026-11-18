@@ -57,25 +57,29 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
         DomainError::CaseNotFound | DomainError::AppealNotFound if f.scene == Scene::Member => {
             api::not_found()
         }
-        DomainError::CaseNotFound => {
-            case_or(f, super::case_not_found, "That case doesn't exist in this server.")
-        }
-        DomainError::CaseAlreadyVoided => {
-            case_or(f, super::case_already_voided, "This case is already voided.")
-        }
-        DomainError::CaseVoided if f.scene == Scene::Member => {
-            case_or(f, appeal::submit_voided, "This case was voided, so there's nothing to appeal.")
-        }
+        DomainError::CaseNotFound => case_or(
+            f,
+            super::case_not_found,
+            "Quack couldn't find that case in this server.",
+        ),
+        DomainError::CaseAlreadyVoided => case_or(
+            f,
+            super::case_already_voided,
+            "This case is already voided.",
+        ),
+        DomainError::CaseVoided if f.scene == Scene::Member => case_or(
+            f,
+            appeal::submit_voided,
+            "This case was voided and no longer counts. You can still review it on the dashboard.",
+        ),
         DomainError::CaseVoided => match (f.case_number, f.action) {
             (Some(n), Some(kind)) => super::case_voided(n, kind),
-            _ => Text::fixed(
-                "This case is voided, so Quack won't run its action. Add a new case if it still applies.",
-            ),
+            _ => Text::fixed("This case is voided. Quack won't retry its action."),
         },
         DomainError::ReplacementInvalid => case_or(
             f,
             super::replacement_invalid,
-            "That case can't be replaced: only a voided case in this server that has no replacement yet can be.",
+            "That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.",
         ),
         DomainError::RuleNotFound => super::rule_not_found(),
         DomainError::RuleArchived => f.rule.map_or_else(
@@ -84,9 +88,11 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
         ),
         DomainError::RuleChanged => match (f.scene, f.rule) {
             (Scene::AddingCase, Some(rule)) => super::rule_changed(rule),
-            (Scene::AddingCase, None) => Text::fixed(
-                "The rule changed while you were adding the case. Open the form again to use the new version.",
-            ),
+            (Scene::AddingCase, None) => {
+                Text::fixed("The rule changed while you were adding the case. Run ")
+                    .command(crate::model::Command::CaseAdd)
+                    .s(" again to use the new version.")
+            }
             (Scene::Staff | Scene::EditingRule | Scene::Member, _) => api::rule_changed(),
         },
         DomainError::RuleNameTaken => f.rule.map_or_else(
@@ -99,29 +105,31 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
         DomainError::ActionNotRetryable => action_or(
             f,
             super::action_not_retryable,
-            "This action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.",
+            "This action can no longer be retried. Open the case to see its current outcome.",
         ),
         DomainError::ActionNotDismissable => action_or(
             f,
             super::action_not_dismissable,
-            "This action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.",
+            "This failure can no longer be dismissed. Open the case to see its current outcome.",
         ),
         DomainError::ActionNotUndoable => action_or(
             f,
             super::action_not_undoable,
-            "There's nothing to undo: the action isn't in place, or Quack is already undoing it. Open the case to see where it stands.",
+            "This action can't be undone from the case. Open the case to see its current outcome.",
         ),
         DomainError::TimeoutWindowPassed => f.member.map_or_else(
-            || Text::fixed("The timeout's end time has passed. Add a new case if the member still needs a timeout."),
+            || Text::fixed("The timeout's end time has passed, so Quack won't retry it."),
             super::timeout_window_passed,
         ),
         DomainError::AppealNotFound => super::appeal_not_found(),
         DomainError::AppealChanged if f.scene == Scene::Member => appeal::information_outdated(),
         DomainError::AppealChanged => super::appeal_changed(),
-        DomainError::AppealExists => f.case_number.map_or_else(api::appeal_exists, appeal::submit_exists),
-        DomainError::AppealNotAllowed => {
-            f.case_number.map_or_else(api::appeal_not_allowed, appeal::submit_not_allowed)
-        }
+        DomainError::AppealExists => f
+            .case_number
+            .map_or_else(api::appeal_exists, appeal::submit_exists),
+        DomainError::AppealNotAllowed => f
+            .case_number
+            .map_or_else(api::appeal_not_allowed, appeal::submit_not_allowed),
         DomainError::EvidenceLimitReached { .. } => case_or(
             f,
             super::evidence_limit_reached,

@@ -169,7 +169,7 @@ pub fn draft_page_saved(saved_page: u8, pages: u8, next: DraftPage) -> Msg {
     Msg::text(
         Tone::Neutral,
         Text::fixed(format!(
-            "Page {saved_page} of {pages} is saved in your draft. Continue to finish the case."
+            "Page {saved_page} of {pages} is saved. Select Continue to finish adding the case."
         )),
     )
     .buttons(vec![Button::new(
@@ -185,7 +185,11 @@ pub fn draft_page_invalid(problems: &[Text], retry: DraftPage) -> Msg {
     for p in problems {
         t = t.s("\n").then(p.clone());
     }
-    Msg::text(Tone::Warning, t.s("\nUse Try again to correct them.")).buttons(vec![Button::new(
+    Msg::text(
+        Tone::Warning,
+        t.s("\nSelect Try again to fix your answers."),
+    )
+    .buttons(vec![Button::new(
         "Try again",
         ButtonStyle::Primary,
         ButtonAction::DraftRetryPage(retry),
@@ -204,20 +208,21 @@ pub enum AlreadySaved {
 /// `case.draft.page_already_saved`, with the draft's current page or the
 /// case it became.
 pub fn draft_page_already_saved(next: AlreadySaved) -> Msg {
-    let first = Text::fixed("This form page was already saved.");
     match next {
-        AlreadySaved::Continue(page) => {
-            Msg::text(Tone::Neutral, first.s(" Continue with the next page.")).buttons(vec![
-                Button::new(
-                    "Continue",
-                    ButtonStyle::Primary,
-                    ButtonAction::DraftContinue(page),
-                ),
-            ])
-        }
-        AlreadySaved::Case(case) => {
-            Msg::text(Tone::Neutral, first).buttons(vec![word::open_case_button(case)])
-        }
+        AlreadySaved::Continue(page) => Msg::text(
+            Tone::Neutral,
+            Text::fixed("This page is already saved. Select Continue to open the next page."),
+        )
+        .buttons(vec![Button::new(
+            "Continue",
+            ButtonStyle::Primary,
+            ButtonAction::DraftContinue(page),
+        )]),
+        AlreadySaved::Case(case) => Msg::text(
+            Tone::Neutral,
+            Text::fixed("The case is already saved. Select Open case to see it."),
+        )
+        .buttons(vec![word::open_case_button(case)]),
     }
 }
 
@@ -225,7 +230,7 @@ pub fn draft_page_already_saved(next: AlreadySaved) -> Msg {
 pub fn draft_expired() -> Text {
     Text::fixed("This form expired after 15 minutes. Run ")
         .command(crate::model::Command::CaseAdd)
-        .s(" again.")
+        .s(" again to open a new form.")
 }
 
 /// `case.draft.rule_changed`.
@@ -253,35 +258,39 @@ pub fn context_problem(
     label: Option<&str>,
     kind: Option<FieldKind>,
 ) -> Text {
-    let key = || Text::new().user(fmt::one_line(&problem.key));
-    let lead = || {
-        Text::new()
-            .user(fmt::one_line(label.unwrap_or(&problem.key)))
-            .s(": ")
-    };
+    // The field's key stays in the API's details; people see its label.
+    let field = || Text::new().user(fmt::one_line(label.unwrap_or("This field")));
+    let lead = || field().s(" — ");
     match problem.code {
-        ContextProblemCode::UnknownField => key().s(" isn't a field of this rule."),
-        ContextProblemCode::DuplicateField => key().s(" is answered more than once."),
-        ContextProblemCode::Required => lead().s("an answer is required."),
+        ContextProblemCode::UnknownField => Text::fixed(
+            "One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.",
+        ),
+        ContextProblemCode::DuplicateField => match label {
+            Some(_) => field().s(" has two answers. Keep one answer and save again."),
+            None => Text::fixed(
+                "One field has two answers. Open the form again and enter one answer per field.",
+            ),
+        },
+        ContextProblemCode::Required => lead().s("Enter an answer."),
         ContextProblemCode::TooLong => {
             let max = match kind {
                 Some(FieldKind::ShortText) => limits::CONTEXT_SHORT_TEXT.max,
                 Some(FieldKind::MessageLink) => limits::CONTEXT_MESSAGE_LINK_MAX_CHARS,
                 _ => limits::CONTEXT_LONG_TEXT.max,
             };
-            lead().s(format!("use at most {} characters.", fmt::count(max as u64)))
+            lead().s(format!("Use at most {} characters.", fmt::count(max as u64)))
         }
-        ContextProblemCode::NotText => lead().s("enter text."),
-        ContextProblemCode::NotYesNo => lead().s("choose Yes or No."),
-        ContextProblemCode::NotANumber => lead().s("enter a number, like 3 or 2.5."),
+        ContextProblemCode::NotText => lead().s("Enter text."),
+        ContextProblemCode::NotYesNo => lead().s("Choose Yes or No."),
+        ContextProblemCode::NotANumber => lead().s("Enter a number, like 3 or 2.5."),
         ContextProblemCode::NumberOutOfRange => lead().s(
-            "enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.",
+            "Enter a number between −1,000,000,000,000,000 and 1,000,000,000,000,000 with at most 6 decimal places.",
         ),
         ContextProblemCode::NotAMessageLink => lead().s(
-            "paste a Discord message link. Right-click the message and choose Copy Message Link.",
+            "Paste a Discord message link. Right-click or press and hold the message, then choose Copy Message Link.",
         ),
         ContextProblemCode::OtherServer => {
-            lead().s("that message is in another server. Use a message from this server.")
+            lead().s("That message is in another server. Use a message from this server.")
         }
     }
 }

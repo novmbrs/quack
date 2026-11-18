@@ -4,19 +4,19 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## next page
 tone: Neutral
 --- discord ---
-This form page was already saved. Continue with the next page.
+This page is already saved. Select Continue to open the next page.
 buttons: [Continue · Primary] DraftContinue(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 2 })
 --- plain ---
-This form page was already saved. Continue with the next page.
+This page is already saved. Select Continue to open the next page.
 --- model ---
-Text [Fixed("This form page was already saved. Continue with the next page.")]
+Text [Fixed("This page is already saved. Select Continue to open the next page.")]
 
 ## case already added
 tone: Neutral
 --- discord ---
-This form page was already saved.
+The case is already saved. Select Open case to see it.
 buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
-This form page was already saved.
+The case is already saved. Select Open case to see it.
 --- model ---
-Text [Fixed("This form page was already saved.")]
+Text [Fixed("The case is already saved. Select Open case to see it.")]

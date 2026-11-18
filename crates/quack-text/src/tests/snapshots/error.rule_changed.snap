@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: The rule **Spam** changed while you were adding the case. Open the form again to use the new version.
-plain:   The rule Spam changed while you were adding the case. Open the form again to use the new version.
-model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" changed while you were adding the case. Open the form again to use the new version.")]
+discord: The rule **Spam** changed while you were adding the case. Run </case add:1001> again to use the new version.
+plain:   The rule Spam changed while you were adding the case. Run /case add again to use the new version.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" changed while you were adding the case. Run "), Command(CaseAdd), Fixed(" again to use the new version.")]

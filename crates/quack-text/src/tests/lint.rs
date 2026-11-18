@@ -184,6 +184,7 @@ const BANNED: &[&str] = &[
 const ALLOWED: &[&str] = &[
     "View Audit Log",
     "Server Settings → Audit Log",
+    "User Settings → My Account",
     "Deny View Channel",
     "for your records",
     "starter rule notice",
@@ -231,13 +232,8 @@ fn looks_like_identifier(word: &str) -> bool {
     snake || camel
 }
 
-/// Samples that show a machine key or id as sent: the API's unknown and
-/// duplicate context keys, and the ticket thread name.
-const SHOWS_KEYS: &[&str] = &[
-    "context.unknown_field",
-    "context.duplicate_field",
-    "ticket.thread_name",
-];
+/// Samples that show a machine key or id as sent: the ticket thread name.
+const SHOWS_KEYS: &[&str] = &["ticket.thread_name"];
 
 fn hostile(s: &Sample) -> bool {
     s.variant.contains("hostile")

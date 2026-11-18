@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack isn't in that server, or you're not a member of it.
-plain:   Quack isn't in that server, or you're not a member of it.
-model:   [Fixed("Quack isn't in that server, or you're not a member of it.")]
+discord: Quack couldn't open that server. Choose a server from your dashboard.
+plain:   Quack couldn't open that server. Choose a server from your dashboard.
+model:   [Fixed("Quack couldn't open that server. Choose a server from your dashboard.")]

@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: That appeal doesn't exist in this server.
-plain:   That appeal doesn't exist in this server.
-model:   [Fixed("That appeal doesn't exist in this server.")]
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]

@@ -2,6 +2,6 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## ShortText
-discord: what\_happened isn't a field of this rule.
-plain:   what_happened isn't a field of this rule.
-model:   [User("what_happened"), Fixed(" isn't a field of this rule.")]
+discord: One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.
+plain:   One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.
+model:   [Fixed("One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.")]

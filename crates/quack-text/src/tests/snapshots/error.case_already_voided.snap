@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Case #12 is already voided.
-plain:   Case #12 is already voided.
-model:   [Fixed("Case #12 is already voided.")]
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]

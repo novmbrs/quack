@@ -38,17 +38,6 @@ const fn channel_setting(s: ChannelSetting) -> &'static str {
     }
 }
 
-/// "the ban", "removing the timeout": what a retry tries again.
-const fn retry_noun(kind: ActionKind) -> &'static str {
-    match kind {
-        ActionKind::Timeout => "the timeout",
-        ActionKind::Kick => "the kick",
-        ActionKind::Ban => "the ban",
-        ActionKind::RemoveTimeout => "removing the timeout",
-        ActionKind::Unban => "unbanning the member",
-    }
-}
-
 fn refusal_from_code(code: MemberRefusalCode, permission: DiscordPermission) -> MemberRefusal {
     match code {
         MemberRefusalCode::QuackNotInServer => MemberRefusal::QuackNotInServer,
@@ -117,7 +106,10 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::ActionDone(d) => super::actions::action_done(d, f),
         ModLogEntry::ActionFailed(d) => super::actions::action_failed(d, f),
         ModLogEntry::ActionRetryRequested(d) => case(
-            actor().s(format!(" chose to retry {} for ", retry_noun(d.kind))),
+            actor().s(format!(
+                " chose to retry {} for ",
+                action::retry_noun(d.kind)
+            )),
             d.case_number,
         )
         .s("."),

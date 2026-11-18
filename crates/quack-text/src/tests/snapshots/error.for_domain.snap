@@ -2,54 +2,54 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## MissingCapability(Moderate) · staff · all facts
-discord: Only moderators can do this. Ask a server administrator to give you a moderator role.
-plain:   Only moderators can do this. Ask a server administrator to give you a moderator role.
-model:   [Fixed("Only moderators can do this. Ask a server administrator to give you a moderator role.")]
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
 
 ## MissingCapability(Moderate) · adding a case · all facts
-discord: Only moderators can do this. Ask a server administrator to give you a moderator role.
-plain:   Only moderators can do this. Ask a server administrator to give you a moderator role.
-model:   [Fixed("Only moderators can do this. Ask a server administrator to give you a moderator role.")]
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
 
 ## MissingCapability(Moderate) · editing a rule · all facts
-discord: Only moderators can do this. Ask a server administrator to give you a moderator role.
-plain:   Only moderators can do this. Ask a server administrator to give you a moderator role.
-model:   [Fixed("Only moderators can do this. Ask a server administrator to give you a moderator role.")]
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
 
 ## MissingCapability(Moderate) · member · all facts
-discord: Only moderators can do this. Ask a server administrator to give you a moderator role.
-plain:   Only moderators can do this. Ask a server administrator to give you a moderator role.
-model:   [Fixed("Only moderators can do this. Ask a server administrator to give you a moderator role.")]
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
 
 ## MissingCapability(Moderate) · no facts
-discord: Only moderators can do this. Ask a server administrator to give you a moderator role.
-plain:   Only moderators can do this. Ask a server administrator to give you a moderator role.
-model:   [Fixed("Only moderators can do this. Ask a server administrator to give you a moderator role.")]
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
 
 ## MfaRequired · staff · all facts
-discord: This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-plain:   This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-model:   [Fixed("This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.")]
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
 
 ## MfaRequired · adding a case · all facts
-discord: This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-plain:   This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-model:   [Fixed("This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.")]
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
 
 ## MfaRequired · editing a rule · all facts
-discord: This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-plain:   This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-model:   [Fixed("This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.")]
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
 
 ## MfaRequired · member · all facts
-discord: This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-plain:   This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-model:   [Fixed("This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.")]
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
 
 ## MfaRequired · no facts
-discord: This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-plain:   This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.
-model:   [Fixed("This server requires two-factor authentication for moderation. Turn on 2FA in your Discord settings, then sign in to the Quack dashboard once so Quack can confirm it.")]
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
 
 ## MemberRefused(MemberIsBot) · staff · all facts
 discord: No case was added. <@222> is a bot, and cases are only for people.
@@ -77,49 +77,49 @@ plain:   No case was added. The member is a bot, and cases are only for people.
 model:   [Fixed("No case was added. The member is a bot, and cases are only for people.")]
 
 ## CaseNotFound · staff · all facts
-discord: There's no case #12 in this server.
-plain:   There's no case #12 in this server.
-model:   [Fixed("There's no case #12 in this server.")]
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]
 
 ## CaseNotFound · adding a case · all facts
-discord: There's no case #12 in this server.
-plain:   There's no case #12 in this server.
-model:   [Fixed("There's no case #12 in this server.")]
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]
 
 ## CaseNotFound · editing a rule · all facts
-discord: There's no case #12 in this server.
-plain:   There's no case #12 in this server.
-model:   [Fixed("There's no case #12 in this server.")]
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]
 
 ## CaseNotFound · member · all facts
-discord: Quack couldn't find that.
-plain:   Quack couldn't find that.
-model:   [Fixed("Quack couldn't find that.")]
+discord: Quack couldn't find what you opened. Go back to the list and open it again.
+plain:   Quack couldn't find what you opened. Go back to the list and open it again.
+model:   [Fixed("Quack couldn't find what you opened. Go back to the list and open it again.")]
 
 ## CaseNotFound · no facts
-discord: That case doesn't exist in this server.
-plain:   That case doesn't exist in this server.
-model:   [Fixed("That case doesn't exist in this server.")]
+discord: Quack couldn't find that case in this server.
+plain:   Quack couldn't find that case in this server.
+model:   [Fixed("Quack couldn't find that case in this server.")]
 
 ## CaseAlreadyVoided · staff · all facts
-discord: Case #12 is already voided.
-plain:   Case #12 is already voided.
-model:   [Fixed("Case #12 is already voided.")]
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
 
 ## CaseAlreadyVoided · adding a case · all facts
-discord: Case #12 is already voided.
-plain:   Case #12 is already voided.
-model:   [Fixed("Case #12 is already voided.")]
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
 
 ## CaseAlreadyVoided · editing a rule · all facts
-discord: Case #12 is already voided.
-plain:   Case #12 is already voided.
-model:   [Fixed("Case #12 is already voided.")]
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
 
 ## CaseAlreadyVoided · member · all facts
-discord: Case #12 is already voided.
-plain:   Case #12 is already voided.
-model:   [Fixed("Case #12 is already voided.")]
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
 
 ## CaseAlreadyVoided · no facts
 discord: This case is already voided.
@@ -127,19 +127,19 @@ plain:   This case is already voided.
 model:   [Fixed("This case is already voided.")]
 
 ## CaseVoided · staff · all facts
-discord: Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
 
 ## CaseVoided · adding a case · all facts
-discord: Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
 
 ## CaseVoided · editing a rule · all facts
-discord: Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-plain:   Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
-model:   [Fixed("Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.")]
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
 
 ## CaseVoided · member · all facts
 discord: Case #12 was voided, so there's nothing to appeal.
@@ -147,34 +147,34 @@ plain:   Case #12 was voided, so there's nothing to appeal.
 model:   [Fixed("Case #12 was voided, so there's nothing to appeal.")]
 
 ## CaseVoided · no facts
-discord: This case is voided, so Quack won't run its action. Add a new case if it still applies.
-plain:   This case is voided, so Quack won't run its action. Add a new case if it still applies.
-model:   [Fixed("This case is voided, so Quack won't run its action. Add a new case if it still applies.")]
+discord: This case is voided. Quack won't retry its action.
+plain:   This case is voided. Quack won't retry its action.
+model:   [Fixed("This case is voided. Quack won't retry its action.")]
 
 ## ReplacementInvalid · staff · all facts
-discord: Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-plain:   Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-model:   [Fixed("Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.")]
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
 
 ## ReplacementInvalid · adding a case · all facts
-discord: Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-plain:   Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-model:   [Fixed("Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.")]
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
 
 ## ReplacementInvalid · editing a rule · all facts
-discord: Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-plain:   Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-model:   [Fixed("Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.")]
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
 
 ## ReplacementInvalid · member · all facts
-discord: Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-plain:   Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.
-model:   [Fixed("Case #12 can't be replaced: only a voided case in this server that has no replacement yet can be.")]
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
 
 ## ReplacementInvalid · no facts
-discord: That case can't be replaced: only a voided case in this server that has no replacement yet can be.
-plain:   That case can't be replaced: only a voided case in this server that has no replacement yet can be.
-model:   [Fixed("That case can't be replaced: only a voided case in this server that has no replacement yet can be.")]
+discord: That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
 
 ## RuleNotFound · staff · all facts
 discord: That rule doesn't exist anymore. Choose another rule.
@@ -232,9 +232,9 @@ plain:   Someone else saved this rule. Reload it to see the latest version befor
 model:   [Fixed("Someone else saved this rule. Reload it to see the latest version before you save.")]
 
 ## RuleChanged · adding a case · all facts
-discord: The rule **Spam** changed while you were adding the case. Open the form again to use the new version.
-plain:   The rule Spam changed while you were adding the case. Open the form again to use the new version.
-model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" changed while you were adding the case. Open the form again to use the new version.")]
+discord: The rule **Spam** changed while you were adding the case. Run </case add:1001> again to use the new version.
+plain:   The rule Spam changed while you were adding the case. Run /case add again to use the new version.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" changed while you were adding the case. Run "), Command(CaseAdd), Fixed(" again to use the new version.")]
 
 ## RuleChanged · editing a rule · all facts
 discord: Someone else saved this rule. Reload it to see the latest version before you save.
@@ -352,144 +352,144 @@ plain:   The honeypot uses this rule, so its fields can't be required. Make the 
 model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]
 
 ## ActionNotRetryable · staff · all facts
-discord: This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
 
 ## ActionNotRetryable · adding a case · all facts
-discord: This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
 
 ## ActionNotRetryable · editing a rule · all facts
-discord: This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
 
 ## ActionNotRetryable · member · all facts
-discord: This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
 
 ## ActionNotRetryable · no facts
-discord: This action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-plain:   This action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
-model:   [Fixed("This action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+discord: This action can no longer be retried. Open the case to see its current outcome.
+plain:   This action can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("This action can no longer be retried. Open the case to see its current outcome.")]
 
 ## ActionNotDismissable · staff · all facts
-discord: This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## ActionNotDismissable · adding a case · all facts
-discord: This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## ActionNotDismissable · editing a rule · all facts
-discord: This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## ActionNotDismissable · member · all facts
-discord: This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This ban isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## ActionNotDismissable · no facts
-discord: This action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-plain:   This action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.
-model:   [Fixed("This action isn't failed anymore, or it was already dismissed, so there's nothing to dismiss.")]
+discord: This failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   This failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("This failure can no longer be dismissed. Open the case to see its current outcome.")]
 
 ## ActionNotUndoable · staff · all facts
-discord: There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-plain:   There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-model:   [Fixed("There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
 
 ## ActionNotUndoable · adding a case · all facts
-discord: There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-plain:   There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-model:   [Fixed("There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
 
 ## ActionNotUndoable · editing a rule · all facts
-discord: There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-plain:   There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-model:   [Fixed("There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
 
 ## ActionNotUndoable · member · all facts
-discord: There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-plain:   There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-model:   [Fixed("There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
 
 ## ActionNotUndoable · no facts
-discord: There's nothing to undo: the action isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-plain:   There's nothing to undo: the action isn't in place, or Quack is already undoing it. Open the case to see where it stands.
-model:   [Fixed("There's nothing to undo: the action isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+discord: This action can't be undone from the case. Open the case to see its current outcome.
+plain:   This action can't be undone from the case. Open the case to see its current outcome.
+model:   [Fixed("This action can't be undone from the case. Open the case to see its current outcome.")]
 
 ## TimeoutWindowPassed · staff · all facts
-discord: The timeout's end time has passed. Add a new case if <@222> still needs a timeout.
-plain:   The timeout's end time has passed. Add a new case if Sam still needs a timeout.
-model:   [Fixed("The timeout's end time has passed. Add a new case if "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" still needs a timeout.")]
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
 
 ## TimeoutWindowPassed · adding a case · all facts
-discord: The timeout's end time has passed. Add a new case if <@222> still needs a timeout.
-plain:   The timeout's end time has passed. Add a new case if Sam still needs a timeout.
-model:   [Fixed("The timeout's end time has passed. Add a new case if "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" still needs a timeout.")]
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
 
 ## TimeoutWindowPassed · editing a rule · all facts
-discord: The timeout's end time has passed. Add a new case if <@222> still needs a timeout.
-plain:   The timeout's end time has passed. Add a new case if Sam still needs a timeout.
-model:   [Fixed("The timeout's end time has passed. Add a new case if "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" still needs a timeout.")]
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
 
 ## TimeoutWindowPassed · member · all facts
-discord: The timeout's end time has passed. Add a new case if <@222> still needs a timeout.
-plain:   The timeout's end time has passed. Add a new case if Sam still needs a timeout.
-model:   [Fixed("The timeout's end time has passed. Add a new case if "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" still needs a timeout.")]
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
 
 ## TimeoutWindowPassed · no facts
-discord: The timeout's end time has passed. Add a new case if the member still needs a timeout.
-plain:   The timeout's end time has passed. Add a new case if the member still needs a timeout.
-model:   [Fixed("The timeout's end time has passed. Add a new case if the member still needs a timeout.")]
+discord: The timeout's end time has passed, so Quack won't retry it.
+plain:   The timeout's end time has passed, so Quack won't retry it.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it.")]
 
 ## AppealNotFound · staff · all facts
-discord: That appeal doesn't exist in this server.
-plain:   That appeal doesn't exist in this server.
-model:   [Fixed("That appeal doesn't exist in this server.")]
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
 
 ## AppealNotFound · adding a case · all facts
-discord: That appeal doesn't exist in this server.
-plain:   That appeal doesn't exist in this server.
-model:   [Fixed("That appeal doesn't exist in this server.")]
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
 
 ## AppealNotFound · editing a rule · all facts
-discord: That appeal doesn't exist in this server.
-plain:   That appeal doesn't exist in this server.
-model:   [Fixed("That appeal doesn't exist in this server.")]
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
 
 ## AppealNotFound · member · all facts
-discord: Quack couldn't find that.
-plain:   Quack couldn't find that.
-model:   [Fixed("Quack couldn't find that.")]
+discord: Quack couldn't find what you opened. Go back to the list and open it again.
+plain:   Quack couldn't find what you opened. Go back to the list and open it again.
+model:   [Fixed("Quack couldn't find what you opened. Go back to the list and open it again.")]
 
 ## AppealNotFound · no facts
-discord: That appeal doesn't exist in this server.
-plain:   That appeal doesn't exist in this server.
-model:   [Fixed("That appeal doesn't exist in this server.")]
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
 
 ## AppealChanged · staff · all facts
-discord: This appeal changed since you opened it. Open it again to see where it stands.
-plain:   This appeal changed since you opened it. Open it again to see where it stands.
-model:   [Fixed("This appeal changed since you opened it. Open it again to see where it stands.")]
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
 
 ## AppealChanged · adding a case · all facts
-discord: This appeal changed since you opened it. Open it again to see where it stands.
-plain:   This appeal changed since you opened it. Open it again to see where it stands.
-model:   [Fixed("This appeal changed since you opened it. Open it again to see where it stands.")]
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
 
 ## AppealChanged · editing a rule · all facts
-discord: This appeal changed since you opened it. Open it again to see where it stands.
-plain:   This appeal changed since you opened it. Open it again to see where it stands.
-model:   [Fixed("This appeal changed since you opened it. Open it again to see where it stands.")]
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
 
 ## AppealChanged · member · all facts
 discord: This appeal changed since you opened it. Reload the page to see the latest question before you answer.
@@ -497,9 +497,9 @@ plain:   This appeal changed since you opened it. Reload the page to see the lat
 model:   [Fixed("This appeal changed since you opened it. Reload the page to see the latest question before you answer.")]
 
 ## AppealChanged · no facts
-discord: This appeal changed since you opened it. Open it again to see where it stands.
-plain:   This appeal changed since you opened it. Open it again to see where it stands.
-model:   [Fixed("This appeal changed since you opened it. Open it again to see where it stands.")]
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
 
 ## AppealExists · staff · all facts
 discord: You already appealed case #12. Open your appeal to check where it stands.
@@ -522,9 +522,9 @@ plain:   You already appealed case #12. Open your appeal to check where it stand
 model:   [Fixed("You already appealed case #12. Open your appeal to check where it stands.")]
 
 ## AppealExists · no facts
-discord: You already appealed this case.
-plain:   You already appealed this case.
-model:   [Fixed("You already appealed this case.")]
+discord: You already appealed this case. Open your appeal to see the latest update.
+plain:   You already appealed this case. Open your appeal to see the latest update.
+model:   [Fixed("You already appealed this case. Open your appeal to see the latest update.")]
 
 ## AppealNotAllowed · staff · all facts
 discord: Case #12 can't be appealed.
@@ -547,9 +547,9 @@ plain:   Case #12 can't be appealed.
 model:   [Fixed("Case #12 can't be appealed.")]
 
 ## AppealNotAllowed · no facts
-discord: This case can't be appealed.
-plain:   This case can't be appealed.
-model:   [Fixed("This case can't be appealed.")]
+discord: This case can't be appealed. You can still review it on the dashboard.
+plain:   This case can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("This case can't be appealed. You can still review it on the dashboard.")]
 
 ## EvidenceLimitReached { count: 50 } · staff · all facts
 discord: Case #12 would have more than 50 evidence items. Add fewer message links.
@@ -602,29 +602,29 @@ plain:   Add at most 10 message links at a time.
 model:   [Fixed("Add at most 10 message links at a time.")]
 
 ## SettingsChanged · staff · all facts
-discord: Someone else changed the staff roles. Reload the settings and try again.
-plain:   Someone else changed the staff roles. Reload the settings and try again.
-model:   [Fixed("Someone else changed the staff roles. Reload the settings and try again.")]
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
 
 ## SettingsChanged · adding a case · all facts
-discord: Someone else changed the staff roles. Reload the settings and try again.
-plain:   Someone else changed the staff roles. Reload the settings and try again.
-model:   [Fixed("Someone else changed the staff roles. Reload the settings and try again.")]
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
 
 ## SettingsChanged · editing a rule · all facts
-discord: Someone else changed the staff roles. Reload the settings and try again.
-plain:   Someone else changed the staff roles. Reload the settings and try again.
-model:   [Fixed("Someone else changed the staff roles. Reload the settings and try again.")]
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
 
 ## SettingsChanged · member · all facts
-discord: Someone else changed the staff roles. Reload the settings and try again.
-plain:   Someone else changed the staff roles. Reload the settings and try again.
-model:   [Fixed("Someone else changed the staff roles. Reload the settings and try again.")]
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
 
 ## SettingsChanged · no facts
-discord: Someone else changed the staff roles. Reload the settings and try again.
-plain:   Someone else changed the staff roles. Reload the settings and try again.
-model:   [Fixed("Someone else changed the staff roles. Reload the settings and try again.")]
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
 
 ## TicketNotOpen · staff · all facts
 discord: This ticket is already closed or closing.

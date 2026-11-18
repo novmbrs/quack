@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Some fields need fixing.
-plain:   Some fields need fixing.
-model:   [Fixed("Some fields need fixing.")]
+discord: Check the marked fields and save again.
+plain:   Check the marked fields and save again.
+model:   [Fixed("Check the marked fields and save again.")]

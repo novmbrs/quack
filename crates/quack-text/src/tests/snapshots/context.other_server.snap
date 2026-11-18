@@ -2,6 +2,6 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## MessageLink
-discord: What happened?: that message is in another server. Use a message from this server.
-plain:   What happened?: that message is in another server. Use a message from this server.
-model:   [User("What happened?"), Fixed(": that message is in another server. Use a message from this server.")]
+discord: What happened? — That message is in another server. Use a message from this server.
+plain:   What happened? — That message is in another server. Use a message from this server.
+model:   [User("What happened?"), Fixed(" — That message is in another server. Use a message from this server.")]

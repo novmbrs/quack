@@ -118,7 +118,7 @@ pub fn sign_in_required() -> Text {
 
 /// `api.session_expired`.
 pub fn session_expired() -> Text {
-    Text::fixed("Your session has ended. Sign in again.")
+    Text::fixed("Your session has ended. Sign in with Discord again.")
 }
 
 /// `api.origin_rejected`.
@@ -130,57 +130,59 @@ pub fn origin_rejected() -> Text {
 
 /// `api.csrf_rejected`.
 pub fn csrf_rejected() -> Text {
-    Text::fixed("Quack couldn't verify this came from your session. Reload the page and try again.")
+    Text::fixed("Quack couldn't verify your sign-in. Reload this page and try again.")
 }
 
 /// `api.not_found`.
 pub fn not_found() -> Text {
-    Text::fixed("Quack couldn't find that.")
+    Text::fixed("Quack couldn't find what you opened. Go back to the list and open it again.")
 }
 
 /// `api.server_not_found`.
 pub fn server_not_found() -> Text {
-    Text::fixed("Quack isn't in that server, or you're not a member of it.")
+    Text::fixed("Quack couldn't open that server. Choose a server from your dashboard.")
 }
 
 /// `api.file_unavailable`.
 pub fn file_unavailable() -> Text {
-    Text::fixed("That file isn't available anymore.")
+    Text::fixed(
+        "This file is no longer available. Go back to the page where you opened it to check for another copy.",
+    )
 }
 
 /// `api.validation_failed`.
 pub fn validation_failed() -> Text {
-    Text::fixed("Some fields need fixing.")
+    Text::fixed("Check the marked fields and save again.")
 }
 
 /// `api.invalid_json` (also `api.unsupported_media_type`, same words).
 pub fn invalid_json() -> Text {
-    Text::fixed("Quack couldn't read what was sent. Reload the dashboard and try again.")
+    Text::fixed("Quack couldn't read your changes. Reload this page and try again.")
 }
 
 /// `api.body_too_large`.
 pub fn body_too_large() -> Text {
-    Text::fixed("That's too much to save at once. The limit is 256 KB.")
+    Text::fixed(
+        "Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.",
+    )
 }
 
 /// `api.idempotency_key_required`.
 pub fn idempotency_key_required() -> Text {
-    Text::fixed(
-        "Quack couldn't tell whether this was already saved. Reload the dashboard and try again.",
-    )
+    Text::fixed("Quack didn't save this change. Reload the dashboard and try again.")
 }
 
 /// `api.idempotency_key_reused`.
 pub fn idempotency_key_reused() -> Text {
     Text::fixed(
-        "This looks like a repeat of an earlier, different change. Reload the dashboard and try again.",
+        "Quack didn't save this change because it conflicts with an earlier save. Reload the dashboard, check what's saved, and try again.",
     )
 }
 
 /// `api.rate_limited`.
 pub fn rate_limited(seconds: u64) -> Text {
     Text::fixed(format!(
-        "You're doing that too often. Try again in {}.",
+        "Please wait {} before trying again.",
         fmt::plural(seconds.max(1), "second", "seconds")
     ))
 }
@@ -220,23 +222,25 @@ pub fn too_many_rules() -> Text {
 
 /// `api.settings_changed`.
 pub fn settings_changed() -> Text {
-    Text::fixed("Someone else changed the staff roles. Reload the settings and try again.")
+    Text::fixed(
+        "Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.",
+    )
 }
 
 /// `api.appeal_exists`.
 pub fn appeal_exists() -> Text {
-    Text::fixed("You already appealed this case.")
+    Text::fixed("You already appealed this case. Open your appeal to see the latest update.")
 }
 
 /// `api.appeal_not_allowed`.
 pub fn appeal_not_allowed() -> Text {
-    Text::fixed("This case can't be appealed.")
+    Text::fixed("This case can't be appealed. You can still review it on the dashboard.")
 }
 
 /// `api.module_not_ready`.
 pub fn module_not_ready(module: ModuleName) -> Text {
     Text::fixed(format!(
-        "{} can't be turned on yet.",
+        "{} can't be turned on yet. Open its settings on the dashboard to see what needs fixing.",
         fmt::upper_first(module_name(module))
     ))
 }
@@ -249,16 +253,16 @@ pub fn unavailable() -> Text {
 /// `api.internal_error`.
 pub fn internal_error() -> Text {
     Text::fixed(
-        "Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.",
+        "Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.",
     )
 }
 
 /// `api.sign_in_failed` (sign-in page, not an API error).
 pub fn sign_in_failed() -> Text {
-    Text::fixed("Discord sign-in didn't finish. Start again.")
+    Text::fixed("Discord sign-in didn't finish. Choose Sign in with Discord to try again.")
 }
 
 /// `api.sign_in_denied` (sign-in page, not an API error).
 pub fn sign_in_denied() -> Text {
-    Text::fixed("You cancelled the Discord sign-in.")
+    Text::fixed("Discord sign-in was cancelled. Choose Sign in with Discord when you're ready.")
 }

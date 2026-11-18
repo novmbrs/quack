@@ -2,6 +2,6 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Boolean
-discord: What happened?: choose Yes or No.
-plain:   What happened?: choose Yes or No.
-model:   [User("What happened?"), Fixed(": choose Yes or No.")]
+discord: What happened? — Choose Yes or No.
+plain:   What happened? — Choose Yes or No.
+model:   [User("What happened?"), Fixed(" — Choose Yes or No.")]

@@ -2,6 +2,6 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Number
-discord: What happened?: enter a number, like 3 or 2.5.
-plain:   What happened?: enter a number, like 3 or 2.5.
-model:   [User("What happened?"), Fixed(": enter a number, like 3 or 2.5.")]
+discord: What happened? — Enter a number, like 3 or 2.5.
+plain:   What happened? — Enter a number, like 3 or 2.5.
+model:   [User("What happened?"), Fixed(" — Enter a number, like 3 or 2.5.")]

@@ -2,16 +2,16 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Tickets
-discord: Tickets can't be turned on yet.
-plain:   Tickets can't be turned on yet.
-model:   [Fixed("Tickets can't be turned on yet.")]
+discord: Tickets can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
+plain:   Tickets can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
+model:   [Fixed("Tickets can't be turned on yet. Open its settings on the dashboard to see what needs fixing.")]
 
 ## ActivityLog
-discord: The server activity log can't be turned on yet.
-plain:   The server activity log can't be turned on yet.
-model:   [Fixed("The server activity log can't be turned on yet.")]
+discord: The server activity log can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
+plain:   The server activity log can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
+model:   [Fixed("The server activity log can't be turned on yet. Open its settings on the dashboard to see what needs fixing.")]
 
 ## Honeypot
-discord: The honeypot can't be turned on yet.
-plain:   The honeypot can't be turned on yet.
-model:   [Fixed("The honeypot can't be turned on yet.")]
+discord: The honeypot can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
+plain:   The honeypot can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
+model:   [Fixed("The honeypot can't be turned on yet. Open its settings on the dashboard to see what needs fixing.")]

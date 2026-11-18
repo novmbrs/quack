@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: That file isn't available anymore.
-plain:   That file isn't available anymore.
-model:   [Fixed("That file isn't available anymore.")]
+discord: This file is no longer available. Go back to the page where you opened it to check for another copy.
+plain:   This file is no longer available. Go back to the page where you opened it to check for another copy.
+model:   [Fixed("This file is no longer available. Go back to the page where you opened it to check for another copy.")]

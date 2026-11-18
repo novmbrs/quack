@@ -71,12 +71,14 @@ pub fn receipt_post_failed(number: u64) -> Text {
 
 /// `case.receipt.replayed`.
 pub fn receipt_replayed(number: u64) -> Text {
-    Text::fixed(format!("Case #{number} was already saved by this command."))
+    Text::fixed(format!("Case #{number} is already saved. Run "))
+        .command(crate::model::Command::CaseView)
+        .s(format!(" and enter {number} as the number to see it."))
 }
 
 /// `case.saved_unconfirmed`.
 pub fn saved_unconfirmed() -> Text {
     Text::fixed(
-        "Quack couldn't confirm whether the case was saved. Use Try again: if it was saved, Quack shows it instead of adding another.",
+        "Quack couldn't confirm whether the case was saved. Select Try again. If the case was already saved, Quack will open it.",
     )
 }

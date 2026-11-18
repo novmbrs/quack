@@ -29,12 +29,12 @@ pub fn context_modal(case: CaseId, number: u64, revision: u32, fields: &[FormFie
 /// `case.context.saved`, or `case.context.saved_new_evidence` when new
 /// message links became evidence.
 pub fn context_saved(number: u64, new_evidence: u32) -> Text {
-    let t = Text::fixed(format!("The context of case #{number} is saved."));
+    let t = Text::fixed(format!("Case context saved for case #{number}."));
     match new_evidence {
         0 => t,
-        1 => t.s(" Quack is saving 1 new evidence item."),
+        1 => t.s(" Quack is saving 1 new message as evidence."),
         n => t.s(format!(
-            " Quack is saving {} new evidence items.",
+            " Quack is saving {} new messages as evidence.",
             fmt::count(n)
         )),
     }
