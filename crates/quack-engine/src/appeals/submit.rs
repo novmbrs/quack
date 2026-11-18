@@ -219,12 +219,6 @@ pub async fn add_information(
             }
             Keyed::Fresh(tx) => tx,
         };
-        // The settings row first (shared): a change of the appeal channel
-        // in flight finishes before this reads it, and one that starts later
-        // waits for this appeal and then moves its post (§4.12, §8.3).
-        let channel = settings::lock_shared(&mut tx, guild)
-            .await?
-            .and_then(|s| s.appeal_channel);
         let locked = cases::lock(&mut tx, guild, case)
             .await?
             .ok_or(DomainError::CaseNotFound)?;
