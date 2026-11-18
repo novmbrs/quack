@@ -2,8 +2,8 @@
 //! §17.3). Each method is one call: fact reads go to [`Facts`] (the caches
 //! under §2's freshness rules, else REST), everything else to the
 //! [`DiscordClient`] method of the same name; messages are rendered with
-//! the command ids from the last sync. Types and outcomes map variant for
-//! variant (the `convert` module).
+//! the command ids from the last sync. Outcomes and most payloads are
+//! shared types; `convert` maps the rest.
 
 mod convert;
 
@@ -24,10 +24,6 @@ use quack_engine::port::{
 use quack_engine::{BoxFuture, Discord};
 use quack_text::Msg;
 use time::OffsetDateTime;
-
-use std::convert::identity;
-
-use convert::outcome;
 
 /// The engine's `Discord` port over Quack's Discord client and caches.
 #[derive(Clone, Debug)]
@@ -54,7 +50,7 @@ impl DiscordPort {
 
 impl Discord for DiscordPort {
     fn guild_facts(&self, guild: GuildId) -> BoxFuture<'_, Outcome<GuildFacts>> {
-        Box::pin(async move { outcome(self.facts.guild_facts(guild).await, identity) })
+        Box::pin(async move { self.facts.guild_facts(guild).await })
     }
 
     fn member(
@@ -63,18 +59,11 @@ impl Discord for DiscordPort {
         member: MemberId,
         fresh: Fresh,
     ) -> BoxFuture<'_, Outcome<Membership>> {
-        Box::pin(async move {
-            outcome(
-                self.facts
-                    .member(guild, member, convert::fresh(fresh))
-                    .await,
-                convert::membership,
-            )
-        })
+        Box::pin(async move { self.facts.member(guild, member, fresh).await })
     }
 
     fn accounts<'a>(&'a self, ids: &'a [AccountId]) -> BoxFuture<'a, Outcome<Vec<AccountFacts>>> {
-        Box::pin(async move { outcome(self.client().accounts(ids).await, identity) })
+        Box::pin(async move { self.client().accounts(ids).await })
     }
 
     fn channel_facts(
@@ -82,15 +71,15 @@ impl Discord for DiscordPort {
         guild: GuildId,
         channel: ChannelId,
     ) -> BoxFuture<'_, Outcome<Option<ChannelFacts>>> {
-        Box::pin(async move { outcome(self.facts.channel_facts(guild, channel).await, identity) })
+        Box::pin(async move { self.facts.channel_facts(guild, channel).await })
     }
 
     fn guild_channels(&self, guild: GuildId) -> BoxFuture<'_, Outcome<Vec<ChannelFacts>>> {
-        Box::pin(async move { outcome(self.facts.guild_channels(guild).await, identity) })
+        Box::pin(async move { self.facts.guild_channels(guild).await })
     }
 
     fn ban(&self, guild: GuildId, member: MemberId) -> BoxFuture<'_, Outcome<Option<BanFacts>>> {
-        Box::pin(async move { outcome(self.client().ban(guild, member).await, identity) })
+        Box::pin(async move { self.client().ban(guild, member).await })
     }
 
     fn is_thread_member(
@@ -98,12 +87,7 @@ impl Discord for DiscordPort {
         thread: ChannelId,
         account: AccountId,
     ) -> BoxFuture<'_, Outcome<bool>> {
-        Box::pin(async move {
-            outcome(
-                self.client().is_thread_member(thread, account).await,
-                identity,
-            )
-        })
+        Box::pin(async move { self.client().is_thread_member(thread, account).await })
     }
 
     fn search_members<'a>(
@@ -113,12 +97,9 @@ impl Discord for DiscordPort {
         limit: u8,
     ) -> BoxFuture<'a, Outcome<Vec<MemberFacts>>> {
         Box::pin(async move {
-            outcome(
-                self.facts
-                    .search_members(guild, query, u16::from(limit))
-                    .await,
-                |m| m,
-            )
+            self.facts
+                .search_members(guild, query, u16::from(limit))
+                .await
         })
     }
 
@@ -129,12 +110,7 @@ impl Discord for DiscordPort {
         until: OffsetDateTime,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        Box::pin(async move {
-            outcome(
-                self.client().timeout(guild, member, until, reason).await,
-                identity,
-            )
-        })
+        Box::pin(async move { self.client().timeout(guild, member, until, reason).await })
     }
 
     fn remove_timeout<'a>(
@@ -143,12 +119,7 @@ impl Discord for DiscordPort {
         member: MemberId,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        Box::pin(async move {
-            outcome(
-                self.client().remove_timeout(guild, member, reason).await,
-                identity,
-            )
-        })
+        Box::pin(async move { self.client().remove_timeout(guild, member, reason).await })
     }
 
     fn kick<'a>(
@@ -157,7 +128,7 @@ impl Discord for DiscordPort {
         member: MemberId,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        Box::pin(async move { outcome(self.client().kick(guild, member, reason).await, identity) })
+        Box::pin(async move { self.client().kick(guild, member, reason).await })
     }
 
     fn ban_member<'a>(
@@ -168,12 +139,9 @@ impl Discord for DiscordPort {
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
         Box::pin(async move {
-            outcome(
-                self.client()
-                    .ban_member(guild, member, delete_message_seconds, reason)
-                    .await,
-                identity,
-            )
+            self.client()
+                .ban_member(guild, member, delete_message_seconds, reason)
+                .await
         })
     }
 
@@ -183,11 +151,11 @@ impl Discord for DiscordPort {
         member: MemberId,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        Box::pin(async move { outcome(self.client().unban(guild, member, reason).await, identity) })
+        Box::pin(async move { self.client().unban(guild, member, reason).await })
     }
 
     fn open_dm(&self, account: AccountId) -> BoxFuture<'_, Outcome<ChannelId>> {
-        Box::pin(async move { outcome(self.client().open_dm(account).await, identity) })
+        Box::pin(async move { self.client().open_dm(account).await })
     }
 
     fn send<'a>(
@@ -198,15 +166,11 @@ impl Discord for DiscordPort {
         nonce: &'a Nonce,
     ) -> BoxFuture<'a, Outcome<SentMessage>> {
         Box::pin(async move {
-            let files: Vec<_> = files.iter().map(convert::file).collect();
             let nonce = convert::nonce(nonce);
             let body = self.body(msg);
-            outcome(
-                self.client()
-                    .send(channel, &body, &files, nonce.as_ref())
-                    .await,
-                convert::sent,
-            )
+            self.client()
+                .send(channel, &body, files, nonce.as_ref())
+                .await
         })
     }
 
@@ -219,11 +183,7 @@ impl Discord for DiscordPort {
     ) -> BoxFuture<'a, Outcome<SentMessage>> {
         Box::pin(async move {
             let body = self.body(msg);
-            let files = convert::file_edit(files);
-            outcome(
-                self.client().edit(channel, message, &body, &files).await,
-                convert::sent,
-            )
+            self.client().edit(channel, message, &body, files).await
         })
     }
 
@@ -234,22 +194,14 @@ impl Discord for DiscordPort {
     ) -> BoxFuture<'a, Outcome<()>> {
         Box::pin(async move {
             let rendered = render(msg, &self.commands.get());
-            outcome(
-                self.client()
-                    .edit_interaction_original(&convert::token(token), &rendered)
-                    .await,
-                identity,
-            )
+            self.client()
+                .edit_interaction_original(token, &rendered)
+                .await
         })
     }
 
     fn delete_message(&self, channel: ChannelId, message: MessageId) -> BoxFuture<'_, Outcome<()>> {
-        Box::pin(async move {
-            outcome(
-                self.client().delete_message(channel, message).await,
-                identity,
-            )
-        })
+        Box::pin(async move { self.client().delete_message(channel, message).await })
     }
 
     fn fetch_message(
@@ -258,10 +210,10 @@ impl Discord for DiscordPort {
         message: MessageId,
     ) -> BoxFuture<'_, Outcome<FetchedMessage>> {
         Box::pin(async move {
-            outcome(
-                self.client().fetch_message(channel, message).await,
-                convert::fetched,
-            )
+            self.client()
+                .fetch_message(channel, message)
+                .await
+                .map(convert::fetched)
         })
     }
 
@@ -272,10 +224,10 @@ impl Discord for DiscordPort {
         limit: u8,
     ) -> BoxFuture<'_, Outcome<Vec<FetchedMessage>>> {
         Box::pin(async move {
-            outcome(
-                self.client().fetch_history(channel, before, limit).await,
-                |list| list.into_iter().map(convert::fetched).collect(),
-            )
+            self.client()
+                .fetch_history(channel, before, limit)
+                .await
+                .map(|list| list.into_iter().map(convert::fetched).collect())
         })
     }
 
@@ -284,12 +236,7 @@ impl Discord for DiscordPort {
         url: &'a str,
         max_bytes: u64,
     ) -> BoxFuture<'a, Outcome<Vec<u8>>> {
-        Box::pin(async move {
-            outcome(
-                self.client().download_attachment(url, max_bytes).await,
-                |b| b,
-            )
-        })
+        Box::pin(async move { self.client().download_attachment(url, max_bytes).await })
     }
 
     fn create_channel<'a>(
@@ -298,12 +245,9 @@ impl Discord for DiscordPort {
         spec: &'a ChannelSpec,
     ) -> BoxFuture<'a, Outcome<ChannelId>> {
         Box::pin(async move {
-            outcome(
-                self.client()
-                    .create_channel(guild, &convert::channel_spec(spec))
-                    .await,
-                |c| c,
-            )
+            self.client()
+                .create_channel(guild, &convert::channel_spec(spec))
+                .await
         })
     }
 
@@ -312,12 +256,7 @@ impl Discord for DiscordPort {
         parent: ChannelId,
         name: &'a str,
     ) -> BoxFuture<'a, Outcome<ChannelId>> {
-        Box::pin(async move {
-            outcome(
-                self.client().create_private_thread(parent, name).await,
-                |c| c,
-            )
-        })
+        Box::pin(async move { self.client().create_private_thread(parent, name).await })
     }
 
     fn find_threads<'a>(
@@ -331,24 +270,16 @@ impl Discord for DiscordPort {
             // Only threads Quack itself created are ever returned.
             let quack = match self.facts.quack_id().await.into_result() {
                 Ok(quack) => quack,
-                Err(failure) => return outcome(failure, identity),
+                Err(failure) => return failure,
             };
-            outcome(
-                self.client()
-                    .find_threads(guild, parent, name, quack, since)
-                    .await,
-                identity,
-            )
+            self.client()
+                .find_threads(guild, parent, name, quack, since)
+                .await
         })
     }
 
     fn add_thread_member(&self, thread: ChannelId, member: MemberId) -> BoxFuture<'_, Outcome<()>> {
-        Box::pin(async move {
-            outcome(
-                self.client().add_thread_member(thread, member).await,
-                identity,
-            )
-        })
+        Box::pin(async move { self.client().add_thread_member(thread, member).await })
     }
 
     fn remove_thread_member(
@@ -356,16 +287,11 @@ impl Discord for DiscordPort {
         thread: ChannelId,
         member: MemberId,
     ) -> BoxFuture<'_, Outcome<()>> {
-        Box::pin(async move {
-            outcome(
-                self.client().remove_thread_member(thread, member).await,
-                identity,
-            )
-        })
+        Box::pin(async move { self.client().remove_thread_member(thread, member).await })
     }
 
     fn thread_members(&self, thread: ChannelId) -> BoxFuture<'_, Outcome<Vec<MemberId>>> {
-        Box::pin(async move { outcome(self.client().thread_members(thread).await, identity) })
+        Box::pin(async move { self.client().thread_members(thread).await })
     }
 
     fn set_thread_state(
@@ -375,16 +301,13 @@ impl Discord for DiscordPort {
         locked: bool,
     ) -> BoxFuture<'_, Outcome<()>> {
         Box::pin(async move {
-            outcome(
-                self.client()
-                    .set_thread_state(thread, archived, locked)
-                    .await,
-                identity,
-            )
+            self.client()
+                .set_thread_state(thread, archived, locked)
+                .await
         })
     }
 
     fn delete_channel(&self, channel: ChannelId) -> BoxFuture<'_, Outcome<()>> {
-        Box::pin(async move { outcome(self.client().delete_channel(channel).await, identity) })
+        Box::pin(async move { self.client().delete_channel(channel).await })
     }
 }

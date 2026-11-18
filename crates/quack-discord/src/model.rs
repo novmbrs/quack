@@ -4,8 +4,7 @@
 //! no Twilight type crosses this crate's public surface except inside the
 //! command definitions.
 
-use std::fmt;
-
+pub use quack_core::discord::{FileEdit, InteractionToken, OutgoingFile, SentMessage};
 use quack_core::ids::{AccountId, AttachmentId, ChannelId, GuildId, MemberId, MessageId, RoleId};
 use quack_core::permissions::{AccountFacts, Overwrite, RoleFacts};
 use time::OffsetDateTime;
@@ -160,51 +159,6 @@ pub struct Message {
     pub attachments: Vec<Attachment>,
 }
 
-/// Where a created or edited message is, and the attachment ids Discord
-/// assigned (by file name).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SentMessage {
-    /// The channel.
-    pub channel_id: ChannelId,
-    /// The message.
-    pub message_id: MessageId,
-    /// `(file name, attachment id)` for each file on the message.
-    pub attachments: Vec<(String, AttachmentId)>,
-}
-
-/// A file to upload.
-#[derive(Clone, PartialEq, Eq)]
-pub struct OutgoingFile {
-    /// The file name (also the `attachment://` name the message refers to).
-    pub name: String,
-    /// Its MIME type, when known (`application/octet-stream` otherwise).
-    pub content_type: Option<String>,
-    /// Its contents.
-    pub bytes: Vec<u8>,
-}
-
-impl fmt::Debug for OutgoingFile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("OutgoingFile")
-            .field("name", &self.name)
-            .field("content_type", &self.content_type)
-            .field("bytes", &self.bytes.len())
-            .finish()
-    }
-}
-
-/// Files on an edit: none (Discord keeps what is there), keep one existing
-/// attachment, or replace with a new upload.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FileEdit {
-    /// Leave the message's attachments as they are.
-    None,
-    /// Keep exactly this attachment.
-    Keep(AttachmentId),
-    /// Replace the attachments with this file.
-    Replace(OutgoingFile),
-}
-
 /// A message nonce: 1–25 characters, fixed per record (§10.4).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Nonce(String);
@@ -222,28 +176,6 @@ impl Nonce {
     /// The nonce text.
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-}
-
-/// An interaction token. Its `Debug` hides the secret.
-#[derive(Clone, PartialEq, Eq)]
-pub struct InteractionToken(String);
-
-impl InteractionToken {
-    /// Wraps a token from an interaction payload.
-    pub fn new(token: impl Into<String>) -> Self {
-        Self(token.into())
-    }
-
-    /// The secret itself, for building the request URL.
-    pub fn expose(&self) -> &str {
-        &self.0
-    }
-}
-
-impl fmt::Debug for InteractionToken {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("InteractionToken(…)")
     }
 }
 

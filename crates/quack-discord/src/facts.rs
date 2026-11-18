@@ -9,6 +9,7 @@
 
 use std::sync::{Arc, OnceLock};
 
+pub use quack_core::discord::{Fresh, Membership};
 use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId};
 use quack_core::permissions::{ChannelFacts, GuildFacts, MemberFacts};
 use time::OffsetDateTime;
@@ -17,24 +18,6 @@ use crate::cache::{GuildCache, MemberCache};
 use crate::model::Channel;
 use crate::permissions::{channel_facts, member_facts};
 use crate::rest::{DiscordClient, Outcome, RefusalKind};
-
-/// Where a member read may come from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Fresh {
-    /// The member cache under §2's rules, else REST.
-    Cached,
-    /// Always REST (action reads, §5.1).
-    Rest,
-}
-
-/// A member lookup.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Membership {
-    /// In the server.
-    Present(MemberFacts),
-    /// Discord answered 404 Unknown Member.
-    Absent,
-}
 
 /// Reads server, member, and channel facts from the caches or REST.
 /// Cheap to clone.

@@ -14,6 +14,7 @@ mod macros;
 pub mod action;
 pub mod appeal;
 pub mod case;
+pub mod discord;
 pub mod dm;
 mod error;
 pub mod escalation;

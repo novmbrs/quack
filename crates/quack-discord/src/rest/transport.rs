@@ -18,7 +18,7 @@ use tokio::sync::oneshot;
 use tracing::{Instrument as _, Span};
 use twilight_http_ratelimiting::{Endpoint, Permit, RateLimitHeaders, RateLimiter};
 
-use super::outcome::{NotSentCause, Outcome, UnknownCause, classify_failure};
+use super::outcome::{NotSentCause, Outcome, OutcomeClass, UnknownCause, classify_failure};
 use super::route::{Route, encode_component};
 
 /// What Discord's API expects in `User-Agent`.

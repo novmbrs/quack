@@ -16,11 +16,11 @@ use quack_core::permissions::{AccountFacts, BanFacts, ChannelFacts, GuildFacts, 
 use quack_text::Msg;
 use time::OffsetDateTime;
 
-pub use types::{
-    ChannelSpec, FetchedAttachment, FetchedEmbed, FetchedMessage, FileEdit, Fresh,
-    InteractionToken, Membership, Nonce, NotSentCause, Outcome, OutgoingFile, Refusal, RefusalKind,
-    SentMessage, UnknownCause,
+pub use quack_core::discord::{
+    FileEdit, Fresh, InteractionToken, Membership, NotSentCause, Outcome, OutgoingFile, Refusal,
+    RefusalKind, SentMessage, UnknownCause,
 };
+pub use types::{ChannelSpec, FetchedAttachment, FetchedEmbed, FetchedMessage, Nonce};
 
 /// A boxed, sendable future borrowing for `'a`: what every port method
 /// returns.

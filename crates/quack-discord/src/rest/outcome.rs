@@ -1,218 +1,28 @@
-//! The typed result of one Discord call, and how an HTTP answer maps to it.
-//!
-//! Getting this right is what makes retries safe: `Refused` means Discord
-//! definitely changed nothing, `NotSent` means the request never left Quack,
-//! and `Unknown` means it may have taken effect (§5.2, §6.4, §10.4).
+//! How an HTTP answer maps to the typed outcome of one Discord call
+//! (`quack_core::discord::Outcome`).
 
 use std::time::Duration;
 
+pub use quack_core::discord::{NotSentCause, Outcome, Refusal, RefusalKind, UnknownCause};
 use quack_telemetry::labels::RestOutcome;
 use serde::Deserialize;
 
-/// The typed result of one Discord call (§17.3).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Outcome<T> {
-    /// Discord confirmed it.
-    Done(T),
-    /// Discord definitely refused; nothing changed.
-    Refused(Refusal),
-    /// Rate limited before anything was sent; try again after the delay.
-    RetryAfter(Duration),
-    /// The request was never sent: nothing changed.
-    NotSent(NotSentCause),
-    /// The request may or may not have taken effect.
-    Unknown(UnknownCause),
+/// The outcome class recorded on metrics and spans.
+pub(crate) trait OutcomeClass {
+    /// The class of this outcome.
+    fn class(&self) -> RestOutcome;
 }
 
-impl<T> Outcome<T> {
-    /// Maps the confirmed value.
-    pub fn map<U>(self, f: impl FnOnce(T) -> U) -> Outcome<U> {
+impl<T> OutcomeClass for Outcome<T> {
+    fn class(&self) -> RestOutcome {
         match self {
-            Self::Done(v) => Outcome::Done(f(v)),
-            Self::Refused(r) => Outcome::Refused(r),
-            Self::RetryAfter(d) => Outcome::RetryAfter(d),
-            Self::NotSent(c) => Outcome::NotSent(c),
-            Self::Unknown(c) => Outcome::Unknown(c),
+            Outcome::Done(_) => RestOutcome::Done,
+            Outcome::Refused(_) => RestOutcome::Refused,
+            Outcome::RetryAfter(_) => RestOutcome::RateLimited,
+            Outcome::NotSent(_) => RestOutcome::NotSent,
+            Outcome::Unknown(_) => RestOutcome::Unknown,
         }
     }
-
-    /// Chains a second step that runs only when this one is `Done`.
-    pub fn and_then<U>(self, f: impl FnOnce(T) -> Outcome<U>) -> Outcome<U> {
-        match self {
-            Self::Done(v) => f(v),
-            Self::Refused(r) => Outcome::Refused(r),
-            Self::RetryAfter(d) => Outcome::RetryAfter(d),
-            Self::NotSent(c) => Outcome::NotSent(c),
-            Self::Unknown(c) => Outcome::Unknown(c),
-        }
-    }
-
-    /// The confirmed value, or the same failure for another value type, so
-    /// a multi-step call can stop at its first failure.
-    pub fn into_result<U>(self) -> Result<T, Outcome<U>> {
-        match self {
-            Self::Done(v) => Ok(v),
-            Self::Refused(r) => Err(Outcome::Refused(r)),
-            Self::RetryAfter(d) => Err(Outcome::RetryAfter(d)),
-            Self::NotSent(c) => Err(Outcome::NotSent(c)),
-            Self::Unknown(c) => Err(Outcome::Unknown(c)),
-        }
-    }
-
-    /// The confirmed value, if any.
-    pub fn done(self) -> Option<T> {
-        match self {
-            Self::Done(v) => Some(v),
-            _ => None,
-        }
-    }
-
-    /// Whether Discord confirmed it.
-    pub const fn is_done(&self) -> bool {
-        matches!(self, Self::Done(_))
-    }
-
-    /// The refusal kind, when Discord refused.
-    pub const fn refusal(&self) -> Option<RefusalKind> {
-        match self {
-            Self::Refused(r) => Some(r.kind),
-            _ => None,
-        }
-    }
-
-    /// The outcome class recorded on metrics and spans.
-    pub const fn class(&self) -> RestOutcome {
-        match self {
-            Self::Done(_) => RestOutcome::Done,
-            Self::Refused(_) => RestOutcome::Refused,
-            Self::RetryAfter(_) => RestOutcome::RateLimited,
-            Self::NotSent(_) => RestOutcome::NotSent,
-            Self::Unknown(_) => RestOutcome::Unknown,
-        }
-    }
-}
-
-/// A definite refusal: the HTTP status, Discord's JSON error code, and what
-/// it means for Quack.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Refusal {
-    /// The HTTP status (4xx).
-    pub status: u16,
-    /// Discord's JSON error code, when the body carried one.
-    pub code: Option<u32>,
-    /// What the refusal means.
-    pub kind: RefusalKind,
-}
-
-impl Refusal {
-    /// A refusal from a status and optional JSON error code.
-    pub const fn new(status: u16, code: Option<u32>) -> Self {
-        Self {
-            status,
-            code,
-            kind: RefusalKind::from_answer(status, code),
-        }
-    }
-
-    /// The machine code stored in `last_error` columns, such as
-    /// `http_403_50001` (§10.1).
-    pub fn machine_code(&self) -> String {
-        match self.code {
-            Some(code) => format!("http_{}_{code}", self.status),
-            None => format!("http_{}", self.status),
-        }
-    }
-}
-
-/// What a definite refusal means (§17.3).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum RefusalKind {
-    /// 50013: Quack lacks a permission.
-    MissingPermissions,
-    /// 50001: Quack can't see the channel or resource.
-    MissingAccess,
-    /// 50007: the member's DMs are closed or they blocked Quack.
-    CannotDm,
-    /// 50278: Quack shares no server with the member.
-    NoMutualGuilds,
-    /// 10004: Quack is not in the server.
-    UnknownGuild,
-    /// 10007: not a member of the server.
-    UnknownMember,
-    /// 10013: no such account.
-    UnknownUser,
-    /// 10026: no such ban.
-    UnknownBan,
-    /// 10008: no such message.
-    UnknownMessage,
-    /// 10003: no such channel.
-    UnknownChannel,
-    /// 413, or 40005: the request or a file is too large.
-    TooLarge,
-    /// Any other definite refusal (4xx except 429).
-    Other,
-}
-
-impl RefusalKind {
-    /// Maps Discord's answer. The JSON code decides when it is one Quack
-    /// knows (an `Unknown …` code only with its documented 404, since Quack
-    /// reads it as "absent"); otherwise a bare 413 is `TooLarge` and
-    /// anything else `Other`.
-    pub const fn from_answer(status: u16, code: Option<u32>) -> Self {
-        match code {
-            Some(50013) => Self::MissingPermissions,
-            Some(50001) => Self::MissingAccess,
-            Some(50007) => Self::CannotDm,
-            Some(50278) => Self::NoMutualGuilds,
-            Some(10004) if status == 404 => Self::UnknownGuild,
-            Some(10007) if status == 404 => Self::UnknownMember,
-            Some(10013) if status == 404 => Self::UnknownUser,
-            Some(10026) if status == 404 => Self::UnknownBan,
-            Some(10008) if status == 404 => Self::UnknownMessage,
-            Some(10003) if status == 404 => Self::UnknownChannel,
-            Some(40005) => Self::TooLarge,
-            _ if status == 413 => Self::TooLarge,
-            _ => Self::Other,
-        }
-    }
-
-    /// Whether the thing asked about does not exist (any `Unknown…` code).
-    pub const fn is_unknown_resource(self) -> bool {
-        matches!(
-            self,
-            Self::UnknownGuild
-                | Self::UnknownMember
-                | Self::UnknownUser
-                | Self::UnknownBan
-                | Self::UnknownMessage
-                | Self::UnknownChannel
-        )
-    }
-}
-
-/// Why a request may have taken effect without Quack learning the answer.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum UnknownCause {
-    /// The deadline passed after the request was sent.
-    Timeout,
-    /// Discord answered 5xx.
-    ServerError(u16),
-    /// The connection broke after the request was sent.
-    Connection,
-    /// Discord answered success with a body Quack could not read.
-    Malformed,
-}
-
-/// Why a request never left Quack.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NotSentCause {
-    /// Connecting failed (DNS, TCP, or TLS) before anything was sent.
-    Connection,
-    /// The client is shutting down and accepts no new calls.
-    ShuttingDown,
-    /// Quack refused to build the request (a disallowed download URL, an
-    /// unencodable header). Retrying will not help.
-    Invalid,
 }
 
 /// Discord's JSON error body (`{"code": 50013, "message": …}`), or a 429

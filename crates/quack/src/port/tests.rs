@@ -1,13 +1,10 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use httpmock::prelude::*;
 use quack_core::ids::{ChannelId, GuildId, MemberId, MessageId};
 use quack_discord::cache::{GuildCache, MemberCache};
 use quack_discord::facts::Facts;
-use quack_discord::{
-    ClientConfig, DiscordClient, NotSentCause, Outcome, Refusal, RefusalKind, UnknownCause,
-};
+use quack_discord::{ClientConfig, DiscordClient, RefusalKind};
 use quack_engine::Discord;
 use quack_engine::port as engine;
 use quack_text::{Msg, Text, Tone};
@@ -16,83 +13,8 @@ use super::DiscordPort;
 use super::convert;
 
 #[test]
-fn outcomes_map_variant_for_variant() {
-    assert_eq!(
-        convert::outcome(Outcome::Done(3), |n| n + 1),
-        engine::Outcome::Done(4)
-    );
-    let refused: engine::Outcome<()> =
-        convert::outcome(Outcome::Refused(Refusal::new(403, Some(50_013))), |()| ());
-    assert_eq!(
-        refused,
-        engine::Outcome::Refused(engine::Refusal::of(engine::RefusalKind::MissingPermissions))
-    );
-    assert_eq!(
-        convert::outcome::<(), ()>(Outcome::RetryAfter(Duration::from_secs(2)), |()| ()),
-        engine::Outcome::RetryAfter(Duration::from_secs(2))
-    );
-    assert_eq!(
-        convert::unknown(UnknownCause::Malformed),
-        engine::UnknownCause::Malformed
-    );
-    assert_eq!(
-        convert::unknown(UnknownCause::ServerError(502)),
-        engine::UnknownCause::ServerError(502)
-    );
-    assert_eq!(
-        convert::not_sent(NotSentCause::Invalid),
-        engine::NotSentCause::Invalid
-    );
-    assert_eq!(
-        convert::not_sent(NotSentCause::ShuttingDown),
-        engine::NotSentCause::ShuttingDown
-    );
-}
-
-#[test]
-fn every_refusal_kind_keeps_its_meaning() {
-    for (status, code, kind) in [
-        (403, Some(50_013), engine::RefusalKind::MissingPermissions),
-        (403, Some(50_001), engine::RefusalKind::MissingAccess),
-        (403, Some(50_007), engine::RefusalKind::CannotDm),
-        (403, Some(50_278), engine::RefusalKind::NoMutualGuilds),
-        (404, Some(10_004), engine::RefusalKind::UnknownGuild),
-        (404, Some(10_007), engine::RefusalKind::UnknownMember),
-        (404, Some(10_013), engine::RefusalKind::UnknownUser),
-        (404, Some(10_026), engine::RefusalKind::UnknownBan),
-        (404, Some(10_008), engine::RefusalKind::UnknownMessage),
-        (404, Some(10_003), engine::RefusalKind::UnknownChannel),
-        (413, Some(40_005), engine::RefusalKind::TooLarge),
-        (400, None, engine::RefusalKind::Other),
-    ] {
-        let r = convert::refusal(Refusal::new(status, code));
-        assert_eq!((r.status, r.code, r.kind), (status, code, kind));
-    }
-}
-
-#[test]
-fn messages_and_files_convert() {
-    let file = engine::OutgoingFile {
-        name: "a.png".into(),
-        content_type: Some("image/png".into()),
-        bytes: vec![1, 2],
-    };
-    let converted = convert::file(&file);
-    assert_eq!(
-        (converted.name.as_str(), converted.bytes.len()),
-        ("a.png", 2)
-    );
-    assert!(matches!(
-        convert::file_edit(&engine::FileEdit::Replace(file)),
-        quack_discord::model::FileEdit::Replace(_)
-    ));
+fn nonces_convert() {
     assert!(convert::nonce(&engine::Nonce::new("case-dm-123")).is_some());
-    assert_eq!(
-        convert::token(&engine::InteractionToken::new("t")).expose(),
-        "t"
-    );
-    let fresh = convert::fresh(engine::Fresh::Rest);
-    assert_eq!(fresh, quack_discord::facts::Fresh::Rest);
 }
 
 fn port(server: &MockServer) -> DiscordPort {

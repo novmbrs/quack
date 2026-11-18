@@ -9,7 +9,7 @@ use quack_telemetry::{metrics, spans};
 use reqwest::Url;
 use tracing::Instrument as _;
 
-use super::outcome::classify_failure;
+use super::outcome::{OutcomeClass, classify_failure};
 use super::transport::error_outcome;
 use super::{DiscordClient, NotSentCause, Outcome, Refusal, UnknownCause};
 
