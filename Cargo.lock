@@ -1719,6 +1719,8 @@ dependencies = [
  "base64 0.22.1",
  "config",
  "httpmock",
+ "opentelemetry",
+ "opentelemetry_sdk",
  "quack-activity-log",
  "quack-api",
  "quack-bot",

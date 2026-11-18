@@ -358,6 +358,9 @@ pub(super) async fn start(
     );
     let runner = start_runner(config, &parts.app, &db).await?;
     let _ = runner_cell.set(runner.clone());
+    quack_telemetry::metrics()
+        .runtime
+        .observe_tokio(tokio::runtime::Handle::current());
     let gauges = Gauges::install();
     let (gauge_stop, gauge_db) = (stop.clone(), db.clone());
     tasks.push(tokio::spawn(async move {

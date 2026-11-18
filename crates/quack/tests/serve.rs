@@ -1,7 +1,8 @@
 //! `quack serve` end to end against real PostgreSQL 18, with Discord
 //! turned off through the internal test seam: readiness flips to ready,
-//! a job enqueued through the database completes on the runner, and a
-//! shutdown signal stops everything cleanly within the deadline.
+//! a job enqueued through the database completes on the runner, a
+//! shutdown signal stops everything cleanly within the deadline, and the
+//! instruments `serve`'s startup feeds report.
 
 #![allow(
     clippy::unwrap_used,
@@ -10,6 +11,10 @@
     reason = "tests"
 )]
 
+#[path = "support/telemetry.rs"]
+mod telemetry;
+
+use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -47,6 +52,7 @@ async fn status(client: &reqwest::Client, url: &str) -> Option<u16> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn serve_becomes_ready_runs_a_job_and_shuts_down_cleanly() {
+    let captured = telemetry::capture();
     let test = TestDb::new().await.unwrap();
     let dashboard = std::env::temp_dir().join(format!("quack-serve-test-{}", std::process::id()));
     std::fs::create_dir_all(&dashboard).unwrap();
@@ -108,10 +114,32 @@ async fn serve_becomes_ready_runs_a_job_and_shuts_down_cleanly() {
         .await
         .unwrap();
     assert_eq!(fence, 0, "the fence was released");
+
+    captured.flush();
+    let metrics = captured.metrics();
+    for name in telemetry::SERVE_STARTUP {
+        assert!(metrics.contains_key(*name), "{name} never reported");
+    }
+    let workers: Vec<f64> = metrics["quack.runtime.workers"]
+        .iter()
+        .map(|p| p.value)
+        .collect();
+    assert!(workers.iter().all(|n| (n - 4.0).abs() < 0.5), "{workers:?}");
+    // Gauges over a closed set report every member, zeros included.
+    let kinds: BTreeSet<&str> = metrics["quack.actions.failed"]
+        .iter()
+        .flat_map(|p| &p.attributes)
+        .map(|(_, kind)| kind.as_str())
+        .collect();
+    assert_eq!(
+        kinds,
+        BTreeSet::from(["ban", "kick", "remove_timeout", "timeout", "unban"])
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_signal_while_waiting_for_the_fence_stops_serve() {
+    let _ = telemetry::capture();
     let test = TestDb::new().await.unwrap();
     // Another Quack holds the fence.
     let _other = quack_db::Fence::try_acquire(test.db.connect_options())

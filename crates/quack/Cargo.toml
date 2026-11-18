@@ -38,6 +38,8 @@ tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
 quack-testkit = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true, features = ["testing"] }
 aws-lc-rs = { workspace = true }
 sqlx = { workspace = true }
 base64 = { version = "=0.22.1" }

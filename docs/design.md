@@ -2637,7 +2637,7 @@ OTLP/HTTP traces, metrics, and logs (OpenTelemetry 0.33.1, `tracing`
 | `http.server.request.duration`, `http.server.active_requests`, `quack.auth.sign_ins`, `quack.http.rate_limited` | `quack-api` (a drop guard counts cancelled requests). |
 | `db.client.operation.duration`, `db.client.connection.*`, `quack.db.transaction.duration`, `quack.db.transaction.retries` | `quack-db` query wrapper and `Db::begin` guard; a CTE by its verb; unreadable row → `error.type` `decode`. |
 | `quack.tickets.opened`, `quack.tickets.closed`, `quack.ticket.transcript.size`, `quack.activity_log.events`, `quack.honeypot.hits`, `quack.honeypot.cleanups` | the module crates. |
-| `quack.runtime.*`, `process.*`, `quack.build.info` | telemetry crate, every 30 s. |
+| `quack.runtime.*`, `process.*`, `quack.build.info` | telemetry crate, every 30 s (`quack.runtime.*` once `serve` starts). |
 
 ### 18.3 Label mapping
 
