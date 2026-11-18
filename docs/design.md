@@ -2510,7 +2510,10 @@ count only with a 404, else `Other`. `last_error` stores
 - Deadline 10 s, 30 s for files; spans `{method} {route}` with
   `http.client.request.duration`.
 - A route permit is awaited at most 10 s, else `RetryAfter` unsent.
-  Buckets keep only major ids (channel, server, webhook). A 429 waits its
+  Buckets keep only major ids (channel, server, webhook). Interaction
+  callbacks take no permit: each token is answered once, and with no
+  major id the limiter would queue them behind any request without one
+  (`GET /users/{id}`, opening a DM). A 429 waits its
   `retry_after` (else `Retry-After`, else 1 s). A global 429 holds all
   bot-authenticated requests (not interaction callbacks) until it ends.
 - Modify Guild Member, Modify/Delete Channel, and interaction edits are

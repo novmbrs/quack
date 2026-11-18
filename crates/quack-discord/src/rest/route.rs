@@ -69,6 +69,9 @@ pub(crate) struct Route {
     pub(crate) auth: bool,
 }
 
+/// The initial interaction response's route.
+const INTERACTION_CALLBACK: &str = "/interactions/{interaction_id}/{interaction_token}/callback";
+
 /// A short, stable stand-in for an interaction token (FNV-1a, hex).
 fn token_tag(token: &str) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
@@ -269,10 +272,16 @@ impl Route {
 
     // Interactions (no bot token; the token is in the path).
 
+    /// Whether this is an interaction's initial response, which never
+    /// waits for a rate-limit permit (§17.3).
+    pub(crate) fn is_callback(&self) -> bool {
+        self.template == INTERACTION_CALLBACK
+    }
+
     pub(crate) fn interaction_callback(id: u64, token: &str) -> Self {
         Self {
             method: Method::Post,
-            template: "/interactions/{interaction_id}/{interaction_token}/callback",
+            template: INTERACTION_CALLBACK,
             path: format!("/interactions/{id}/{token}/callback"),
             query: None,
             limit_path: format!("interactions/{id}/{}/callback", token_tag(token)),

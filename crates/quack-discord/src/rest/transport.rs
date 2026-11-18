@@ -186,9 +186,16 @@ impl Transport {
         if global && let Err(outcome) = self.global_wait().await {
             return Answer::without_status(outcome);
         }
-        let permit = match self.permit(&request.route, span).await {
-            Ok(permit) => permit,
-            Err(outcome) => return Answer::without_status(outcome),
+        // An interaction callback is answered once per token and has no
+        // major id, so the limiter would queue it behind any other request
+        // without one; it never waits for a permit.
+        let permit = if request.route.is_callback() {
+            None
+        } else {
+            match self.permit(&request.route, span).await {
+                Ok(permit) => Some(permit),
+                Err(outcome) => return Answer::without_status(outcome),
+            }
         };
         // A global limit learned while this request waited for its permit.
         if global && let Err(outcome) = self.global_wait().await {
@@ -215,7 +222,9 @@ impl Transport {
                 Ok(Ok(response)) => response,
             };
         let status = response.status().as_u16();
-        permit.complete(rate_limit_headers(response.headers()));
+        if let Some(permit) = permit {
+            permit.complete(rate_limit_headers(response.headers()));
+        }
         let retry_after = response
             .headers()
             .get(RETRY_AFTER)

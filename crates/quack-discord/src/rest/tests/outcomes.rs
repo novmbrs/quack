@@ -409,3 +409,53 @@ async fn a_global_limit_holds_other_routes_back() {
     assert!(client.defer(&interaction, true).await.is_done());
     assert_eq!(callback.calls_async().await, 1);
 }
+
+/// Rehearsal finding: a slow `/case add` ack. An interaction callback has
+/// no major id, so the rate limiter queued it behind any in-flight request
+/// without one (`GET /users/{id}`, opening a DM). Callbacks skip the
+/// limiter: the defer goes out while the slow read is still waiting.
+#[tokio::test]
+async fn an_interaction_callback_never_waits_behind_another_request() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method("GET").path("/api/v10/users/7");
+            then.status(200)
+                .json_body(
+                    json!({"id": "7", "username": "slow", "discriminator": "0", "avatar": null}),
+                )
+                .delay(Duration::from_millis(350));
+        })
+        .await;
+    let callback = server
+        .mock_async(|when, then| {
+            when.method("POST")
+                .path("/api/v10/interactions/1/tok/callback");
+            then.status(204);
+        })
+        .await;
+    let client = client(&server.base_url());
+    let slow = {
+        let client = client.clone();
+        tokio::spawn(async move {
+            client
+                .user(quack_core::ids::AccountId::new(7).unwrap())
+                .await
+        })
+    };
+    // Let the read take its permit first.
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    let interaction = crate::model::InteractionRef {
+        id: 1,
+        token: crate::model::InteractionToken::new("tok"),
+    };
+    let started = Instant::now();
+    assert!(client.defer(&interaction, true).await.is_done());
+    let waited = started.elapsed();
+    assert!(
+        waited < Duration::from_millis(200),
+        "the defer waited {waited:?} behind the read"
+    );
+    assert_eq!(callback.calls_async().await, 1);
+    assert!(slow.await.unwrap().is_done());
+}
