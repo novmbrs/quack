@@ -7975,3 +7975,9 @@ folds these into the sections (or changes the code) and removes them here.
     have reached Discord; a retry after a lost answer or a crash sends 0, so
     messages are deleted at most once even if the ban was lifted outside
     Quack in between (a missed deletion is preferred to a second one).
+41. §17.3 outcomes (Discord review MAJOR 5) → only a 4xx (other than 429)
+    or Discord's documented 304 is `Refused`; any other non-success answer
+    (a redirect from an intermediary, an undocumented status) is
+    `Unknown`, like a 5xx. Modify Guild Member, Modify and Delete Channel,
+    and the interaction webhook edits are `Done` only when their success
+    body is a JSON object; otherwise `Unknown(Malformed)`.

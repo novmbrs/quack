@@ -328,3 +328,33 @@ async fn a_chunked_download_stops_at_the_limit() {
         Outcome::Done(b"1234567812345678".to_vec())
     );
 }
+
+/// Discord review MAJOR 5: an answer Quack can't place is `Unknown`, never
+/// a refusal (a redirect from something between Quack and Discord), and a
+/// success on an endpoint that returns an object is `Done` only with one.
+#[tokio::test]
+async fn unexpected_statuses_and_unreadable_successes_are_unknown() {
+    let server = MockServer::start_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method("DELETE").path("/api/v10/guilds/1/members/2");
+            then.status(307)
+                .header("location", "https://elsewhere.test/");
+        })
+        .await;
+    server
+        .mock_async(|when, then| {
+            when.method("PATCH").path("/api/v10/guilds/1/members/2");
+            then.status(200).body("not json");
+        })
+        .await;
+    let client = client(&server.base_url());
+    assert_eq!(
+        client.kick(g(), m(), "r").await,
+        Outcome::Unknown(UnknownCause::ServerError(307))
+    );
+    assert_eq!(
+        client.remove_timeout(g(), m(), "r").await,
+        Outcome::Unknown(UnknownCause::Malformed)
+    );
+}

@@ -166,9 +166,19 @@ impl DiscordClient {
         self.call(request).await.and_then(|body| decode(&body))
     }
 
-    /// Sends a request whose answer body is ignored.
+    /// Sends a request whose success has no body Quack needs (204, or a
+    /// body it ignores).
     async fn unit(&self, request: Request<'_>) -> Outcome<()> {
         self.call(request).await.map(|_| ())
+    }
+
+    /// Sends a request whose success returns an object (a member, channel,
+    /// or message) Quack doesn't keep: a success whose body isn't one is
+    /// `Unknown(Malformed)`, never `Done` (§17.3).
+    async fn object(&self, request: Request<'_>) -> Outcome<()> {
+        self.json::<serde_json::Map<String, serde_json::Value>>(request)
+            .await
+            .map(|_| ())
     }
 }
 

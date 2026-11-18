@@ -189,7 +189,7 @@ impl DiscordClient {
         let body = TimeoutBody {
             communication_disabled_until: until,
         };
-        self.unit(Request {
+        self.object(Request {
             reason: Some(reason),
             ..with_json(Route::member(Method::Patch, guild, member), &body)
         })

@@ -254,8 +254,13 @@ pub(crate) fn classify_failure<T>(
                 .unwrap_or(DEFAULT_RETRY_AFTER);
             Outcome::RetryAfter(delay.max(MIN_RETRY_AFTER))
         }
-        500..=599 => Outcome::Unknown(UnknownCause::ServerError(status)),
-        _ => Outcome::Refused(Refusal::new(status, parsed.and_then(|b| b.code))),
+        // A 4xx is Discord's definite refusal; 304 is its documented "no
+        // action was taken".
+        304 | 400..=499 => Outcome::Refused(Refusal::new(status, parsed.and_then(|b| b.code))),
+        // Anything else (a 5xx, a redirect from an intermediary, a status
+        // nobody documents) says nothing about whether the request took
+        // effect.
+        _ => Outcome::Unknown(UnknownCause::ServerError(status)),
     }
 }
 

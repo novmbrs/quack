@@ -199,7 +199,7 @@ impl DiscordClient {
             token.expose(),
             "@original",
         );
-        self.unit(with_json(route, &message_data(message, COMPONENTS_V2)))
+        self.object(with_json(route, &message_data(message, COMPONENTS_V2)))
             .await
     }
 
@@ -238,7 +238,7 @@ impl DiscordClient {
             token.expose(),
             &message_id.to_string(),
         );
-        self.unit(with_json(route, &message_data(message, COMPONENTS_V2)))
+        self.object(with_json(route, &message_data(message, COMPONENTS_V2)))
             .await
     }
 }

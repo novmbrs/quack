@@ -297,7 +297,7 @@ impl DiscordClient {
         archived: bool,
         locked: bool,
     ) -> Outcome<()> {
-        self.unit(with_json(
+        self.object(with_json(
             Route::channel(Method::Patch, thread),
             &ThreadStateBody { archived, locked },
         ))
@@ -306,7 +306,7 @@ impl DiscordClient {
 
     /// Deletes a channel or thread.
     pub async fn delete_channel(&self, channel: ChannelId) -> Outcome<()> {
-        self.unit(Request::new(Route::channel(Method::Delete, channel)))
+        self.object(Request::new(Route::channel(Method::Delete, channel)))
             .await
     }
 }
