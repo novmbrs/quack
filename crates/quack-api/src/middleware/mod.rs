@@ -3,9 +3,9 @@
 //! 1. `telemetry`: the request's span (its trace ID is the request ID,
 //!    returned as `traceparent` and in every error), `http.server.*`
 //!    metrics by route template.
-//! 2. panic catching: a panicking handler answers `500 internal_error`.
-//! 3. `headers`: security headers; `no-store` and a deny-all CSP on API
-//!    and health responses.
+//! 2. `headers`: security headers; `no-store` and a deny-all CSP on API
+//!    and health responses (a caught panic's answer included).
+//! 3. panic catching: a panicking handler answers `500 internal_error`.
 //! 4. gzip compression of text responses.
 //! 5. the 10 s deadline for reads (`503 unavailable`).
 //! 6. the 256 KiB body cap (`413 body_too_large`).
@@ -39,8 +39,10 @@ pub(crate) fn stack(router: Router<ApiState>, state: &ApiState) -> Router<ApiSta
             limits::deadline(limits::DEADLINE, request, next)
         }))
         .layer(CompressionLayer::new().gzip(true))
-        .layer(from_fn_with_state(state.clone(), headers::layer))
+        // Inside the headers layer, so a caught panic's answer gets the
+        // security and cache headers too.
         .layer(CatchPanicLayer::custom(limits::panicked))
+        .layer(from_fn_with_state(state.clone(), headers::layer))
         .layer(from_fn(telemetry::layer))
 }
 
