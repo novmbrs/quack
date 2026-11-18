@@ -187,3 +187,36 @@ impl World {
 }
 
 pub const M: u64 = MEMBER;
+
+/// A second server where the standard moderator is also a moderator;
+/// returns it and that moderator's principal there.
+pub async fn second_guild(h: &Harness) -> Result<(quack_core::ids::GuildId, Principal)> {
+    use quack_testkit::fake::{GuildSetup, MemberSetup};
+    use quack_testkit::{MODERATOR, OWNER, quack_permissions};
+    let other: quack_core::ids::GuildId = sf(2002);
+    let (facts, member) = h.fake.world(|w| {
+        w.add_guild(&GuildSetup {
+            id: other,
+            owner: sf(OWNER),
+            quack_position: 50,
+            quack_permissions: quack_permissions(),
+            mfa_required: false,
+        });
+        w.add_member(
+            other,
+            &MemberSetup::new(sf(MODERATOR), 30).permissions(Permission::ModerateMembers),
+        );
+        let facts = w.guilds[&other].facts.clone();
+        let member = w.member(other, sf(MODERATOR)).cloned();
+        (facts, member)
+    });
+    h.install(other).await?;
+    let principal = Principal::from_facts(
+        &facts,
+        sf(MODERATOR),
+        Origin::Dashboard,
+        member.as_ref(),
+        false,
+    );
+    Ok((other, principal))
+}
