@@ -152,7 +152,12 @@ async fn finish(
     let stored = serde_json::json!({ "rule_id": written.rule, "version": written.version });
     complete(&mut tx, &key, 200, stored).await?;
     tx.commit().await?;
-    engine.rules_cache().reload(engine.db(), guild).await?;
+    // The change is saved; a failed reload is recovered by the NOTIFY the
+    // commit sent (every process reloads on it), so it isn't the caller's
+    // failure.
+    if let Err(error) = engine.rules_cache().reload(engine.db(), guild).await {
+        tracing::warn!(guild_id = %guild, error = %error, "couldn't reload the rules cache after a rule write");
+    }
     Ok(written)
 }
 

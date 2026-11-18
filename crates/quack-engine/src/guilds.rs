@@ -75,9 +75,17 @@ pub async fn bootstrap(
         })
     })
     .await?;
-    engine.rules_cache().reload(engine.db(), guild).await?;
-    if let Some(present) = channels {
-        reconcile(engine, guild, present).await?;
+    // The server is saved; the cache reload and the channel reconciliation
+    // are separately recoverable (the commit's NOTIFY reloads the cache, and
+    // reconciliation runs again on the next READY), so their failures are
+    // logged, not returned.
+    if let Err(error) = engine.rules_cache().reload(engine.db(), guild).await {
+        tracing::warn!(guild_id = %guild, error = %error, "couldn't reload the rules cache after joining");
+    }
+    if let Some(present) = channels
+        && let Err(error) = reconcile(engine, guild, present).await
+    {
+        tracing::warn!(guild_id = %guild, error = %error, "couldn't reconcile the server's channels");
     }
     Ok(result)
 }
