@@ -68,6 +68,48 @@ async fn a_public_receipt_is_posted_once_and_kept_current() -> Result<()> {
     Ok(())
 }
 
+/// Rehearsal finding: a voided ban's public receipt says the ban was
+/// lifted once the unban is done, in its one action sentence.
+#[tokio::test]
+async fn a_voided_bans_receipt_says_it_was_lifted() -> Result<()> {
+    let h = Harness::new().await?;
+    let channel = h.fake.world(|w| w.add_text_channel(h.guild, false));
+    let rule = h
+        .rule(levels(
+            "Spam",
+            &[Some(quack_testkit::rules_for_tests::BAN)],
+            false,
+        ))
+        .await?;
+    let mut request = h.request(MEMBER, rule);
+    request.receipt = Some(Receipt::Public {
+        channel,
+        token: None,
+    });
+    let Applied::Created(created) = apply_rule(&h.engine, request).await? else {
+        anyhow::bail!("expected a case");
+    };
+    h.settle().await?;
+    let text = || {
+        h.fake.world(|w| {
+            w.sent_to(channel)
+                .first()
+                .and_then(|m| m.msg.as_ref())
+                .map_or_default(quack_text::Msg::plain)
+        })
+    };
+    assert!(text().contains("Action: Quack banned "), "{}", text());
+    void(&h, created.case.id).await?;
+    h.settle().await?;
+    let after = text();
+    assert!(after.contains(" · Voided"), "{after}");
+    assert!(
+        after.contains(", then unbanned them when the case was voided."),
+        "{after}"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn a_bump_during_a_sync_is_synced_again() -> Result<()> {
     let h = Harness::new().await?;

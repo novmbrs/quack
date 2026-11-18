@@ -1312,7 +1312,9 @@ The **public receipt** is a tracked message (§10.4) with only
 `ReceiptView`'s fields: case number, rule, "· Voided", member, official
 reason, the action line's first sentence, and `case.receipt.staff_hint`
 when the action failed or is unconfirmed; never context, evidence,
-moderator, void reason, appeal, DM, or failure detail. Its only button is
+moderator, void reason, appeal, DM, or failure detail. On a voided case
+whose undo is done, that sentence also says the ban or timeout was lifted
+(`case.receipt.action_lifted`). Its only button is
 Open case (`cv`). If Quack can't post it, the case stands and the
 moderator gets `case.receipt.post_failed` with the card.
 
@@ -1485,7 +1487,9 @@ surface).
 
 `case.card.*` (in order: what staff act on before context, so trimming
 drops context first; ends with `case.card.trimmed` when cut),
-`case.receipt.*`, `case.button.*`, `case.saved_unconfirmed`.
+`case.receipt.*` (`case.receipt.action_lifted`: a voided case's action line
+once its unban or timeout removal is done), `case.button.*`,
+`case.saved_unconfirmed`.
 
 ### 12.5 Adding a case: picker, form, drafts, context problems
 

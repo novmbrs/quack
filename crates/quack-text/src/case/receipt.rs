@@ -1,5 +1,6 @@
 //! The public receipt (§11.7, §12.4) and the messages around posting one.
 
+use quack_core::action::{ActionKind, ActionState};
 use quack_core::ids::CaseId;
 
 use super::card::{CaseCard, field, heading, tone};
@@ -24,6 +25,8 @@ pub struct ReceiptView {
     pub reason: String,
     /// The original action; `None` is a warning.
     pub action: Option<ActionView>,
+    /// The original's undo, once the case is voided.
+    pub undo: Option<ActionView>,
 }
 
 impl CaseCard {
@@ -37,6 +40,11 @@ impl CaseCard {
             member: self.member.clone(),
             reason: self.reason.clone(),
             action: self.action.as_ref().map(|a| a.view.clone()),
+            undo: self
+                .voided
+                .as_ref()
+                .and(self.undo.as_ref())
+                .map(|u| u.view.clone()),
         }
     }
 }
@@ -45,7 +53,10 @@ impl CaseCard {
 /// the Open case button.
 pub fn receipt(r: &ReceiptView) -> Msg {
     let sentence = r.action.as_ref().map_or_else(action::none, |a| {
-        action::sentence(a, &r.member, Detail::Receipt)
+        r.undo
+            .as_ref()
+            .and_then(|u| lifted(a, u, &r.member))
+            .unwrap_or_else(|| action::sentence(a, &r.member, Detail::Receipt))
     });
     let mut msg = Msg::new(tone(r.action.as_ref(), r.voided))
         .block(heading(r.number, &r.rule, r.voided))
@@ -64,6 +75,36 @@ pub fn receipt(r: &ReceiptView) -> Msg {
         )));
     }
     msg.buttons(vec![word::open_case_button(r.case)])
+}
+
+/// `case.receipt.action_lifted`: a voided case's timeout or ban that Quack
+/// applied and that is gone now, in one sentence. `None` until the undo
+/// is done.
+fn lifted(original: &ActionView, undo: &ActionView, m: &Person) -> Option<Text> {
+    if original.state != ActionState::Done || original.no_change || undo.state != ActionState::Done
+    {
+        return None;
+    }
+    let t = Text::new();
+    Some(match (original.kind, undo.no_change) {
+        (ActionKind::Timeout, false) => t
+            .s("Quack timed out ")
+            .person(m)
+            .s(", then removed the timeout when the case was voided."),
+        (ActionKind::Timeout, true) => t
+            .s("Quack timed out ")
+            .person(m)
+            .s(", and the timeout was already over when the case was voided."),
+        (ActionKind::Ban, false) => t
+            .s("Quack banned ")
+            .person(m)
+            .s(", then unbanned them when the case was voided."),
+        (ActionKind::Ban, true) => t
+            .s("Quack banned ")
+            .person(m)
+            .s(", and the ban was already lifted when the case was voided."),
+        _ => return None,
+    })
 }
 
 /// `case.receipt.posted`.

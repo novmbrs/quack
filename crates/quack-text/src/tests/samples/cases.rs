@@ -113,6 +113,52 @@ pub fn samples() -> Vec<Sample> {
             Out::Msg(case::receipt(&c.receipt())),
         ));
     }
+    for (kind, undo_kind, no_change, name) in [
+        (
+            ActionKind::Ban,
+            ActionKind::Unban,
+            false,
+            "voided, unban done",
+        ),
+        (
+            ActionKind::Ban,
+            ActionKind::Unban,
+            true,
+            "voided, already unbanned",
+        ),
+        (
+            ActionKind::Timeout,
+            ActionKind::RemoveTimeout,
+            false,
+            "voided, timeout removed",
+        ),
+        (
+            ActionKind::Timeout,
+            ActionKind::RemoveTimeout,
+            true,
+            "voided, timeout already over",
+        ),
+    ] {
+        let mut lifted = super::cards::base_card();
+        lifted.action = Some(super::cards::card_action(super::cards::av(
+            kind,
+            ActionState::Done,
+        )));
+        let mut undo = super::cards::av(undo_kind, ActionState::Done);
+        undo.no_change = no_change;
+        lifted.undo = Some(super::cards::card_action(undo));
+        lifted.voided = Some(case::Voided {
+            by: crate::Actor::Quack,
+            at: lifted.created_at,
+            reason: "Wrong member.".to_owned(),
+        });
+        v.push(covering(
+            "case.receipt",
+            &["case.receipt.action_lifted"],
+            name,
+            Out::Msg(case::receipt(&lifted.receipt())),
+        ));
+    }
     let mut unconfirmed = super::cards::base_card();
     let mut a = super::cards::av(ActionKind::Ban, ActionState::Failed);
     a.failure = Some(Failure::new(ActionFailure::Unconfirmed));
