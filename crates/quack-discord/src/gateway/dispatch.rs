@@ -220,6 +220,11 @@ async fn pooled<H, F>(
         let Ok(permit) = limit.clone().acquire_owned().await else {
             break;
         };
+        // Shutdown may have begun while it waited for a slot.
+        if stopping.load(Ordering::Acquire) {
+            metrics().queues.dropped(INTERACTIONS, 1);
+            continue;
+        }
         let handle = handler(event);
         running.spawn(async move {
             handle.await;

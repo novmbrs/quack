@@ -381,6 +381,47 @@ async fn a_message_flood_never_drops_a_server_leaving() {
 }
 
 #[tokio::test]
+async fn an_interaction_waiting_for_a_slot_never_starts_after_shutdown() {
+    let started = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let gate = Arc::new(Semaphore::new(0));
+    let (count, held) = (started.clone(), gate.clone());
+    let dispatcher = Dispatcher::start(Arc::new(move |_event: Event| {
+        let (count, held) = (count.clone(), held.clone());
+        async move {
+            count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            let _ = held.acquire().await;
+        }
+    }));
+    let interaction = crate::interaction::decode_json(
+        &fixtures::interaction(2, &json!({"id": "101", "name": "help", "type": 1})).to_string(),
+    )
+    .unwrap();
+    for _ in 0..=MAX_INTERACTION_HANDLERS {
+        let mut event = Event::Interaction(Box::new(interaction.clone()));
+        while let Some(back) = dispatcher.dispatch(event) {
+            event = back;
+            tokio::task::yield_now().await;
+        }
+    }
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while started.load(std::sync::atomic::Ordering::SeqCst) < MAX_INTERACTION_HANDLERS {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    // One more waits for a slot; shutdown begins, then the slots free up.
+    let stopping = tokio::spawn(dispatcher.stop());
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    gate.add_permits(10_000);
+    stopping.await.unwrap();
+    assert_eq!(
+        started.load(std::sync::atomic::Ordering::SeqCst),
+        MAX_INTERACTION_HANDLERS
+    );
+}
+
+#[tokio::test]
 async fn interactions_run_concurrently_up_to_the_limit() {
     let running = Arc::new(Semaphore::new(0));
     let gate = Arc::new(Semaphore::new(0));
