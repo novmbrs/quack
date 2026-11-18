@@ -1,0 +1,26 @@
+[package]
+name = "quack"
+description = "The Quack binary: config, CLI, wiring, and graceful shutdown"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quack-core = { workspace = true }
+quack-text = { workspace = true }
+quack-telemetry = { workspace = true }
+quack-db = { workspace = true }
+quack-discord = { workspace = true }
+quack-engine = { workspace = true }
+quack-tickets = { workspace = true }
+quack-activity-log = { workspace = true }
+quack-honeypot = { workspace = true }
+quack-api = { workspace = true }
+quack-bot = { workspace = true }
+quack-import = { workspace = true }

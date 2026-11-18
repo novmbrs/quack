@@ -1,0 +1,9 @@
+# Panicking shortcuts are denied in the workspace lints but fine in tests.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-dbg-in-tests = true
+
+# Product and protocol names that `doc_markdown` would otherwise want in
+# backticks; ".." keeps clippy's default list.
+doc-valid-idents = ["OpenAPI", "OpenTelemetry", "PostgreSQL", "MySQL", "OAuth", ".."]

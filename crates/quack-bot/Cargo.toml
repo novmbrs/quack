@@ -1,0 +1,22 @@
+[package]
+name = "quack-bot"
+description = "Quack's interaction and gateway event routing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quack-core = { workspace = true }
+quack-text = { workspace = true }
+quack-engine = { workspace = true }
+quack-discord = { workspace = true }
+quack-tickets = { workspace = true }
+quack-activity-log = { workspace = true }
+quack-honeypot = { workspace = true }
+quack-telemetry = { workspace = true }

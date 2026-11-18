@@ -1,0 +1,18 @@
+[package]
+name = "quack-engine"
+description = "Quack's use cases and job handlers"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quack-core = { workspace = true }
+quack-text = { workspace = true }
+quack-db = { workspace = true }
+quack-telemetry = { workspace = true }

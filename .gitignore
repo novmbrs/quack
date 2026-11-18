@@ -3,3 +3,6 @@
 !.env.example
 tmp/
 quack.toml
+
+# Rust build output
+/target
