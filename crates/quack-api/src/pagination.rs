@@ -124,31 +124,19 @@ pub(crate) fn decode_time(
     }
 }
 
-/// A page from rows fetched with `limit + 1`: the first `limit` rows, and
-/// a cursor after the last of them only when another row exists, so the
+/// A page's rows and the cursor after its last row, present only when
+/// another row follows (the page was fetched with one extra row), so the
 /// last page is never followed by an empty one.
-pub(crate) fn page<T>(
-    mut rows: Vec<T>,
-    limit: u32,
+pub(crate) fn split<T>(
+    page: quack_db::Page<T>,
     cursor: impl Fn(&T) -> String,
 ) -> (Vec<T>, Option<String>) {
-    let limit = usize::try_from(limit).unwrap_or(usize::MAX);
-    if rows.len() > limit {
-        rows.truncate(limit);
-        let next = rows.last().map(cursor);
-        (rows, next)
-    } else {
-        (rows, None)
-    }
-}
-
-/// The next cursor when a page came back full.
-pub(crate) fn next<T>(rows: &[T], limit: u32, cursor: impl Fn(&T) -> String) -> Option<String> {
-    if rows.len() == usize::try_from(limit).unwrap_or(usize::MAX) {
-        rows.last().map(cursor)
+    let next = if page.more {
+        page.rows.last().map(cursor)
     } else {
         None
-    }
+    };
+    (page.rows, next)
 }
 
 #[cfg(test)]

@@ -1,8 +1,6 @@
 //! Actions (routes 28–31): the failed-actions list and the staff
 //! controls retry, dismiss, and undo.
 
-use std::collections::HashMap;
-
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -10,10 +8,8 @@ use quack_core::action::{
     ActionFailure, ActionKind, ActionSkipReason, ActionState, AttemptOutcome,
 };
 use quack_core::ids::{AccountId, ActionId, CaseId, MemberId};
-use quack_core::permissions::Capability;
-use quack_engine::CaseRef;
 use quack_engine::actions::{self, ActionError, ControlDone};
-use quack_engine::cases::{self, ActionItem, CaseView};
+use quack_engine::cases::{self, ActionItem};
 use quack_text::error::Scene;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -217,72 +213,53 @@ async fn list_actions(
     let limit = pagination::limit(q.limit)?;
     let filters = format!("state={}&dismissed={}", action_state.as_str(), q.dismissed);
     let cursor = pagination::decode_time(q.cursor.as_deref(), &filters)?;
-    let guild = staff.guild();
-    let rows = {
-        let mut conn = state.engine().db().conn().await?;
-        staff
-            .principal
-            .require(&mut conn, Capability::Moderate)
-            .await?
-            .map_err(|e| Facts::scene(Scene::Staff).domain(e))?;
-        quack_db::actions::list(&mut conn, guild, action_state, q.dismissed, cursor, limit).await?
-    };
-    let next_cursor = pagination::next(&rows, limit, |r| {
-        pagination::time_cursor(r.action.created_at, r.action.id.get(), &filters)
+    let rows = cases::actions(
+        state.engine(),
+        &staff.principal,
+        action_state,
+        q.dismissed,
+        cursor,
+        limit,
+    )
+    .await
+    .map_err(|e| map::case(e, &Facts::scene(Scene::Staff), ""))?;
+    let (rows, next_cursor) = pagination::split(rows, |r| {
+        pagination::time_cursor(r.item.created_at, r.item.id.get(), &filters)
     });
-    // Each action's outcome text and controls come from its case's view.
-    let mut views: HashMap<CaseId, CaseView> = HashMap::new();
-    let mut actions = Vec::new();
-    for row in rows {
-        let case_id = row.action.case;
-        let view = match views.entry(case_id) {
-            std::collections::hash_map::Entry::Occupied(e) => e.into_mut(),
-            std::collections::hash_map::Entry::Vacant(e) => {
-                e.insert(case_view(&state, &staff, CaseRef::Id(case_id)).await?)
-            }
-        };
-        let Some(item) = view.actions.iter().find(|a| a.id == row.action.id) else {
-            continue;
-        };
-        actions.push(ActionListItem {
-            action: Action::from_item(case_id, row.case_number, item.clone()),
-            member_id: row.member,
-            rule_name: row
-                .rule_name
-                .unwrap_or_else(|| quack_text::word::IMPORTED.to_owned()),
-        });
-    }
+    let actions = rows
+        .into_iter()
+        .map(|r| ActionListItem {
+            action: Action::from_item(r.case, r.case_number, r.item),
+            member_id: r.member,
+            rule_name: r.rule_name,
+        })
+        .collect();
     Ok(Json(ActionPage {
         actions,
         next_cursor,
     }))
 }
 
-async fn case_view(
-    state: &ApiState,
-    staff: &Staff<Moderate>,
-    case: CaseRef,
-) -> ApiResult<CaseView> {
-    cases::get(state.engine(), &staff.principal, case)
-        .await
-        .map_err(|e| map::case(e, &Facts::scene(Scene::Staff), ""))
-}
-
-/// The action a control left, read back from its case.
+/// The action a control left, read back from its case's records.
 async fn answer(
     state: &ApiState,
     staff: &Staff<Moderate>,
     result: Result<ControlDone, ActionError>,
 ) -> ApiResult<Json<Action>> {
     let done = result.map_err(|e| map::action(e, &Facts::scene(Scene::Staff)))?;
-    let view = case_view(state, staff, CaseRef::Id(done.case)).await?;
-    let item = view
-        .actions
-        .iter()
-        .find(|a| a.id == done.action)
-        .cloned()
-        .ok_or_else(|| ApiError::api(quack_text::api::ApiCode::ActionNotFound))?;
-    Ok(Json(Action::from_item(view.id, view.number, item)))
+    let found = cases::action(state.engine(), &staff.principal, done.case, done.action)
+        .await
+        .map_err(|e| match e {
+            cases::CaseError::Refused(quack_core::DomainError::CaseNotFound) => {
+                ApiError::api(quack_text::api::ApiCode::ActionNotFound)
+            }
+            other => map::case(other, &Facts::scene(Scene::Staff), ""),
+        })?;
+    Ok(Json(Action::from_item(
+        found.case,
+        found.case_number,
+        found.item,
+    )))
 }
 
 /// Facts that name the action in a refusal.

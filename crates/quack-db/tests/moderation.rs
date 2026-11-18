@@ -155,7 +155,11 @@ async fn action_attempts_follow_the_state_table(
     assert_eq!(actions::count_failed(&mut conn, g).await?, 1);
     let listed = actions::list(&mut conn, g, ActionState::Failed, false, None, 50).await?;
     assert_eq!(
-        listed.iter().map(|i| i.case_number).collect::<Vec<_>>(),
+        listed
+            .rows
+            .iter()
+            .map(|i| i.case_number)
+            .collect::<Vec<_>>(),
         vec![c.number]
     );
 
@@ -402,7 +406,8 @@ async fn appeal_transitions_compare_state_and_version(
     assert!(closed.first_decided_at.is_some());
     assert_eq!(closed.decision.map(|d| d.0), Some(account_id(3)));
     assert_eq!(appeals::events(&mut conn, g, appeal).await?, vec![event]);
-    assert_eq!(appeals::list(&mut conn, g, None, None, 10).await?.len(), 1);
+    let page = appeals::list(&mut conn, g, None, None, 10).await?;
+    assert_eq!((page.rows.len(), page.more), (1, false));
     assert_eq!(appeals::pending(&mut conn, g, 10).await?, Vec::new());
     Ok(())
 }

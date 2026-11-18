@@ -1,6 +1,7 @@
 //! Cases (§4): applying a rule, voiding, editing context, adding evidence,
 //! and the staff and member read models.
 
+mod action_list;
 mod apply;
 mod apply_tx;
 mod apply_writes;
@@ -29,6 +30,7 @@ use crate::opkey::KeyError;
 use crate::port::InteractionToken;
 use crate::principal::Principal;
 
+pub use action_list::{ListedAction, action, actions};
 pub use apply::apply_rule;
 pub(crate) use card::{card, receipt};
 pub use edit::{ContextEdited, edit_context};

@@ -111,11 +111,11 @@ pub(super) async fn list_tickets(
         &staff.principal,
         ticket_state,
         cursor,
-        limit + 1,
+        limit,
     )
     .await
     .map_err(mapped)?;
-    let (rows, next_cursor) = pagination::page(rows, limit, |t| {
+    let (rows, next_cursor) = pagination::split(rows, |t| {
         pagination::time_cursor(t.created_at, t.id.get(), &filters)
     });
     let viewer = staff.principal.account;

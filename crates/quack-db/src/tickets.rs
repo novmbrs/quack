@@ -9,7 +9,7 @@ use time::OffsetDateTime;
 
 use crate::DbError;
 use crate::obs::{self, Insert, Select, Update};
-use crate::pg::{Pg, TimeCursor, count, cursor_parts, id, int, limit, opt_id};
+use crate::pg::{Page, Pg, TimeCursor, count, cursor_parts, fetch_limit, id, int, opt_id};
 
 pub use journal::{
     JOURNAL_PAGE, JournalFile, JournalMessage, Transcript, TranscriptInfo, add_journal_message,
@@ -370,7 +370,7 @@ pub async fn list(
     state: Option<TicketState>,
     cursor: Option<TimeCursor>,
     page: u32,
-) -> Result<Vec<Ticket>, DbError> {
+) -> Result<Page<Ticket>, DbError> {
     let (after_time, after_id) = cursor_parts(cursor);
     let rows = obs::run(
         Select,
@@ -383,12 +383,16 @@ pub async fn list(
             state.map(Pg),
             after_time,
             after_id,
-            limit(page, 100),
+            fetch_limit(page, 100),
         )
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter().map(Ticket::try_from).collect()
+    let rows = rows
+        .into_iter()
+        .map(Ticket::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Page::of(rows, page, 100))
 }
 
 /// Open tickets: in one server, or across servers for the gauge.

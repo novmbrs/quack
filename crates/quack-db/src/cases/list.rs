@@ -11,7 +11,7 @@ use time::OffsetDateTime;
 
 use crate::DbError;
 use crate::obs::{self, Select};
-use crate::pg::{Pg, TimeCursor, count, cursor_parts, id, int, limit, opt_id};
+use crate::pg::{Page, Pg, TimeCursor, count, cursor_parts, fetch_limit, id, int, opt_id};
 
 /// Filters of the staff case list (route 20), combined with AND.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -74,7 +74,7 @@ pub async fn list(
     filter: &CaseFilter,
     before_number: Option<u64>,
     page: u32,
-) -> Result<Vec<CaseSummary>, DbError> {
+) -> Result<Page<CaseSummary>, DbError> {
     let rows = obs::run(
         Select,
         "cases",
@@ -112,12 +112,13 @@ pub async fn list(
             filter.number.map(int::<u64, i64>).transpose()?,
             filter.created_after,
             filter.created_before,
-            limit(page, 100),
+            fetch_limit(page, 100),
         )
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter()
+    let rows: Result<Vec<_>, DbError> = rows
+        .into_iter()
         .map(|r| {
             Ok(CaseSummary {
                 id: CaseId::from_uuid(r.id),
@@ -138,7 +139,8 @@ pub async fn list(
                 appeal_state: r.appeal_state.map(|s| s.0),
             })
         })
-        .collect()
+        .collect();
+    Ok(Page::of(rows?, page, 100))
 }
 
 /// One of a member's own cases (route 51).
@@ -180,7 +182,7 @@ pub async fn member_cases(
     guild: Option<GuildId>,
     cursor: Option<TimeCursor>,
     page: u32,
-) -> Result<Vec<MemberCaseSummary>, DbError> {
+) -> Result<Page<MemberCaseSummary>, DbError> {
     let (after_time, after_id) = cursor_parts(cursor);
     let rows = obs::run(
         Select,
@@ -205,12 +207,13 @@ pub async fn member_cases(
             guild.map(i64::from),
             after_time,
             after_id,
-            limit(page, 100),
+            fetch_limit(page, 100),
         )
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter()
+    let rows: Result<Vec<_>, DbError> = rows
+        .into_iter()
         .map(|r| {
             Ok(MemberCaseSummary {
                 id: CaseId::from_uuid(r.id),
@@ -228,7 +231,8 @@ pub async fn member_cases(
                 appeal_state: r.appeal_state.map(|s| s.0),
             })
         })
-        .collect()
+        .collect();
+    Ok(Page::of(rows?, page, 100))
 }
 
 /// A member's case counts under one rule (route 27).

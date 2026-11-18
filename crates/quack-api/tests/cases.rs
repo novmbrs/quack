@@ -313,6 +313,10 @@ async fn lists_page_with_bound_cursors() {
         .await;
     assert_eq!(page2.json["cases"][0]["number"], 1);
     assert!(page2.json["next_cursor"].is_null());
+    // A page that is exactly full is the last one: no cursor to an empty page.
+    let exact = app.send(app.get(&g("/cases?limit=3")).by(&moderator)).await;
+    assert_eq!(exact.json["cases"].as_array().unwrap().len(), 3);
+    assert!(exact.json["next_cursor"].is_null());
     let filtered = app
         .send(
             app.get(&g(&format!(

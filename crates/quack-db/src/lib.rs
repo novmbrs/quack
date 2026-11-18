@@ -49,5 +49,5 @@ pub use db::{
 pub use error::{Applied, Conflict, DbError, Violation};
 pub use fence::{FENCE_CHECK_INTERVAL, FENCE_CHECK_TIMEOUT, FENCE_KEY, Fence};
 pub use migrate::{MIGRATOR, MigrationInfo, MigrationMismatch, migrate, verify_migrations};
-pub use pg::TimeCursor;
+pub use pg::{Page, TimeCursor};
 pub use sqlx::PgConnection;

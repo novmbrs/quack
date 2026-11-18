@@ -1,17 +1,15 @@
 //! Evidence files (routes 26 and 53, §7.4): a `302` to a fresh Discord CDN
-//! URL, found by fetching the copy message (when the file was copied) or
-//! the source message and locating the attachment by its ID. The staff
-//! route finds the case in the path's server; the member route finds it
-//! only among the member's own cases.
+//! URL from `quack_engine::evidence::resolve_file`. The staff route finds
+//! the case in the path's server; the member route finds it only among the
+//! member's own cases.
 
 use axum::extract::{Path, State};
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use quack_core::evidence::FileCopyState;
-use quack_core::ids::{AttachmentId, ChannelId, FileId, GuildId, MessageId};
-use quack_db::cases::Case;
-use quack_engine::{CaseRef, Outcome};
+use quack_core::ids::FileId;
+use quack_engine::evidence::{FileError, FileViewer, resolve_file};
 use quack_text::api::ApiCode;
+use quack_text::error::{ErrorFacts, Scene};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -25,58 +23,23 @@ pub(super) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(member_file))
 }
 
-/// Where an attachment was; `Ok(None)` when the message or the attachment
-/// is gone.
-async fn locate(
-    state: &ApiState,
-    channel: ChannelId,
-    message: MessageId,
-    attachment: AttachmentId,
-) -> ApiResult<Option<String>> {
-    match state
-        .engine()
-        .discord()
-        .fetch_message(channel, message)
+/// The redirect to a resolved file.
+async fn redirect(state: &ApiState, viewer: FileViewer<'_>, file: FileId) -> ApiResult<Response> {
+    let url = resolve_file(state.engine(), viewer, file)
         .await
-    {
-        Outcome::Done(m) => Ok(m
-            .attachments
-            .into_iter()
-            .find(|a| a.id == attachment)
-            .map(|a| a.url)),
-        Outcome::Refused(_) => Ok(None),
-        Outcome::RetryAfter(_) | Outcome::NotSent(_) | Outcome::Unknown(_) => {
-            Err(ApiError::api(ApiCode::DiscordUnavailable))
-        }
-    }
-}
-
-/// The redirect for one file of `case`.
-async fn redirect(
-    state: &ApiState,
-    guild: GuildId,
-    case: &Case,
-    file: FileId,
-) -> ApiResult<Response> {
-    let found = {
-        let mut conn = state.engine().db().conn().await?;
-        quack_db::evidence::file(&mut conn, guild, case.id, file).await?
-    };
-    let Some((file, source_channel, source_message)) = found else {
-        return Err(ApiError::not_found());
-    };
-    let mut url = None;
-    if file.copy_state == FileCopyState::Copied
-        && let Some((channel, message, attachment)) = file.copy
-    {
-        url = locate(state, channel, message, attachment).await?;
-    }
-    if url.is_none()
-        && let Some(attachment) = file.attachment_id
-    {
-        url = locate(state, source_channel, source_message, attachment).await?;
-    }
-    let url = url.ok_or_else(|| ApiError::api(ApiCode::FileUnavailable))?;
+        .map_err(|e| match e {
+            FileError::NotFound => ApiError::not_found(),
+            FileError::Unavailable => ApiError::api(ApiCode::FileUnavailable),
+            FileError::DiscordUnavailable => ApiError::api(ApiCode::DiscordUnavailable),
+            FileError::Refused(d) => ApiError::domain(
+                &d,
+                &ErrorFacts {
+                    scene: Scene::Staff,
+                    ..ErrorFacts::default()
+                },
+            ),
+            FileError::Db(e) => e.into(),
+        })?;
     let location =
         HeaderValue::from_str(&url).map_err(|_| ApiError::api(ApiCode::FileUnavailable))?;
     let mut response = StatusCode::FOUND.into_response();
@@ -95,17 +58,12 @@ async fn staff_file(
     staff: Staff<Moderate>,
     Path(path): Path<(String, String, String)>,
 ) -> ApiResult<Response> {
-    let guild = staff.guild();
     let file: FileId = uuid_id(&path.2)?;
-    let case = {
-        let mut conn = state.engine().db().conn().await?;
-        match case_ref(&path.1)? {
-            CaseRef::Number(n) => quack_db::cases::get_by_number(&mut conn, guild, n).await?,
-            CaseRef::Id(id) => quack_db::cases::get(&mut conn, guild, id).await?,
-        }
+    let viewer = FileViewer::Staff {
+        principal: &staff.principal,
+        case: case_ref(&path.1)?,
     };
-    let case = case.ok_or_else(ApiError::not_found)?;
-    redirect(&state, guild, &case, file).await
+    redirect(&state, viewer, file).await
 }
 
 /// A file of the member's own case.
@@ -119,12 +77,10 @@ async fn member_file(
     member: MemberSelf,
     Path(path): Path<(String, String)>,
 ) -> ApiResult<Response> {
-    let case_id = member_case_id(&path.0)?;
-    let file: FileId = uuid_id(&path.1)?;
-    let case = {
-        let mut conn = state.engine().db().conn().await?;
-        quack_db::cases::get_for_member(&mut conn, member.account.member(), case_id).await?
+    let viewer = FileViewer::Member {
+        account: member.account,
+        case: member_case_id(&path.0)?,
     };
-    let case = case.ok_or_else(ApiError::not_found)?;
-    redirect(&state, case.guild, &case, file).await
+    let file: FileId = uuid_id(&path.1)?;
+    redirect(&state, viewer, file).await
 }

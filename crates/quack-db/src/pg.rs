@@ -163,6 +163,41 @@ pub(crate) fn cursor_parts(cursor: Option<TimeCursor>) -> (Option<OffsetDateTime
     cursor.map_or((None, None), |c| (Some(c.created_at), Some(c.id)))
 }
 
+/// The SQL `LIMIT` of a list page: the page size clamped to `1..=max`, plus
+/// one row that tells [`Page::more`] whether another page follows.
+pub(crate) fn fetch_limit(requested: u32, max: u32) -> i64 {
+    i64::from(requested.clamp(1, max)) + 1
+}
+
+/// One page of a list, fetched with one extra row so that `more` is exact
+/// and the last page is never followed by an empty one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Page<T> {
+    /// At most the requested number of rows.
+    pub rows: Vec<T>,
+    /// Another row follows the last one.
+    pub more: bool,
+}
+
+impl<T> Page<T> {
+    /// The page from rows fetched with [`fetch_limit`].
+    pub(crate) fn of(mut rows: Vec<T>, requested: u32, max: u32) -> Self {
+        let size = usize::try_from(requested.clamp(1, max)).unwrap_or(usize::MAX);
+        let more = rows.len() > size;
+        rows.truncate(size);
+        Self { rows, more }
+    }
+
+    /// The same page with each row mapped.
+    #[must_use]
+    pub fn map<U>(self, f: impl FnMut(T) -> U) -> Page<U> {
+        Page {
+            rows: self.rows.into_iter().map(f).collect(),
+            more: self.more,
+        }
+    }
+}
+
 /// Clamps a page size to `1..=max` and returns it as a SQL `LIMIT`.
 pub(crate) fn limit(requested: u32, max: u32) -> i64 {
     i64::from(requested.clamp(1, max))

@@ -7,7 +7,6 @@ use axum::Json;
 use axum::extract::State;
 use quack_core::ids::{AccountId, GuildId};
 use quack_core::permissions::Capabilities as CoreCapabilities;
-use quack_db::{actions, appeals, guilds};
 use quack_engine::Origin;
 use quack_text::api::ApiCode;
 use serde::Serialize;
@@ -128,14 +127,12 @@ async fn list_guilds(
 ) -> ApiResult<Json<GuildList>> {
     let list = account_guilds(&state, &session).await?;
     let ids: Vec<GuildId> = list.iter().filter_map(|g| g.id.parse().ok()).collect();
-    let installed: HashMap<GuildId, bool> = {
-        let mut conn = state.engine().db().conn().await?;
-        guilds::get_many(&mut conn, &ids)
+    let installed: HashMap<GuildId, bool> =
+        quack_engine::guilds::installed_among(state.engine(), &ids)
             .await?
             .into_iter()
-            .map(|g| (g.id, g.installed))
-            .collect()
-    };
+            .map(|g| (g, true))
+            .collect();
     let mut out = Vec::new();
     for g in list.iter() {
         let Ok(guild_id) = g.id.parse::<GuildId>() else {
@@ -232,19 +229,15 @@ async fn guild_me(
     staff: Staff<InServer>,
 ) -> ApiResult<Json<GuildMe>> {
     let guild = staff.guild();
-    let mut conn = state.engine().db().conn().await?;
-    let stored = guilds::get(&mut conn, guild)
+    let summary = quack_engine::guilds::summary(state.engine(), &staff.principal)
         .await?
         .ok_or_else(|| ApiError::api(ApiCode::ServerNotFound))?;
+    let stored = summary.guild;
     let caps = Capabilities::effective(staff.capabilities);
-    let counts = if caps.moderate {
-        Some(GuildCounts {
-            pending_appeals: appeals::count_pending(&mut conn, guild).await?,
-            failed_actions: actions::count_failed(&mut conn, guild).await?,
-        })
-    } else {
-        None
-    };
+    let counts = summary.counts.map(|c| GuildCounts {
+        pending_appeals: c.pending_appeals,
+        failed_actions: c.failed_actions,
+    });
     Ok(Json(GuildMe {
         guild: GuildInfo {
             guild_id: guild,

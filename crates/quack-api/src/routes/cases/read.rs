@@ -118,9 +118,8 @@ pub(super) async fn list_cases(
     let rows = cases::list(state.engine(), &staff.principal, &filter, before, limit)
         .await
         .map_err(|e| map::case(e, &staff_facts(), ""))?;
-    let next_cursor = pagination::next(&rows, limit, |c| {
-        pagination::number_cursor(c.number, &filters)
-    });
+    let (rows, next_cursor) =
+        pagination::split(rows, |c| pagination::number_cursor(c.number, &filters));
     Ok(Json(CasePage {
         cases: rows.into_iter().map(Into::into).collect(),
         next_cursor,

@@ -9,7 +9,7 @@ use time::OffsetDateTime;
 
 use crate::jobs::{self, NewJob};
 use crate::obs::{self, AfterCommit, Insert, Select};
-use crate::pg::{Pg, TimeCursor, cursor_parts, id, limit, opt_id};
+use crate::pg::{Page, Pg, TimeCursor, cursor_parts, fetch_limit, id, limit, opt_id};
 use crate::{DbError, Tx};
 
 /// An entry to write. Its links must satisfy the kind's link rules
@@ -289,7 +289,7 @@ pub async fn list(
     filter: &ModLogFilter,
     cursor: Option<TimeCursor>,
     page: u32,
-) -> Result<Vec<StoredEntry>, DbError> {
+) -> Result<Page<StoredEntry>, DbError> {
     let (after_time, after_id) = cursor_parts(cursor);
     let kinds: Option<Vec<Pg<ModLogKind>>> =
         (!filter.kinds.is_empty()).then(|| filter.kinds.iter().copied().map(Pg).collect());
@@ -322,12 +322,16 @@ pub async fn list(
             filter.created_before,
             after_time,
             after_id,
-            limit(page, 100),
+            fetch_limit(page, 100),
         )
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter().map(StoredEntry::try_from).collect()
+    let rows = rows
+        .into_iter()
+        .map(StoredEntry::try_from)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Page::of(rows, page, 100))
 }
 
 /// A case's staff timeline, oldest first, at most `page` entries

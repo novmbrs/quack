@@ -4,7 +4,7 @@ use quack_core::DomainError;
 use quack_core::appeal::{AppealEventKind, AppealState};
 use quack_core::ids::{AccountId, AppealEventId, AppealId, CaseId, MemberId};
 use quack_core::permissions::Capability;
-use quack_db::{TimeCursor, appeals};
+use quack_db::{Page, TimeCursor, appeals};
 use serde::Serialize;
 use time::OffsetDateTime;
 
@@ -106,22 +106,19 @@ pub async fn get(
 }
 
 /// The principal's server's appeals (optionally in one state), newest
-/// first, after `cursor`.
+/// first, after `cursor`: one page of at most `limit`.
 pub async fn list(
     engine: &Engine,
     principal: &Principal,
     state: Option<AppealState>,
     cursor: Option<TimeCursor>,
     limit: u32,
-) -> Result<Vec<AppealView>, AppealError> {
+) -> Result<Page<AppealView>, AppealError> {
     obs::use_case("list_appeals", Some(principal.guild), async {
         let mut conn = engine.db().conn().await?;
         principal.require(&mut conn, Capability::Moderate).await??;
         let rows = appeals::list(&mut conn, principal.guild, state, cursor, limit).await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| to_view(r.appeal, r.case_number, r.rule_name.unwrap_or_default()))
-            .collect())
+        Ok(rows.map(|r| to_view(r.appeal, r.case_number, r.rule_name.unwrap_or_default())))
     })
     .await
 }

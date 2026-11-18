@@ -7,7 +7,7 @@ use quack_core::ids::{AccountId, GuildId, MemberId, RuleId};
 use quack_core::permissions::Capability;
 use quack_core::rule::Level;
 use quack_db::cases::{self, CaseFilter, CaseSummary, MemberCaseSummary, RuleTally};
-use quack_db::{TimeCursor, rules};
+use quack_db::{Page, TimeCursor, rules};
 use serde::Serialize;
 use time::OffsetDateTime;
 
@@ -34,14 +34,15 @@ pub struct CasePreview {
     pub at: OffsetDateTime,
 }
 
-/// The server's cases, newest first, before `before_number`.
+/// The server's cases, newest first, before `before_number`: one page of
+/// at most `limit`.
 pub async fn list(
     engine: &Engine,
     principal: &Principal,
     filter: &CaseFilter,
     before_number: Option<u64>,
     limit: u32,
-) -> Result<Vec<CaseSummary>, CaseError> {
+) -> Result<Page<CaseSummary>, CaseError> {
     obs::use_case("list_cases", Some(principal.guild), async {
         let mut conn = engine.db().conn().await?;
         principal.require(&mut conn, Capability::Moderate).await??;
@@ -107,14 +108,15 @@ pub async fn preview(
     .await
 }
 
-/// A member's own cases across servers (or in one), newest first.
+/// A member's own cases across servers (or in one), newest first: one
+/// page of at most `limit`.
 pub async fn member_cases(
     engine: &Engine,
     member: AccountId,
     guild: Option<GuildId>,
     cursor: Option<TimeCursor>,
     limit: u32,
-) -> Result<Vec<MemberCaseSummary>, CaseError> {
+) -> Result<Page<MemberCaseSummary>, CaseError> {
     obs::use_case("member_cases", guild, async {
         let mut conn = engine.db().conn().await?;
         Ok(cases::member_cases(&mut conn, member.member(), guild, cursor, limit).await?)

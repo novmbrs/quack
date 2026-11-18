@@ -47,7 +47,12 @@ pub async fn void(h: &Harness, case: CaseId) -> Result<()> {
 pub async fn log_kinds(h: &Harness) -> Result<Vec<ModLogKind>> {
     let mut conn = h.db.db.conn().await?;
     let entries = modlog::list(&mut conn, h.guild, &ModLogFilter::default(), None, 100).await?;
-    Ok(entries.into_iter().rev().map(|e| e.entry.kind()).collect())
+    Ok(entries
+        .rows
+        .into_iter()
+        .rev()
+        .map(|e| e.entry.kind())
+        .collect())
 }
 
 /// How many entries of `kind` the log has.

@@ -283,3 +283,63 @@ async fn cleared(tx: &mut Tx, guild: GuildId, setting: ChannelSetting) -> Result
     .await?;
     Ok(())
 }
+
+/// The servers among `guilds` Quack is installed in (the dashboard's
+/// server list).
+pub async fn installed_among(engine: &Engine, guilds: &[GuildId]) -> Result<Vec<GuildId>, DbError> {
+    let mut conn = engine.db().conn().await?;
+    Ok(guilds::get_many(&mut conn, guilds)
+        .await?
+        .into_iter()
+        .filter(|g| g.installed)
+        .map(|g| g.id)
+        .collect())
+}
+
+/// What staff are waiting on in a server.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct StaffCounts {
+    /// Appeals waiting for a decision.
+    pub pending_appeals: u64,
+    /// Failed actions not dismissed.
+    pub failed_actions: u64,
+}
+
+/// A server as the dashboard shows it to someone in it (route 6).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ServerSummary {
+    /// The stored server.
+    pub guild: guilds::Guild,
+    /// The staff counts, for `moderate` (with the 2FA rule).
+    pub counts: Option<StaffCounts>,
+}
+
+/// The principal's server and, when they hold `moderate`, its counts.
+/// `None` when the server is not stored.
+pub async fn summary(
+    engine: &Engine,
+    principal: &crate::Principal,
+) -> Result<Option<ServerSummary>, DbError> {
+    let guild = principal.guild;
+    let mut conn = engine.db().conn().await?;
+    let Some(stored) = guilds::get(&mut conn, guild).await? else {
+        return Ok(None);
+    };
+    let moderates = principal
+        .current_capabilities(&mut conn)
+        .await?
+        .check(quack_core::permissions::Capability::Moderate)
+        .is_ok();
+    let counts = if moderates {
+        Some(StaffCounts {
+            pending_appeals: quack_db::appeals::count_pending(&mut conn, guild).await?,
+            failed_actions: quack_db::actions::count_failed(&mut conn, guild).await?,
+        })
+    } else {
+        None
+    };
+    Ok(Some(ServerSummary {
+        guild: stored,
+        counts,
+    }))
+}

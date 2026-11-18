@@ -261,7 +261,7 @@ pub async fn on_guild_create(
                     let mut conn = engine.db().conn().await?;
                     tickets::list(&mut conn, guild, Some(state), cursor, 100).await?
                 };
-                for t in &page {
+                for t in &page.rows {
                     let Some(thread) = t.thread.filter(|th| !active_threads.contains(th)) else {
                         continue;
                     };
@@ -274,8 +274,8 @@ pub async fn on_guild_create(
                         closed += 1;
                     }
                 }
-                match page.last() {
-                    Some(last) if page.len() == 100 => {
+                match page.rows.last() {
+                    Some(last) if page.more => {
                         cursor = Some(TimeCursor {
                             created_at: last.created_at,
                             id: last.id.get(),

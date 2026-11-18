@@ -8,7 +8,7 @@ use time::OffsetDateTime;
 use super::{Appeal, AppealEvent, AppealRow};
 use crate::DbError;
 use crate::obs::{self, Select};
-use crate::pg::{Pg, TimeCursor, count, cursor_parts, limit, opt_id};
+use crate::pg::{Page, Pg, TimeCursor, count, cursor_parts, fetch_limit, limit, opt_id};
 
 struct EventRow {
     id: uuid::Uuid,
@@ -98,7 +98,7 @@ pub async fn list(
     state: Option<AppealState>,
     cursor: Option<TimeCursor>,
     page: u32,
-) -> Result<Vec<AppealSummary>, DbError> {
+) -> Result<Page<AppealSummary>, DbError> {
     let (after_time, after_id) = cursor_parts(cursor);
     let rows = obs::run(
         Select,
@@ -118,12 +118,13 @@ pub async fn list(
             state.map(Pg),
             after_time,
             after_id,
-            limit(page, 100),
+            fetch_limit(page, 100),
         )
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter()
+    let rows: Result<Vec<_>, DbError> = rows
+        .into_iter()
         .map(|r| {
             Ok(AppealSummary {
                 case_number: count(r.case_number)?,
@@ -145,7 +146,8 @@ pub async fn list(
                 })?,
             })
         })
-        .collect()
+        .collect();
+    Ok(Page::of(rows?, page, 100))
 }
 
 /// Pending appeals, oldest first (`/appeals`; `appeals_guild_state`).

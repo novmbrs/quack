@@ -161,7 +161,7 @@ async fn list_appeals(
     )
     .await
     .map_err(|e| map::appeal(e, &staff_facts(), "", ""))?;
-    let next_cursor = pagination::next(&rows, limit, |a| {
+    let (rows, next_cursor) = pagination::split(rows, |a| {
         pagination::time_cursor(a.created_at, a.id.get(), &filters)
     });
     Ok(Json(AppealPage {

@@ -75,7 +75,7 @@ async fn my_cases(
     let rows = cases::member_cases(state.engine(), member.account, guild, cursor, limit)
         .await
         .map_err(|e| map::case(e, &facts(), ""))?;
-    let next_cursor = pagination::next(&rows, limit, |r| {
+    let (rows, next_cursor) = pagination::split(rows, |r| {
         pagination::time_cursor(r.created_at, r.id.get(), &filters)
     });
     Ok(Json(MemberCasePage {

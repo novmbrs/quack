@@ -117,7 +117,8 @@ async fn failed_actions_list_retry_dismiss_and_undo() {
         .send(app.get(&g("/actions?state=done&limit=1")).by(&moderator))
         .await;
     assert_eq!(paged.json["actions"].as_array().unwrap().len(), 1);
-    assert!(paged.json["next_cursor"].is_string());
+    // The only done action fills the page exactly: no cursor to an empty page.
+    assert!(paged.json["next_cursor"].is_null());
     let bad = app
         .send(app.get(&g("/actions?state=exploded")).by(&moderator))
         .await;

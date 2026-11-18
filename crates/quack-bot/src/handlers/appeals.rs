@@ -55,7 +55,8 @@ async fn list_page(a: &Acked<'_>, page: u32) -> Result<Msg, Failure> {
         LIST_CAP,
     )
     .await
-    .map_err(|e| errors::appeal(&e, &ErrorFacts::default()))?;
+    .map_err(|e| errors::appeal(&e, &ErrorFacts::default()))?
+    .rows;
     appeals.sort_by_key(|v| v.created_at);
     let pages = u32::try_from(appeals.len().div_ceil(PER_PAGE).max(1)).unwrap_or(u32::MAX);
     let page = page.clamp(1, pages);

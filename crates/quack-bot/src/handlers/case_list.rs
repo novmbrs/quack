@@ -42,7 +42,8 @@ async fn cases_page(
 ) -> Result<ListPage, Failure> {
     let all = list(a.engine(), principal, filter, None, LIST_CAP)
         .await
-        .map_err(|e| errors::case(&e, &ErrorFacts::default()))?;
+        .map_err(|e| errors::case(&e, &ErrorFacts::default()))?
+        .rows;
     let pages = u32::try_from(all.len())
         .unwrap_or(u32::MAX)
         .div_ceil(PER_PAGE)

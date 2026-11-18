@@ -7,7 +7,7 @@ use sqlx::PgConnection;
 use super::{Action, ActionRow};
 use crate::DbError;
 use crate::obs::{self, Select};
-use crate::pg::{Pg, TimeCursor, count, cursor_parts, limit};
+use crate::pg::{Page, Pg, TimeCursor, count, cursor_parts, fetch_limit};
 
 /// One row of the actions page (route 28).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,7 +31,7 @@ pub async fn list(
     dismissed: bool,
     cursor: Option<TimeCursor>,
     page: u32,
-) -> Result<Vec<ActionListItem>, DbError> {
+) -> Result<Page<ActionListItem>, DbError> {
     let (after_time, after_id) = cursor_parts(cursor);
     let rows = obs::run(
         Select,
@@ -56,12 +56,13 @@ pub async fn list(
             dismissed,
             after_time,
             after_id,
-            limit(page, 100),
+            fetch_limit(page, 100),
         )
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter()
+    let rows: Result<Vec<_>, DbError> = rows
+        .into_iter()
         .map(|r| {
             let action = Action::try_from(ActionRow {
                 id: r.id,
@@ -96,7 +97,8 @@ pub async fn list(
                 rule_name: r.rule_name,
             })
         })
-        .collect()
+        .collect();
+    Ok(Page::of(rows?, page, 100))
 }
 
 /// Failed, undismissed actions in a server (`GuildMe` counts).

@@ -538,10 +538,12 @@ async fn an_unreadable_log_detail_keeps_the_page_readable(
     .execute(&mut *conn)
     .await?;
     let page = modlog::list(&mut conn, g, &modlog::ModLogFilter::default(), None, 10).await?;
-    assert_eq!(page.len(), 2, "the bad row doesn't hide its neighbour");
-    assert_eq!(page.iter().filter(|e| !e.detail_readable).count(), 1);
+    assert_eq!(page.rows.len(), 2, "the bad row doesn't hide its neighbour");
+    assert!(!page.more);
+    assert_eq!(page.rows.iter().filter(|e| !e.detail_readable).count(), 1);
     assert!(
-        page.iter()
+        page.rows
+            .iter()
             .all(|e| e.kind == quack_core::modlog::ModLogKind::SettingsChanged)
     );
     Ok(())

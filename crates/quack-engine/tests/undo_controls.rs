@@ -204,6 +204,7 @@ async fn failed(h: &Harness, dismissed: bool) -> Result<usize> {
     Ok(
         quack_db::actions::list(&mut conn, h.guild, ActionState::Failed, dismissed, None, 50)
             .await?
+            .rows
             .len(),
     )
 }

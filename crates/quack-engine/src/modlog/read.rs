@@ -79,16 +79,17 @@ pub async fn list(
         let limit = limit.clamp(1, quack_core::limits::MAX_PAGE_SIZE);
         let rows =
             quack_db::modlog::list(&mut conn, principal.guild, filter, cursor, limit).await?;
-        let next_cursor = (rows.len() == limit as usize)
+        let next_cursor = rows
+            .more
             .then(|| {
-                rows.last().map(|e| TimeCursor {
+                rows.rows.last().map(|e| TimeCursor {
                     created_at: e.created_at,
                     id: e.id.get(),
                 })
             })
             .flatten();
         let mut entries = Vec::new();
-        for entry in &rows {
+        for entry in &rows.rows {
             entries.push(entry_view(engine, &mut conn, entry).await?);
         }
         Ok(Ok(ModLogPage {

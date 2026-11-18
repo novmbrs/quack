@@ -138,7 +138,7 @@ async fn step(h: &Harness, ids: &[RuleId], model: &mut Vec<ModelCase>, op: Op) -
                 quack_db::actions::list(&mut conn, h.guild, ActionState::Failed, false, None, 50)
                     .await?;
             drop(conn);
-            if let Some(item) = failed.get(action) {
+            if let Some(item) = failed.rows.get(action) {
                 let _ = retry(&h.engine, &h.moderator(), item.action.id, &h.key("ar")).await;
             }
         }
