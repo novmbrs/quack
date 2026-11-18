@@ -158,10 +158,11 @@ async fn other_servers_see_nothing() -> Result<()> {
     assert!(matches!(fixed, Err(TicketError::NotFound)), "{fixed:?}");
     let read = quack_tickets::transcript(&w.h.engine, &moderator, t.id).await;
     assert!(matches!(read, Err(TicketError::NotFound)), "{read:?}");
-    assert!(
+    assert_eq!(
         quack_tickets::list(&w.h.engine, &moderator, None, None, 50)
             .await?
-            .is_empty()
+            .len(),
+        0
     );
     assert!(!quack_tickets::on_thread_deleted(&w.h.engine, other, thread).await?);
     let mut entry = w.entry_for(thread, sf(55), M, "from elsewhere");
