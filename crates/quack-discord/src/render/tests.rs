@@ -170,10 +170,12 @@ fn modals_use_labels() {
         },
     ];
     let form = render_modal(&quack_text::case::form_modal("Spam", page, 2, &fields));
-    insta::assert_json_snapshot!(
-        "case_form_modal",
-        (&form.custom_id, &form.title, &form.components)
-    );
+    let wire = form.wire_components();
+    // Discord review MAJOR 6: Discord forbids `disabled` on a modal select,
+    // whatever its value; asserted apart from the snapshot so accepting a
+    // snapshot can't bless it.
+    assert!(!wire.to_string().contains("\"disabled\""), "{wire}");
+    insta::assert_json_snapshot!("case_form_modal", (&form.custom_id, &form.title, &wire));
 }
 
 #[test]

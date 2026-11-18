@@ -21,6 +21,34 @@ pub struct RenderedModal {
     pub components: Vec<Component>,
 }
 
+impl RenderedModal {
+    /// The components as the modal callback sends them. Discord forbids
+    /// `disabled` on a select inside a modal, whatever its value, and
+    /// Twilight always writes it, so it is removed here.
+    pub fn wire_components(&self) -> serde_json::Value {
+        let mut value = serde_json::to_value(&self.components).unwrap_or_default();
+        strip_select_disabled(&mut value);
+        value
+    }
+}
+
+fn strip_select_disabled(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Array(items) => items.iter_mut().for_each(strip_select_disabled),
+        serde_json::Value::Object(map) => {
+            let select = map
+                .get("type")
+                .and_then(serde_json::Value::as_u64)
+                .is_some_and(|t| matches!(t, 3 | 5..=8));
+            if select {
+                map.remove("disabled");
+            }
+            map.values_mut().for_each(strip_select_disabled);
+        }
+        _ => {}
+    }
+}
+
 fn cut(s: &str, max: usize) -> String {
     s.chars().take(max).collect()
 }

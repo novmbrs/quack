@@ -38,6 +38,10 @@ struct Callback<'a> {
 struct Data<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     components: Option<&'a [Component]>,
+    /// A modal's components, already in their wire form
+    /// ([`RenderedModal::wire_components`]); sent as `components`.
+    #[serde(rename = "components", skip_serializing_if = "Option::is_none")]
+    modal_components: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     flags: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -145,7 +149,7 @@ impl DiscordClient {
         modal: &RenderedModal,
     ) -> Outcome<()> {
         let data = Data {
-            components: Some(&modal.components),
+            modal_components: Some(modal.wire_components()),
             custom_id: Some(&modal.custom_id),
             title: Some(&modal.title),
             ..Data::default()
