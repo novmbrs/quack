@@ -26,6 +26,10 @@ use quack_text::{Msg, Text, Tone};
 
 use crate::bot::Shared;
 
+/// The ack must go out within this long of the interaction's snowflake
+/// time (§11.3).
+const ACK_DEADLINE: time::Duration = time::Duration::milliseconds(2_500);
+
 /// How long the exception read before a prefilled modal may take (§11.3).
 pub(crate) const PREFILL_DEADLINE: Duration = Duration::from_millis(300);
 
@@ -156,6 +160,14 @@ impl<'a> Pending<'a> {
     /// Records the ack on the metric and the span.
     fn acked(&self, outcome: &Outcome<()>, how: &'static str) -> Result<(), Finish> {
         let latency = self.received.elapsed();
+        if let Some(created) = self.ix.created_at()
+            && time::OffsetDateTime::now_utc() - created > ACK_DEADLINE
+        {
+            tracing::warn!(
+                interaction.id = self.ix.id,
+                "an interaction was acknowledged more than 2.5 s after Discord created it"
+            );
+        }
         metrics()
             .interactions
             .acked(self.ix.telemetry_kind(), self.ix.command_name(), latency);

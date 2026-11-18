@@ -2011,8 +2011,8 @@ fully (with 2FA) before any write.
 | `/help` | Immediate message (type 4), ephemeral. Static text. | Ephemeral. |
 | Message or member command "Add case" | Deferred channel message, ephemeral. | Ephemeral; a public receipt is a separate message (§11.7). |
 | Autocomplete | Type 8 result from memory. | — |
-| Button that opens a modal with no stored values (Void, Add evidence, Accept, Reject, Appeal, Continue) | Modal (custom ID, caches, or static text only). | — |
-| **Exception:** a modal prefilled with stored values: Edit context, Try again on a draft page, Set rejoin invite, Edit warning | Authorize from the payload, the caches, and the actor's 2FA row, and read the one row the modal shows, in a single query bound to the actor and server, within 300 ms; then the modal. Not authorized → ephemeral refusal and no modal. Deadline missed → ephemeral `interaction.busy`. | — |
+| Button that opens a modal with no stored values (Void, Accept, Reject, Appeal, Continue) | Modal (custom ID, caches, or static text only). Void, Accept, Reject, and Continue refuse privately, with no modal, when the payload shows no `moderate`. | — |
+| **Exception:** a modal prefilled with stored values: Edit context, Try again on a draft page, Set rejoin invite, Edit warning, and Add evidence (its title names the case number, which the `ea` custom ID doesn't carry) | Authorize from the payload, the caches, and the actor's 2FA row, and read the one row the modal shows, in a single query bound to the actor and server, within 300 ms; then the modal. Not authorized → ephemeral refusal and no modal. Deadline missed → ephemeral `interaction.busy`. | — |
 | Button or select on an ephemeral message | Deferred update (type 6). | Edits that ephemeral message. |
 | Button on a shared message (public receipt, log channel post, appeal post, ticket post, ticket panel) | Deferred channel message, ephemeral (type 5, flag 64). | New ephemeral message; the shared message changes only through tracked-message sync. |
 | Modal submit | Deferred update when the modal came from an ephemeral message; otherwise deferred channel message, ephemeral. | Ephemeral. |
@@ -2138,7 +2138,13 @@ version it was started with, and expires 15 minutes after it was created.
 
 **From `/case add`:** when the rule needs input, the initial response is
 modal page 1 with a fresh draft ID (UUIDv7) in its custom ID; the first
-submit creates the row. Otherwise the command defers and applies the rule
+submit creates the row. The `cd` custom ID doesn't carry the member or the
+receipt choice, so `quack-bot` remembers them in memory (by draft ID, 15
+minutes, bounded) when it opens the modal; a first-page submit after a
+restart finds nothing and answers `case.draft.expired`. Only page 1 may
+create the row, and a form whose case was applied is marked used, so a
+resubmitted page finds the case through `draft:<id>` instead of starting
+a second draft. Otherwise the command defers and applies the rule
 at once with operation key = the interaction ID.
 
 **From the "Add case" message or member command:**
@@ -5701,14 +5707,14 @@ dependencies from the stack audit plus the additions in §20.5.
 | `quack-text` | Every user-facing string (§12) and the neutral message model. | core | `Msg`, `Text`, `Inline`, `Block`, `Row`, `Button`, `Select`, `Modal`, `Tone`, `Person`, `Actor`, `ChannelRef`, `RoleRef`, `Command`, `TimeStyle` (from `model`); `ButtonAction`, `SelectAction`, `ModalAction` (from `actions`); `Surface` (`Discord(&CommandIds)` renders mentions, `Plain` renders names) and `CommandIds` (from `render`); one function per message id in `command`, `error`, `case` (incl. `CaseCard`, `ReceiptView`), `action`, `dm`, `evidence`, `appeal`, `log`, `setup`, `help`, `rules`, `ticket`, `activity`, `honeypot`, `api`, `timeline`; shared `word`, `fmt` (`duration`, `plural`, `escape_markdown`, `date`, `datetime`, …), `budget` (Discord limits, `check_msg`, `fit`); full map in §17.2.1. |
 | `quack-telemetry` | OTel setup and the instrument catalog (`METRICS.md`, §18). | — | `init(&TelemetryConfig) -> Result<TelemetryGuard, TelemetryError>`, `init_with_exporters`, `Exporters`, `TelemetryConfig`, `LogFormat`, `SHUTDOWN_DEADLINE`, `TelemetryGuard::{is_exporting, with_deadline, force_flush, shutdown}`, `TelemetryError`; `metrics()` / `Metrics` (typed instrument families such as `JobMetrics`, `DbMetrics`, `CaseMetrics`); `catalog` (`INSTRUMENTS`, `ATTRIBUTES`, `render_markdown`); `labels` (`Attribute` and attribute enums); `keys`; `spans` (`interaction`, `gateway`, `http`, `job`/`JobRun`, `use_case`, `db`, `discord`, `record*`, `event`, `SpanEvent`); `current_trace_context`, `trace_context_of`, `parse_trace_context`; full map in §17.2.1. |
 | `quack-db` | PostgreSQL: migrations, every query (sqlx macros, offline data in `.sqlx/`), the job queue, sessions, tracked messages. | core, telemetry | `Db` (`connect`, `begin`, `transaction`, `conn`), `Tx`, `TxError`, `DbError`/`Conflict`/`Violation`, `Applied`, `TimeCursor`, `migrate`, `verify_migrations`, `MigrationMismatch`, `Fence` (the singleton lock, §17.5); query modules `guilds`, `settings`, `rules`, `cases`, `actions`, `dms`, `evidence`, `appeals`, `modlog`, `messages`, `operation_keys`, `drafts`, `sessions`, `accounts`, `stats`, `tickets`, `activity_log`, `honeypot`, `import`, `housekeeping`; `jobs` (`JobKind`, `JobKey`, `NewJob`, `RunAt`, `enqueue`, `claim`, `sweep_leases`, `fence`, `settle`, `ClaimedJob`, `JobResult`, the generic `Runner` with the engine's `Handler`); `notify` (`rules_changed`, `settings_changed`, `Notification`, `Listener`); full map in §17.2.1. |
-| `quack-discord` | Twilight 0.18: gateway, caches, REST with typed outcomes, rendering, custom IDs, command definitions. | core, text, telemetry | `DiscordClient`, `Gateway` (`run(tx)` yielding Twilight events), `GuildCache`, `MemberCache`, `render(&Msg) -> RenderedMessage`, `custom_id::{CustomId, encode, decode, decode_legacy}`, `commands::{definitions, sync}`, `Responder` (ack, defer, modal, edit original, follow-up), `permissions::{in_channel, in_guild}`. |
+| `quack-discord` | Twilight 0.18: gateway, caches, REST with typed outcomes, rendering, custom IDs, command definitions. | core, text, telemetry | `DiscordClient`, `Gateway` (`run(tx)` yielding Twilight events), `GuildCache`, `MemberCache`, `render(&Msg) -> RenderedMessage`, `custom_id::{CustomId, encode, decode, decode_legacy}`, `commands::{definitions, sync}`, the interaction callbacks on `DiscordClient` (`defer`, `defer_update`, `reply`, `open_modal`, `autocomplete`, `edit_interaction_original`, `followup`), `permissions::{in_channel, in_guild}`. |
 | `quack-engine` | Use cases and job handlers; defines the `Discord` port, the `Module` contract, and the neutral input types (`ModuleEvent`, `ComponentCall`, `FetchedMessage`, `SentMessage`). | core, text, db, telemetry | `Engine`, `Ctx`, `Principal`, `Discord` (trait), `Outcome`, `Refusal`, facts loader; `cases::{apply_rule, void_case, edit_context, add_evidence, get, list, preview, member_summary}`; `actions::{run, finalize, retry, dismiss, undo}`; `dms::{send, finalize}`; `evidence::{capture, finalize, resolve_file}`; `appeals::{submit, add_information, decide, get, list}`; `messages::{bump, sync}`; `modlog::{list, post}`; `rules::{create, edit, archive, restore, import, export, get, list}`; `settings::{get, patch, acknowledge_starter_notice}`; `setup::{create_channel, panel, apply}`; `guilds::{bootstrap, left, reconcile_channels}`; `stats::compute`; `drafts`; the job `Handler` (one closure for every kind) that the binary passes to `quack_db::jobs::Runner`, §16.4; `Module`, `ModuleSpec`; `RulesCache`, `ConfigCache`. |
 | `quack-tickets`, `quack-activity-log`, `quack-honeypot` | The optional modules (§13). | core, text, db, engine, telemetry | `module() -> Arc<dyn Module>`; service functions and DTOs used by `quack-api` (`settings`, `update_settings`, `list`, `get`, `transcript`, `close` for tickets). |
 | `quack-api` | axum HTTP API, OAuth (its own small traced client), sessions, CSRF, rate limits, OpenAPI, static files. | core, text, db, engine, modules, telemetry | `router(ApiState) -> axum::Router`, `ApiState`, `openapi::document()`, extractors (`SessionAccount`, `Staff<Capability>`, `MemberSelf`, `IdempotencyKey`), `ApiError`. |
-| `quack-bot` | Interaction and gateway routing into engine calls and replies; converts Twilight events into `ModuleEvent` and `ComponentCall`. | core, text, engine, discord, modules, telemetry | `Bot::new`, `Bot::on_interaction`, `Bot::on_event`. |
+| `quack-bot` | Interaction and gateway routing into engine calls and replies; hands module components and events to the modules. | core, text, engine, discord, db (draft and 2FA reads), telemetry; modules through its `Module` seam | `Bot::new`, `Bot::on_interaction`, `Bot::on_event`; `Responder` (the initial callback, edits, follow-ups; `DiscordResponder` over the client, a recorder in tests), `CommandMentions` (command ids shared by every renderer); `Module` and `ComponentCall` (the module seam until the module crates are connected). |
 | `quack-import` | MySQL → PostgreSQL importer (only crate with sqlx `mysql`). | core, db | `run(ImportOptions) -> Result<Report>`, `Report`. |
 | `quack-testkit` | Test helpers (dev-dependency only). | core, engine, db | `FakeDiscord`, `TestDb` (Postgres 18 in Testcontainers, migrated), `fixtures`. |
-| `quack` (bin) | Config, CLI, wiring, shutdown, and `DiscordPort`. | everything | `main`. |
+| `quack` (bin) | Config, CLI, wiring, shutdown, and `DiscordPort`. | everything | `main`; its library: `cli::parse`, `config::{Config, Need, load, validate}`, `serve::{run, Options, DiscordMode, Readiness, sync_commands}`, `DiscordPort`, and `wiring` (where the modules, the API router, and the importer are connected). |
 
 `quack-discord` may not depend on `quack-engine` (adapters never import
 each other, and the engine must not see Twilight). The binary therefore
@@ -6520,7 +6526,7 @@ Drawn from the table in §17.2 (`A ──> B` means A depends on B):
 
 ```
 quack (bin)          ──> every crate below
-quack-bot            ──> quack-discord, quack-tickets, quack-activity-log, quack-honeypot, quack-engine, quack-text, quack-core
+quack-bot            ──> quack-discord, quack-tickets, quack-activity-log, quack-honeypot, quack-engine, quack-db, quack-text, quack-core
 quack-api            ──> quack-tickets, quack-activity-log, quack-honeypot, quack-engine, quack-db, quack-text, quack-core
 quack-tickets,
 quack-activity-log,
