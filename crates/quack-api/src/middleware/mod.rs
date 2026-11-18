@@ -43,3 +43,31 @@ pub(crate) fn stack(router: Router<ApiState>, state: &ApiState) -> Router<ApiSta
         .layer(CatchPanicLayer::custom(limits::panicked))
         .layer(from_fn(telemetry::layer))
 }
+
+#[cfg(test)]
+mod tests {
+    use axum::Router;
+    use axum::body::Body;
+    use axum::http::Request;
+    use axum::routing::get;
+    use tower::ServiceExt as _;
+    use tower_http::catch_panic::CatchPanicLayer;
+
+    #[tokio::test]
+    async fn a_panicking_handler_answers_with_the_envelope() {
+        let app = Router::new()
+            .route("/boom", get(|| async { panic!("boom") }))
+            .layer(CatchPanicLayer::custom(super::limits::panicked));
+        let response = app
+            .oneshot(Request::get("/boom").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 500);
+        let body = axum::body::to_bytes(response.into_body(), 1 << 16)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["error"]["code"], "internal_error");
+        assert!(!json.to_string().contains("boom"));
+    }
+}

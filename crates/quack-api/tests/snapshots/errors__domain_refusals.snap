@@ -1,0 +1,694 @@
+---
+source: crates/quack-api/tests/errors.rs
+expression: all
+---
+[
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask an administrator to check your roles in Server Settings → Roles, or the rules manager roles in the Quack dashboard's server settings.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "Only the server owner or a member with Administrator can change Quack's moderator roles. Ask one of them to change them in the Quack dashboard's server settings.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "missing_capability",
+          "message": "Only the server owner or a member with Administrator can change Quack's moderator roles. Ask one of them to change them in the Quack dashboard's server settings.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "mfa_required",
+          "message": "This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "mfa_required",
+          "message": "This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.",
+          "trace_id": null
+        }
+      },
+      "status": 403
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "member_refused",
+          "fields": [
+            {
+              "code": "member_role_too_high",
+              "field": "member_id",
+              "message": "No case was added. Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs."
+            }
+          ],
+          "message": "No case was added. Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "member_refused",
+          "fields": [
+            {
+              "code": "member_role_too_high",
+              "field": "member_id",
+              "message": "No case was added. Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs."
+            }
+          ],
+          "message": "No case was added. Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "member_refused",
+          "fields": [
+            {
+              "code": "quack_missing_permission",
+              "field": "member_id",
+              "message": "No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles. Then run /case add again."
+            }
+          ],
+          "message": "No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles. Then run /case add again.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "member_refused",
+          "fields": [
+            {
+              "code": "quack_missing_permission",
+              "field": "member_id",
+              "message": "No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles. Then run /case add again."
+            }
+          ],
+          "message": "No case was added. This rule calls for a ban. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles. Then run /case add again.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "Quack couldn't find what you opened. Go back to the list and open it again.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "Case #12 wasn't found in this server. Check the number or use /case list.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "case_already_voided",
+          "message": "This case is already voided and no longer counts.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "case_already_voided",
+          "message": "Case #12 is already voided and no longer counts.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "case_voided",
+          "message": "This case was voided and no longer counts. You can still review it on the dashboard.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "case_voided",
+          "message": "Case #12 is voided. Quack won't retry its ban.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "replacement_invalid",
+          "message": "That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "replacement_invalid",
+          "message": "Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "That rule doesn't exist anymore. Choose another rule.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "That rule doesn't exist anymore. Choose another rule.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "rule_archived",
+          "message": "That rule is archived, so it can't be applied. Choose an active rule.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "rule_archived",
+          "message": "The rule Spam is archived, so it can't be applied. Choose an active rule.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "rule_changed",
+          "message": "Someone else saved this rule. Reload it to see the latest version before you save.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "rule_changed",
+          "message": "Someone else saved this rule. Reload it to see the latest version before you save.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "rule_name_taken",
+          "message": "Another active rule already has this name. Choose a different name.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "rule_name_taken",
+          "message": "Another active rule is already called Spam. Choose a different name.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "too_many_rules",
+          "message": "A server can have at most 100 active rules. Archive one first.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "too_many_rules",
+          "message": "A server can have at most 100 active rules. Archive one first.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "rule_used_by_honeypot",
+          "message": "The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "rule_used_by_honeypot",
+          "message": "The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "required_field_on_honeypot_rule",
+          "message": "The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "required_field_on_honeypot_rule",
+          "message": "The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "action_not_retryable",
+          "message": "This action can no longer be retried. Open the case to see its current outcome.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "action_not_retryable",
+          "message": "The ban can no longer be retried. Open the case to see its current outcome.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "action_not_dismissable",
+          "message": "This failure can no longer be dismissed. Open the case to see its current outcome.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "action_not_dismissable",
+          "message": "The ban failure can no longer be dismissed. Open the case to see its current outcome.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "action_not_undoable",
+          "message": "This action can't be undone from the case. Open the case to see its current outcome.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "action_not_undoable",
+          "message": "This ban can't be undone from the case now. Open the case to see its current outcome.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "timeout_window_passed",
+          "message": "The timeout's end time has passed, so Quack won't retry it.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "timeout_window_passed",
+          "message": "The timeout's end time has passed, so Quack won't retry it.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "Quack couldn't find what you opened. Go back to the list and open it again.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "appeal_changed",
+          "message": "The appeal changed while you were writing. Reload it and read the latest question before replying.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "appeal_changed",
+          "message": "This appeal changed since you opened it. Open it again to see the latest update.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "appeal_exists",
+          "message": "You already appealed this case. Open your appeal to see the latest update.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "appeal_exists",
+          "message": "You already appealed case #12. Open your appeal on the dashboard to see the latest update.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "appeal_not_allowed",
+          "message": "This case can't be appealed. You can still review it on the dashboard.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "appeal_not_allowed",
+          "message": "Case #12 can't be appealed. You can still review it on the dashboard.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "evidence_limit_reached",
+          "message": "This case would have more than 50 evidence items. Add fewer message links.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "evidence_limit_reached",
+          "message": "Case #12 would have more than 50 evidence items. Add fewer message links.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "too_many_links",
+          "message": "Add at most 10 message links at a time.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "too_many_links",
+          "message": "Add at most 10 message links at a time.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "settings_changed",
+          "message": "Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "settings_changed",
+          "message": "Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "ticket_not_open",
+          "message": "This ticket is already closed or closing.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "ticket_not_open",
+          "message": "This ticket is already closed or closing.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  }
+]
