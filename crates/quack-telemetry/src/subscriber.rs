@@ -9,6 +9,10 @@
 //! The two export layers never see events from the exporters' own stack
 //! (`opentelemetry*`, `hyper`, `reqwest`, …), so an export failure cannot
 //! feed back into the exporter. Those events still reach stderr.
+//!
+//! Each layer has its own filter, so the log filter decides only what is
+//! logged. Those filters never let a callsite's interest be cached as
+//! "always" (see [`LayerFilter`]).
 
 use std::io::IsTerminal as _;
 
@@ -16,8 +20,10 @@ use opentelemetry::trace::TracerProvider as _;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::trace::SdkTracerProvider;
-use tracing::Subscriber;
-use tracing_subscriber::layer::SubscriberExt as _;
+use tracing::subscriber::Interest;
+use tracing::{Metadata, Subscriber, span};
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::layer::{Context, Filter, SubscriberExt as _};
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::{EnvFilter, Layer, Registry};
 
@@ -70,7 +76,7 @@ pub(crate) fn build(
     Ok(Registry::default().with(layers))
 }
 
-fn stderr_layer(format: LogFormat, filter: EnvFilter) -> BoxedLayer {
+fn stderr_layer(format: LogFormat, filter: LayerFilter) -> BoxedLayer {
     let layer = tracing_subscriber::fmt::layer().with_writer(std::io::stderr);
     match format {
         LogFormat::Text => layer
@@ -87,13 +93,65 @@ fn stderr_layer(format: LogFormat, filter: EnvFilter) -> BoxedLayer {
     }
 }
 
-fn filter(directives: &str) -> Result<EnvFilter, TelemetryError> {
+fn filter(directives: &str) -> Result<LayerFilter, TelemetryError> {
     EnvFilter::builder()
         .parse(directives)
+        .map(LayerFilter)
         .map_err(|error| TelemetryError::InvalidLogFilter {
             filter: directives.to_owned(),
             message: error.to_string(),
         })
+}
+
+/// One layer's [`EnvFilter`], asked again at every span and event it might
+/// enable.
+///
+/// `tracing-subscriber` keeps each layer's verdict in a thread-local until
+/// the span or event is dispatched. A bare `tracing::enabled!` probe of a
+/// callsite only some layers enable never dispatches, so those verdicts
+/// linger, and the next callsite cached as "always" skips filtering and
+/// inherits them: with `quack_engine=debug`, HTTP spans and shutdown logs
+/// went missing. Reporting "sometimes" instead of "always" makes every
+/// dispatch filter again and overwrite them.
+struct LayerFilter(EnvFilter);
+
+impl<S> Filter<S> for LayerFilter {
+    fn enabled(&self, meta: &Metadata<'_>, cx: &Context<'_, S>) -> bool {
+        Filter::enabled(&self.0, meta, cx)
+    }
+
+    fn callsite_enabled(&self, meta: &'static Metadata<'static>) -> Interest {
+        let interest = Filter::<S>::callsite_enabled(&self.0, meta);
+        if interest.is_always() {
+            Interest::sometimes()
+        } else {
+            interest
+        }
+    }
+
+    fn max_level_hint(&self) -> Option<LevelFilter> {
+        Filter::<S>::max_level_hint(&self.0)
+    }
+
+    fn on_new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, cx: Context<'_, S>) {
+        Filter::on_new_span(&self.0, attrs, id, cx);
+    }
+
+    fn on_record(&self, id: &span::Id, values: &span::Record<'_>, cx: Context<'_, S>) {
+        Filter::on_record(&self.0, id, values, cx);
+    }
+
+    fn on_enter(&self, id: &span::Id, cx: Context<'_, S>) {
+        Filter::on_enter(&self.0, id, cx);
+    }
+
+    fn on_exit(&self, id: &span::Id, cx: Context<'_, S>) {
+        Filter::on_exit(&self.0, id, cx);
+    }
+
+    fn on_close(&self, id: span::Id, cx: Context<'_, S>) {
+        Filter::on_close(&self.0, id, cx);
+    }
 }
 
 #[cfg(test)]
