@@ -8088,3 +8088,9 @@ folds these into the sections (or changes the code) and removes them here.
     (`thread_delete_failed`) and closes with a partial transcript. A
     message sent before `frozen_at` whose event arrives after the freeze
     is still journaled until the transcript is saved.
+56. §10.3 (engine review MAJOR 7) → when the channel itself is gone or
+    unreadable (Unknown Channel, Missing Access, or the facts say it is
+    missing) and it is still where the message belongs, the sync ends with
+    `last_error = destination_unavailable` instead of posting "again" in
+    the same channel under a new generation every run; the next bump (a
+    settings change, say) tries again.

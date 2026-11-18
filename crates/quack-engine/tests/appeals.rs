@@ -473,3 +473,50 @@ async fn an_appeal_during_a_channel_change_posts_in_the_new_channel() -> Result<
     assert_eq!(post.channel, Some(channel));
     Ok(())
 }
+
+/// Engine review MAJOR 7: the appeal channel still configured but gone
+/// (its delete event was missed) ends the sync with an error instead of
+/// a new generation every run.
+#[tokio::test]
+async fn a_post_whose_configured_channel_is_gone_stops_trying() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    let case = h.apply(MEMBER, rule).await?.case.id;
+    let channel = h.fake.world(|w| w.add_text_channel(h.guild, true));
+    sqlx::query("UPDATE guild_settings SET appeal_channel_id = $1 WHERE guild_id = $2")
+        .bind(i64::from(channel))
+        .bind(i64::try_from(GUILD)?)
+        .execute(h.db.db.pool())
+        .await?;
+    let appeal = submit(
+        &h.engine,
+        sf(MEMBER),
+        Origin::Dashboard,
+        case,
+        "Not me.",
+        &h.key("apm"),
+    )
+    .await?
+    .appeal;
+    h.settle().await?;
+    h.fake.world(|w| {
+        if let Some(g) = w.guilds.get_mut(&h.guild) {
+            g.channels.remove(&channel);
+        }
+    });
+    let mut tx = h.db.db.begin().await?;
+    quack_db::messages::bump(&mut tx, h.guild, quack_db::messages::Owner::Appeal(appeal)).await?;
+    tx.commit().await?;
+    h.settle().await?;
+    let mut conn = h.db.db.conn().await?;
+    let post = quack_db::messages::by_owner(
+        &mut conn,
+        h.guild,
+        quack_db::messages::Owner::Appeal(appeal),
+    )
+    .await?
+    .context("the appeal's post")?;
+    assert_eq!(post.last_error.as_deref(), Some("destination_unavailable"));
+    assert_eq!(post.generation, 1, "no new generation per run");
+    Ok(())
+}

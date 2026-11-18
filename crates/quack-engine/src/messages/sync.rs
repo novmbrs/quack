@@ -18,7 +18,7 @@ use super::stale::{clean_stale, on_missing};
 use super::{Payload, finish, give_up, kind, synced};
 use crate::channels::{ChannelCheck, staff_channel};
 use crate::jobs::{dead, retry};
-use crate::port::{FileEdit, InteractionToken, Nonce, Outcome, SentMessage};
+use crate::port::{FileEdit, InteractionToken, Nonce, Outcome, RefusalKind, SentMessage};
 use crate::{Engine, obs};
 
 /// Brings one tracked message up to date (§10.3). One writer per row: the
@@ -216,9 +216,18 @@ async fn write(
         Outcome::Refused(r)
             if is_missing(r.code) || (creating && kind(row) == MessageKind::CaseReceipt) =>
         {
-            on_missing(engine, job, row, creating)
-                .await
-                .map(Written::Finished)
+            on_missing(
+                engine,
+                job,
+                row,
+                creating,
+                matches!(
+                    r.kind,
+                    RefusalKind::UnknownChannel | RefusalKind::MissingAccess
+                ),
+            )
+            .await
+            .map(Written::Finished)
         }
         Outcome::Refused(r) => {
             let code = quack_core::messages::sync_error_code(r.status, r.code);
@@ -250,7 +259,7 @@ async fn staff_check(
     match staff_channel(engine, row.guild, channel, needs).await {
         ChannelCheck::Ok => Ok(None),
         ChannelCheck::Problems(_) => give_up(engine, job, row, "not_staff_only").await.map(Some),
-        ChannelCheck::Missing => on_missing(engine, job, row, false).await.map(Some),
+        ChannelCheck::Missing => on_missing(engine, job, row, false, true).await.map(Some),
         ChannelCheck::Unavailable => Ok(Some(Handled::Settle(retry(job, "facts_unavailable")))),
     }
 }

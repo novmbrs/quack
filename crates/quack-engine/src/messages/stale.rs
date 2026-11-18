@@ -46,11 +46,17 @@ async fn current_channel(
 /// 403 Missing Access), or a public receipt's create was refused: post it
 /// again where it belongs, wait for a channel, make the receipt private,
 /// or mark it gone (§10.3 table).
+///
+/// `channel_failed` says the channel itself is gone or unreadable (not
+/// only the message): when that channel is still where the message
+/// belongs, posting it "again" there can't work, so the sync ends with
+/// `destination_unavailable` instead of making a new generation each run.
 pub(super) async fn on_missing(
     engine: &Engine,
     job: &ClaimedJob,
     row: &TrackedMessage,
     create_refused: bool,
+    channel_failed: bool,
 ) -> Result<Handled, DbError> {
     let now = OffsetDateTime::now_utc();
     let token_valid = row
@@ -63,6 +69,9 @@ pub(super) async fn on_missing(
         create_refused,
         token_valid,
     );
+    if channel_failed && matches!(plan, MissingPlan::Repost(c) if Some(c) == row.channel) {
+        return super::give_up(engine, job, row, "destination_unavailable").await;
+    }
     let mut tx = engine.db().begin().await?;
     let Some(locked) = messages::lock(&mut tx, row.guild, row.id).await? else {
         return finish(tx, job, JobResult::Done).await;
