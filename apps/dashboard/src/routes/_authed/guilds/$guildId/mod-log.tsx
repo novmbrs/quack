@@ -3,12 +3,16 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ScrollText, X } from "lucide-react";
 
 import { cx } from "~/lib/cx";
-import { auditLogQuery } from "~/api/audit";
-import type { AuditResult, AuditSource } from "~/api/types";
-import { AuditEntry, auditSourceLabel } from "~/features/audit/AuditEntry";
-import { auditActionGroups, auditQueryOf, type AuditSearch } from "~/features/audit/describe";
+import { modLogQuery } from "~/api/queries";
+import { ModLogEntry } from "~/features/mod-log/ModLogEntry";
+import {
+  filtersOf,
+  kindGroups,
+  type ModLogSearch,
+  parseKind,
+  parseResult,
+} from "~/features/mod-log/kinds";
 import { MemberPicker } from "~/features/people/MemberPicker";
-import { plural } from "~/lib/format";
 import { Button } from "~/ui/Button";
 import { Select, TextInput } from "~/ui/Field";
 import { Page } from "~/ui/Page";
@@ -16,43 +20,40 @@ import { Segmented } from "~/ui/Segmented";
 import { Empty, ErrorState, SkeletonRows } from "~/ui/States";
 import s from "./mod-log.module.css";
 
-const results: AuditResult[] = ["success", "failure", "denied"];
-const sources = Object.keys(auditSourceLabel) as AuditSource[];
-
 export const Route = createFileRoute("/_authed/guilds/$guildId/mod-log")({
-  validateSearch: (raw: Record<string, unknown>): AuditSearch => ({
-    result: results.includes(raw.result as AuditResult) ? (raw.result as AuditResult) : undefined,
-    source: sources.includes(raw.source as AuditSource) ? (raw.source as AuditSource) : undefined,
+  validateSearch: (raw: Record<string, unknown>): ModLogSearch => ({
+    kind: parseKind(raw.kind),
+    result: parseResult(raw.result),
     actor: id(raw.actor),
     member: id(raw.member),
-    action: typeof raw.action === "string" && raw.action ? raw.action : undefined,
+    case: caseNumber(raw.case),
+    rule: typeof raw.rule === "string" && raw.rule ? raw.rule : undefined,
     from: day(raw.from),
     to: day(raw.to),
   }),
   loaderDeps: ({ search }) => search,
   loader: ({ context, params, deps }) =>
-    context.queryClient.ensureInfiniteQueryData(auditLogQuery(params.guildId, auditQueryOf(deps))),
-  component: AuditLog,
+    context.queryClient.ensureInfiniteQueryData(modLogQuery(params.guildId, filtersOf(deps))),
+  component: ModLog,
 });
 
-function AuditLog() {
+function ModLog() {
   const { guildId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const log = useInfiniteQuery(auditLogQuery(guildId, auditQueryOf(search)));
+  const log = useInfiniteQuery(modLogQuery(guildId, filtersOf(search)));
 
-  const set = (patch: Partial<AuditSearch>) =>
+  const set = (patch: Partial<ModLogSearch>) =>
     void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
 
-  const entries = log.data?.pages.flatMap((p) => p.entries ?? []) ?? [];
-  const total = log.data?.pages[0]?.total ?? 0;
-  const filtered = Object.values(search).some(Boolean);
+  const entries = log.data?.pages.flatMap((p) => p.entries) ?? [];
+  const filtered = Object.values(search).some((v) => v !== undefined && v !== "");
 
   return (
     <Page
       icon={<ScrollText size={22} />}
-      title="Audit log"
-      topic="Everything staff and Quack did in this server. Entries are permanent: never edited or deleted."
+      title="Moderation log"
+      topic="Who did what in this server: staff and Quack. Entries are never edited or deleted."
     >
       <div className={s.filters}>
         <div className={s.line}>
@@ -62,47 +63,48 @@ function AuditLog() {
             onChange={(v) => set({ result: v === "all" ? undefined : v })}
             options={[
               { value: "all", label: "All" },
-              { value: "success", label: "Done" },
-              { value: "failure", label: "Failed" },
-              { value: "denied", label: "Denied" },
+              { value: "ok", label: "Done" },
+              { value: "failed", label: "Failed" },
+              { value: "refused", label: "Refused" },
             ]}
           />
           <Select
-            aria-label="Action"
-            value={search.action ?? ""}
-            onChange={(e) => set({ action: e.currentTarget.value || undefined })}
+            aria-label="Kind of entry"
+            value={search.kind ?? ""}
+            onChange={(e) => set({ kind: parseKind(e.currentTarget.value) })}
             className={s.action}
           >
-            <option value="">Any action</option>
-            {auditActionGroups.map((g) => (
+            <option value="">Every kind of entry</option>
+            {kindGroups.map((g) => (
               <optgroup key={g.label} label={g.label}>
-                {g.actions.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
+                {g.kinds.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
                   </option>
                 ))}
               </optgroup>
             ))}
-            {search.action &&
-            !auditActionGroups.some((g) => g.actions.some((a) => a.value === search.action)) ? (
-              <option value={search.action}>{search.action}</option>
-            ) : null}
           </Select>
-          <Select
-            aria-label="Source"
-            value={search.source ?? ""}
-            onChange={(e) =>
-              set({ source: (e.currentTarget.value || undefined) as AuditSource | undefined })
-            }
-            className={s.source}
-          >
-            <option value="">Any source</option>
-            {sources.map((src) => (
-              <option key={src} value={src}>
-                {auditSourceLabel[src]}
-              </option>
-            ))}
-          </Select>
+          {search.case ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<X size={14} />}
+              onClick={() => set({ case: undefined })}
+            >
+              Case #{search.case}
+            </Button>
+          ) : null}
+          {search.rule ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<X size={14} />}
+              onClick={() => set({ rule: undefined })}
+            >
+              One rule
+            </Button>
+          ) : null}
         </div>
         <div className={s.line}>
           <div className={s.person}>
@@ -118,7 +120,7 @@ function AuditLog() {
               guildId={guildId}
               value={search.member ?? null}
               onChange={(v) => set({ member: v ?? undefined })}
-              placeholder="Involving member"
+              placeholder="About member"
             />
           </div>
           <label className={s.dates}>
@@ -167,16 +169,15 @@ function AuditLog() {
           </Empty>
         ) : (
           <Empty icon="history" title="Nothing recorded yet">
-            Every case, appeal, setting change, and permission check in this server will be recorded
-            here.
+            Cases, actions, DMs, appeals, rule changes, and setting changes in this server are
+            recorded here.
           </Empty>
         )
       ) : (
         <div className={s.results}>
-          <p className={s.count}>{plural(total, "entry", "entries")}</p>
           <ol className={cx(s.list, log.isRefetching && s.dim)}>
             {entries.map((e) => (
-              <AuditEntry key={e.id} guildId={guildId} entry={e} />
+              <ModLogEntry key={e.id} guildId={guildId} entry={e} />
             ))}
           </ol>
           {log.hasNextPage ? (
@@ -204,4 +205,9 @@ function id(v: unknown): string | undefined {
 
 function day(v: unknown): string | undefined {
   return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+}
+
+function caseNumber(v: unknown): number | undefined {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : Number.NaN;
+  return Number.isSafeInteger(n) && n > 0 ? n : undefined;
 }
