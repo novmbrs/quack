@@ -49,7 +49,10 @@ pub fn env() -> Option<(String, String)> {
         Some((m, p))
     } else {
         let note = "set QUACK_IMPORT_TEST_MYSQL_URL and QUACK_IMPORT_TEST_PG_URL to run the importer's end-to-end tests";
-        assert!(std::env::var_os("CI").is_none(), "not skipped in CI: {note}");
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "not skipped in CI: {note}"
+        );
         eprintln!("SKIPPED (nothing was checked): {note}");
         None
     }
