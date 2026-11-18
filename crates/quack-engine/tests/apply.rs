@@ -282,9 +282,11 @@ async fn a_principal_of_one_server_cant_create_a_case_in_another() -> Result<()>
         ),
         "{refused:?}"
     );
-    let cases = h
-        .db
-        .count(&format!("SELECT count(*) FROM cases WHERE guild_id = {}", GUILD + 1))
+    let cases =
+        h.db.count(&format!(
+            "SELECT count(*) FROM cases WHERE guild_id = {}",
+            GUILD + 1
+        ))
         .await?;
     assert_eq!(cases, 0);
     Ok(())
