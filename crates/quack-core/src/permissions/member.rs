@@ -157,9 +157,45 @@ pub enum CheckPurpose {
     ApplyRule,
     /// Quack applies the honeypot rule: checks 1, 3, 5, 6, 8.
     ApplyHoneypotRule,
-    /// A moderator retries a failed original action: checks 2, 4, 6, 7, and
-    /// 3 for a timeout. Quack's own checks run later in the action job.
+    /// A moderator retries a failed action (§5.8). An original: checks 2,
+    /// 4, 6, 7, and 3 for a timeout. A remove timeout: check 7 when the
+    /// member is in the server. An unban: none (the member is usually
+    /// absent). Quack's own checks run later in the action job.
     RetryAction(ActionKind),
+    /// A moderator asks for an undo of this kind by hand (§5.8): a remove
+    /// timeout runs check 7 when the member is in the server; an unban runs
+    /// none.
+    RequestUndo(ActionKind),
+}
+
+impl CheckPurpose {
+    /// Whether member check `check` (1–8) runs for this purpose.
+    const fn runs(self, check: u8) -> bool {
+        match self {
+            Self::ApplyRule => true,
+            Self::ApplyHoneypotRule => matches!(check, 1 | 3 | 5 | 6 | 8),
+            Self::RetryAction(kind) if kind.is_original() => {
+                matches!(check, 2 | 4 | 6 | 7)
+                    || (check == 3 && matches!(kind, ActionKind::Timeout))
+            }
+            Self::RetryAction(kind) | Self::RequestUndo(kind) => {
+                check == 7 && matches!(kind, ActionKind::RemoveTimeout)
+            }
+        }
+    }
+
+    /// Whether any member check runs, so the caller needs Discord's facts
+    /// at all (an unban's retry or request needs none).
+    pub const fn needs_facts(self) -> bool {
+        let mut check = 1;
+        while check <= 8 {
+            if self.runs(check) {
+                return true;
+            }
+            check += 1;
+        }
+        false
+    }
 }
 
 /// Runs member checks 1–8 for `purpose`, in order; the first failure wins.
@@ -168,13 +204,7 @@ pub enum CheckPurpose {
 /// [`check_action_permission`]. Checks 4–8 use only account facts and skip
 /// role positions when the member is not in the server.
 pub fn check_member(facts: &ApplyFacts, purpose: CheckPurpose) -> Result<(), MemberRefusal> {
-    let runs = |check: u8| match purpose {
-        CheckPurpose::ApplyRule => true,
-        CheckPurpose::ApplyHoneypotRule => matches!(check, 1 | 3 | 5 | 6 | 8),
-        CheckPurpose::RetryAction(kind) => {
-            matches!(check, 2 | 4 | 6 | 7) || (check == 3 && kind == ActionKind::Timeout)
-        }
-    };
+    let runs = |check: u8| purpose.runs(check);
     let member = facts.member;
     let (actor_id, actor_member) = match facts.actor {
         ActorPresence::Quack => (None, None),

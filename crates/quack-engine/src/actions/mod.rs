@@ -19,8 +19,8 @@ use quack_db::{DbError, Tx};
 
 use crate::modlog::{self, By};
 
-pub(crate) use controls::view;
 pub use controls::{ActionError, ControlDone, dismiss, retry, undo};
+pub(crate) use controls::{undo_guard, view};
 pub use run::{finalize, run};
 
 /// The `run_action` payload.

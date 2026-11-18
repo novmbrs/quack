@@ -15,8 +15,7 @@ use crate::InvalidTransition;
 use crate::permissions::DiscordPermission;
 
 pub use controls::{
-    ActionView, Controls, GuardCandidate, StillApplies, VoidEffect, VoidFacts, controls, on_void,
-    undo_guard, undo_needed,
+    ActionView, Controls, StillApplies, VoidEffect, VoidFacts, controls, on_void, undo_needed,
 };
 pub use marker::{AUDIT_LOG_REASON_MAX_CHARS, case_marker, parse_case_marker, undo_marker};
 pub use run::{

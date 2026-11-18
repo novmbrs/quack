@@ -339,8 +339,11 @@ pub fn plan_from_member(
 /// - Ban: a ban exists → `done` when its reason carries this case's marker
 ///   (an earlier attempt placed it), else `no_change`; so messages are
 ///   never deleted twice. No ban → place it.
-/// - Unban: no ban → `no_change`; a ban with a case marker → check that
-///   case ([`Plan::CheckMarker`]); without one → `changed_outside_case`.
+/// - Unban: no ban → `no_change`; a ban carrying this undo's own case
+///   marker → remove it (its case placed it; the guard already ran, so no
+///   other valid case wants it, whether this case was voided or staff
+///   asked for the undo by hand); another case's marker → check that case
+///   ([`Plan::CheckMarker`]); no marker → `changed_outside_case`.
 pub fn plan_from_ban(
     target: &ActionTarget,
     ban: Option<&BanFacts>,
@@ -354,10 +357,11 @@ pub fn plan_from_ban(
         (ActionKind::Ban, Some(_)) | (ActionKind::Unban, None) => {
             Plan::Finish(AttemptResult::NoChange)
         }
-        (ActionKind::Unban, Some(_)) => marker
-            .map_or(Plan::Finish(AttemptResult::ChangedOutsideCase), |n| {
-                Plan::CheckMarker(n)
-            }),
+        (ActionKind::Unban, Some(_)) => match marker {
+            Some(n) if n == target.case_number => Plan::Call,
+            Some(n) => Plan::CheckMarker(n),
+            None => Plan::Finish(AttemptResult::ChangedOutsideCase),
+        },
         _ => return Err(wrong_read(target.kind, "ban_read")),
     };
     Ok(plan)

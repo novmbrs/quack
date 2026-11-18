@@ -3,7 +3,7 @@
 //! its unsent DM, and close its open appeal.
 
 use quack_core::DomainError;
-use quack_core::action::{ActionState, AttemptOutcome, VoidFacts, on_void};
+use quack_core::action::{AttemptOutcome, VoidFacts, on_void};
 use quack_core::appeal::{AppealEventKind, AppealRow, CLOSED_BECAUSE_VOIDED, close_by_void};
 use quack_core::case::VoidCause;
 use quack_core::dm::{DmKind, DmState};
@@ -227,20 +227,13 @@ async fn void_actions(
         return Ok(());
     };
     let has_undo = actions::undo_of(tx, guild, original.id).await?.is_some();
-    // A `done` original holds the desired state on Discord, even when no
-    // attempt changed anything (`no_change`: what Discord showed belonged
-    // to an earlier case). Its undo is queued like any applied one, so the
-    // case that "owns what Discord shows" removes it (§5.6); provenance
-    // and the guard still decide whether it changes anything.
-    let attempts: Vec<Option<AttemptOutcome>> = if original.state == ActionState::Done {
-        vec![Some(AttemptOutcome::Done)]
-    } else {
-        actions::attempts(tx, original.id)
-            .await?
-            .into_iter()
-            .map(|a| a.outcome)
-            .collect()
-    };
+    // `on_void` queues a done ban's unban even when it was `no_change`, so
+    // the case that now owns what Discord shows removes it (§5.6).
+    let attempts: Vec<Option<AttemptOutcome>> = actions::attempts(tx, original.id)
+        .await?
+        .into_iter()
+        .map(|a| a.outcome)
+        .collect();
     let effect = on_void(&VoidFacts {
         kind: original.kind,
         state: original.state,

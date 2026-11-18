@@ -37,6 +37,10 @@ pub struct ActionView {
     pub timeout_ends_at: Option<OffsetDateTime>,
     /// For an original: whether an undo of it exists.
     pub has_undo: bool,
+    /// For a done original timeout or ban: the undo guard's answer (§5.6)
+    /// for its undo, read like the undo's own start would. `Some` means
+    /// the undo would be skipped, so it is not offered.
+    pub undo_guard: Option<StillApplies>,
 }
 
 /// Which controls an action offers, each with the refusal a write gets
@@ -78,8 +82,11 @@ impl Controls {
 ///   for a timeout an end in the future (else `timeout_window_passed`). An
 ///   undo can always be retried (its case is voided by definition).
 /// - Dismiss: `failed` and not dismissed.
-/// - Undo: a `done` timeout or ban with no undo yet; a timeout's end must
-///   be in the future.
+/// - Undo: a `done` timeout or ban with no undo yet, that the undo guard
+///   would not skip (no other valid case's action of that kind is in
+///   force); a timeout's end must be in the future. What is offered is
+///   what runs: the undo's provenance check accepts its own case's ban
+///   marker even while the case is valid.
 pub fn controls(action: &ActionView, case_valid: bool, now: OffsetDateTime) -> Controls {
     let failed_open = action.state == ActionState::Failed && !action.dismissed;
     let retry = if !failed_open {
@@ -105,6 +112,7 @@ pub fn controls(action: &ActionView, case_valid: bool, now: OffsetDateTime) -> C
         Some(undo)
             if action.state == ActionState::Done
                 && !action.has_undo
+                && action.undo_guard.is_none()
                 && undo_needed(action.kind, action.timeout_ends_at, now) =>
         {
             Ok(undo)
@@ -150,6 +158,13 @@ pub struct VoidEffect {
 /// none exists, at least one attempt may have applied (§5.2), and, for a
 /// timeout, its end is still in the future; a `cancelled` original never
 /// does.
+///
+/// A `done` ban gets its undo even when every attempt was `no_change`: the
+/// ban it found may be one another case placed whose own undo was skipped
+/// because this case still applied, and the unban's provenance check
+/// (§5.6) decides whether that ban is Quack's to remove. A `no_change`
+/// timeout gets none: the timeout it found ends at or after this case's
+/// own end, so it was not this case's, and it expires on its own.
 pub fn on_void(facts: &VoidFacts<'_>) -> VoidEffect {
     if !facts.kind.is_original() {
         return VoidEffect {
@@ -157,9 +172,11 @@ pub fn on_void(facts: &VoidFacts<'_>) -> VoidEffect {
             queue_undo: None,
         };
     }
+    let reached_discord = may_have_applied(facts.attempts)
+        || (facts.kind == ActionKind::Ban && facts.state == ActionState::Done);
     let wants_undo = facts.state != ActionState::Cancelled
         && !facts.has_undo
-        && may_have_applied(facts.attempts)
+        && reached_discord
         && undo_needed(facts.kind, facts.timeout_ends_at, facts.now);
     VoidEffect {
         cancel: facts.state == ActionState::Pending,
@@ -178,49 +195,4 @@ pub struct StillApplies {
     pub case_id: CaseId,
     /// Its number, for "left in place because case #N still applies".
     pub case_number: u64,
-}
-
-/// One of the member's other actions, as the undo guard query reads it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct GuardCandidate {
-    /// The action's case.
-    pub case_id: CaseId,
-    /// That case's number.
-    pub case_number: u64,
-    /// Whether that case is valid.
-    pub case_valid: bool,
-    /// The action's kind.
-    pub kind: ActionKind,
-    /// The action's state.
-    pub state: ActionState,
-    /// For a timeout, its fixed end.
-    pub timeout_ends_at: Option<OffsetDateTime>,
-}
-
-/// The undo guard (§5.6), mirroring the design's query: the newest other
-/// valid case of the member whose original of the undone kind is `done`
-/// and, for a timeout, not yet ended. `Some` means the undo is skipped
-/// (`other_case_applies`). Only `done` actions count: one that has not
-/// started applies after the undo, and one in flight makes the undo wait.
-pub fn undo_guard(
-    undo: ActionKind,
-    own_case: CaseId,
-    candidates: &[GuardCandidate],
-    now: OffsetDateTime,
-) -> Option<StillApplies> {
-    let original = undo.undoes()?;
-    candidates
-        .iter()
-        .filter(|c| {
-            c.kind == original
-                && c.case_id != own_case
-                && c.case_valid
-                && c.state == ActionState::Done
-                && (c.kind != ActionKind::Timeout || c.timeout_ends_at.is_some_and(|end| end > now))
-        })
-        .max_by_key(|c| c.case_number)
-        .map(|c| StillApplies {
-            case_id: c.case_id,
-            case_number: c.case_number,
-        })
 }

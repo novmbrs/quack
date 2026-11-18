@@ -39,6 +39,8 @@ pub(crate) struct CaseRecords {
     pub replaced_by: Option<DbCaseRef>,
     /// Numbers of the cases named by skipped undos (`other_case_applies`).
     pub still_applies: HashMap<CaseId, u64>,
+    /// The undo guard's answer for the original's undo (§5.6).
+    pub undo_guard: Option<quack_core::action::StillApplies>,
 }
 
 impl CaseRecords {
@@ -87,6 +89,13 @@ impl CaseRecords {
                 still_applies.insert(id, other.number);
             }
         }
+        let undo_guard = match actions.iter().find(|a| a.undo_of.is_none()) {
+            Some(original) => {
+                let has_undo = actions.iter().any(|a| a.undo_of == Some(original.id));
+                crate::actions::undo_guard(conn, &case, original, has_undo).await?
+            }
+            None => None,
+        };
         Ok(Self {
             case,
             definition,
@@ -100,6 +109,7 @@ impl CaseRecords {
             replaces,
             replaced_by,
             still_applies,
+            undo_guard,
         })
     }
 
@@ -182,8 +192,13 @@ impl CaseRecords {
         now: OffsetDateTime,
     ) -> quack_core::action::Controls {
         let has_undo = action.kind.is_original() && self.undo().is_some();
+        let guard = if action.kind.is_original() {
+            self.undo_guard
+        } else {
+            None
+        };
         quack_core::action::controls(
-            &crate::actions::view(action, has_undo),
+            &crate::actions::view(action, has_undo, guard),
             self.case.is_valid(),
             now,
         )

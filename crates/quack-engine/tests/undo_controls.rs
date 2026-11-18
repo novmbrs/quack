@@ -274,8 +274,70 @@ async fn staff_undo_queues_one_undo() -> Result<()> {
         Err(ActionError::Refused(DomainError::ActionNotUndoable))
     ));
     h.settle().await?;
-    // The case is still valid, so the ban's marker names a valid case:
-    // provenance leaves it in place.
-    assert_eq!(action(&h, done.action).await?.state, ActionState::Skipped);
+    // The case is still valid, but the ban carries its own marker: the
+    // undo staff asked for removes it.
+    assert_eq!(action(&h, done.action).await?.state, ActionState::Done);
+    assert!(h.fake.world(|w| w.ban(h.guild, sf(MEMBER)).is_none()));
+    Ok(())
+}
+
+#[tokio::test]
+async fn undo_is_not_offered_while_another_case_applies() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h
+        .rule(levels("Spam", &[Some(BAN), Some(BAN)], false))
+        .await?;
+    let first = h.apply(MEMBER, rule).await?;
+    h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    let refused = undo(
+        &h.engine,
+        &h.moderator(),
+        first.action.unwrap(),
+        &h.key("auo"),
+    )
+    .await;
+    assert!(
+        matches!(
+            refused,
+            Err(ActionError::Refused(DomainError::ActionNotUndoable))
+        ),
+        "{refused:?}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_remove_timeout_request_runs_the_role_check_only() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(one("Spam", TIMEOUT, false)).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    let moderator = h.moderator();
+    let position = moderator
+        .member
+        .map(|m| m.highest_role_position)
+        .context("the moderator is in the server")?;
+    h.fake.world(|w| {
+        if let Some(m) = w.member_mut(h.guild, sf(MEMBER)) {
+            m.highest_role_position = position;
+        }
+    });
+    let refused = undo(
+        &h.engine,
+        &moderator,
+        created.action.unwrap(),
+        &h.key("art"),
+    )
+    .await;
+    assert!(
+        matches!(
+            refused,
+            Err(ActionError::Refused(DomainError::MemberRefused(
+                quack_core::permissions::MemberRefusal::MemberRoleTooHigh
+            )))
+        ),
+        "{refused:?}"
+    );
     Ok(())
 }

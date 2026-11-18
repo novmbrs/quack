@@ -267,6 +267,51 @@ fn retry_runs_2_4_6_7_and_3_for_timeouts() {
 }
 
 #[test]
+fn undo_retries_and_requests_run_their_own_subsets() {
+    let equal = with(|f| f.member.present = present(5));
+    let absent = with(|f| f.member.present = None);
+    let owner_actor = with(|f| {
+        f.member.present = present(6);
+        f.actor = ActorPresence::Staff {
+            id: AccountId::new(OWNER).unwrap(),
+            member: present(5),
+        };
+    });
+    // A member who came back with a role equal to the actor's: an unban
+    // runs no checks, so it can still settle as already unbanned.
+    let unban = [
+        CheckPurpose::RetryAction(ActionKind::Unban),
+        CheckPurpose::RequestUndo(ActionKind::Unban),
+    ];
+    for purpose in unban {
+        assert!(!purpose.needs_facts(), "{purpose:?}");
+        for facts in [&equal, &absent, &ok(), &with(|f| f.quack = None)] {
+            assert_eq!(check_member(facts, purpose), Ok(()), "{purpose:?}");
+        }
+    }
+    // Remove timeout: only check 7, only when the member is present; the
+    // owner bypasses it.
+    for purpose in [
+        CheckPurpose::RetryAction(ActionKind::RemoveTimeout),
+        CheckPurpose::RequestUndo(ActionKind::RemoveTimeout),
+    ] {
+        assert!(purpose.needs_facts());
+        assert_eq!(
+            check_member(&equal, purpose),
+            Err(MemberRefusal::MemberRoleTooHigh)
+        );
+        assert_eq!(check_member(&absent, purpose), Ok(()));
+        assert_eq!(check_member(&owner_actor, purpose), Ok(()));
+        assert_eq!(
+            check_member(&with(|f| f.member.id = member_id(OWNER)), purpose),
+            Ok(()),
+            "check 6 is not part of an undo"
+        );
+    }
+    assert!(CheckPurpose::RetryAction(ActionKind::Ban).needs_facts());
+}
+
+#[test]
 fn absent_member_skips_role_positions() {
     let facts = with(|f| f.member.present = None);
     assert_eq!(

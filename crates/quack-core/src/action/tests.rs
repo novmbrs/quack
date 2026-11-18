@@ -589,6 +589,12 @@ fn ban_and_unban_read_the_ban() {
         plan_from_ban(&u, Some(&ban("Quack case #7: Spam"))),
         Ok(Plan::CheckMarker(7))
     );
+    // Its own case's marker: removed without asking whether the case is
+    // voided, so a manual undo of a valid case's ban does what Undo said.
+    assert_eq!(
+        plan_from_ban(&u, Some(&ban("Quack case #12: Spam"))),
+        Ok(Plan::Call)
+    );
     assert_eq!(
         plan_from_ban(&u, Some(&ban("manual"))),
         Ok(Plan::Finish(AttemptResult::ChangedOutsideCase))
@@ -819,7 +825,63 @@ fn view(kind: ActionKind, state: ActionState) -> ActionView {
         timeout_ends_at: matches!(kind, ActionKind::Timeout | ActionKind::RemoveTimeout)
             .then_some(NOW + Duration::hours(1)),
         has_undo: false,
+        undo_guard: None,
     }
+}
+
+/// Case A bans the member; case B (same member, also a ban) finds A's ban
+/// and settles `done`/`no_change`. Voiding A queues an unban the guard
+/// skips (B applies); voiding B must still queue an unban, and its
+/// provenance check removes the ban carrying voided A's marker (§5.6).
+#[test]
+fn two_voided_ban_cases_never_leave_the_ban() {
+    use ActionKind::{Ban, Unban};
+    use ActionState::{Done, Pending};
+    use AttemptOutcome as O;
+    let start_facts = |kind| facts(kind, Pending);
+    let b_case_number = 13;
+    // Void A: B is a valid case with a done ban, so A's unban is skipped.
+    let a_undo = start(&StartFacts {
+        still_applies: Some(StillApplies {
+            case_id: CaseId::from_uuid(Uuid::from_u128(13)),
+            case_number: b_case_number,
+        }),
+        ..start_facts(Unban)
+    });
+    assert!(matches!(a_undo, StartDecision::Skip(_)));
+    // Void B: its only attempt was no_change, yet its unban is queued.
+    let b = on_void(&void_facts(Ban, Done, &[Some(O::NoChange)]));
+    assert_eq!(b.queue_undo, Some(Unban));
+    // B's unban: no other valid case applies now, so it opens, reads A's
+    // marker (a voided ban case of the member), and removes the ban.
+    assert_eq!(start(&start_facts(Unban)), StartDecision::Open);
+    let b_unban = ActionTarget {
+        case_number: b_case_number,
+        ..target(Unban)
+    };
+    assert_eq!(
+        plan_from_ban(&b_unban, Some(&ban("Quack case #12: Spam"))),
+        Ok(Plan::CheckMarker(12))
+    );
+    assert_eq!(plan_after_marker(true), Plan::Call);
+}
+
+#[test]
+fn undo_is_offered_only_when_the_guard_lets_it_run() {
+    use ActionKind::{Ban, Unban};
+    let done = view(Ban, ActionState::Done);
+    assert_eq!(controls(&done, true, NOW).undo, Ok(Unban));
+    let blocked = ActionView {
+        undo_guard: Some(StillApplies {
+            case_id: CaseId::from_uuid(Uuid::from_u128(13)),
+            case_number: 13,
+        }),
+        ..done
+    };
+    assert_eq!(
+        controls(&blocked, true, NOW).undo,
+        Err(DomainError::ActionNotUndoable)
+    );
 }
 
 #[test]
@@ -958,7 +1020,11 @@ fn void_effects_follow_the_table() {
         ),
         (Kick, Running, &[None], effect(false, None)),
         (Ban, Done, &[Some(O::Done)], effect(false, Some(Unban))),
-        (Ban, Done, &[Some(O::NoChange)], effect(false, None)),
+        // A done ban found another case's ban: its undo is queued and the
+        // provenance check decides.
+        (Ban, Done, &[Some(O::NoChange)], effect(false, Some(Unban))),
+        // A no-change timeout found a longer one that was never its own.
+        (Timeout, Done, &[Some(O::NoChange)], effect(false, None)),
         (
             Timeout,
             Done,
@@ -997,59 +1063,4 @@ fn void_effects_follow_the_table() {
         ..void_facts(Ban, Done, &[Some(O::Done)])
     };
     assert_eq!(on_void(&has_undo), effect(false, None));
-}
-
-fn candidate(n: u64, kind: ActionKind, state: ActionState) -> GuardCandidate {
-    GuardCandidate {
-        case_id: CaseId::from_uuid(Uuid::from_u128(u128::from(n))),
-        case_number: n,
-        case_valid: true,
-        kind,
-        state,
-        timeout_ends_at: (kind == ActionKind::Timeout).then_some(NOW + Duration::hours(1)),
-    }
-}
-
-#[test]
-fn undo_guard_matches_the_query() {
-    let own = CaseId::from_uuid(Uuid::from_u128(1));
-    let guard = |undo, c: &[GuardCandidate]| undo_guard(undo, own, c, NOW).map(|s| s.case_number);
-    let done_ban = candidate(5, ActionKind::Ban, ActionState::Done);
-    assert_eq!(guard(ActionKind::Unban, &[done_ban]), Some(5));
-    // Only done actions count.
-    for state in [
-        ActionState::Pending,
-        ActionState::Running,
-        ActionState::Failed,
-        ActionState::Cancelled,
-    ] {
-        assert_eq!(
-            guard(ActionKind::Unban, &[candidate(5, ActionKind::Ban, state)]),
-            None,
-            "{state:?}"
-        );
-    }
-    let voided = GuardCandidate {
-        case_valid: false,
-        ..done_ban
-    };
-    assert_eq!(guard(ActionKind::Unban, &[voided]), None);
-    let same_case = GuardCandidate {
-        case_id: own,
-        ..done_ban
-    };
-    assert_eq!(guard(ActionKind::Unban, &[same_case]), None);
-    assert_eq!(guard(ActionKind::RemoveTimeout, &[done_ban]), None);
-    let ended = GuardCandidate {
-        timeout_ends_at: Some(NOW),
-        ..candidate(6, ActionKind::Timeout, ActionState::Done)
-    };
-    assert_eq!(guard(ActionKind::RemoveTimeout, &[ended]), None);
-    let live = candidate(7, ActionKind::Timeout, ActionState::Done);
-    assert_eq!(guard(ActionKind::RemoveTimeout, &[ended, live]), Some(7));
-    // The newest case wins.
-    let older = candidate(3, ActionKind::Ban, ActionState::Done);
-    assert_eq!(guard(ActionKind::Unban, &[older, done_ban]), Some(5));
-    // Originals have no guard.
-    assert_eq!(guard(ActionKind::Ban, &[done_ban]), None);
 }

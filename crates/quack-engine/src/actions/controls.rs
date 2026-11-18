@@ -3,12 +3,10 @@
 //! after locking the case and the action.
 
 use quack_core::DomainError;
-use quack_core::action::{ActionKind, ActionView, Controls, controls};
+use quack_core::action::{ActionKind, ActionState, ActionView, Controls, StillApplies, controls};
 use quack_core::ids::{ActionId, CaseId};
 use quack_core::modlog::{ActionDetail, ModLogEntry, ModLogLinks};
-use quack_core::permissions::{
-    ApplyFacts, Capability, CheckPurpose, MemberRefusal, MemberSubject, check_member,
-};
+use quack_core::permissions::{ApplyFacts, Capability, CheckPurpose, MemberSubject, check_member};
 use quack_db::actions::{self, Action, NewAction};
 use quack_db::cases::{self, Case};
 use quack_db::jobs::{self, NewJob};
@@ -229,15 +227,41 @@ pub(crate) async fn allowed(
     } else {
         false
     };
+    let guard = undo_guard(tx, case, action, has_undo).await?;
     Ok(controls(
-        &view(action, has_undo),
+        &view(action, has_undo, guard),
         case.is_valid(),
         OffsetDateTime::now_utc(),
     ))
 }
 
+/// The undo guard (§5.6) for a done original's undo, read like the
+/// undo's own start would; `None` when there is nothing to undo.
+pub(crate) async fn undo_guard(
+    conn: &mut quack_db::PgConnection,
+    case: &Case,
+    action: &Action,
+    has_undo: bool,
+) -> Result<Option<StillApplies>, DbError> {
+    if has_undo || action.state != ActionState::Done || action.kind.undo_kind().is_none() {
+        return Ok(None);
+    }
+    Ok(
+        actions::guard(conn, case.guild, case.member, action.kind, case.id)
+            .await?
+            .map(|(case_id, case_number)| StillApplies {
+                case_id,
+                case_number,
+            }),
+    )
+}
+
 /// An action as the controls see it.
-pub(crate) fn view(action: &Action, has_undo: bool) -> ActionView {
+pub(crate) fn view(
+    action: &Action,
+    has_undo: bool,
+    undo_guard: Option<StillApplies>,
+) -> ActionView {
     ActionView {
         kind: action.kind,
         state: action.state,
@@ -245,6 +269,7 @@ pub(crate) fn view(action: &Action, has_undo: bool) -> ActionView {
         failure: action.failure.map(|f| f.reason),
         timeout_ends_at: action.timeout_ends_at,
         has_undo,
+        undo_guard,
     }
 }
 
@@ -325,10 +350,10 @@ async fn insert_undo(
     Ok(undo)
 }
 
-/// The actor checks of §5.8, from fresh facts: retrying an original runs
-/// member checks 2, 4, 6, 7 (and 3 for a timeout); retrying or requesting
-/// a remove timeout runs check 7 when the member is in the server; unban
-/// and dismiss run none.
+/// The actor checks of §5.8, from fresh facts, through the shared member
+/// checks: retrying an original runs checks 2, 4, 6, 7 (and 3 for a
+/// timeout); retrying or requesting a remove timeout runs check 7 when the
+/// member is in the server; an unban and dismiss run none.
 async fn actor_checks(
     engine: &Engine,
     principal: &Principal,
@@ -336,12 +361,16 @@ async fn actor_checks(
     case: &Case,
     which: Control,
 ) -> Result<(), ActionError> {
-    let kind = match which {
+    let purpose = match which {
         Control::Dismiss => return Ok(()),
-        Control::Retry => action.kind,
-        Control::Undo => action.kind.undo_kind().unwrap_or(action.kind),
+        Control::Retry => CheckPurpose::RetryAction(action.kind),
+        Control::Undo => match action.kind.undo_kind() {
+            Some(undo) => CheckPurpose::RequestUndo(undo),
+            // Not undoable: the write refuses it under lock.
+            None => return Ok(()),
+        },
     };
-    if kind == ActionKind::Unban || (which == Control::Undo && kind != ActionKind::RemoveTimeout) {
+    if !purpose.needs_facts() {
         return Ok(());
     }
     let discord = engine.discord();
@@ -366,17 +395,6 @@ async fn actor_checks(
         actor: principal.presence(),
         member,
     };
-    if kind.is_original() {
-        check_member(&facts, CheckPurpose::RetryAction(kind))
-            .map_err(DomainError::MemberRefused)?;
-        return Ok(());
-    }
-    // Remove timeout: check 7 when the member is in the server.
-    if let (Some(target), Some(actor)) = (facts.member.present, principal.member)
-        && !principal.actor.is_owner
-        && target.highest_role_position >= actor.highest_role_position
-    {
-        return Err(DomainError::MemberRefused(MemberRefusal::MemberRoleTooHigh).into());
-    }
+    check_member(&facts, purpose).map_err(DomainError::MemberRefused)?;
     Ok(())
 }
