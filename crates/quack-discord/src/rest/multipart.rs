@@ -7,8 +7,10 @@ use super::transport::Body;
 use crate::model::OutgoingFile;
 
 /// A file name safe inside a `Content-Disposition` header: no quotes,
-/// backslashes, or control characters.
-fn header_safe(name: &str) -> String {
+/// backslashes, or control characters. The same name goes in the
+/// attachment metadata and any `attachment://` reference, so all three
+/// agree on the upload's name.
+pub(crate) fn upload_name(name: &str) -> String {
     let cleaned: String = name
         .chars()
         .map(|c| {
@@ -58,7 +60,7 @@ pub(crate) fn form(boundary: &str, payload_json: &[u8], files: &[&OutgoingFile])
             head,
             "\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"files[{i}]\"; \
              filename=\"{}\"\r\nContent-Type: {}\r\n\r\n",
-            header_safe(&file.name),
+            upload_name(&file.name),
             content_type(file)
         );
         bytes.extend_from_slice(head.as_bytes());
@@ -104,7 +106,7 @@ mod tests {
              Content-Type: application/octet-stream\r\n\r\nhello\r\n--XYZ--\r\n"
         );
         assert_ne!(boundary(), boundary());
-        assert_eq!(header_safe(""), "file");
+        assert_eq!(upload_name(""), "file");
         let typed = |t: &str| OutgoingFile {
             name: "a".into(),
             content_type: Some(t.into()),

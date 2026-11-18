@@ -13,7 +13,7 @@ mod download;
 mod interactions;
 mod members;
 mod messages;
-mod multipart;
+pub(crate) mod multipart;
 mod outcome;
 mod route;
 mod transport;

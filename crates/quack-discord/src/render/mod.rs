@@ -77,7 +77,7 @@ fn blocks(msg: &Msg, commands: &CommandIds) -> Vec<Component> {
                         content_type: None,
                         height: None,
                         proxy_url: None,
-                        url: format!("attachment://{name}"),
+                        url: format!("attachment://{}", crate::rest::multipart::upload_name(name)),
                         width: None,
                     },
                     id: None,

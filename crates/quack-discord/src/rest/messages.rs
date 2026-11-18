@@ -131,7 +131,7 @@ fn uploads(files: &[&OutgoingFile]) -> Vec<AttachmentRef> {
         .enumerate()
         .map(|(id, f)| AttachmentRef::Upload {
             id,
-            filename: f.name.clone(),
+            filename: super::multipart::upload_name(&f.name),
         })
         .collect()
 }
@@ -269,5 +269,33 @@ impl DiscordClient {
         )))
         .await
         .map(|messages| messages.iter().filter_map(convert::message).collect())
+    }
+}
+
+#[cfg(test)]
+mod name_tests {
+    use super::{AttachmentRef, uploads};
+    use crate::model::OutgoingFile;
+
+    /// Discord review MINOR 23: a name the multipart header must rewrite is
+    /// rewritten the same way in the attachment metadata and the File
+    /// component's `attachment://` link.
+    #[test]
+    fn an_upload_has_one_name_everywhere() {
+        let file = OutgoingFile {
+            name: "SPOILER_a\"b\\c.txt".into(),
+            content_type: None,
+            bytes: Vec::new(),
+        };
+        let refs = uploads(&[&file]);
+        let AttachmentRef::Upload { filename, .. } = &refs[0] else {
+            panic!("an upload");
+        };
+        assert_eq!(filename, "SPOILER_a_b_c.txt");
+        let msg = quack_text::Msg::new(quack_text::Tone::Neutral)
+            .block(quack_text::Block::File(file.name.clone()));
+        let rendered = crate::render::render(&msg, &quack_text::CommandIds::EMPTY);
+        let json = serde_json::to_string(&rendered.components).unwrap();
+        assert!(json.contains("attachment://SPOILER_a_b_c.txt"), "{json}");
     }
 }
