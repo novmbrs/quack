@@ -109,7 +109,7 @@ impl DiscordOauth {
         let api_base = config.api_base.trim_end_matches('/').to_owned();
         let token_url = format!("{api_base}/oauth2/token");
         let client = BasicClient::new(ClientId::new(config.client_id.clone()))
-            .set_client_secret(ClientSecret::new(config.client_secret.clone()))
+            .set_client_secret(ClientSecret::new(config.client_secret.expose().to_owned()))
             .set_auth_uri(
                 AuthUrl::new(config.authorize_url.clone())
                     .map_err(|_| bad(&config.authorize_url))?,

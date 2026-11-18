@@ -384,3 +384,20 @@ async fn more_than_one_recommended_shard_stops_startup() {
         Err(GatewayError::TooManyShards(3))
     ));
 }
+
+/// Discord review BLOCKER 1: an unreadable frame is described by a closed
+/// kind and its event name only, never its token or text.
+#[test]
+fn an_unreadable_frame_is_described_without_its_content() {
+    let frame = r#"{"t":"INTERACTION_CREATE","s":3,"op":0,"d":{"token":"sentinel-interaction-token","data":{"components":[{"value":"private member text"}]}}}"#;
+    let kind = twilight_gateway::error::ReceiveMessageErrorType::Deserializing {
+        event: frame.to_owned(),
+    };
+    let (what, event) = describe(&kind);
+    let logged = format!("{what} {event:?}");
+    assert_eq!(logged, "deserializing Some(\"INTERACTION_CREATE\")");
+    assert!(!logged.contains("sentinel") && !logged.contains("private"));
+    // A frame whose `t` isn't a plain event name logs no name at all.
+    assert_eq!(event_name(r#"{"t":"secret token here"}"#), None);
+    assert_eq!(event_name("not json sentinel"), None);
+}

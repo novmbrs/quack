@@ -132,7 +132,7 @@ pub struct DiscordOauthConfig {
     /// client ID.
     pub client_id: String,
     /// The client secret (`QUACK_DISCORD_CLIENT_SECRET`).
-    pub client_secret: String,
+    pub client_secret: quack_core::Secret,
     /// The authorize page, `https://discord.com/oauth2/authorize`.
     pub authorize_url: String,
     /// The REST base, `https://discord.com/api/v10` (token exchange at
@@ -145,7 +145,7 @@ impl DiscordOauthConfig {
     pub fn discord(client_id: impl Into<String>, client_secret: impl Into<String>) -> Self {
         Self {
             client_id: client_id.into(),
-            client_secret: client_secret.into(),
+            client_secret: quack_core::Secret::new(client_secret.into()),
             authorize_url: "https://discord.com/oauth2/authorize".to_owned(),
             api_base: "https://discord.com/api/v10".to_owned(),
         }

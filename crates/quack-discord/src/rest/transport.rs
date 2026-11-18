@@ -69,7 +69,7 @@ impl Request<'_> {
 pub(crate) struct Transport {
     pub(crate) http: reqwest::Client,
     pub(crate) api_base: String,
-    pub(crate) authorization: String,
+    pub(crate) authorization: quack_core::Secret,
     pub(crate) limiter: RateLimiter,
     pub(crate) closed: AtomicBool,
     pub(crate) request_timeout: Duration,
@@ -285,7 +285,7 @@ impl Transport {
             .request(route.method.reqwest(), url)
             .header(USER_AGENT, QUACK_USER_AGENT);
         if route.auth {
-            builder = builder.header(AUTHORIZATION, &self.authorization);
+            builder = builder.header(AUTHORIZATION, self.authorization.expose());
         }
         if let Some(reason) = request.reason {
             builder = builder.header("X-Audit-Log-Reason", encode_reason(reason));

@@ -51,3 +51,14 @@ pub(super) async fn closed_port() -> String {
     drop(listener);
     format!("http://{address}")
 }
+
+/// Discord review BLOCKER 1: neither the client nor its config prints the
+/// bot token.
+#[tokio::test]
+async fn the_client_never_prints_its_token() {
+    let config = ClientConfig::new("sentinel-bot-token", 42);
+    let client = DiscordClient::new(&config).unwrap();
+    for printed in [format!("{client:?}"), format!("{config:?}")] {
+        assert!(!printed.contains("sentinel"), "{printed}");
+    }
+}

@@ -188,7 +188,7 @@ impl TryFrom<EntryRow> for StoredEntry {
                 tracing::warn!(
                     mod_log_id = %r.id,
                     kind = kind.as_str(),
-                    error = %error,
+                    category = ?error.classify(),
                     "a moderation log entry's detail can't be read; it is shown as unavailable"
                 );
                 (unreadable(kind), false)

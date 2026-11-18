@@ -5,7 +5,6 @@
 //! together; secrets never appear in `Debug` output or logs.
 
 mod parse;
-mod secret;
 
 #[cfg(test)]
 mod tests;
@@ -16,7 +15,7 @@ use std::path::{Path, PathBuf};
 
 use quack_core::ids::GuildId;
 
-pub use secret::Secret;
+pub use quack_core::Secret;
 
 /// Every key Quack reads, without the `QUACK_` prefix, in lowercase.
 pub const KEYS: [&str; 17] = [

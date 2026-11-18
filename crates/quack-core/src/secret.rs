@@ -1,4 +1,6 @@
-//! A configuration value that must never be printed.
+//! A value that must never be printed: tokens, client secrets, database
+//! URLs. Wrap it at the edge where it enters Quack and expose it only where
+//! it is used.
 
 use std::fmt;
 
@@ -28,5 +30,19 @@ impl fmt::Debug for Secret {
 impl fmt::Display for Secret {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("[redacted]")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Secret;
+
+    #[test]
+    fn debug_and_display_never_show_the_value() {
+        let s = Secret::new("Bot sentinel-token-123".to_owned());
+        assert_eq!(format!("{s:?}"), "[redacted]");
+        assert_eq!(format!("{s}"), "[redacted]");
+        assert_eq!(format!("{:?}", Some(&s)), "Some([redacted])");
+        assert_eq!(s.expose(), "Bot sentinel-token-123");
     }
 }

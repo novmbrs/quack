@@ -90,6 +90,32 @@ fn recover(error: &twilight_gateway::error::ReceiveMessageError) -> Option<Event
     }
 }
 
+/// A receive error as a closed kind and, for a frame that couldn't be
+/// read, its event name (`t`) when it is a plain event name. Nothing else
+/// of the frame is ever logged.
+pub(crate) fn describe(kind: &ReceiveMessageErrorType) -> (&'static str, Option<String>) {
+    match kind {
+        ReceiveMessageErrorType::Deserializing { event } => ("deserializing", event_name(event)),
+        ReceiveMessageErrorType::Reconnect => ("reconnect", None),
+        #[allow(
+            unreachable_patterns,
+            reason = "Compression exists only with a compression feature"
+        )]
+        _ => ("compression", None),
+    }
+}
+
+/// The `t` field of a raw gateway frame, when it looks like an event name
+/// (`MESSAGE_CREATE`).
+pub(crate) fn event_name(frame: &str) -> Option<String> {
+    #[derive(serde::Deserialize)]
+    struct Envelope {
+        t: Option<String>,
+    }
+    let name = serde_json::from_str::<Envelope>(frame).ok()?.t?;
+    (name.len() <= 64 && name.bytes().all(|b| b.is_ascii_uppercase() || b == b'_')).then_some(name)
+}
+
 /// Queues an event; a full queue drops it and tells `on_dropped`.
 fn hand_off(dispatcher: &dispatch::Dispatcher, event: Event, on_dropped: &impl Fn(&Event)) {
     if let Some(dropped) = dispatcher.dispatch(event) {
@@ -244,7 +270,10 @@ impl Gateway {
                     if let Some(event) = recover(&error) {
                         hand_off(&dispatcher, event, &on_dropped);
                     } else {
-                        tracing::warn!(%error, "couldn't read a gateway event");
+                        // Never the error itself: Twilight's message holds
+                        // the whole frame (interaction tokens, message text).
+                        let (kind, event) = describe(error.kind());
+                        tracing::warn!(kind, event, "couldn't read a gateway event");
                     }
                     continue;
                 }

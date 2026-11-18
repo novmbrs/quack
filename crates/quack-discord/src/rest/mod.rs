@@ -47,8 +47,8 @@ pub const DISCORD_API: &str = "https://discord.com/api/v10";
 /// deadlines; tests point `api_base` at a local server.
 #[derive(Clone)]
 pub struct ClientConfig {
-    /// The bot token, without the `Bot ` prefix.
-    pub token: String,
+    /// The bot token, without the `Bot ` prefix. Never printed.
+    pub token: quack_core::Secret,
     /// The application id (also the OAuth client id).
     pub application_id: u64,
     /// The API base URL, without a trailing slash.
@@ -68,7 +68,7 @@ impl ClientConfig {
     /// The design's settings for this token and application.
     pub fn new(token: impl Into<String>, application_id: u64) -> Self {
         Self {
-            token: token.into(),
+            token: quack_core::Secret::new(token.into()),
             application_id,
             api_base: DISCORD_API.to_owned(),
             request_timeout: Duration::from_secs(10),
@@ -127,7 +127,10 @@ impl DiscordClient {
                 transport: Transport {
                     http,
                     api_base: config.api_base.trim_end_matches('/').to_owned(),
-                    authorization: format!("Bot {}", config.token),
+                    authorization: quack_core::Secret::new(format!(
+                        "Bot {}",
+                        config.token.expose()
+                    )),
                     limiter: RateLimiter::default(),
                     closed: AtomicBool::new(false),
                     request_timeout: config.request_timeout,
@@ -175,7 +178,14 @@ fn decode<T: DeserializeOwned>(body: &[u8]) -> Outcome<T> {
     match serde_json::from_slice(body) {
         Ok(value) => Outcome::Done(value),
         Err(error) => {
-            tracing::warn!(%error, "couldn't read Discord's answer");
+            // Only where and what kind: serde's message can quote values
+            // from the body (message text, names).
+            tracing::warn!(
+                category = ?error.classify(),
+                line = error.line(),
+                column = error.column(),
+                "couldn't read Discord's answer"
+            );
             Outcome::Unknown(UnknownCause::Malformed)
         }
     }

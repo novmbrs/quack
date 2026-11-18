@@ -222,7 +222,7 @@ impl App {
             session_secret: SessionSecret::new([7; 32]),
             discord: DiscordOauthConfig {
                 client_id: "4242".to_owned(),
-                client_secret: "client-secret".to_owned(),
+                client_secret: quack_core::Secret::new("client-secret".to_owned()),
                 authorize_url: discord.url("/oauth2/authorize"),
                 api_base: discord.url("/api/v10"),
             },
