@@ -5,7 +5,8 @@
 //! listener and caches, the gateway, then the job runner and gauges once
 //! the servers have loaded; `/readyz` turns ready when every check passes.
 //!
-//! Shutdown (SIGTERM/SIGINT, or the fence lost): one deadline 30 s after
+//! Shutdown (SIGTERM/SIGINT, the fence lost, or the gateway closed for
+//! good): one deadline 30 s after
 //! the signal. Mark not ready; stop claiming jobs, stop the gateway, stop
 //! accepting HTTP connections; drain interactions, requests, and jobs
 //! until 5 s before the deadline; then refuse new Discord calls, close the
@@ -69,6 +70,10 @@ pub enum ServeError {
         "lost the database lock that keeps one Quack running; stopping so two never act at once"
     )]
     FenceLost,
+    /// The gateway ended on its own (a terminal close): this process can't
+    /// receive Discord events any more.
+    #[error("the Discord gateway closed for good; stopping so a supervisor can start Quack again")]
+    GatewayStopped,
 }
 
 /// Runs `serve` until `signal` completes (or the fence is lost), then
@@ -82,17 +87,18 @@ pub async fn run(
 ) -> Result<(), ServeError> {
     let stop = CancellationToken::new();
     let started = start::start(config, options, Arc::clone(&ready), stop.clone()).await?;
-    let fence_lost = tokio::select! {
-        () = signal => false,
-        () = started.fence_lost.cancelled() => true,
+    // A fence or gateway lost during startup has already cancelled `stop`
+    // (and, for the fence, closed the Discord client); it ends the wait at
+    // once.
+    let cause = tokio::select! {
+        biased;
+        () = started.fence_lost.cancelled() => Err(ServeError::FenceLost),
+        () = started.gateway_lost.cancelled() => Err(ServeError::GatewayStopped),
+        () = signal => Ok(()),
     };
-    tracing::info!(fence_lost, "shutting down");
+    tracing::info!(ok = cause.is_ok(), "shutting down");
     shut_down(started, &ready, &stop).await;
-    if fence_lost {
-        Err(ServeError::FenceLost)
-    } else {
-        Ok(())
-    }
+    cause
 }
 
 /// Steps 1–4 of the shutdown.

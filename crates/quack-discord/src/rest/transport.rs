@@ -194,6 +194,10 @@ impl Transport {
         if global && let Err(outcome) = self.global_wait().await {
             return Answer::without_status(outcome);
         }
+        // Closed while it waited: it hasn't been sent, so it never is.
+        if self.closed.load(Ordering::Acquire) {
+            return Answer::without_status(Outcome::NotSent(NotSentCause::ShuttingDown));
+        }
         let deadline = tokio::time::Instant::now()
             + if request.files {
                 self.file_timeout

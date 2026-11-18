@@ -36,6 +36,7 @@ pub(super) struct Started {
     pub(super) tasks: Vec<JoinHandle<()>>,
     pub(super) fence: Arc<Mutex<Option<Fence>>>,
     pub(super) fence_lost: CancellationToken,
+    pub(super) gateway_lost: CancellationToken,
     pub(super) modules: Arc<Modules>,
 }
 
@@ -70,10 +71,11 @@ async fn database(config: &Config, options: &Options, ready: &Readiness) -> Resu
 }
 
 /// Step 4: the singleton fence, retried every 5 s while another process
-/// holds it; then a watcher that cancels `lost` if it is ever lost.
+/// holds it; then [`watch_fence`].
 async fn fence(
     db: &Db,
     ready: &Readiness,
+    client: &DiscordClient,
     stop: &CancellationToken,
 ) -> Result<(Arc<Mutex<Option<Fence>>>, CancellationToken, JoinHandle<()>), ServeError> {
     let held = loop {
@@ -92,26 +94,43 @@ async fn fence(
     Readiness::set(&ready.fence, true);
     let fence = Arc::new(Mutex::new(Some(held)));
     let lost = CancellationToken::new();
-    let watch = {
-        let (fence, lost, stop) = (Arc::clone(&fence), lost.clone(), stop.clone());
-        tokio::spawn(async move {
-            let mut guard = fence.lock().await;
-            let Some(held) = guard.as_mut() else { return };
-            tokio::select! {
-                () = stop.cancelled() => {}
-                () = held.lost() => {
-                    tracing::error!("lost the database lock");
-                    lost.cancel();
-                }
-            }
-        })
-    };
+    let watch = watch_fence(
+        Arc::clone(&fence),
+        client.clone(),
+        stop.clone(),
+        lost.clone(),
+    );
     Ok((fence, lost, watch))
 }
 
-/// Step 6: the REST client; with Discord connected, the token and shard
-/// checks.
-async fn rest(config: &Config, options: &Options) -> Result<DiscordClient, ServeError> {
+/// Watches the held fence from the moment it is acquired (startup
+/// included). Losing it closes the Discord client to new calls at once,
+/// before anything else, so no path of this process starts a Discord call
+/// a replacement might also make; then it cancels `lost` and `stop`.
+fn watch_fence(
+    fence: Arc<Mutex<Option<Fence>>>,
+    client: DiscordClient,
+    stop: CancellationToken,
+    lost: CancellationToken,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut guard = fence.lock().await;
+        let Some(held) = guard.as_mut() else { return };
+        tokio::select! {
+            () = stop.cancelled() => {}
+            () = held.lost() => {
+                client.close();
+                tracing::error!("lost the database lock");
+                lost.cancel();
+                stop.cancel();
+            }
+        }
+    })
+}
+
+/// The REST client (built before the fence so losing the fence can close
+/// it; building it calls nothing).
+fn client(config: &Config, options: &Options) -> Result<DiscordClient, ServeError> {
     let discord = config.discord.as_ref().ok_or_else(|| {
         ServeError::Startup("the Discord token and application id are required".to_owned())
     })?;
@@ -119,8 +138,12 @@ async fn rest(config: &Config, options: &Options) -> Result<DiscordClient, Serve
     if let DiscordMode::Off { api_base } = &options.discord {
         client_config.api_base.clone_from(api_base);
     }
-    let client = DiscordClient::new(&client_config)
-        .map_err(|e| ServeError::Startup(format!("couldn't build the Discord client: {e}")))?;
+    DiscordClient::new(&client_config)
+        .map_err(|e| ServeError::Startup(format!("couldn't build the Discord client: {e}")))
+}
+
+/// Step 6: with Discord connected, the token and shard checks.
+async fn rest(client: &DiscordClient, options: &Options) -> Result<(), ServeError> {
     if options.discord == DiscordMode::Connect {
         match client.current_user().await {
             Outcome::Done(me) => tracing::info!(account = me.id.get(), "signed in to Discord"),
@@ -134,11 +157,11 @@ async fn rest(config: &Config, options: &Options) -> Result<DiscordClient, Serve
                 )));
             }
         }
-        check_shards(&client)
+        check_shards(client)
             .await
             .map_err(|e| ServeError::Startup(e.to_string()))?;
     }
-    Ok(client)
+    Ok(())
 }
 
 /// Step 7 (and `quack commands sync`): command sync (§11.2).
@@ -258,6 +281,7 @@ async fn gateway(
     parts: &Parts,
     bot: Bot,
     stop: &CancellationToken,
+    gateway_lost: &CancellationToken,
     tasks: &mut Vec<JoinHandle<()>>,
 ) -> GatewaySource {
     let (DiscordMode::Connect, Some(discord)) = (&options.discord, &config.discord) else {
@@ -271,13 +295,21 @@ async fn gateway(
     let status = gateway.status();
     let gateway_stop = stop.clone();
     let on_dropped = parts.app.modules.on_dropped();
+    let ended = gateway_lost.clone();
     tasks.push(tokio::spawn(async move {
         let handler = move |event| {
             let bot = bot.clone();
             async move { bot.on_event(event).await }
         };
-        if let Err(error) = gateway.run(handler, on_dropped, gateway_stop).await {
+        let result = gateway.run(handler, on_dropped, gateway_stop.clone()).await;
+        if let Err(error) = &result {
             tracing::error!(%error, "the gateway stopped");
+        }
+        // A gateway that ends on its own (a terminal close such as 4014)
+        // stops the process, so its supervisor can start a working one.
+        if !gateway_stop.is_cancelled() {
+            ended.cancel();
+            gateway_stop.cancel();
         }
     }));
     wait_for_servers(parts.app.engine.db(), &parts.guilds, &status, stop).await;
@@ -292,9 +324,10 @@ pub(super) async fn start(
     stop: CancellationToken,
 ) -> Result<Started, ServeError> {
     let db = database(config, options, &ready).await?;
-    let (fence, fence_lost, fence_watch) = fence(&db, &ready, &stop).await?;
+    let client = client(config, options)?;
+    let (fence, fence_lost, fence_watch) = fence(&db, &ready, &client, &stop).await?;
     let mut tasks = vec![fence_watch];
-    let client = rest(config, options).await?;
+    rest(&client, options).await?;
     let parts = Parts::new(config, options, &db, &client, &ready)?;
     tasks.push(http(config, parts.app.router.clone(), &stop).await?);
     if options.discord == DiscordMode::Connect {
@@ -304,7 +337,17 @@ pub(super) async fn start(
     let engine = parts.app.engine.clone();
     tasks.push(notifications(&engine, &runner_cell, &stop).await?);
     let bot = parts.app.bot.clone();
-    let gateway = gateway(config, options, &parts, bot, &stop, &mut tasks).await;
+    let gateway_lost = CancellationToken::new();
+    let gateway = gateway(
+        config,
+        options,
+        &parts,
+        bot,
+        &stop,
+        &gateway_lost,
+        &mut tasks,
+    )
+    .await;
     tasks.extend(
         parts
             .app
@@ -336,6 +379,7 @@ pub(super) async fn start(
         tasks,
         fence,
         fence_lost,
+        gateway_lost,
         modules: Arc::clone(&parts.app.modules),
     })
 }
@@ -381,4 +425,56 @@ async fn start_runner(config: &Config, app: &App, db: &Db) -> Result<Runner, Ser
     );
     runner.start();
     Ok(runner)
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, reason = "tests")]
+
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use quack_db::Fence;
+    use quack_discord::{ClientConfig, DiscordClient, NotSentCause, Outcome};
+    use quack_testkit::db::TestDb;
+    use tokio::sync::Mutex;
+    use tokio_util::sync::CancellationToken;
+
+    #[tokio::test]
+    async fn losing_the_fence_closes_discord_to_new_calls_at_once() {
+        let test = TestDb::new().await.unwrap();
+        let fence = Fence::try_acquire(test.db.connect_options())
+            .await
+            .unwrap()
+            .unwrap();
+        let mut config = ClientConfig::new("token", 42);
+        "http://127.0.0.1:9".clone_into(&mut config.api_base);
+        let client = DiscordClient::new(&config).unwrap();
+        let (stop, lost) = (CancellationToken::new(), CancellationToken::new());
+        let watch = super::watch_fence(
+            Arc::new(Mutex::new(Some(fence))),
+            client.clone(),
+            stop.clone(),
+            lost.clone(),
+        );
+        // Another session ends the fence's connection.
+        test.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' \
+             AND database = (SELECT oid FROM pg_database WHERE datname = current_database())",
+        )
+        .await
+        .unwrap();
+        tokio::time::timeout(Duration::from_secs(15), lost.cancelled())
+            .await
+            .unwrap();
+        assert!(stop.is_cancelled(), "the process stops");
+        assert!(
+            matches!(
+                client.current_user().await,
+                Outcome::NotSent(NotSentCause::ShuttingDown)
+            ),
+            "no Discord call starts after the fence is lost"
+        );
+        watch.await.unwrap();
+    }
 }

@@ -8002,3 +8002,13 @@ folds these into the sections (or changes the code) and removes them here.
     while a post waited hides its text, file names, or embed types.
     Leaving a server also retires its posted/dropped counters. A
     permission change can still race the REST call itself.
+45. §17.5 step 4 and shutdown (application review BLOCKER 2, MAJOR 12) →
+    the REST client is built before the fence (building it calls
+    nothing), and the fence is watched from the moment it is acquired,
+    startup included. Losing it **closes the Discord client to new calls
+    at once** (a call still waiting for its rate-limit permit is not sent
+    either), then runs the shutdown sequence, whose drain can no longer
+    start a Discord call; the process exits 1. A gateway that ends on its
+    own (a terminal close such as 4014) also runs the shutdown sequence
+    and exits 1, so a supervisor starts a working process instead of one
+    that is live but never ready.
