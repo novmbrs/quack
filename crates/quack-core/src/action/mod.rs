@@ -265,7 +265,9 @@ pub enum ActionEvent {
         /// Whether the round's budget allows another attempt.
         attempts_left: bool,
     },
-    /// Staff retried a failed action.
+    /// Staff retried a failed action: the write clears every failure field
+    /// (`failure_reason`, `failure_permission`, `failure_http_status`,
+    /// `failure_discord_code`) and starts a new round (`attempts = 0`).
     StaffRetry,
     /// Staff dismissed a failed action.
     StaffDismiss,
