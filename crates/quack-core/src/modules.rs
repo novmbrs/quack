@@ -4,7 +4,6 @@
 use std::borrow::Cow;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use time::Duration;
 
 use crate::ids::{ChannelId, RuleId, TicketId};
 use crate::permissions::{MemberRefusalCode, Permission};
@@ -268,9 +267,6 @@ impl HoneypotHitState {
         }
     }
 }
-
-/// A burst of posts within this long after a honeypot case joins that case.
-pub const HONEYPOT_BURST_WINDOW: Duration = Duration::seconds(30);
 
 /// Why the honeypot couldn't add a case, as `honeypot_case_failed`
 /// records it (§9.2, §13.4.2).

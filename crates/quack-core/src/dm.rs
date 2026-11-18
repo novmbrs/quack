@@ -75,11 +75,6 @@ impl DmFailure {
     }
 }
 
-/// Attempts of the `send_dm` job (§6.4); a run that ends with the DM still
-/// `pending` uses one.
-pub const SEND_ATTEMPTS: u32 = 3;
-/// Waits between `send_dm` job attempts.
-pub const SEND_BACKOFF: [Duration; 2] = [Duration::seconds(5), Duration::seconds(30)];
 /// After a create with an unknown result, wait this long and repeat it with
 /// the same nonce while the window lasts.
 pub const UNKNOWN_REPEAT_DELAY: Duration = Duration::seconds(2);

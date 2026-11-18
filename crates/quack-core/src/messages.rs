@@ -50,16 +50,6 @@ str_enum! {
 pub const INTERACTION_TOKEN_LIFETIME: Duration = Duration::seconds(15 * 60 - 60);
 /// Most render-and-write loops per sync job run.
 pub const MAX_SYNC_LOOPS: u32 = 3;
-/// Attempts per `sync_message` job.
-pub const SYNC_ATTEMPTS: u32 = 6;
-/// Waits between `sync_message` attempts.
-pub const SYNC_BACKOFF: [Duration; 5] = [
-    Duration::seconds(2),
-    Duration::seconds(10),
-    Duration::minutes(1),
-    Duration::minutes(5),
-    Duration::minutes(30),
-];
 
 /// When an interaction token received at `received_at` stops being used;
 /// `None` (the token can't be used) when that can't be represented.

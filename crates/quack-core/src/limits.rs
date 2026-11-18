@@ -146,10 +146,6 @@ pub const IDEMPOTENCY_KEY: CharLimit = CharLimit::new(8, 200);
 pub const DEFAULT_PAGE_SIZE: u32 = 50;
 /// Largest API page size.
 pub const MAX_PAGE_SIZE: u32 = 100;
-/// Rows per page in Discord lists.
-pub const DISCORD_PAGE_SIZE: u32 = 10;
-/// How long a multi-page `/case add` draft lives.
-pub const CASE_DRAFT_LIFETIME: Duration = Duration::minutes(15);
 /// How long after a create's start Quack repeats it with the same nonce
 /// (§10.4). Discord documents no exact window; Quack assumes 60 seconds.
 pub const NONCE_WINDOW: Duration = Duration::seconds(60);

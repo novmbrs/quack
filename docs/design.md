@@ -5851,8 +5851,8 @@ string enum (`str_enum!`) has `ALL`, `as_str()`, `FromStr` (→
     `const fn failure_for(event, refusal_code: Option<u32>) -> Option<DmFailure>`,
     `const fn releases_waiting_action(kind, to: DmState) -> bool`,
     `fn in_window(first_attempt_at, now) -> bool`, `fn wait_fits(first_attempt_at, now, wait) -> bool`.
-  - Constants: `SEND_ATTEMPTS` (3), `SEND_BACKOFF`, `UNKNOWN_REPEAT_DELAY`,
-    `ACTION_WAIT` (120 s).
+  - Constants: `UNKNOWN_REPEAT_DELAY`, `ACTION_WAIT` (120 s). The
+    `send_dm` attempts and backoff are the job policy's (`quack-db` `jobs`).
 - `escalation` — choosing a rule's level from the member's case count
   (§3.4).
   - `LevelChoice { index, from_case_count, action, send_dm }`.
@@ -5902,7 +5902,7 @@ string enum (`str_enum!`) has `ALL`, `as_str()`, `FromStr` (→
     `MIN_TICKET_RETENTION_DAYS`, `MAX_TICKET_RETENTION_DAYS`,
     `DEFAULT_TICKET_RETENTION_DAYS`, `MAX_TRANSCRIPT_BYTES`,
     `IDEMPOTENCY_KEY`, `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE`,
-    `DISCORD_PAGE_SIZE`, `CASE_DRAFT_LIFETIME`, `NONCE_WINDOW`,
+    `NONCE_WINDOW`,
     `MAX_BODY_BYTES`, `MIN_STATS_RANGE`, `MAX_STATS_RANGE`.
 - `messages` — tracked messages (§10): kinds, states, and the sync
   routing.
@@ -5920,7 +5920,8 @@ string enum (`str_enum!`) has `ALL`, `as_str()`, `FromStr` (→
     `const fn on_missing(kind, current_channel: Option<ChannelId>, create_refused: bool, token_valid: bool) -> MissingPlan`,
     `const fn stale_cleanup(kind) -> StaleCleanup`.
   - Constants: `MAX_STALE` (5), `INTERACTION_TOKEN_LIFETIME`,
-    `MAX_SYNC_LOOPS` (3), `SYNC_ATTEMPTS` (6), `SYNC_BACKOFF`.
+    `MAX_SYNC_LOOPS` (3); the sync job's attempts and backoff are its job
+    policy's.
 - `modlog` — the append-only moderation log (§9): kinds, results, typed
   links, typed details, and legacy redaction.
   - Types: `ModLogKind` (one variant per §9 kind, `CaseCreated` …
@@ -5965,7 +5966,7 @@ string enum (`str_enum!`) has `ALL`, `as_str()`, `FromStr` (→
     `HoneypotFailure::{Refused(..), Exempt, ImportedPending}`.
   - `fn redact_secrets(text: &str) -> Cow<'_, str>`,
     `fn ticket_thread_name(id: TicketId) -> String`; constants
-    `HONEYPOT_BURST_WINDOW` (30 s), `REDACTED_SECRET`.
+    `REDACTED_SECRET`.
 - `permissions` — who may do what (§2): permission bits, capabilities,
   the operation table, member checks, and the staff-only channel check.
   - Types: `Permissions(u64)` (`NONE`, `contains`, `allows`, `missing`),
