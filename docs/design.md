@@ -2060,10 +2060,10 @@ no authority: every handler authorizes the clicker.
 | `ev` | Button "View evidence", pager | case u22, item number (1-based) | Show one evidence item. |
 | `vd` | Button "Void case" | case u22 | Open the void modal (reason). |
 | `vdm` | Modal | case u22 | Void (§4.7). |
-| `hi` | Button "History", pager | member snowflake, page | Member history page. |
+| `hi` | Button "Member's case history", pager | member snowflake, page | Member history page. |
 | `cl` | Pager | page, member snowflake or `0`, rule u22 or `0` | Case list page. |
 | `ar` | Button "Retry {action}" | action u22 | Retry (§5.8). |
-| `ad` | Button "Dismiss {action}" | action u22 | Dismiss (§5.8). |
+| `ad` | Button "Dismiss failed {action}" | action u22 | Dismiss (§5.8). |
 | `au` | Button "Remove timeout" / "Unban" | action u22 (the original) | Ask to confirm. |
 | `auc` | Button "Yes, remove timeout" / "Yes, unban" | action u22 | Undo (§5.8). |
 | `rp` | Select (rule picker) | draft u22 | Value: rule u22. Set the draft's rule (§11.6). |
@@ -2072,19 +2072,19 @@ no authority: every handler authorizes the clicker.
 | `cn` | Button "Continue" / "Fill in the form" | draft u22, rule u22, rule version, page | Open that page's modal (no stored values). |
 | `cr` | Button "Try again" (a page with problems) | draft u22, rule u22, rule version, page | Exception read: re-open the same page prefilled with the values the moderator sent. |
 | `cs` | Button "Try again" (saving failed) | draft u22 | Apply the completed draft again (§11.6). |
-| `ap` | Button "Appeal" (DM) | case u22 | Open the appeal modal. |
+| `ap` | Button "Appeal case" (DM) | case u22 | Open the appeal modal. |
 | `apm` | Modal | case u22 | Submit the appeal (§8.1). |
 | `aa` | Button "Accept" | appeal u22, version | Open the accept modal (prefilled default reason). |
 | `aam` | Modal | appeal u22, version | Accept. |
 | `aj` | Button "Reject" | appeal u22, version | Open the reject modal. |
 | `ajm` | Modal | appeal u22, version | Reject. |
-| `ao` | Button "Open" | appeal u22 | Show the appeal card: the appeal post's content plus Accept and Reject while `pending`, and Open appeal (dashboard link). Other decisions are made on the dashboard. |
+| `ao` | Button "Open appeal for #{number}" | appeal u22 | Show the appeal card: the appeal post's content plus Accept and Reject while `pending`, and Open appeal (dashboard link). Other decisions are made on the dashboard. |
 | `al` | Pager | page | `/appeals` page. |
 | `rl` | Pager | page | `/rules` page. |
 | `su` | Setup controls | area, operation | §11.8. |
 | `to` | Button "Open a ticket" | none | Open a ticket (§13.2). |
 | `tc` | Button "Close ticket" | ticket u22 | Close the ticket. |
-| `tf` | Button "Fix access" | ticket u22 | Fix ticket access. |
+| `tf` | Button "Restore private access" | ticket u22 | Fix ticket access. |
 
 Longest form: `1:cd:<22>:<22>:<10>:<2>` = 64 characters.
 
@@ -2179,7 +2179,9 @@ these fixed fields, from `quack-text`'s `ReceiptView` projection:
 - the action line: the §12.6 action sentence without its failure reason or
   retry suffix (`Detail::Receipt` keeps only the first sentence, so an
   action Quack couldn't confirm shows "Quack couldn't confirm whether …"
-  without the staff advice after it).
+  without the staff advice after it);
+- for a failed or unconfirmed action, `case.receipt.staff_hint`, which
+  points staff at Open case without saying what went wrong.
 
 It never shows case context, evidence, the moderator, the void reason, the
 appeal, the DM outcome, or any failure detail, and its only button is
@@ -3439,7 +3441,7 @@ Tickets:
 
 `{transcript time}` is UTC as "2026-11-17 14:05:09 UTC". The staff post
 shows the transcript, partial, and thread lines only once closed (and not
-for a ticket that failed to open); its buttons (Open thread, Fix access,
+for a ticket that failed to open); its buttons (Open thread, Restore private access,
 Close ticket) only while open.
 
 Server activity log (posted in the routed channel):
@@ -4411,10 +4413,10 @@ Envelope:
 ```json
 { "error": {
     "code": "validation_failed",
-    "message": "Some fields need fixing.",
+    "message": "Check the marked fields and save again.",
     "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
     "fields": [ { "field": "levels[1].from_case_count", "code": "level_order", "message": "…" } ],
-    "problems": [ { "code": "ticket_queue_missing", "message": "Choose the staff channel for new tickets." } ],
+    "problems": [ { "code": "ticket_queue_missing", "message": "Choose a staff channel for new tickets." } ],
     "retry_after_seconds": 12
 } }
 ```
