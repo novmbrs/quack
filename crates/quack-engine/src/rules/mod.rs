@@ -19,7 +19,7 @@ use crate::modlog::{self, By};
 use crate::opkey::{KeyError, Keyed, begin_keyed, complete, request_hash, stored_id};
 use crate::{Engine, OpKey, Principal, obs};
 
-pub use read::{RuleSummary, RuleView, VersionView, export, get, list, version};
+pub use read::{RuleList, export, get, list, version};
 
 /// Why a rule write was refused.
 #[derive(Debug, thiserror::Error)]

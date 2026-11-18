@@ -7,7 +7,8 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use quack_core::ids::{AccountId, RuleId};
 use quack_core::rule::{RuleDefinition, RuleFile};
-use quack_engine::rules::{self, RuleError, RuleSummary, RuleView, VersionView};
+use quack_db::rules::{Rule, VersionInfo};
+use quack_engine::rules::{self, RuleError, RuleList};
 use quack_text::error::Scene;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -66,28 +67,35 @@ pub(crate) struct RuleSummaryWire {
     levels: Vec<quack_core::rule::Level>,
 }
 
-impl From<RuleSummary> for RuleSummaryWire {
-    fn from(r: RuleSummary) -> Self {
+impl RuleSummaryWire {
+    fn new(r: Rule, starter: Option<RuleId>, honeypot_rule: Option<RuleId>) -> Self {
+        let levels: Vec<_> = r
+            .definition
+            .levels
+            .iter()
+            .map(|l| (l.from_case_count, l.action))
+            .collect();
         Self {
             id: r.id,
-            name: r.name,
-            description: r.description,
+            levels_text: quack_text::word::levels_summary(&levels),
+            field_count: r.definition.fields.len(),
+            is_starter: starter == Some(r.id),
+            used_by_honeypot: honeypot_rule == Some(r.id),
+            appealable: r.definition.appealable,
+            counting_window_days: r.definition.counting_window_days,
+            levels: r.definition.levels,
+            name: r.definition.name,
+            description: r.definition.description,
             current_version: r.current_version,
             archived_at: r.archived_at,
-            levels_text: r.levels_text,
-            field_count: r.field_count,
-            is_starter: r.is_starter,
-            used_by_honeypot: r.used_by_honeypot,
-            appealable: r.appealable,
-            counting_window_days: r.counting_window_days,
-            levels: r.levels,
         }
     }
 }
 
 /// Route 12's body.
 #[derive(Debug, Serialize, ToSchema)]
-pub(crate) struct RuleList {
+#[schema(as = RuleList)]
+pub(crate) struct RuleListWire {
     rules: Vec<RuleSummaryWire>,
 }
 
@@ -106,7 +114,8 @@ pub(crate) struct VersionEntry {
 
 /// A rule with its current definition and history.
 #[derive(Debug, Serialize, ToSchema)]
-pub(crate) struct Rule {
+#[schema(as = Rule)]
+pub(crate) struct RuleWire {
     #[schema(value_type = uuid::Uuid)]
     id: RuleId,
     current_version: u32,
@@ -129,8 +138,8 @@ pub(crate) struct Rule {
     versions: Vec<VersionEntry>,
 }
 
-impl From<RuleView> for Rule {
-    fn from(r: RuleView) -> Self {
+impl From<(Rule, Vec<VersionInfo>)> for RuleWire {
+    fn from((r, versions): (Rule, Vec<VersionInfo>)) -> Self {
         Self {
             id: r.id,
             current_version: r.current_version,
@@ -140,8 +149,7 @@ impl From<RuleView> for Rule {
             updated_at: r.updated_at,
             updated_by: r.updated_by,
             definition: r.definition,
-            versions: r
-                .versions
+            versions: versions
                 .into_iter()
                 .map(|v| VersionEntry {
                     version: v.version,
@@ -170,15 +178,15 @@ pub(crate) struct RuleVersion {
     definition: Option<RuleDefinition>,
 }
 
-impl RuleVersion {
-    fn from_view(rule_id: RuleId, v: VersionView) -> Self {
+impl From<quack_db::rules::RuleVersion> for RuleVersion {
+    fn from(v: quack_db::rules::RuleVersion) -> Self {
         Self {
-            rule_id,
+            rule_id: v.rule,
             version: v.version,
             created_at: v.created_at,
             created_by: v.created_by,
             reconstructed: v.reconstructed,
-            definition: v.definition,
+            definition: Some(v.definition),
         }
     }
 }
@@ -219,7 +227,7 @@ async fn written(
     result: Result<rules::RuleWritten, RuleError>,
     facts: &Facts,
     prefix: &str,
-) -> ApiResult<Json<Rule>> {
+) -> ApiResult<Json<RuleWire>> {
     let written = result.map_err(|e| map::rule(e, facts, prefix))?;
     let view = rules::get(state.engine(), &staff.principal, written.rule)
         .await
@@ -230,25 +238,32 @@ async fn written(
 /// The server's rules, by name.
 #[utoipa::path(get, path = "/api/guilds/{guild_id}/rules", tag = "rules",
     params(("guild_id" = String, Path), ListQuery),
-    responses((status = 200, body = RuleList), (status = 403, body = ErrorEnvelope)),
+    responses((status = 200, body = RuleListWire), (status = 403, body = ErrorEnvelope)),
     security(("session" = [])))]
 async fn list_rules(
     State(state): State<ApiState>,
     staff: Staff<ReadRules>,
     Query(q): Query<ListQuery>,
-) -> ApiResult<Json<RuleList>> {
-    let rules = rules::list(state.engine(), &staff.principal, q.archived)
+) -> ApiResult<Json<RuleListWire>> {
+    let RuleList {
+        rules,
+        starter,
+        honeypot_rule,
+    } = rules::list(state.engine(), &staff.principal, q.archived)
         .await
         .map_err(|e| map::rule(e, &facts(None), ""))?;
-    Ok(Json(RuleList {
-        rules: rules.into_iter().map(Into::into).collect(),
+    Ok(Json(RuleListWire {
+        rules: rules
+            .into_iter()
+            .map(|r| RuleSummaryWire::new(r, starter, honeypot_rule))
+            .collect(),
     }))
 }
 
 /// Creates a rule.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/rules", tag = "rules",
     params(("guild_id" = String, Path)), request_body = schema::RuleDefinition,
-    responses((status = 201, body = Rule), (status = 400, body = ErrorEnvelope),
+    responses((status = 201, body = RuleWire), (status = 400, body = ErrorEnvelope),
               (status = 409, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn create_rule(
@@ -256,7 +271,7 @@ async fn create_rule(
     staff: Staff<ManageRules>,
     key: IdempotencyKey,
     Body(definition): Body<RuleDefinition>,
-) -> ApiResult<(StatusCode, Json<Rule>)> {
+) -> ApiResult<(StatusCode, Json<RuleWire>)> {
     let facts = facts(Some(definition.name.trim()));
     let result = rules::create(state.engine(), &staff.principal, definition, &key.0).await;
     let rule = written(&state, &staff, result, &facts, "").await?;
@@ -266,13 +281,13 @@ async fn create_rule(
 /// A rule with its history.
 #[utoipa::path(get, path = "/api/guilds/{guild_id}/rules/{rule_id}", tag = "rules",
     params(("guild_id" = String, Path), ("rule_id" = String, Path)),
-    responses((status = 200, body = Rule), (status = 404, body = ErrorEnvelope)),
+    responses((status = 200, body = RuleWire), (status = 404, body = ErrorEnvelope)),
     security(("session" = [])))]
 async fn get_rule(
     State(state): State<ApiState>,
     staff: Staff<ReadRules>,
     Path(path): Path<(String, String)>,
-) -> ApiResult<Json<Rule>> {
+) -> ApiResult<Json<RuleWire>> {
     let rule: RuleId = uuid_id(&path.1)?;
     let view = rules::get(state.engine(), &staff.principal, rule)
         .await
@@ -283,7 +298,7 @@ async fn get_rule(
 /// Saves a new version of a rule.
 #[utoipa::path(put, path = "/api/guilds/{guild_id}/rules/{rule_id}", tag = "rules",
     params(("guild_id" = String, Path), ("rule_id" = String, Path)), request_body = EditRule,
-    responses((status = 200, body = Rule), (status = 409, body = ErrorEnvelope)),
+    responses((status = 200, body = RuleWire), (status = 409, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn edit_rule(
     State(state): State<ApiState>,
@@ -291,7 +306,7 @@ async fn edit_rule(
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
     Body(body): Body<EditRule>,
-) -> ApiResult<Json<Rule>> {
+) -> ApiResult<Json<RuleWire>> {
     let rule: RuleId = uuid_id(&path.1)?;
     let facts = facts(Some(body.definition.name.trim()));
     let result = rules::edit(
@@ -309,14 +324,14 @@ async fn edit_rule(
 /// Archives a rule: it stays, but can't be applied.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/rules/{rule_id}/archive", tag = "rules",
     params(("guild_id" = String, Path), ("rule_id" = String, Path)),
-    responses((status = 200, body = Rule), (status = 409, body = ErrorEnvelope)),
+    responses((status = 200, body = RuleWire), (status = 409, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn archive_rule(
     State(state): State<ApiState>,
     staff: Staff<ManageRules>,
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
-) -> ApiResult<Json<Rule>> {
+) -> ApiResult<Json<RuleWire>> {
     let rule: RuleId = uuid_id(&path.1)?;
     let result = rules::archive(state.engine(), &staff.principal, rule, &key.0).await;
     written(&state, &staff, result, &facts(None), "").await
@@ -325,14 +340,14 @@ async fn archive_rule(
 /// Restores an archived rule.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/rules/{rule_id}/restore", tag = "rules",
     params(("guild_id" = String, Path), ("rule_id" = String, Path)),
-    responses((status = 200, body = Rule), (status = 409, body = ErrorEnvelope)),
+    responses((status = 200, body = RuleWire), (status = 409, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn restore_rule(
     State(state): State<ApiState>,
     staff: Staff<ManageRules>,
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
-) -> ApiResult<Json<Rule>> {
+) -> ApiResult<Json<RuleWire>> {
     let rule: RuleId = uuid_id(&path.1)?;
     let result = rules::restore(state.engine(), &staff.principal, rule, &key.0).await;
     written(&state, &staff, result, &facts(None), "").await
@@ -358,7 +373,7 @@ async fn export_rule(
 /// Imports a rule file as a new rule.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/rules/import", tag = "rules",
     params(("guild_id" = String, Path)), request_body = ImportRule,
-    responses((status = 201, body = Rule), (status = 400, body = ErrorEnvelope),
+    responses((status = 201, body = RuleWire), (status = 400, body = ErrorEnvelope),
               (status = 409, body = ErrorEnvelope)),
     security(("session" = [], "csrf" = [])))]
 async fn import_rule(
@@ -366,7 +381,7 @@ async fn import_rule(
     staff: Staff<ManageRules>,
     key: IdempotencyKey,
     Body(body): Body<ImportRule>,
-) -> ApiResult<(StatusCode, Json<Rule>)> {
+) -> ApiResult<(StatusCode, Json<RuleWire>)> {
     if !body.confirm {
         return Err(ApiError::field(
             "confirm",
@@ -406,5 +421,5 @@ async fn rule_version(
     let view = rules::version(state.engine(), &staff.principal, rule, version)
         .await
         .map_err(|e| map::rule(e, &facts(None), ""))?;
-    Ok(Json(RuleVersion::from_view(rule, view)))
+    Ok(Json(view.into()))
 }
