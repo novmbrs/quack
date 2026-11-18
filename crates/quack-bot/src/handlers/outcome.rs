@@ -58,7 +58,7 @@ pub(crate) async fn applied(
     match applied {
         Applied::Created(_) => Ok(None),
         Applied::Replayed(case) => {
-            let view = quack_engine::cases::get(engine, principal, CaseRef::Id(*case))
+            let view = quack_engine::cases::staff_card(engine, principal, CaseRef::Id(*case))
                 .await
                 .map_err(|e| errors::case(&e, &ErrorFacts::default()))?;
             Ok(Some(Msg::text(

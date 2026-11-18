@@ -16,6 +16,7 @@ use time::OffsetDateTime;
 use super::{By, read::facts, write};
 use crate::channels::{ChannelCheck, staff_channel};
 use crate::jobs::{dead, retry};
+use crate::names::Names;
 use crate::port::{Nonce, Outcome, RefusalKind};
 use crate::{Engine, obs};
 
@@ -68,7 +69,7 @@ pub async fn post(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError>
         }
         let msg = {
             let mut conn = engine.db().conn().await?;
-            let f = facts(engine, &mut conn, &entry, true).await?;
+            let f = facts(engine, &mut conn, &entry, true, &Names::default()).await?;
             quack_text::log::post(&entry.entry, &f)
         };
         // The destination checked again right before the create: a switch

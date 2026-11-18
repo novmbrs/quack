@@ -17,6 +17,7 @@ use super::records::CaseRecords;
 use super::timeline::member_timeline;
 use super::view_items::{ActionItem, EvidenceItem, action_item, evidence_item};
 use super::{CaseError, CaseRef};
+use crate::names::Names;
 use crate::{Engine, Principal, modlog, obs};
 
 /// Most staff timeline entries a view carries.
@@ -82,6 +83,10 @@ pub struct CaseView {
     pub member_timeline: Vec<TimelineText>,
     /// There are more member timeline items than shown.
     pub timeline_truncated: bool,
+    /// The display names the sentences used, for the caller's own
+    /// sentences about the case.
+    #[serde(skip)]
+    pub names: Names,
 }
 
 /// How a case was voided.
@@ -165,10 +170,20 @@ pub async fn get(
             .find(&mut conn, principal.guild)
             .await?
             .ok_or(DomainError::CaseNotFound)?;
-        let records = CaseRecords::of(&mut conn, found).await?;
+        let mut records = CaseRecords::of(&mut conn, found).await?;
         let entries =
             quack_db::modlog::for_case(&mut conn, principal.guild, records.case.id, TIMELINE_LIMIT)
                 .await?;
+        let people = records
+            .people()
+            .chain(
+                entries
+                    .iter()
+                    .flat_map(|e| [e.actor, e.links.member_id.map(MemberId::account)])
+                    .flatten(),
+            )
+            .collect();
+        records.names = Names::read(engine, people).await;
         let mut timeline = Vec::new();
         let (member_timeline, timeline_truncated) = member_timeline(&records, &entries);
         for entry in &entries {
@@ -176,7 +191,7 @@ pub async fn get(
                 kind: entry.kind,
                 result: entry.result,
                 actor_id: entry.actor,
-                text: modlog::entry_text(engine, &mut conn, entry).await?,
+                text: modlog::entry_text(engine, &mut conn, entry, &records.names).await?,
                 created_at: entry.created_at,
             });
         }
@@ -219,7 +234,7 @@ fn view(
 ) -> CaseView {
     let case = &r.case;
     let now = OffsetDateTime::now_utc();
-    let member = quack_text::Person::unnamed(case.member.account());
+    let member = r.names.person(case.member.account());
     let d = case.decision;
     CaseView {
         id: case.id,
@@ -276,6 +291,7 @@ fn view(
         timeline,
         member_timeline,
         timeline_truncated,
+        names: r.names.clone(),
     }
 }
 

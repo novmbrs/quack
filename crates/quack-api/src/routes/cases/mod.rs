@@ -231,7 +231,7 @@ async fn void_case(
         // A replay: what the first void did, read back from the case.
         None => cases::void_results_of(&view),
     };
-    let member = quack_text::Person::unnamed(voided.member.account());
+    let member = view.names.person(voided.member.account());
     let message = quack_text::render::plain(&quack_text::case::void_done(
         voided.number,
         &voided.rule_name,

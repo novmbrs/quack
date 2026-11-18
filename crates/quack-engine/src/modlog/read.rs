@@ -1,5 +1,6 @@
 //! Reading the moderation log (§9.6) and the facts an entry's sentence
-//! needs (§9.4: immutable records, plus display names read live).
+//! needs (§9.4: immutable records, plus display names read live for the
+//! dashboard).
 
 use quack_core::DomainError;
 use quack_core::ids::{
@@ -9,12 +10,13 @@ use quack_core::modlog::{ModLogEntry, ModLogKind, ModLogResult, ModLogSource};
 use quack_core::permissions::Capability;
 use quack_db::modlog::{ModLogFilter, StoredEntry};
 use quack_db::{DbError, PgConnection, TimeCursor, actions, cases, rules, tickets};
+use quack_text::ChannelRef;
 use quack_text::log::LogFacts;
 use quack_text::render::plain;
-use quack_text::{Actor, ChannelRef, Person};
 use serde::Serialize;
 use time::OffsetDateTime;
 
+use crate::names::Names;
 use crate::{Engine, Principal, obs};
 
 /// One entry as the dashboard shows it.
@@ -88,9 +90,16 @@ pub async fn list(
                 })
             })
             .flatten();
+        let people = rows
+            .rows
+            .iter()
+            .flat_map(|e| [e.actor, e.links.member_id.map(MemberId::account)])
+            .flatten()
+            .collect();
+        let names = Names::read(engine, people).await;
         let mut entries = Vec::new();
         for entry in &rows.rows {
-            entries.push(entry_view(engine, &mut conn, entry).await?);
+            entries.push(entry_view(engine, &mut conn, entry, &names).await?);
         }
         Ok(Ok(ModLogPage {
             entries,
@@ -104,8 +113,9 @@ async fn entry_view(
     engine: &Engine,
     conn: &mut PgConnection,
     entry: &StoredEntry,
+    names: &Names,
 ) -> Result<EntryView, DbError> {
-    let facts = facts(engine, conn, entry, false).await?;
+    let facts = facts(engine, conn, entry, false, names).await?;
     Ok(EntryView {
         id: entry.id,
         kind: entry.kind,
@@ -125,34 +135,32 @@ async fn entry_view(
     })
 }
 
-/// An entry's sentence for the dashboard.
+/// An entry's sentence for the dashboard, naming people from `names`.
 pub async fn entry_text(
     engine: &Engine,
     conn: &mut PgConnection,
     entry: &StoredEntry,
+    names: &Names,
 ) -> Result<String, DbError> {
-    let facts = facts(engine, conn, entry, false).await?;
+    let facts = facts(engine, conn, entry, false, names).await?;
     Ok(plain(&quack_text::log::text(&entry.entry, &facts)))
 }
 
 /// The names and links an entry's sentence needs. `post` adds the links a
 /// log channel post carries and, for a retryable failed action, the Retry
-/// button's action (§9.4).
+/// button's action (§9.4). People are named from `names` (plain text only;
+/// a post mentions them).
 pub(crate) async fn facts(
     engine: &Engine,
     conn: &mut PgConnection,
     entry: &StoredEntry,
     post: bool,
+    names: &Names,
 ) -> Result<LogFacts, DbError> {
     let guild = entry.guild;
     let links = engine.links();
-    let mut f = LogFacts::new(
-        entry.created_at,
-        entry
-            .actor
-            .map_or(Actor::Quack, |a| Actor::Person(Person::unnamed(a))),
-    );
-    f.member = entry.links.member_id.map(|m| Person::unnamed(m.account()));
+    let mut f = LogFacts::new(entry.created_at, names.actor(entry.actor));
+    f.member = entry.links.member_id.map(|m| names.person(m.account()));
     let case = match entry.links.case_id {
         Some(id) => cases::get(conn, guild, id).await?,
         None => None,

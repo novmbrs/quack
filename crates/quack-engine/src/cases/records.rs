@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use quack_core::action::{ActionKind, ActionState};
 use quack_core::dm::DmKind;
-use quack_core::ids::{CaseId, GuildId};
+use quack_core::ids::{AccountId, CaseId, GuildId};
 use quack_core::rule::RuleDefinition;
 use quack_db::actions::{Action, Attempt};
 use quack_db::appeals::{Appeal, AppealEvent};
@@ -17,6 +17,8 @@ use quack_db::{DbError, PgConnection, actions, appeals, cases, dms, evidence, ru
 use quack_text::action::ActionView;
 use quack_text::dm::DmView;
 use time::OffsetDateTime;
+
+use crate::names::Names;
 
 /// A case with its decision's rule version, actions, DM, evidence, appeal,
 /// and replacement links.
@@ -41,6 +43,9 @@ pub(crate) struct CaseRecords {
     pub still_applies: HashMap<CaseId, u64>,
     /// The undo guard's answer for the original's undo (§5.6).
     pub undo_guard: Option<quack_core::action::StillApplies>,
+    /// Display names for plain text (empty until read: Discord renders
+    /// mentions).
+    pub names: Names,
 }
 
 impl CaseRecords {
@@ -110,7 +115,21 @@ impl CaseRecords {
             replaced_by,
             still_applies,
             undo_guard,
+            names: Names::default(),
         })
+    }
+
+    /// The accounts the staff sentences about the case can name: the
+    /// member, the moderator, and whoever dismissed a failed action.
+    pub(crate) fn people(&self) -> impl Iterator<Item = AccountId> + '_ {
+        [Some(self.case.member.account()), self.case.moderator]
+            .into_iter()
+            .chain(
+                self.actions
+                    .iter()
+                    .map(|a| a.dismissed.and_then(|(_, by)| by)),
+            )
+            .flatten()
     }
 
     /// The original action.
@@ -163,7 +182,7 @@ impl CaseRecords {
             dismissed: action.dismissed.map(|(at, by)| {
                 (
                     by.map_or(quack_text::Actor::UnknownModerator, |by| {
-                        quack_text::Actor::Person(quack_text::Person::unnamed(by))
+                        quack_text::Actor::Person(self.names.person(by))
                     }),
                     at,
                 )

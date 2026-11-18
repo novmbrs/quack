@@ -15,6 +15,7 @@ use time::OffsetDateTime;
 use super::CaseError;
 use super::records::CaseRecords;
 use super::view_items::{ActionItem, action_item};
+use crate::names::Names;
 use crate::{Engine, Principal, obs};
 
 /// One action with its case.
@@ -51,6 +52,18 @@ pub async fn actions(
         let rows =
             quack_db::actions::list(&mut conn, guild, state, dismissed, cursor, limit).await?;
         let now = OffsetDateTime::now_utc();
+        let people = rows
+            .rows
+            .iter()
+            .flat_map(|r| {
+                [
+                    Some(r.member.account()),
+                    r.action.dismissed.and_then(|(_, by)| by),
+                ]
+            })
+            .flatten()
+            .collect();
+        let names = Names::read(engine, people).await;
         let mut records: HashMap<CaseId, CaseRecords> = HashMap::new();
         let mut out = Vec::with_capacity(rows.rows.len());
         for row in rows.rows {
@@ -61,13 +74,15 @@ pub async fn actions(
                     let Some(found) = quack_db::cases::get(&mut conn, guild, case).await? else {
                         continue;
                     };
-                    e.insert(CaseRecords::of(&mut conn, found).await?)
+                    let mut r = CaseRecords::of(&mut conn, found).await?;
+                    r.names = names.clone();
+                    e.insert(r)
                 }
             };
             let Some(action) = r.actions.iter().find(|a| a.id == row.action.id) else {
                 continue;
             };
-            let member = quack_text::Person::unnamed(r.case.member.account());
+            let member = r.names.person(r.case.member.account());
             out.push(ListedAction {
                 item: action_item(r, action, &member, now),
                 case,
@@ -97,13 +112,14 @@ pub async fn action(
     let found = quack_db::cases::get(&mut conn, guild, case)
         .await?
         .ok_or(DomainError::CaseNotFound)?;
-    let r = CaseRecords::of(&mut conn, found).await?;
+    let mut r = CaseRecords::of(&mut conn, found).await?;
+    r.names = Names::read(engine, r.people().collect()).await;
     let a = r
         .actions
         .iter()
         .find(|a| a.id == action)
         .ok_or(DomainError::CaseNotFound)?;
-    let member = quack_text::Person::unnamed(r.case.member.account());
+    let member = r.names.person(r.case.member.account());
     Ok(ListedAction {
         item: action_item(&r, a, &member, OffsetDateTime::now_utc()),
         case,

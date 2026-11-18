@@ -1455,6 +1455,12 @@ Typed text is escaped (no Markdown, mentions, or links); the server's own
 Markdown (DM intro and footer, honeypot warning) keeps formatting but can't
 mention.
 
+Dashboard sentences (the staff case view, the actions page, the moderation
+log, the void message) name people by global name, else username, read once
+per response for every account they mention through the port's `accounts`
+(`quack_engine::names::Names`); when Discord can't answer, the "a member
+(ID {id})" wording stands. Member pages say "you" and never name staff.
+
 ### 12.1 Commands
 
 `command.*`, `command.case.*`, `command.help.*`, `command.add_case`.
