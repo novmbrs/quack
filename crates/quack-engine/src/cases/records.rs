@@ -156,6 +156,14 @@ impl CaseRecords {
                     at,
                 )
             }),
+            may_have_applied: quack_core::action::may_have_applied(
+                &self
+                    .attempts
+                    .iter()
+                    .filter(|a| a.action == action.id)
+                    .map(|a| a.outcome)
+                    .collect::<Vec<_>>(),
+            ),
         }
     }
 
