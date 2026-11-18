@@ -25,7 +25,6 @@ quack-activity-log = { workspace = true }
 quack-telemetry = { workspace = true }
 opentelemetry = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

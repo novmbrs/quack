@@ -25,12 +25,10 @@ quack-tickets = { workspace = true }
 quack-honeypot = { workspace = true }
 quack-activity-log = { workspace = true }
 anyhow = { workspace = true }
-aws-lc-rs = { workspace = true }
 axum = { workspace = true }
 config = { workspace = true }
 reqwest = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true }
 thiserror = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true }
@@ -40,6 +38,8 @@ tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
 quack-testkit = { workspace = true }
+aws-lc-rs = { workspace = true }
+sqlx = { workspace = true }
 base64 = { version = "=0.22.1" }
 tower = { workspace = true }
 httpmock = { workspace = true }

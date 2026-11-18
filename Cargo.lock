@@ -1758,18 +1758,15 @@ dependencies = [
  "quack-text",
  "serde",
  "serde_json",
- "thiserror 2.0.21",
  "time",
  "tokio",
  "tracing",
- "uuid",
 ]
 
 [[package]]
 name = "quack-api"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "aws-lc-rs",
  "axum",
  "base64 0.22.1",
@@ -1819,7 +1816,6 @@ dependencies = [
  "quack-text",
  "quack-tickets",
  "serde_json",
- "thiserror 2.0.21",
  "time",
  "tokio",
  "tracing",
@@ -1915,10 +1911,8 @@ dependencies = [
  "quack-engine",
  "quack-telemetry",
  "quack-testkit",
- "quack-text",
  "serde",
  "serde_json",
- "thiserror 2.0.21",
  "time",
  "tokio",
  "tracing",
@@ -1970,7 +1964,6 @@ dependencies = [
  "quack-db",
  "quack-engine",
  "quack-text",
- "serde_json",
  "sqlx",
  "time",
  "tokio",

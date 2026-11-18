@@ -30,14 +30,12 @@ quack-testkit = { path = "crates/quack-testkit" }
 
 # Discord.
 twilight-gateway = { version = "=0.18.0", default-features = false, features = ["twilight-http", "rustls-platform-verifier", "zstd"] }
-twilight-http = { version = "=0.18.0", default-features = false, features = ["decompression", "rustls-platform-verifier"] }
 twilight-model = { version = "=0.18.0" }
 twilight-cache-inmemory = { version = "=0.18.0" }
 twilight-util = { version = "=0.18.0", features = ["builder", "permission-calculator"] }
-# The REST rate limiter twilight-http uses, driven directly by quack-discord's
+# The REST rate limiter of twilight-http, driven directly by quack-discord's
 # own transport (twilight-http cannot send string nonces with enforce_nonce).
 twilight-http-ratelimiting = { version = "=0.18.0" }
-twilight-interactions = { version = "=0.18.0", features = ["derive"] }
 
 # Runtime and HTTP.
 tokio = { version = "=1.54.1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
@@ -46,7 +44,6 @@ axum = { version = "=0.8.9", default-features = false, features = ["http1", "htt
 tower = { version = "=0.5.3", features = ["util"] }
 tower-http = { version = "=0.7.1", features = ["limit", "timeout", "sensitive-headers"] }
 reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "json"] }
-rustls = { version = "=0.23.46", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
 
 # Storage.
 sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "macros", "migrate", "uuid", "time", "json"] }
@@ -60,12 +57,9 @@ opentelemetry-appender-tracing = { version = "=0.33.1" }
 tracing = { version = "=0.1.44" }
 tracing-opentelemetry = { version = "=0.34.0", default-features = false }
 tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "json"] }
-opentelemetry-instrumentation-tower = { version = "=0.19.0", features = ["axum"] }
 
-# Sign-in and sessions.
+# Sign-in (sessions are quack-db rows).
 oauth2 = { version = "=5.0.0", default-features = false }
-tower-sessions = { version = "=0.15.0", default-features = false, features = ["axum-core"] }
-tower-sessions-sqlx-store = { version = "=0.16.0", features = ["postgres"] }
 
 # Hashing (SHA-256 of operation-key requests); already in the graph
 # through rustls, so this adds no new code (design §20.5 #31).
@@ -85,7 +79,6 @@ utoipa = { version = "=6.0.0", features = ["axum_extras", "uuid", "time"] }
 utoipa-axum = { version = "=0.3.0" }
 
 # Tests only (dev-dependencies).
-testcontainers = { version = "=0.28.0", default-features = false }
 httpmock = { version = "=0.9.0", default-features = false }
 insta = { version = "=1.49.0" }
 proptest = { version = "=1.12.0" }
@@ -100,11 +93,9 @@ missing_docs = "warn"
 unreachable_pub = "warn"
 
 [workspace.lints.cargo]
-# The scaffold declares the charter's dependency edges and the audited pins
-# before any code uses them. Set both back to "warn" once every crate has
-# code, so unused dependencies are reported again.
-unused_dependencies = "allow"
-unused_workspace_dependencies = "allow"
+# Unused dependencies and unused workspace pins are reported.
+unused_dependencies = "warn"
+unused_workspace_dependencies = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

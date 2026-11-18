@@ -142,7 +142,7 @@ times (requests, job runs, interactions handled).
 | `http.route` | static names chosen in code | API route template (semconv). |
 | `url.template` | static names chosen in code | Discord REST route template (semconv). |
 | `http.response.status_code` | static names chosen in code | HTTP status code (semconv); absent when no response arrived. |
-| `quack.discord.outcome` | `done`, `refused`, `unknown`, `rate_limited`, `not_sent` | Outcome class of a Discord REST call (`not_sent`: it never left Quack). |
+| `quack.discord.outcome` | `done`, `refused`, `unknown`, `rate_limited`, `not_sent` | Outcome class of a Discord REST call. |
 | `quack.discord.rate_limit.scope` | `route`, `global`, `shared` | Which Discord rate limit applied. |
 | `quack.gateway.event` | static names chosen in code | Gateway event type. |
 | `quack.gateway.connection.event` | `identify`, `resume`, `reconnect`, `invalid_session` | Gateway connection change. |

@@ -13,15 +13,12 @@ workspace = true
 
 [dependencies]
 quack-core = { workspace = true }
-quack-text = { workspace = true }
 quack-db = { workspace = true }
 quack-engine = { workspace = true }
 quack-telemetry = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 time = { workspace = true }
-tokio = { workspace = true }
 tracing = { workspace = true }
 uuid = { workspace = true }
 

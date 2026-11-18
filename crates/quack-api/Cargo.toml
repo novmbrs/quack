@@ -41,7 +41,6 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 quack-testkit = { workspace = true }
-anyhow = { workspace = true }
 httpmock = { workspace = true }
 insta = { workspace = true, features = ["json"] }
 tokio = { workspace = true, features = ["test-util"] }
