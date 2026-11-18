@@ -108,13 +108,14 @@ impl Facts {
         {
             return Outcome::Done(Membership::Present(member_facts(&facts, &cached, now)));
         }
+        let since = self.members.revision(guild);
         self.client.member(guild, member).await.map(|found| {
             let Some(found) = found else {
-                self.members.remove(guild, member);
+                self.members.remove_rest(guild, member, since);
                 return Membership::Absent;
             };
             let present = member_facts(&facts, &found, now);
-            self.members.put_rest(guild, found);
+            self.members.put_rest(guild, found, since);
             Membership::Present(present)
         })
     }
@@ -133,6 +134,7 @@ impl Facts {
             Err(failure) => return failure,
         };
         let now = OffsetDateTime::now_utc();
+        let since = self.members.revision(guild);
         self.client
             .search_members(guild, query, limit)
             .await
@@ -141,7 +143,7 @@ impl Facts {
                     .into_iter()
                     .map(|m| {
                         let present = member_facts(&facts, &m, now);
-                        self.members.put_rest(guild, m);
+                        self.members.put_rest(guild, m, since);
                         present
                     })
                     .collect()

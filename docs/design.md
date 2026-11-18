@@ -8147,3 +8147,9 @@ folds these into the sections (or changes the code) and removes them here.
     overwrite can't give a timed-out member Manage Threads back); a thread
     whose parent is unknown gets no permissions (fail closed). Voice
     channels' Connect rule isn't applied: Quack never posts in them.
+65. §2, §11.10 (Discord review MAJOR 10) → the member cache keeps a
+    revision per server that every gateway member change (add, update,
+    remove, clear) bumps. A REST read or search notes it before the
+    request and writes its answer (a member, or its absence) only if no
+    change came in between, under the same lock, so a late answer never
+    resurrects a departed member or erases a rejoin.

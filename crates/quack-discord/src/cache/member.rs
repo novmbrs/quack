@@ -33,8 +33,26 @@ struct Entry {
 /// The bounded member cache.
 #[derive(Debug)]
 pub struct MemberCache {
-    entries: Mutex<Lru<(GuildId, MemberId), Entry>>,
+    entries: Mutex<Inner>,
     rest_ttl: Duration,
+}
+
+/// The entries, and per server a revision every gateway change bumps, so a
+/// REST answer that started before a change never overwrites it.
+#[derive(Debug)]
+struct Inner {
+    lru: Lru<(GuildId, MemberId), Entry>,
+    revisions: std::collections::HashMap<GuildId, u64>,
+}
+
+impl Inner {
+    fn bump(&mut self, guild: GuildId) {
+        *self.revisions.entry(guild).or_default() += 1;
+    }
+
+    fn revision(&self, guild: GuildId) -> u64 {
+        self.revisions.get(&guild).copied().unwrap_or_default()
+    }
 }
 
 impl Default for MemberCache {
@@ -52,12 +70,15 @@ impl MemberCache {
     /// An empty cache.
     pub fn new(capacity: usize, rest_ttl: Duration) -> Self {
         Self {
-            entries: Mutex::new(Lru::new(capacity)),
+            entries: Mutex::new(Inner {
+                lru: Lru::new(capacity),
+                revisions: std::collections::HashMap::new(),
+            }),
             rest_ttl,
         }
     }
 
-    fn lock(&self) -> MutexGuard<'_, Lru<(GuildId, MemberId), Entry>> {
+    fn lock(&self) -> MutexGuard<'_, Inner> {
         self.entries.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
@@ -75,7 +96,7 @@ impl MemberCache {
     pub fn get(&self, guild: GuildId, member: MemberId, trusted: bool) -> Option<Member> {
         let found = {
             let mut entries = self.lock();
-            entries.get(&(guild, member)).and_then(|e| {
+            entries.lru.get(&(guild, member)).and_then(|e| {
                 let usable = match e.fed {
                     Fed::Event => trusted,
                     Fed::Rest(at) => at.elapsed() < self.rest_ttl,
@@ -87,43 +108,72 @@ impl MemberCache {
         found
     }
 
-    fn insert(&self, guild: GuildId, member: Member, fed: Fed) {
-        let evicted = self
-            .lock()
+    fn insert(entries: &mut Inner, guild: GuildId, member: Member, fed: Fed) {
+        let evicted = entries
+            .lru
             .insert((guild, member.id), Entry { member, fed });
         if evicted > 0 {
             metrics().caches.evicted(NAME, evicted as u64);
         }
     }
 
-    /// Stores a member from a gateway event.
-    pub fn put_event(&self, guild: GuildId, member: Member) {
-        self.insert(guild, member, Fed::Event);
+    /// The server's revision now: read it before a REST request and pass
+    /// it to [`MemberCache::put_rest`] or [`MemberCache::remove_rest`].
+    pub fn revision(&self, guild: GuildId) -> u64 {
+        self.lock().revision(guild)
     }
 
-    /// Stores a member Quack read over REST.
-    pub fn put_rest(&self, guild: GuildId, member: Member) {
-        self.insert(guild, member, Fed::Rest(Instant::now()));
+    /// Stores a member from a gateway event.
+    pub fn put_event(&self, guild: GuildId, member: Member) {
+        let mut entries = self.lock();
+        entries.bump(guild);
+        Self::insert(&mut entries, guild, member, Fed::Event);
+    }
+
+    /// Stores a member Quack read over REST, unless a gateway change for
+    /// the server came after `since` (the answer may be older than it).
+    pub fn put_rest(&self, guild: GuildId, member: Member, since: u64) {
+        let mut entries = self.lock();
+        if entries.revision(guild) == since {
+            Self::insert(&mut entries, guild, member, Fed::Rest(Instant::now()));
+        }
     }
 
     /// Forgets a member (`GUILD_MEMBER_REMOVE`).
     pub fn remove(&self, guild: GuildId, member: MemberId) {
-        self.lock().remove(&(guild, member));
+        let mut entries = self.lock();
+        entries.bump(guild);
+        entries.lru.remove(&(guild, member));
+    }
+
+    /// Forgets a member REST said is absent, unless a gateway change for
+    /// the server (a rejoin, say) came after `since`.
+    pub fn remove_rest(&self, guild: GuildId, member: MemberId, since: u64) {
+        let mut entries = self.lock();
+        if entries.revision(guild) == since {
+            entries.lru.remove(&(guild, member));
+        }
     }
 
     /// Forgets a server's members (Quack left, or the server went away).
     pub fn clear_guild(&self, guild: GuildId) {
-        self.lock().retain(|(g, _)| *g != guild);
+        let mut entries = self.lock();
+        entries.bump(guild);
+        entries.lru.retain(|(g, _)| *g != guild);
     }
 
     /// Forgets everything (`READY`: a new session starts from scratch).
     pub fn clear(&self) {
-        self.lock().clear();
+        let mut entries = self.lock();
+        for revision in entries.revisions.values_mut() {
+            *revision += 1;
+        }
+        entries.lru.clear();
     }
 
     /// How many members are cached.
     pub fn len(&self) -> usize {
-        self.lock().len()
+        self.lock().lru.len()
     }
 
     /// Whether nothing is cached.
@@ -160,12 +210,33 @@ mod tests {
             Some(member(5))
         );
         assert_eq!(cache.get(g, MemberId::new(5).unwrap(), false), None);
-        cache.put_rest(g, member(6));
+        cache.put_rest(g, member(6), cache.revision(g));
         assert!(cache.get(g, MemberId::new(6).unwrap(), false).is_some());
         std::thread::sleep(Duration::from_millis(40));
         assert!(cache.get(g, MemberId::new(6).unwrap(), true).is_none());
         cache.remove(g, MemberId::new(5).unwrap());
         assert!(cache.get(g, MemberId::new(5).unwrap(), true).is_none());
+    }
+
+    #[test]
+    fn a_rest_answer_older_than_a_gateway_change_is_not_kept() {
+        let g = GuildId::new(1).unwrap();
+        let id = MemberId::new(5).unwrap();
+        let cache = MemberCache::new(10, MemberCache::REST_TTL);
+        // A GET starts, the member leaves, then the old 200 arrives.
+        let since = cache.revision(g);
+        cache.remove(g, id);
+        cache.put_rest(g, member(5), since);
+        assert_eq!(cache.get(g, id, true), None, "not resurrected");
+        // A GET starts, the member rejoins, then the old 404 arrives.
+        let since = cache.revision(g);
+        cache.put_event(g, member(5));
+        cache.remove_rest(g, id, since);
+        assert!(cache.get(g, id, true).is_some(), "the rejoin stands");
+        // Nothing in between: kept.
+        let since = cache.revision(g);
+        cache.put_rest(g, member(7), since);
+        assert!(cache.get(g, MemberId::new(7).unwrap(), true).is_some());
     }
 
     #[test]
