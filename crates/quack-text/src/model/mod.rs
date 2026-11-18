@@ -147,8 +147,8 @@ impl Command {
 pub enum TimeStyle {
     /// Date and time (`<t:unix:f>`).
     Full,
-    /// Relative ("3 hours ago", `<t:unix:R>`); plain text says "on <date> at
-    /// <time> UTC" so the sentence still reads.
+    /// Relative ("3 hours ago", `<t:unix:R>`); plain text says "on `<date>` at
+    /// `<time>` UTC" so the sentence still reads.
     Relative,
     /// Date and time followed by the relative time (`{ends_at}`).
     FullRelative,

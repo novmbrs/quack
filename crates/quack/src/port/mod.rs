@@ -3,7 +3,7 @@
 //! under §2's freshness rules, else REST), everything else to the
 //! [`DiscordClient`] method of the same name; messages are rendered with
 //! the command ids from the last sync. Types and outcomes map variant for
-//! variant ([`convert`]).
+//! variant (the `convert` module).
 
 mod convert;
 

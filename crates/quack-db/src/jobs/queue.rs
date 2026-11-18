@@ -59,7 +59,7 @@ pub async fn enqueue(tx: &mut Tx, job: &NewJob) -> Result<JobId, DbError> {
 const ENQUEUE_BATCH: usize = 500;
 
 /// [`enqueue`] for many jobs at once (bulk moves of tracked messages):
-/// one statement per [`ENQUEUE_BATCH`] jobs and one notification per kind,
+/// one statement per `ENQUEUE_BATCH` jobs and one notification per kind,
 /// with the same coalescing.
 pub async fn enqueue_many(tx: &mut Tx, jobs: &[NewJob]) -> Result<(), DbError> {
     let trace = quack_telemetry::current_trace_context().filter(|t| t.len() <= 256);
