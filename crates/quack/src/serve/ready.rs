@@ -3,76 +3,15 @@
 //! the gateway and the job runner.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+pub use quack_api::Readiness;
 use quack_db::jobs::Runner;
 use quack_discord::gateway::GatewayStatus;
 use tokio_util::sync::CancellationToken;
 
 /// How fresh every dispatcher's last pass must be.
 pub const WORKERS_FRESH: Duration = Duration::from_secs(15);
-
-/// Readiness flags. All start `false` (not ready, not shutting down).
-#[derive(Debug, Default)]
-pub struct Readiness {
-    /// The applied migrations equal the binary's set (checked at start).
-    pub migrations: AtomicBool,
-    /// This process holds the singleton fence.
-    pub fence: AtomicBool,
-    /// The gateway session is `READY` or `RESUMED`.
-    pub gateway: AtomicBool,
-    /// Every job dispatcher completed a pass in the last 15 seconds.
-    pub workers: AtomicBool,
-    /// Shutdown started.
-    pub shutdown: AtomicBool,
-}
-
-impl Readiness {
-    /// Whether every check passes.
-    pub fn is_ready(&self) -> bool {
-        self.migrations.load(Ordering::Acquire)
-            && self.fence.load(Ordering::Acquire)
-            && self.gateway.load(Ordering::Acquire)
-            && self.workers.load(Ordering::Acquire)
-            && !self.shutdown.load(Ordering::Acquire)
-    }
-
-    /// Each check by name, for `/readyz`.
-    pub fn checks(&self) -> [(&'static str, bool); 5] {
-        [
-            ("migrations", self.migrations.load(Ordering::Acquire)),
-            ("fence", self.fence.load(Ordering::Acquire)),
-            ("gateway", self.gateway.load(Ordering::Acquire)),
-            ("workers", self.workers.load(Ordering::Acquire)),
-            ("shutdown", !self.shutdown.load(Ordering::Acquire)),
-        ]
-    }
-
-    /// Sets one flag.
-    pub fn set(flag: &AtomicBool, value: bool) {
-        flag.store(value, Ordering::Release);
-    }
-}
-
-/// The API's `/readyz` reads the same flags (§14.9).
-impl quack_api::ReadinessFacts for Readiness {
-    fn migrations_current(&self) -> bool {
-        self.migrations.load(Ordering::Acquire)
-    }
-    fn fence_held(&self) -> bool {
-        self.fence.load(Ordering::Acquire)
-    }
-    fn gateway_ready(&self) -> bool {
-        self.gateway.load(Ordering::Acquire)
-    }
-    fn workers_fresh(&self) -> bool {
-        self.workers.load(Ordering::Acquire)
-    }
-    fn shutting_down(&self) -> bool {
-        self.shutdown.load(Ordering::Acquire)
-    }
-}
 
 /// Where the gateway flag comes from.
 #[derive(Clone, Debug)]

@@ -25,9 +25,7 @@ use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode, header};
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use httpmock::MockServer;
-use quack_api::{
-    ApiConfig, ApiState, DiscordOauthConfig, PublicUrl, Readiness, ReadinessFacts, SessionSecret,
-};
+use quack_api::{ApiConfig, ApiState, DiscordOauthConfig, PublicUrl, Readiness, SessionSecret};
 use quack_core::ids::{AccountId, GuildId, RoleId};
 use quack_core::permissions::{Permission, Permissions, RoleFacts};
 use quack_engine::Origin;
@@ -230,8 +228,7 @@ impl App {
             dashboard_dir: Some(dashboard.clone()),
         };
         let readiness = Arc::new(Readiness::all_ready());
-        let facts: Arc<dyn ReadinessFacts> = readiness.clone();
-        let state = ApiState::new(h.engine.clone(), config, facts).unwrap();
+        let state = ApiState::new(h.engine.clone(), config, readiness.clone()).unwrap();
         let router = quack_api::router(state.clone());
         Self {
             h,

@@ -210,8 +210,8 @@ pub fn api_router(
     ready: &Arc<Readiness>,
     modules: &Modules,
 ) -> Result<axum::Router, ApiSetupError> {
-    let readiness: Arc<dyn quack_api::ReadinessFacts> = Arc::clone(ready) as _;
-    let state = ApiState::new(engine.clone(), api, readiness)?.with_modules(modules.services());
+    let state =
+        ApiState::new(engine.clone(), api, Arc::clone(ready))?.with_modules(modules.services());
     Ok(quack_api::router(state))
 }
 

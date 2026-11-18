@@ -41,7 +41,7 @@ pub use extract::{
     IdempotencyKey, InServer, ManageRules, ManageSettings, MemberSelf, Moderate, ReadRules,
     Requirement, SessionAccount, Staff,
 };
-pub use readiness::{Readiness, ReadinessFacts};
+pub use readiness::Readiness;
 pub use routes::modules::ModuleServices;
 pub use serve::serve;
 pub use state::ApiState;

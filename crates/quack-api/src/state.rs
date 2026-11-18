@@ -10,7 +10,7 @@ use crate::auth::guild_cache::AccountGuildsCache;
 use crate::auth::oauth::DiscordOauth;
 use crate::config::{ApiConfig, ConfigError};
 use crate::middleware::rate_limit::RateLimits;
-use crate::readiness::ReadinessFacts;
+use crate::readiness::Readiness;
 use crate::routes::modules::ModuleServices;
 
 /// Everything the API's handlers share. Cheap to clone.
@@ -23,7 +23,7 @@ struct Inner {
     engine: Engine,
     config: ApiConfig,
     oauth: DiscordOauth,
-    readiness: Arc<dyn ReadinessFacts>,
+    readiness: Arc<Readiness>,
     limits: RateLimits,
     account_guilds: AccountGuildsCache,
     modules: ModuleServices,
@@ -44,7 +44,7 @@ impl ApiState {
     pub fn new(
         engine: Engine,
         config: ApiConfig,
-        readiness: Arc<dyn ReadinessFacts>,
+        readiness: Arc<Readiness>,
     ) -> Result<Self, ConfigError> {
         config.validate()?;
         let oauth = DiscordOauth::new(&config.discord, &config.public_url)?;
@@ -96,8 +96,8 @@ impl ApiState {
         &self.inner.oauth
     }
 
-    pub(crate) fn readiness(&self) -> &dyn ReadinessFacts {
-        self.inner.readiness.as_ref()
+    pub(crate) fn readiness(&self) -> &Readiness {
+        &self.inner.readiness
     }
 
     pub(crate) fn limits(&self) -> &RateLimits {

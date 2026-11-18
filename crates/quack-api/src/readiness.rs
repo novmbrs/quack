@@ -4,36 +4,21 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// What `/readyz` asks the rest of the process. Implemented by the binary
-/// over its gateway, fence, and runner; [`Readiness`] is a ready-made
-/// implementation of flags the binary flips.
-pub trait ReadinessFacts: Send + Sync + 'static {
-    /// The applied migrations equal the binary's set (verified at start).
-    fn migrations_current(&self) -> bool;
-    /// This process holds the singleton lock (§17.5).
-    fn fence_held(&self) -> bool;
-    /// The shard's session is `READY` or `RESUMED`.
-    fn gateway_ready(&self) -> bool;
-    /// Every job dispatcher completed a pass within the last 15 s
-    /// (`Runner::heartbeats_fresh`).
-    fn workers_fresh(&self) -> bool;
-    /// The process is shutting down.
-    fn shutting_down(&self) -> bool;
-}
-
-/// Readiness flags the binary sets as things start and stop. All start
-/// `false` (not ready, not shutting down).
+/// Readiness flags the binary sets as things start and stop, and `/readyz`
+/// reads. All start `false` (not ready, not shutting down). Writes release
+/// and reads acquire.
 #[derive(Debug, Default)]
 pub struct Readiness {
-    /// See [`ReadinessFacts::migrations_current`].
+    /// The applied migrations equal the binary's set (checked at start).
     pub migrations: AtomicBool,
-    /// See [`ReadinessFacts::fence_held`].
+    /// This process holds the singleton lock (§17.5).
     pub fence: AtomicBool,
-    /// See [`ReadinessFacts::gateway_ready`].
+    /// The shard's session is `READY` or `RESUMED`.
     pub gateway: AtomicBool,
-    /// See [`ReadinessFacts::workers_fresh`].
+    /// Every job dispatcher completed a pass within the last 15 s
+    /// (`Runner::heartbeats_fresh`).
     pub workers: AtomicBool,
-    /// See [`ReadinessFacts::shutting_down`].
+    /// Shutdown started.
     pub shutdown: AtomicBool,
 }
 
@@ -48,22 +33,22 @@ impl Readiness {
             shutdown: AtomicBool::new(false),
         }
     }
-}
 
-impl ReadinessFacts for Readiness {
-    fn migrations_current(&self) -> bool {
-        self.migrations.load(Ordering::Relaxed)
+    /// Reads one flag.
+    pub fn get(flag: &AtomicBool) -> bool {
+        flag.load(Ordering::Acquire)
     }
-    fn fence_held(&self) -> bool {
-        self.fence.load(Ordering::Relaxed)
+
+    /// Sets one flag.
+    pub fn set(flag: &AtomicBool, value: bool) {
+        flag.store(value, Ordering::Release);
     }
-    fn gateway_ready(&self) -> bool {
-        self.gateway.load(Ordering::Relaxed)
-    }
-    fn workers_fresh(&self) -> bool {
-        self.workers.load(Ordering::Relaxed)
-    }
-    fn shutting_down(&self) -> bool {
-        self.shutdown.load(Ordering::Relaxed)
+
+    /// Whether every check passes.
+    pub fn is_ready(&self) -> bool {
+        [&self.migrations, &self.fence, &self.gateway, &self.workers]
+            .into_iter()
+            .all(Self::get)
+            && !Self::get(&self.shutdown)
     }
 }

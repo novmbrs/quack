@@ -91,13 +91,14 @@ async fn readyz(State(state): State<ApiState>) -> (StatusCode, Json<Readiness>) 
         .await
         .is_ok_and(|conn| conn.is_ok());
     let facts = state.readiness();
+    let flag = |f| crate::Readiness::get(f).into();
     let checks = Checks {
         database: database.into(),
-        migrations: facts.migrations_current().into(),
-        fence: facts.fence_held().into(),
-        gateway: facts.gateway_ready().into(),
-        workers: facts.workers_fresh().into(),
-        shutdown: (!facts.shutting_down()).into(),
+        migrations: flag(&facts.migrations),
+        fence: flag(&facts.fence),
+        gateway: flag(&facts.gateway),
+        workers: flag(&facts.workers),
+        shutdown: (!crate::Readiness::get(&facts.shutdown)).into(),
     };
     let ready = [
         checks.database,
