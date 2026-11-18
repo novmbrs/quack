@@ -80,7 +80,7 @@ pub(crate) const fn action_failure(failure: ActionFailure) -> labels::Reason {
         ActionFailure::TimeoutWindowPassed => R::Invalid,
         ActionFailure::DiscordRefused => R::Discord,
         ActionFailure::RetriesExhausted => R::RetriesExhausted,
-        ActionFailure::Unconfirmed => R::Timeout,
+        ActionFailure::Unconfirmed | ActionFailure::OriginalUnconfirmed => R::Timeout,
     }
 }
 

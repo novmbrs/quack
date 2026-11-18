@@ -342,3 +342,85 @@ async fn a_remove_timeout_request_runs_the_role_check_only() -> Result<()> {
     );
     Ok(())
 }
+
+/// Engine review BLOCKER 1: a ban request reaches Discord but its answer
+/// never comes back; the case is voided before any retry confirms it. The
+/// undo must not finish "nothing to undo" while that ban may still land:
+/// it reads again through its round, removes the ban once it shows, and
+/// otherwise fails where staff see it.
+#[tokio::test]
+async fn a_ban_that_lands_after_the_void_is_still_undone() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(one("Spam", BAN, false)).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    h.fake.script(Call::Ban, Script::Late);
+    h.run_one(quack_db::jobs::JobKind::RunAction).await?;
+    void(&h, created.case.id).await?;
+    // The original's retry cancels it (voided); the undo's first read
+    // finds no ban yet.
+    h.run_jobs().await?;
+    let original = action(&h, created.action.unwrap()).await?;
+    assert_eq!(original.state, ActionState::Cancelled);
+    let undo = undo_of(&h, original.id).await?.context("undo queued")?;
+    assert_eq!(undo.state, ActionState::Pending, "the undo waits: {undo:?}");
+    // Discord applies the ban now, after the undo's read.
+    assert_eq!(h.fake.land_late(), 1);
+    assert!(h.fake.world(|w| w.ban(h.guild, sf(MEMBER)).is_some()));
+    h.settle().await?;
+    let undo = undo_of(&h, original.id).await?.context("undo")?;
+    assert_eq!(undo.state, ActionState::Done);
+    assert!(h.fake.world(|w| w.ban(h.guild, sf(MEMBER)).is_none()));
+    Ok(())
+}
+
+#[tokio::test]
+async fn an_unresolved_ban_that_never_lands_fails_its_undo_where_staff_see_it() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(one("Spam", BAN, false)).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    h.fake.script(Call::Ban, Script::Late);
+    h.run_one(quack_db::jobs::JobKind::RunAction).await?;
+    void(&h, created.case.id).await?;
+    h.settle().await?;
+    let undo = undo_of(&h, created.action.unwrap())
+        .await?
+        .context("undo")?;
+    assert_eq!(undo.state, ActionState::Failed);
+    assert_eq!(
+        undo.failure.map(|f| f.reason),
+        Some(quack_core::action::ActionFailure::OriginalUnconfirmed)
+    );
+    // A staff retry reads again: once the late ban shows, it is removed.
+    h.fake.land_late();
+    retry(&h.engine, &h.moderator(), undo.id, &h.key("ar")).await?;
+    h.settle().await?;
+    let undo = action(&h, undo.id).await?;
+    assert_eq!(undo.state, ActionState::Done);
+    assert!(h.fake.world(|w| w.ban(h.guild, sf(MEMBER)).is_none()));
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_timeout_that_lands_after_the_void_is_still_removed() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(one("Spam", TIMEOUT, false)).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    h.fake.script(Call::Timeout, Script::Late);
+    h.run_one(quack_db::jobs::JobKind::RunAction).await?;
+    void(&h, created.case.id).await?;
+    h.run_jobs().await?;
+    let undo = undo_of(&h, created.action.unwrap())
+        .await?
+        .context("undo")?;
+    assert_eq!(undo.state, ActionState::Pending);
+    h.fake.land_late();
+    h.settle().await?;
+    let undo = action(&h, undo.id).await?;
+    assert_eq!(undo.state, ActionState::Done);
+    assert!(
+        h.fake
+            .world(|w| w.member(h.guild, sf(MEMBER)).and_then(|m| m.timeout_until))
+            .is_none()
+    );
+    Ok(())
+}

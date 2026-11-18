@@ -95,3 +95,8 @@ model:   [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Pers
 discord: Quack couldn't confirm whether Discord removed the member from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
 plain:   Quack couldn't confirm whether Discord removed the member from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
 model:   [Fixed("Quack couldn't confirm whether Discord removed the member from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.")]
+
+## Unban Unconfirmed · no names known
+discord: Quack couldn't confirm whether Discord unbanned the member for case #12. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't confirm whether Discord unbanned the member for case #12. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord unbanned the member for case #12. Check Server Settings → Bans in Discord.")]

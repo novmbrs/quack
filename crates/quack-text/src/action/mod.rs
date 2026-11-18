@@ -264,6 +264,16 @@ pub fn failure_reason(
                 t.s(" Discord didn't apply it.")
             }
         }
+        ActionFailure::OriginalUnconfirmed => {
+            let what = match kind {
+                ActionKind::Ban | ActionKind::Unban => "ban",
+                _ => "timeout",
+            };
+            t.s(format!(
+                "The {what} Quack tried for this case was never confirmed, and Discord doesn't show it now. "
+            ))
+            .then(check(kind, member))
+        }
         ActionFailure::Unconfirmed => return None,
     })
 }

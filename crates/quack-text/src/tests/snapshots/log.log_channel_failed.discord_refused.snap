@@ -17,3 +17,8 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.
 plain:   Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.
 model:   [Fixed("Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.")]
+
+##  · no names known
+discord: Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.
+plain:   Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.
+model:   [Fixed("Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.")]

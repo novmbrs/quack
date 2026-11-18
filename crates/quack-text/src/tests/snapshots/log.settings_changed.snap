@@ -34,3 +34,8 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@333> changed Quack's settings: log channel, appeal channel, evidence channel, rejoin invite, DM introduction, DM footer, moderator roles, rules manager roles, and starter rule reminder.
 plain:   Ana changed Quack's settings: log channel, appeal channel, evidence channel, rejoin invite, DM introduction, DM footer, moderator roles, rules manager roles, and starter rule reminder.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" changed Quack's settings: log channel, appeal channel, evidence channel, rejoin invite, DM introduction, DM footer, moderator roles, rules manager roles, and starter rule reminder.")]
+
+## one · no names known
+discord: Quack changed Quack's settings: log channel.
+plain:   Quack changed Quack's settings: log channel.
+model:   [Fixed("Quack changed Quack's settings: log channel.")]

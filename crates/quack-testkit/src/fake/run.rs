@@ -23,7 +23,9 @@ impl FakeDiscord {
             Some(Script::Refuse(r)) => Outcome::Refused(r),
             Some(Script::RetryAfter(d)) => Outcome::RetryAfter(d),
             Some(Script::NotSent) => Outcome::NotSent(NotSentCause::Connection),
-            Some(Script::Unknown) => Outcome::Unknown(UnknownCause::Timeout),
+            // Only moderation calls can land late ([`Self::mutation`]);
+            // elsewhere a late change is simply lost.
+            Some(Script::Unknown | Script::Late) => Outcome::Unknown(UnknownCause::Timeout),
             Some(Script::LoseResponse) => {
                 let _ = self.world(effect);
                 Outcome::Unknown(UnknownCause::Connection)
@@ -38,6 +40,37 @@ impl FakeDiscord {
                 outcome
             }
         }
+    }
+
+    /// [`Self::call`] for a moderation call, which can also land late
+    /// ([`Script::Late`]).
+    pub(super) async fn mutation(
+        &self,
+        mut recorded: Recorded,
+        effect: impl FnOnce(&mut World) -> Outcome<()> + Send + 'static,
+    ) -> Outcome<()> {
+        let late = {
+            let mut scripts = super::lock(&self.scripts);
+            let queue = scripts.get_mut(&recorded.call);
+            if queue
+                .as_ref()
+                .and_then(|q| q.front())
+                .is_some_and(|s| matches!(s, Script::Late))
+            {
+                queue.and_then(std::collections::VecDeque::pop_front)
+            } else {
+                None
+            }
+        };
+        if late.is_none() {
+            return self.call(recorded, effect).await;
+        }
+        recorded.scripted = Some("Late".to_owned());
+        self.record(recorded);
+        super::lock(&self.late).push(super::LateEffect(Box::new(move |w| {
+            let _ = effect(w);
+        })));
+        Outcome::Unknown(UnknownCause::Timeout)
     }
 }
 

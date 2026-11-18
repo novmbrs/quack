@@ -149,6 +149,10 @@ str_enum! {
         /// The round's budget ran out and some attempt may have applied:
         /// Quack can't tell whether Discord applied it.
         Unconfirmed = "unconfirmed",
+        /// An undo's round ran out while its original's change was never
+        /// confirmed and Discord didn't show it: the original may still
+        /// land, so the undo can't say there was nothing to undo.
+        OriginalUnconfirmed = "original_unconfirmed",
     }
 }
 

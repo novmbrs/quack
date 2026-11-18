@@ -17,8 +17,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@222> opened a ticket: <#555>.
 plain:   Sam opened a ticket: #ticket-abc.
 model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" opened a ticket: "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(".")]
-
-##  · no names known
-discord: A member opened a ticket.
-plain:   A member opened a ticket.
-model:   [Fixed("A member opened a ticket.")]

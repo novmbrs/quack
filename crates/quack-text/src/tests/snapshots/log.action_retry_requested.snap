@@ -85,8 +85,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@333> chose to retry unbanning the member for case #12.
 plain:   Ana chose to retry unbanning the member for case #12.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" chose to retry unbanning the member for case #12.")]
-
-## Unban · no names known
-discord: Quack chose to retry unbanning the member for case #12.
-plain:   Quack chose to retry unbanning the member for case #12.
-model:   [Fixed("Quack chose to retry unbanning the member for case #12.")]

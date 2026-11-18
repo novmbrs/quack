@@ -2786,6 +2786,7 @@ reads "The member"). Permission and role reasons are the shared
 | `action.failure.timeout_window_passed` | The timeout would already have ended, so Quack didn't apply it. |
 | `action.failure.discord_refused` | Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. |
 | `action.failure.retries_exhausted` | one: Quack stopped after one attempt. / other: Quack stopped trying after {attempts} attempts. Both add "Discord didn't apply it." unless an attempt may have applied. |
+| `action.failure.original_unconfirmed` | The {ban / timeout} Quack tried for this case was never confirmed, and Discord doesn't show it now. {check} (undos only; see the implementation notes) |
 
 Member-facing action sentences (dashboard member view; `you`):
 
@@ -4681,7 +4682,7 @@ CREATE TYPE action_state           AS ENUM ('pending', 'running', 'done', 'faile
 CREATE TYPE action_failure         AS ENUM ('quack_not_in_server', 'quack_missing_permission', 'quack_role_too_low',
                                             'member_is_owner', 'member_not_in_server', 'member_is_administrator',
                                             'timeout_window_passed', 'discord_refused', 'retries_exhausted',
-                                            'unconfirmed');
+                                            'unconfirmed', 'original_unconfirmed');
 CREATE TYPE action_skip_reason     AS ENUM ('other_case_applies', 'changed_outside_case');
 CREATE TYPE attempt_outcome        AS ENUM ('done', 'no_change', 'refused', 'not_sent', 'unknown', 'interrupted');
 CREATE TYPE discord_permission     AS ENUM ('moderate_members', 'kick_members', 'ban_members');
@@ -7908,3 +7909,21 @@ folds these into the sections (or changes the code) and removes them here.
 33. §18 → `error.type` gains `decode` (a row Quack couldn't read back) and
     `quack.discord.outcome` gains `not_sent` (a request that never left
     Quack); static labels have an inherent `as_str`.
+34. §5.6, §5.5, §16.1 (engine review BLOCKER 1) → an undo learns whether
+    its original's change is **unresolved**: the original never reached
+    `done` and one of its attempts may have applied (open, `unknown`,
+    `interrupted`). While it is, an undo read that finds no ban (unban) or
+    no timeout ending in the future (remove timeout) is not `no_change`:
+    the attempt is recorded `not_sent` and the undo reads again on the
+    normal backoff, removing the ban or timeout once it shows. If the round
+    runs out first, the undo is `failed` with the new reason
+    `original_unconfirmed` (`action.failure.original_unconfirmed`, a
+    PostgreSQL enum value added by migration `0004`), which staff see on
+    the failed-actions page and can retry. So an absent effect never
+    finishes an undo while the original's request may still land.
+35. §6.4 steps 3 and 5 (engine review BLOCKER 2) → the DM window is
+    checked right before every create (after the render and after every
+    wait, however late the task wakes) against the persisted
+    `first_attempt_at` on the database's clock (`dms::send_window_open`),
+    not the process clock. Past it: `unknown` when a create may have reached
+    Discord, else back to `pending`.

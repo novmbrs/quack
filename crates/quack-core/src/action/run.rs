@@ -212,6 +212,10 @@ pub struct ActionTarget {
     pub member_joined_at: Option<OffsetDateTime>,
     /// When the case was created.
     pub case_created_at: OffsetDateTime,
+    /// For an undo: its original never reached `done` and an attempt of it
+    /// may have applied, so Discord may still apply it after this read
+    /// (the original's change is unresolved).
+    pub original_unresolved: bool,
 }
 
 /// How one attempt ended, before it is settled.
@@ -242,6 +246,10 @@ pub enum AttemptResult {
     Unknown,
     /// The next run found the attempt still open.
     Interrupted,
+    /// An undo found nothing to undo, but its original's change is
+    /// unresolved and may still land: the undo changed nothing and reads
+    /// again later instead of finishing `no_change`.
+    OriginalUnresolved,
 }
 
 impl AttemptResult {
@@ -251,7 +259,7 @@ impl AttemptResult {
             Self::Done => AttemptOutcome::Done,
             Self::NoChange | Self::ChangedOutsideCase => AttemptOutcome::NoChange,
             Self::Refused { .. } => AttemptOutcome::Refused,
-            Self::NotSent { .. } => AttemptOutcome::NotSent,
+            Self::NotSent { .. } | Self::OriginalUnresolved => AttemptOutcome::NotSent,
             Self::Unknown => AttemptOutcome::Unknown,
             Self::Interrupted => AttemptOutcome::Interrupted,
         }
@@ -304,8 +312,10 @@ fn wrong_read(kind: ActionKind, event: &'static str) -> InvalidTransition {
 /// - Kick: absent, or joined after the case's membership (they left and
 ///   rejoined) → `no_change`.
 /// - Remove timeout: Discord's end is first cut to whole seconds (§5.2),
-///   then: no timeout, or one that has ended → `no_change`; one whose end
-///   differs from this case's → `changed_outside_case`; equal → remove it.
+///   then: no timeout, or one that has ended → `no_change` (or
+///   [`AttemptResult::OriginalUnresolved`] while the original's change may
+///   still land and its end is in the future); one whose end differs from
+///   this case's → `changed_outside_case`; equal → remove it.
 pub fn plan_from_member(
     target: &ActionTarget,
     member: Option<&MemberFacts>,
@@ -342,6 +352,11 @@ pub fn plan_from_member(
                 Some(end) if whole_seconds(current) == whole_seconds(end) => Plan::Call,
                 _ => Plan::Finish(AttemptResult::ChangedOutsideCase),
             },
+            _ if target.original_unresolved
+                && target.timeout_ends_at.is_some_and(|end| end > now) =>
+            {
+                Plan::Finish(AttemptResult::OriginalUnresolved)
+            }
             _ => Plan::Finish(AttemptResult::NoChange),
         },
         ActionKind::Ban | ActionKind::Unban => return Err(wrong_read(target.kind, "member_read")),
@@ -354,7 +369,8 @@ pub fn plan_from_member(
 /// - Ban: a ban exists → `done` when its reason carries this case's marker
 ///   (an earlier attempt placed it), else `no_change`; so messages are
 ///   never deleted twice. No ban → place it.
-/// - Unban: no ban → `no_change`; a ban carrying this undo's own case
+/// - Unban: no ban → `no_change` (or [`AttemptResult::OriginalUnresolved`]
+///   while the original's ban may still land); a ban carrying this undo's own case
 ///   marker → remove it (its case placed it; the guard already ran, so no
 ///   other valid case wants it, whether this case was voided or staff
 ///   asked for the undo by hand); another case's marker → check that case
@@ -368,6 +384,9 @@ pub fn plan_from_ban(
         (ActionKind::Ban, None) => Plan::Call,
         (ActionKind::Ban, Some(_)) if marker == Some(target.case_number) => {
             Plan::Finish(AttemptResult::Done)
+        }
+        (ActionKind::Unban, None) if target.original_unresolved => {
+            Plan::Finish(AttemptResult::OriginalUnresolved)
         }
         (ActionKind::Ban, Some(_)) | (ActionKind::Unban, None) => {
             Plan::Finish(AttemptResult::NoChange)
@@ -506,6 +525,9 @@ pub fn settle(
     let state = transition(facts.kind, ActionState::Running, event)?;
     let failure = match (state, result) {
         (ActionState::Failed, AttemptResult::Refused { failure, .. }) => Some(failure),
+        (ActionState::Failed, AttemptResult::OriginalUnresolved) => {
+            Some(Failure::new(ActionFailure::OriginalUnconfirmed))
+        }
         (ActionState::Failed, _) => {
             let round_applied = outcome.may_have_applied()
                 || facts

@@ -120,7 +120,7 @@ discord: The server activity channel was deleted. Choose a new channel in </setu
 plain:   The server activity channel was deleted. Choose a new channel in /setup.
 model:   [Fixed("The server activity channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
-## TicketEntryChannel · no names known
-discord: The ticket entry channel was deleted. Choose a new channel in </setup:1004>.
-plain:   The ticket entry channel was deleted. Choose a new channel in /setup.
-model:   [Fixed("The ticket entry channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+## AppealChannel · no names known
+discord: The appeal channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The appeal channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The appeal channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]

@@ -17,7 +17,7 @@ pub fn reachable(kind: ActionKind, state: ActionState, reason: Option<ActionFail
     let undo = matches!(kind, ActionKind::RemoveTimeout | ActionKind::Unban);
     match (state, reason) {
         (ActionState::Cancelled, _) => !undo,
-        (ActionState::Skipped, _) => undo,
+        (ActionState::Skipped, _) | (_, Some(ActionFailure::OriginalUnconfirmed)) => undo,
         (_, Some(ActionFailure::MemberIsAdministrator | ActionFailure::TimeoutWindowPassed)) => {
             kind == ActionKind::Timeout
         }
@@ -166,6 +166,7 @@ const ACTION_IDS: &[&str] = &[
     "action.failure.timeout_window_passed",
     "action.failure.discord_refused",
     "action.failure.retries_exhausted",
+    "action.failure.original_unconfirmed",
 ];
 
 const MEMBER_ACTION_IDS: &[&str] = &[

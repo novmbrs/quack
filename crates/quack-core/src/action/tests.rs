@@ -207,7 +207,7 @@ fn enum_names_match_the_database() {
         ),
         "quack_not_in_server,quack_missing_permission,quack_role_too_low,member_is_owner,\
          member_not_in_server,member_is_administrator,timeout_window_passed,discord_refused,\
-         retries_exhausted,unconfirmed"
+         retries_exhausted,unconfirmed,original_unconfirmed"
     );
     assert_eq!(
         names(
@@ -512,7 +512,49 @@ fn target(kind: ActionKind) -> ActionTarget {
             .then_some(NOW + Duration::hours(1)),
         member_joined_at: Some(NOW - Duration::days(1)),
         case_created_at: NOW,
+        original_unresolved: false,
     }
+}
+
+#[test]
+fn an_undo_never_finishes_no_change_while_its_original_may_still_land() {
+    let mut unban = target(ActionKind::Unban);
+    unban.original_unresolved = true;
+    assert_eq!(
+        plan_from_ban(&unban, None).unwrap(),
+        Plan::Finish(AttemptResult::OriginalUnresolved)
+    );
+    let mut remove = target(ActionKind::RemoveTimeout);
+    remove.original_unresolved = true;
+    assert_eq!(
+        plan_from_member(&remove, Some(&member()), NOW).unwrap(),
+        Plan::Finish(AttemptResult::OriginalUnresolved)
+    );
+    // Once the case's own end has passed, a late timeout would already be
+    // over: nothing to wait for.
+    assert_eq!(
+        plan_from_member(&remove, Some(&member()), NOW + Duration::hours(2)).unwrap(),
+        Plan::Finish(AttemptResult::NoChange)
+    );
+    // It changed nothing: retry while the round lasts, then fail where
+    // staff see it, never `done`.
+    let pending = settle(
+        &settle_facts(ActionKind::Unban, false, 1),
+        AttemptResult::OriginalUnresolved,
+    )
+    .unwrap();
+    assert_eq!(pending.state, ActionState::Pending);
+    assert_eq!(pending.outcome, AttemptOutcome::NotSent);
+    let last = settle(
+        &settle_facts(ActionKind::Unban, false, MAX_ATTEMPTS),
+        AttemptResult::OriginalUnresolved,
+    )
+    .unwrap();
+    assert_eq!(last.state, ActionState::Failed);
+    assert_eq!(
+        last.failure.map(|f| f.reason),
+        Some(ActionFailure::OriginalUnconfirmed)
+    );
 }
 
 fn member() -> MemberFacts {

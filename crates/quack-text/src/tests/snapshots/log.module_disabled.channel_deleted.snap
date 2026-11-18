@@ -52,7 +52,7 @@ discord: Quack turned off the honeypot because its channel was deleted. Choose a
 plain:   Quack turned off the honeypot because its channel was deleted. Choose a new channel in /setup, then turn it on.
 model:   [Fixed("Quack turned off the honeypot because its channel was deleted. Choose a new channel in "), Command(Setup), Fixed(", then turn it on.")]
 
-## ActivityLog · no names known
-discord: Quack turned off the server activity log because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
-plain:   Quack turned off the server activity log because its channel was deleted. Choose a new channel in /setup, then turn it on.
-model:   [Fixed("Quack turned off the server activity log because its channel was deleted. Choose a new channel in "), Command(Setup), Fixed(", then turn it on.")]
+## Honeypot · no names known
+discord: Quack turned off the honeypot because its channel was deleted. Choose a new channel in </setup:1004>, then turn it on.
+plain:   Quack turned off the honeypot because its channel was deleted. Choose a new channel in /setup, then turn it on.
+model:   [Fixed("Quack turned off the honeypot because its channel was deleted. Choose a new channel in "), Command(Setup), Fixed(", then turn it on.")]

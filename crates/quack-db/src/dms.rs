@@ -226,6 +226,32 @@ pub async fn start_sending(
     .await
 }
 
+/// Whether a `sending` DM's create may still be repeated: less than
+/// `window` has passed since `first_attempt_at` on the database's clock,
+/// the clock that set it (§6.4, §10.4). `None` when the DM is no longer
+/// `sending` (someone else settled it).
+pub async fn send_window_open(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    dm: DmId,
+    window: time::Duration,
+) -> Result<Option<bool>, DbError> {
+    obs::run(
+        Select,
+        "dms",
+        sqlx::query_scalar!(
+            r#"SELECT clock_timestamp() - first_attempt_at < make_interval(secs => $3) AS "open!"
+               FROM dms
+               WHERE guild_id = $1 AND id = $2 AND state = 'sending' AND first_attempt_at IS NOT NULL"#,
+            i64::from(guild),
+            dm.get(),
+            window.as_seconds_f64(),
+        )
+        .fetch_optional(conn),
+    )
+    .await
+}
+
 /// `sending` → `sent` with the created message.
 pub async fn mark_sent(
     conn: &mut PgConnection,

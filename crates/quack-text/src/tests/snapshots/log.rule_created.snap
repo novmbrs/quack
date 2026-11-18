@@ -17,8 +17,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: <@333> created the rule **Spam**.
 plain:   Ana created the rule Spam.
 model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" created the rule "), Bold([User("Spam")]), Fixed(".")]
-
-##  · no names known
-discord: Quack created the rule **Spam**.
-plain:   Quack created the rule Spam.
-model:   [Fixed("Quack created the rule "), Bold([User("Spam")]), Fixed(".")]

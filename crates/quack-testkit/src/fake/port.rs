@@ -136,7 +136,7 @@ impl Discord for FakeDiscord {
     ) -> BoxFuture<'a, Outcome<()>> {
         let mut r = about(Call::Timeout, guild, member, reason);
         r.until = Some(until);
-        Box::pin(self.call(r, move |w| set_timeout(w, guild, member, Some(until))))
+        Box::pin(self.mutation(r, move |w| set_timeout(w, guild, member, Some(until))))
     }
 
     fn remove_timeout<'a>(
@@ -146,7 +146,7 @@ impl Discord for FakeDiscord {
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
         let r = about(Call::RemoveTimeout, guild, member, reason);
-        Box::pin(self.call(r, move |w| set_timeout(w, guild, member, None)))
+        Box::pin(self.mutation(r, move |w| set_timeout(w, guild, member, None)))
     }
 
     fn kick<'a>(
@@ -156,7 +156,7 @@ impl Discord for FakeDiscord {
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
         let r = about(Call::Kick, guild, member, reason);
-        Box::pin(self.call(r, move |w| kick(w, guild, member)))
+        Box::pin(self.mutation(r, move |w| kick(w, guild, member)))
     }
 
     fn ban_member<'a>(
@@ -168,7 +168,8 @@ impl Discord for FakeDiscord {
     ) -> BoxFuture<'a, Outcome<()>> {
         let mut r = about(Call::Ban, guild, member, reason);
         r.reason = Some(format!("{reason} (delete {delete_message_seconds}s)"));
-        Box::pin(self.call(r, move |w| ban(w, guild, member, reason)))
+        let reason = reason.to_owned();
+        Box::pin(self.mutation(r, move |w| ban(w, guild, member, &reason)))
     }
 
     fn unban<'a>(
@@ -178,7 +179,7 @@ impl Discord for FakeDiscord {
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
         let r = about(Call::Unban, guild, member, reason);
-        Box::pin(self.call(r, move |w| unban(w, guild, member)))
+        Box::pin(self.mutation(r, move |w| unban(w, guild, member)))
     }
 
     fn open_dm(&self, account: AccountId) -> BoxFuture<'_, Outcome<ChannelId>> {

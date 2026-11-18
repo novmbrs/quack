@@ -34,3 +34,8 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack left <@222>'s ban in place after case #12 was voided because another case still applies.
 plain:   Quack left Sam's ban in place after case #12 was voided because another case still applies.
 model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ban in place after case #12 was voided because another case still applies.")]
+
+## OtherCaseApplies Some(7) · no names known
+discord: Quack left a member's ban in place after case #12 was voided because case #7 still applies.
+plain:   Quack left a member's ban in place after case #12 was voided because case #7 still applies.
+model:   [Fixed("Quack left a member's ban in place after case #12 was voided because case #7 still applies.")]

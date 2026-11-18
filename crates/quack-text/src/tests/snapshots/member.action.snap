@@ -396,6 +396,11 @@ discord: Quack couldn't confirm whether Discord removed your timeout.
 plain:   Quack couldn't confirm whether Discord removed your timeout.
 model:   [Fixed("Quack couldn't confirm whether Discord removed your timeout.")]
 
+## RemoveTimeout Failed OriginalUnconfirmed
+discord: Your timeout is still in place. The moderators can see why.
+plain:   Your timeout is still in place. The moderators can see why.
+model:   [Fixed("Your timeout is still in place. The moderators can see why.")]
+
 ## RemoveTimeout Skipped OtherCaseApplies
 discord: Your timeout stays in place because another case still applies.
 plain:   Your timeout stays in place because another case still applies.
@@ -490,6 +495,11 @@ model:   [Fixed("Your ban is still in place. The moderators can see why.")]
 discord: Quack couldn't confirm whether Discord unbanned you.
 plain:   Quack couldn't confirm whether Discord unbanned you.
 model:   [Fixed("Quack couldn't confirm whether Discord unbanned you.")]
+
+## Unban Failed OriginalUnconfirmed
+discord: Your ban is still in place. The moderators can see why.
+plain:   Your ban is still in place. The moderators can see why.
+model:   [Fixed("Your ban is still in place. The moderators can see why.")]
 
 ## Unban Skipped OtherCaseApplies
 discord: Your ban stays in place because another case still applies.

@@ -4,9 +4,10 @@ use std::time::{Duration, Instant};
 
 use quack_core::dm::{
     CreateResult, DmEvent, DmFailure, DmKind, DmState, SendHistory, UNKNOWN_REPEAT_DELAY,
-    failure_for, in_window, transition, wait_fits,
+    failure_for, transition, wait_fits,
 };
 use quack_core::ids::{ChannelId, GuildId};
+use quack_core::limits::NONCE_WINDOW;
 use quack_db::dms::{self, Dm};
 use quack_db::jobs::{ClaimedJob, Handled, JobResult, RunAt, fence};
 use quack_db::{DbError, cases};
@@ -122,8 +123,8 @@ async fn deliver(
     started: Instant,
 ) -> Result<Handled, DbError> {
     let done = |change| settle_dm(engine, job, dm, change, JobResult::Done, Some(started));
-    if !in_window(first, OffsetDateTime::now_utc()) {
-        return done(Change::Unknown).await;
+    if !window_open(engine, dm).await? {
+        return out_of_window(engine, job, dm, history, Duration::ZERO, started).await;
     }
     let Some(rendered) = render(engine, dm).await? else {
         tracing::warn!(guild_id = %guild, dm_id = %dm.id.get(), "a DM's records are missing");
@@ -131,6 +132,13 @@ async fn deliver(
     };
     let nonce = Nonce::new(dm.id.to_u22());
     loop {
+        // The window is checked right before every create, on the clock
+        // that started it: after the render, and after every wait, however
+        // late the task wakes. A create past it could deliver a second
+        // message (§6.4, §10.4).
+        if !window_open(engine, dm).await? {
+            return out_of_window(engine, job, dm, history, Duration::ZERO, started).await;
+        }
         let outcome = engine
             .discord()
             .send(channel, &rendered.msg, &rendered.files, &nonce)
@@ -158,17 +166,48 @@ async fn deliver(
         };
         let fits = time::Duration::try_from(wait)
             .is_ok_and(|w| wait_fits(first, OffsetDateTime::now_utc(), w));
-        if fits {
-            tokio::time::sleep(wait).await;
-            continue;
+        if !fits {
+            return out_of_window(engine, job, dm, history, wait, started).await;
         }
-        if history.maybe_sent() {
-            return done(Change::Unknown).await;
-        }
-        // Nothing was sent: back to pending, and the job tries again later.
-        let result = retry_after(job, wait);
-        return settle_dm(engine, job, dm, Change::BackToPending, result, None).await;
+        tokio::time::sleep(wait).await;
     }
+}
+
+/// Whether the DM's create may still be repeated (the persisted window, on
+/// the database's clock). A DM no longer `sending` was settled by whoever
+/// holds the job now.
+async fn window_open(engine: &Engine, dm: &Dm) -> Result<bool, DbError> {
+    let mut conn = engine.db().conn().await?;
+    dms::send_window_open(&mut conn, dm.guild, dm.id, NONCE_WINDOW)
+        .await?
+        .ok_or(DbError::Stale)
+}
+
+/// The window is over (or the next wait would end past it): `unknown` if a
+/// create may have reached Discord, else back to `pending` and the job
+/// tries again later (after `wait`, a rate limit's, at the least) with a
+/// new window.
+async fn out_of_window(
+    engine: &Engine,
+    job: &ClaimedJob,
+    dm: &Dm,
+    history: SendHistory,
+    wait: Duration,
+    started: Instant,
+) -> Result<Handled, DbError> {
+    if history.maybe_sent() {
+        return settle_dm(
+            engine,
+            job,
+            dm,
+            Change::Unknown,
+            JobResult::Done,
+            Some(started),
+        )
+        .await;
+    }
+    let result = retry_after(job, wait);
+    settle_dm(engine, job, dm, Change::BackToPending, result, None).await
 }
 
 /// The settled change for a refused create, through the DM table: `failed`

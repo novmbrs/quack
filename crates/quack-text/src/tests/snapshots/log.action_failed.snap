@@ -505,6 +505,24 @@ discord: Quack couldn't remove <@222>'s timeout for case #12. Quack stopped tryi
 plain:   Quack couldn't remove Sam's timeout for case #12. Quack stopped trying after 8 attempts. Discord didn't apply it.
 model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. Quack stopped trying after 8 attempts. Discord didn't apply it.")]
 
+## RemoveTimeout OriginalUnconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check <@222>'s timeout in Discord.
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry removing timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Sam's timeout in Discord.
+17 Nov 2026 at 14:05 UTC · Open moderation log
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout OriginalUnconfirmed · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check <@222>'s timeout in Discord.
+plain:   Quack couldn't remove Sam's timeout for case #12. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Sam's timeout in Discord.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
 ## Unban QuackNotInServer · post
 tone: Danger
 --- discord ---
@@ -613,6 +631,24 @@ discord: Quack couldn't unban <@222> for case #12. Quack stopped trying after 8 
 plain:   Quack couldn't unban Sam for case #12. Quack stopped trying after 8 attempts. Discord didn't apply it.
 model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack stopped trying after 8 attempts. Discord didn't apply it.")]
 
+## Unban OriginalUnconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.
+17 Nov 2026 at 14:05 UTC · Open moderation log
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban OriginalUnconfirmed · dashboard text
+discord: Quack couldn't unban <@222> for case #12. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't unban Sam for case #12. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.")]
+
 ## Timeout RetriesExhausted after an attempt that may have applied · post
 tone: Danger
 --- discord ---
@@ -646,7 +682,7 @@ discord: Quack couldn't remove the member's timeout for case #12. Discord didn't
 plain:   Quack couldn't remove the member's timeout for case #12. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
 model:   [Fixed("Quack couldn't remove the member's timeout for case #12. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.")]
 
-## Unban QuackNotInServer · no names known
-discord: Quack couldn't unban the member for case #12. Quack is no longer in this server. Ask an administrator to add Quack again.
-plain:   Quack couldn't unban the member for case #12. Quack is no longer in this server. Ask an administrator to add Quack again.
-model:   [Fixed("Quack couldn't unban the member for case #12. Quack is no longer in this server. Ask an administrator to add Quack again.")]
+## Timeout RetriesExhausted after an attempt that may have applied · no names known
+discord: Quack couldn't confirm whether Discord timed out the member for case #12. Quack stopped trying after 8 attempts.
+plain:   Quack couldn't confirm whether Discord timed out the member for case #12. Quack stopped trying after 8 attempts.
+model:   [Fixed("Quack couldn't confirm whether Discord timed out the member for case #12. Quack stopped trying after 8 attempts.")]

@@ -227,12 +227,12 @@ discord: Quack didn't add a honeypot case for <@222>. Quack couldn't reach Disco
 plain:   Quack didn't add a honeypot case for Sam. Quack couldn't reach Discord in time. Review the post and use /case add if a case is needed.
 model:   [Fixed("Quack didn't add a honeypot case for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack couldn't reach Discord in time. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
 
-## member_is_bot · no names known
-discord: Quack didn't add a honeypot case for a member. The member is a bot, and cases are only for people.
-plain:   Quack didn't add a honeypot case for a member. The member is a bot, and cases are only for people.
-model:   [Fixed("Quack didn't add a honeypot case for a member. The member is a bot, and cases are only for people.")]
+## member_not_in_server · no names known
+discord: Quack didn't add a honeypot case for a member. The member isn't in the server anymore.
+plain:   Quack didn't add a honeypot case for a member. The member isn't in the server anymore.
+model:   [Fixed("Quack didn't add a honeypot case for a member. The member isn't in the server anymore.")]
 
-## policy_changed · no names known
-discord: Quack didn't add a honeypot case for a member. The honeypot settings changed while Quack was adding it. Review the post and use </case add:1001> if a case is needed.
-plain:   Quack didn't add a honeypot case for a member. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed.
-model:   [Fixed("Quack didn't add a honeypot case for a member. The honeypot settings changed while Quack was adding it. Review the post and use "), Command(CaseAdd), Fixed(" if a case is needed.")]
+## member_is_administrator · no names known
+discord: Quack didn't add a honeypot case for a member. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+plain:   Quack didn't add a honeypot case for a member. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+model:   [Fixed("Quack didn't add a honeypot case for a member. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.")]

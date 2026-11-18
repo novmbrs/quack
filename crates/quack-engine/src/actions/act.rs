@@ -3,8 +3,8 @@
 //! still needed (§5.1, §5.6). No locks are held here.
 
 use quack_core::action::{
-    ActionKind, ActionTarget, AttemptResult, Plan, after_call, after_read_failure,
-    plan_after_marker, plan_from_ban, plan_from_member,
+    ActionKind, ActionState, ActionTarget, AttemptResult, Plan, after_call, after_read_failure,
+    may_have_applied, plan_after_marker, plan_from_ban, plan_from_member,
 };
 use quack_core::ids::GuildId;
 use quack_core::permissions::{ActorPresence, ApplyFacts, MemberSubject};
@@ -88,27 +88,37 @@ fn db_code(error: &DbError) -> String {
     )
 }
 
-/// What the attempt is about: a remove timeout uses its original's end.
+/// What the attempt is about. An undo uses its original's end (a remove
+/// timeout) and learns whether the original's change is unresolved: it
+/// never reached `done` and some attempt of it may have applied, so
+/// Discord may still apply it after the undo's read (§5.6).
 pub(super) async fn target(
     engine: &Engine,
     action: &Action,
     case: &Case,
 ) -> Result<ActionTarget, DbError> {
-    let timeout_ends_at = match (action.kind, action.undo_of) {
-        (ActionKind::RemoveTimeout, Some(original)) => {
-            let mut conn = engine.db().conn().await?;
-            actions::get(&mut conn, case.guild, original)
-                .await?
-                .and_then(|o| o.timeout_ends_at)
+    let mut timeout_ends_at = action.timeout_ends_at;
+    let mut original_unresolved = false;
+    if let Some(original) = action.undo_of {
+        let mut conn = engine.db().conn().await?;
+        if let Some(o) = actions::get(&mut conn, case.guild, original).await? {
+            if action.kind == ActionKind::RemoveTimeout {
+                timeout_ends_at = o.timeout_ends_at;
+            }
+            if o.state != ActionState::Done {
+                let attempts = actions::attempts(&mut conn, o.id).await?;
+                let outcomes: Vec<_> = attempts.iter().map(|a| a.outcome).collect();
+                original_unresolved = may_have_applied(&outcomes);
+            }
         }
-        _ => action.timeout_ends_at,
-    };
+    }
     Ok(ActionTarget {
         kind: action.kind,
         case_number: case.number,
         timeout_ends_at,
         member_joined_at: case.member_joined_at,
         case_created_at: case.created_at,
+        original_unresolved,
     })
 }
 

@@ -11,6 +11,9 @@
 //! - `Hold` / `HoldAfter`: the call stops before (or after) taking effect
 //!   until the test releases its [`Gate`]. Aborting the caller while it is
 //!   held is a crash at exactly that point.
+//! - `Late` (moderation calls): the request reached Discord, the caller
+//!   sees `Unknown`, and the change lands only when the test calls
+//!   [`FakeDiscord::land_late`], after anything else that happens meanwhile.
 
 mod effects;
 mod port;
@@ -115,6 +118,9 @@ pub enum Script {
     /// The call takes effect, then waits until the gate is released, then
     /// answers normally.
     HoldAfter(Gate),
+    /// Moderation calls only: the caller sees `Unknown` and the change
+    /// lands later, when the test calls [`FakeDiscord::land_late`].
+    Late,
 }
 
 impl Script {
@@ -216,12 +222,22 @@ impl Recorded {
     }
 }
 
+/// A change Discord accepted but hasn't applied yet ([`Script::Late`]).
+pub(crate) struct LateEffect(pub(crate) Box<dyn FnOnce(&mut World) + Send>);
+
+impl std::fmt::Debug for LateEffect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("LateEffect")
+    }
+}
+
 /// The fake. Share it with `Arc` between the engine and the test.
 #[derive(Debug)]
 pub struct FakeDiscord {
     world: Mutex<World>,
     scripts: Mutex<HashMap<Call, VecDeque<Script>>>,
     calls: Mutex<Vec<Recorded>>,
+    late: Mutex<Vec<LateEffect>>,
 }
 
 impl FakeDiscord {
@@ -231,6 +247,7 @@ impl FakeDiscord {
             world: Mutex::new(World::new(quack)),
             scripts: Mutex::new(HashMap::new()),
             calls: Mutex::new(Vec::new()),
+            late: Mutex::new(Vec::new()),
         }
     }
 
@@ -267,6 +284,33 @@ impl FakeDiscord {
         let gate = Gate::new();
         self.script(call, Script::HoldAfter(gate.clone()));
         gate
+    }
+
+    /// Applies every change that was answered `Unknown` under
+    /// [`Script::Late`], in the order they were sent. Returns how many
+    /// landed.
+    pub fn land_late(&self) -> usize {
+        let late = std::mem::take(&mut *lock(&self.late));
+        let n = late.len();
+        for effect in late {
+            self.world(|w| (effect.0)(w));
+        }
+        n
+    }
+
+    /// How many [`Script::Late`] changes are still waiting to land.
+    pub fn late_count(&self) -> usize {
+        lock(&self.late).len()
+    }
+
+    /// Discord's nonce memory ends: a create repeating an earlier nonce now
+    /// makes a new message (what happens once the window has passed).
+    pub fn expire_nonces(&self) {
+        self.world(|w| {
+            for m in w.messages.values_mut() {
+                m.nonce = None;
+            }
+        });
     }
 
     /// Drops every queued script.

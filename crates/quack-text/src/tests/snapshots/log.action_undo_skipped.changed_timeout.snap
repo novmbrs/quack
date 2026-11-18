@@ -17,8 +17,3 @@ Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text
 discord: Quack left <@222>'s timeout in place because it no longer matches case #12. Check <@222>'s timeout in Discord.
 plain:   Quack left Sam's timeout in place because it no longer matches case #12. Check Sam's timeout in Discord.
 model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in place because it no longer matches case #12. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
-
-## ChangedOutsideCase None · no names known
-discord: Quack left a member's timeout in place because it no longer matches case #12. Check the member's timeout in Discord.
-plain:   Quack left a member's timeout in place because it no longer matches case #12. Check the member's timeout in Discord.
-model:   [Fixed("Quack left a member's timeout in place because it no longer matches case #12. Check the member's timeout in Discord.")]

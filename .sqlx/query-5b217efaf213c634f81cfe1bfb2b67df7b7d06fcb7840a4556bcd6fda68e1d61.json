@@ -37,7 +37,8 @@
                 "timeout_window_passed",
                 "discord_refused",
                 "retries_exhausted",
-                "unconfirmed"
+                "unconfirmed",
+                "original_unconfirmed"
               ]
             }
           }

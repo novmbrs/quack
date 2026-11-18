@@ -396,6 +396,11 @@ discord: Quack couldn't confirm whether Discord removed <@222>'s timeout.
 plain:   Quack couldn't confirm whether Discord removed Sam's timeout.
 model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
 
+## RemoveTimeout Failed OriginalUnconfirmed
+discord: Quack couldn't remove <@222>'s timeout.
+plain:   Quack couldn't remove Sam's timeout.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
+
 ## RemoveTimeout Skipped OtherCaseApplies
 discord: Quack left <@222>'s timeout in place because case #7 still applies.
 plain:   Quack left Sam's timeout in place because case #7 still applies.
@@ -490,6 +495,11 @@ model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), na
 discord: Quack couldn't confirm whether Discord unbanned <@222>.
 plain:   Quack couldn't confirm whether Discord unbanned Sam.
 model:   [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Unban Failed OriginalUnconfirmed
+discord: Quack couldn't unban <@222>.
+plain:   Quack couldn't unban Sam.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
 
 ## Unban Skipped OtherCaseApplies
 discord: Quack left <@222>'s ban in place because case #7 still applies.

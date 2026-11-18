@@ -306,3 +306,36 @@ async fn a_timeout_and_its_dm_run_independently() -> Result<()> {
     );
     Ok(())
 }
+
+/// Engine review BLOCKER 2: Discord accepts a create and the answer is
+/// lost; the run waits to repeat it, but wakes after the nonce window has
+/// passed (and Discord has forgotten the nonce). It must settle `unknown`
+/// instead of creating again: a second create would deliver a second DM.
+#[tokio::test]
+async fn a_repeat_never_starts_after_the_window_even_when_the_wait_ends_late() -> Result<()> {
+    let h = Harness::new().await?;
+    let id = warned(&h).await?;
+    h.fake.script(Call::Send, Script::LoseResponse);
+    let task = h.spawn_one(JobKind::SendDm).await?;
+    // While the run waits to repeat the create, the window passes.
+    for _ in 0..200 {
+        if h.fake.count(Call::Send) == 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(h.fake.count(Call::Send), 1);
+    h.db.execute(&format!(
+        "UPDATE dms SET first_attempt_at = first_attempt_at - interval '61 seconds' WHERE id = '{}'",
+        id.get()
+    ))
+    .await?;
+    h.fake.expire_nonces();
+    task.await?;
+    h.settle().await?;
+    let d = dm(&h, id).await?;
+    assert_eq!(d.state, DmState::Unknown);
+    assert_eq!(h.fake.count(Call::Send), 1, "no create after the window");
+    assert_eq!(dms_to_member(&h), 1);
+    Ok(())
+}
