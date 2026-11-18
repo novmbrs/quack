@@ -83,8 +83,6 @@ pub const MAX_ACTIVE_RULES: u32 = 100;
 pub const CONTEXT_SHORT_TEXT: CharLimit = CharLimit::new(1, 500);
 /// Case context `long_text` answer.
 pub const CONTEXT_LONG_TEXT: CharLimit = CharLimit::new(1, 4_000);
-/// Free-text context (`details`) of a rule with no fields.
-pub const CONTEXT_DETAILS: CharLimit = CharLimit::new(1, 4_000);
 /// Longest case context `message_link` input, in characters.
 pub const CONTEXT_MESSAGE_LINK_MAX_CHARS: usize = 4_000;
 /// Largest absolute value of a case context `number` answer (10^15).

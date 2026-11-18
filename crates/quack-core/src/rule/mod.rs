@@ -64,7 +64,7 @@ impl FieldKey {
     pub fn is_valid(&self) -> bool {
         let bytes = self.0.as_bytes();
         let lower_or_digit = |b: &u8| b.is_ascii_lowercase() || b.is_ascii_digit();
-        (2..=64).contains(&bytes.len())
+        (crate::limits::FIELD_KEY.min..=crate::limits::FIELD_KEY.max).contains(&bytes.len())
             && bytes.first().is_some_and(lower_or_digit)
             && bytes[1..]
                 .iter()
