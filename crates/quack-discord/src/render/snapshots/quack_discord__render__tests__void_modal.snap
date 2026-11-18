@@ -8,7 +8,7 @@ expression: "(&void.custom_id, &void.title, &void.components)"
   [
     {
       "type": 18,
-      "label": "Why is this case wrong?",
+      "label": "Why are you voiding this case?",
       "description": "The member can see this reason.",
       "component": {
         "type": 4,
