@@ -2,7 +2,7 @@
 //! channel is saved and before every post to a staff destination (log
 //! channel, appeal posts, evidence copies, ticket posts).
 
-use quack_core::ids::{ChannelId, GuildId};
+use quack_core::ids::{ChannelId, GuildId, RoleId};
 use quack_core::permissions::{
     ActorFacts, ChannelFacts, ChannelProblem, GuildFacts, OverwriteTarget, Permissions,
     StaffChannelFacts, check_staff_channel,
@@ -25,45 +25,79 @@ pub(crate) enum ChannelCheck {
     Unavailable,
 }
 
+/// A channel's facts gathered for the check, before any lock.
+#[derive(Clone, Debug)]
+pub(crate) enum Gathered {
+    /// The facts the pure check takes.
+    Facts(Box<StaffChannelFacts>),
+    /// The channel no longer exists.
+    Missing,
+    /// Discord answers 403 for it.
+    Inaccessible,
+    /// Discord didn't answer.
+    Unavailable,
+}
+
+/// Gathers what the staff-only check needs about `channel` (§13.1.3).
+pub(crate) async fn gather(engine: &Engine, guild: GuildId, channel: ChannelId) -> Gathered {
+    let discord = engine.discord();
+    let Outcome::Done(facts) = discord.guild_facts(guild).await else {
+        return Gathered::Unavailable;
+    };
+    let channel = match discord.channel_facts(guild, channel).await {
+        Outcome::Done(Some(c)) => c,
+        Outcome::Done(None) => return Gathered::Missing,
+        Outcome::Refused(r) if r.kind == RefusalKind::UnknownChannel => return Gathered::Missing,
+        Outcome::Refused(_) => return Gathered::Inaccessible,
+        _ => return Gathered::Unavailable,
+    };
+    match staff_facts(engine, &facts, &channel).await {
+        Some(staff) => Gathered::Facts(Box::new(staff)),
+        None => Gathered::Unavailable,
+    }
+}
+
+/// Checks gathered facts with these moderator roles (the ones a settings
+/// change is saving, or the saved ones).
+pub(crate) fn check(
+    gathered: &Gathered,
+    moderator_roles: &[RoleId],
+    needs: Permissions,
+) -> ChannelCheck {
+    match gathered {
+        Gathered::Facts(facts) => {
+            let problems = check_staff_channel(facts, moderator_roles, needs);
+            if problems.is_empty() {
+                ChannelCheck::Ok
+            } else {
+                ChannelCheck::Problems(problems)
+            }
+        }
+        Gathered::Missing => ChannelCheck::Missing,
+        Gathered::Inaccessible => ChannelCheck::Problems(vec![ChannelProblem::Inaccessible]),
+        Gathered::Unavailable => ChannelCheck::Unavailable,
+    }
+}
+
 /// Checks `channel` of `guild` as a staff destination where Quack needs
-/// `needs`, from current facts.
+/// `needs`, from current facts and the saved moderator roles.
 pub(crate) async fn staff_channel(
     engine: &Engine,
     guild: GuildId,
     channel: ChannelId,
     needs: Permissions,
 ) -> ChannelCheck {
-    let discord = engine.discord();
-    let Outcome::Done(facts) = discord.guild_facts(guild).await else {
-        return ChannelCheck::Unavailable;
-    };
-    let channel = match discord.channel_facts(guild, channel).await {
-        Outcome::Done(Some(c)) => c,
-        Outcome::Done(None) => return ChannelCheck::Missing,
-        Outcome::Refused(r) if r.kind == RefusalKind::UnknownChannel => {
-            return ChannelCheck::Missing;
-        }
-        Outcome::Refused(_) => return ChannelCheck::Problems(vec![ChannelProblem::Inaccessible]),
-        _ => return ChannelCheck::Unavailable,
-    };
+    let gathered = gather(engine, guild, channel).await;
     let roles = {
         let Ok(mut conn) = engine.db().conn().await else {
             return ChannelCheck::Unavailable;
         };
         match staff_roles(&mut conn, guild).await {
-            Ok(roles) => roles.existing(&facts.role_ids()),
+            Ok(roles) => roles,
             Err(_) => return ChannelCheck::Unavailable,
         }
     };
-    let Some(staff) = staff_facts(engine, &facts, &channel).await else {
-        return ChannelCheck::Unavailable;
-    };
-    let problems = check_staff_channel(&staff, &roles.moderator_role_ids, needs);
-    if problems.is_empty() {
-        ChannelCheck::Ok
-    } else {
-        ChannelCheck::Problems(problems)
-    }
+    check(&gathered, &roles.moderator_role_ids, needs)
 }
 
 /// The facts the pure check takes: role permissions of every role with an

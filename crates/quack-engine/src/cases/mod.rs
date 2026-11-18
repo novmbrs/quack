@@ -7,6 +7,7 @@ mod card;
 mod edit;
 mod evidence_add;
 mod facts;
+mod list;
 mod records;
 mod timeline;
 mod view;
@@ -30,6 +31,7 @@ pub use apply::apply_rule;
 pub(crate) use card::{card, receipt};
 pub use edit::{ContextEdited, edit_context};
 pub use evidence_add::{EvidenceAdded, add_evidence};
+pub use list::{CasePreview, list, member_cases, member_summary, preview};
 pub(crate) use records::CaseRecords;
 pub use view::{
     ActionItem, AppealItem, AttemptItem, CaseView, DmItem, EvidenceFileItem, EvidenceItem,
