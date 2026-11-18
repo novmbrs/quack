@@ -18,13 +18,12 @@ async fn a_post_becomes_a_case_and_is_deleted_after_it_is_saved() -> Result<()> 
     assert_eq!(intake, Intake::Admitted);
     w.h.settle().await?;
     assert_eq!(w.cases().await?, 1);
-    let saved = w
-        .h
-        .db
-        .count(&format!(
-            "SELECT count(*) FROM evidence WHERE message_id = {message} AND state = 'saved'"
-        ))
-        .await?;
+    let saved =
+        w.h.db
+            .count(&format!(
+                "SELECT count(*) FROM evidence WHERE message_id = {message} AND state = 'saved'"
+            ))
+            .await?;
     assert_eq!(saved, 1, "the post is the case's evidence");
     assert!(!w.exists(message), "the post was deleted");
     assert_eq!(
@@ -33,10 +32,11 @@ async fn a_post_becomes_a_case_and_is_deleted_after_it_is_saved() -> Result<()> 
             .await?,
         1
     );
-    let timed_out = w
-        .h
-        .fake
-        .world(|world| world.member(w.h.guild, sf(MEMBER)).and_then(|m| m.timeout_until));
+    let timed_out = w.h.fake.world(|world| {
+        world
+            .member(w.h.guild, sf(MEMBER))
+            .and_then(|m| m.timeout_until)
+    });
     assert!(timed_out.is_some(), "the rule's action ran");
     let warning = w.h.fake.world(|world| world.sent_to(w.channel).len());
     assert_eq!(warning, 1, "the warning is in the channel");
@@ -84,10 +84,9 @@ async fn bots_webhooks_and_staff_never_get_a_case_or_a_deletion() -> Result<()> 
         assert_eq!(intake, Intake::Exempt, "author {author}");
         assert!(w.exists(message));
     }
-    let id = w
-        .h
-        .fake
-        .world(|world| world.post(w.h.guild, w.channel, sf(MEMBER), "hook", Vec::new()));
+    let id =
+        w.h.fake
+            .world(|world| world.post(w.h.guild, w.channel, sf(MEMBER), "hook", Vec::new()));
     let facts = w.facts(w.h.guild, id, w.channel, MEMBER, false, true);
     assert_eq!(
         quack_honeypot::on_message(&w.h.engine, &facts).await?,
@@ -113,7 +112,11 @@ async fn a_member_made_staff_before_the_job_is_exempt() -> Result<()> {
     assert_eq!(w.cases().await?, 0);
     assert_eq!(w.failures().await?, ["exempt"]);
     assert!(w.exists(message), "never deleted");
-    assert!(!w.log_kinds().await?.contains(&ModLogKind::HoneypotCaseFailed));
+    assert!(
+        !w.log_kinds()
+            .await?
+            .contains(&ModLogKind::HoneypotCaseFailed)
+    );
     Ok(())
 }
 
@@ -121,13 +124,21 @@ async fn a_member_made_staff_before_the_job_is_exempt() -> Result<()> {
 async fn changed_settings_refuse_hits_admitted_before() -> Result<()> {
     let w = world().await?;
     let (message, _) = w.post(MEMBER).await?;
-    w.save(Some(w.channel), Some(w.rule), Some("Don't post here, please."))
-        .await?;
+    w.save(
+        Some(w.channel),
+        Some(w.rule),
+        Some("Don't post here, please."),
+    )
+    .await?;
     w.h.settle().await?;
     assert_eq!(w.cases().await?, 0);
     assert_eq!(w.failures().await?, ["policy_changed"]);
     assert!(w.exists(message), "kept for staff");
-    assert!(w.log_kinds().await?.contains(&ModLogKind::HoneypotCaseFailed));
+    assert!(
+        w.log_kinds()
+            .await?
+            .contains(&ModLogKind::HoneypotCaseFailed)
+    );
     // Turned off mid-flight: the same.
     w.post(MEMBER_2).await?;
     w.enable(false).await?;
@@ -144,11 +155,10 @@ async fn the_post_is_kept_until_the_case_saved_it() -> Result<()> {
         .await?
         .context("the case job ran")?;
     assert_eq!(w.cases().await?, 1);
-    let ran = w
-        .h
-        .run_one(JobKind::HoneypotCleanup)
-        .await?
-        .context("the cleanup ran")?;
+    let ran =
+        w.h.run_one(JobKind::HoneypotCleanup)
+            .await?
+            .context("the cleanup ran")?;
     assert!(
         matches!(
             ran.end,
@@ -157,7 +167,10 @@ async fn the_post_is_kept_until_the_case_saved_it() -> Result<()> {
         "{:?}",
         ran.end
     );
-    assert!(w.exists(message), "not deleted while the evidence is saving");
+    assert!(
+        w.exists(message),
+        "not deleted while the evidence is saving"
+    );
     assert_eq!(w.h.fake.count(Call::DeleteMessage), 0);
     w.h.settle().await?;
     assert!(!w.exists(message));
@@ -204,7 +217,11 @@ async fn a_case_path_refusal_fails_the_hits_and_is_logged() -> Result<()> {
     assert_eq!(w.cases().await?, 0);
     assert_eq!(w.failures().await?, ["quack_role_too_low"]);
     assert!(w.exists(message));
-    assert!(w.log_kinds().await?.contains(&ModLogKind::HoneypotCaseFailed));
+    assert!(
+        w.log_kinds()
+            .await?
+            .contains(&ModLogKind::HoneypotCaseFailed)
+    );
     Ok(())
 }
 
@@ -216,6 +233,10 @@ async fn discord_unavailable_until_the_budget_ends() -> Result<()> {
         .script_n(Call::Member, 5, &quack_testkit::fake::Script::Unknown);
     w.h.settle().await?;
     assert_eq!(w.failures().await?, ["discord_unavailable"]);
-    assert!(w.log_kinds().await?.contains(&ModLogKind::HoneypotCaseFailed));
+    assert!(
+        w.log_kinds()
+            .await?
+            .contains(&ModLogKind::HoneypotCaseFailed)
+    );
     Ok(())
 }

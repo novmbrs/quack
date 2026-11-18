@@ -41,7 +41,11 @@ pub async fn configured() -> Result<World> {
     h.register(quack_honeypot::jobs(h.engine.clone()));
     let channel = h.fake.world(|w| {
         let c = w.add_text_channel(h.guild, false);
-        if let Some(f) = w.guilds.get_mut(&h.guild).and_then(|g| g.channels.get_mut(&c)) {
+        if let Some(f) = w
+            .guilds
+            .get_mut(&h.guild)
+            .and_then(|g| g.channels.get_mut(&c))
+        {
             f.quack_permissions = trap_permissions();
         }
         c
@@ -101,13 +105,21 @@ impl World {
     }
 
     /// `author` posts in `channel`; the gateway hands it to the module.
-    pub async fn post_in(&self, guild: GuildId, channel: ChannelId, author: u64) -> Result<(MessageId, Intake)> {
+    pub async fn post_in(
+        &self,
+        guild: GuildId,
+        channel: ChannelId,
+        author: u64,
+    ) -> Result<(MessageId, Intake)> {
         let id = self
             .h
             .fake
             .world(|w| w.post(guild, channel, sf(author), "free nitro", Vec::new()));
         let facts = self.facts(guild, id, channel, author, false, false);
-        Ok((id, quack_honeypot::on_message(&self.h.engine, &facts).await?))
+        Ok((
+            id,
+            quack_honeypot::on_message(&self.h.engine, &facts).await?,
+        ))
     }
 
     pub async fn post(&self, author: u64) -> Result<(MessageId, Intake)> {
@@ -137,7 +149,7 @@ impl World {
             actor: ActorFacts {
                 is_owner: owner == Some(sf(author)),
                 permissions: member.as_ref().map_or(Permissions::NONE, |m| m.permissions),
-                role_ids: member.map(|m| m.role_ids).unwrap_or_default(),
+                role_ids: member.map_or_default(|m| m.role_ids),
                 mfa_enabled: false,
             },
         }
