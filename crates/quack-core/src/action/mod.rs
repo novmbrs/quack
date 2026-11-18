@@ -4,26 +4,30 @@
 //! A case has at most one original action (timeout, kick, ban) and at most
 //! one undo action per original (remove timeout, unban). `done`,
 //! `cancelled`, and `skipped` are terminal; `failed` is terminal unless
-//! staff retry it.
+//! staff retry it. Only originals can be `cancelled` and only undos can be
+//! `skipped`.
 
 mod controls;
+mod marker;
 mod run;
 
 use crate::InvalidTransition;
-use crate::permissions::Permission;
+use crate::permissions::DiscordPermission;
 
 pub use controls::{
-    GuardCandidate, StillApplies, VoidEffect, can_dismiss, can_retry, can_undo, on_void,
+    ActionView, Controls, GuardCandidate, StillApplies, VoidEffect, VoidFacts, controls, on_void,
     undo_guard, undo_needed,
 };
+pub use marker::{AUDIT_LOG_REASON_MAX_CHARS, case_marker, parse_case_marker, undo_marker};
 pub use run::{
-    AttemptContext, AttemptResult, ClaimDecision, ClaimFacts, DiscordRefusal, MAX_ATTEMPTS,
-    RETRY_BACKOFF, Settlement, TIMEOUT_END_MARGIN, before_attempt, retry_delay, settle,
-    timeout_ends_at, timeout_window_passed,
+    ActionTarget, AttemptResult, CallOutcome, DiscordRefusal, MAX_ATTEMPTS, MEMBER_BUSY_DEFER,
+    Plan, RETRY_BACKOFF, SettleFacts, Settlement, StartDecision, StartFacts, after_call,
+    after_read_failure, plan_after_marker, plan_from_ban, plan_from_member, retry_delay, settle,
+    start, timeout_ends_at, timeout_window_passed,
 };
 
 str_enum! {
-    /// What an action does on Discord.
+    /// What an action does on Discord (`action_kind`).
     pub enum ActionKind {
         /// Time the member out until the case's fixed end time.
         Timeout = "timeout",
@@ -56,6 +60,11 @@ impl ActionKind {
         }
     }
 
+    /// Whether this kind is an original action.
+    pub const fn is_original(self) -> bool {
+        matches!(self.purpose(), ActionPurpose::Original)
+    }
+
     /// The undo kind for an original, if it has one (a kick has none).
     pub const fn undo_kind(self) -> Option<Self> {
         match self {
@@ -75,12 +84,18 @@ impl ActionKind {
     }
 
     /// The Discord permission Quack needs for this kind.
-    pub const fn permission(self) -> Permission {
+    pub const fn permission(self) -> DiscordPermission {
         match self {
-            Self::Timeout | Self::RemoveTimeout => Permission::ModerateMembers,
-            Self::Kick => Permission::KickMembers,
-            Self::Ban | Self::Unban => Permission::BanMembers,
+            Self::Timeout | Self::RemoveTimeout => DiscordPermission::ModerateMembers,
+            Self::Kick => DiscordPermission::KickMembers,
+            Self::Ban | Self::Unban => DiscordPermission::BanMembers,
         }
+    }
+
+    /// Whether an attempt reads the member first (`GET …/members/{m}`);
+    /// otherwise it reads the ban (`GET …/bans/{m}`) (§5.1).
+    pub const fn reads_member(self) -> bool {
+        matches!(self, Self::Timeout | Self::Kick | Self::RemoveTimeout)
     }
 }
 
@@ -95,9 +110,9 @@ str_enum! {
         Done = "done",
         /// A definite refusal, or the retry budget ran out.
         Failed = "failed",
-        /// An original whose case was voided before it ran.
+        /// An original that will not run (again) because its case was voided.
         Cancelled = "cancelled",
-        /// An undo left in place because another valid case still applies.
+        /// An undo that did not change Discord; `skip_reason` says why.
         Skipped = "skipped",
     }
 }
@@ -111,7 +126,7 @@ impl ActionState {
 }
 
 str_enum! {
-    /// Why an action failed (`action_failure`).
+    /// Why an action failed (`action_failure`, §5.5).
     pub enum ActionFailure {
         /// Quack is not in the server (pre-check, or Unknown Guild).
         QuackNotInServer = "quack_not_in_server",
@@ -125,12 +140,26 @@ str_enum! {
         MemberNotInServer = "member_not_in_server",
         /// A timeout's member has Administrator.
         MemberIsAdministrator = "member_is_administrator",
-        /// The timeout's fixed end has passed.
+        /// The timeout's end passed before Discord applied it.
         TimeoutWindowPassed = "timeout_window_passed",
         /// Discord refused for another reason.
         DiscordRefused = "discord_refused",
-        /// The retry budget ran out on uncertain attempts.
+        /// The round's budget ran out and no attempt may have applied:
+        /// Discord definitely did not apply it.
         RetriesExhausted = "retries_exhausted",
+        /// The round's budget ran out and some attempt may have applied:
+        /// Quack can't tell whether Discord applied it.
+        Unconfirmed = "unconfirmed",
+    }
+}
+
+str_enum! {
+    /// Why an undo was `skipped` (`action_skip_reason`, §5.6).
+    pub enum ActionSkipReason {
+        /// Another valid case's timeout or ban is still in force.
+        OtherCaseApplies = "other_case_applies",
+        /// Discord shows a timeout or ban this case didn't place.
+        ChangedOutsideCase = "changed_outside_case",
     }
 }
 
@@ -140,7 +169,7 @@ pub struct Failure {
     /// Why it failed.
     pub reason: ActionFailure,
     /// For `quack_missing_permission`: which permission.
-    pub permission: Option<Permission>,
+    pub permission: Option<DiscordPermission>,
     /// For `discord_refused`: Discord's HTTP status.
     pub http_status: Option<u16>,
     /// For `discord_refused`: Discord's JSON error code, when it sent one.
@@ -159,50 +188,81 @@ impl Failure {
     }
 
     /// Quack lacks `permission`.
-    pub const fn missing_permission(permission: Permission) -> Self {
+    pub const fn missing_permission(permission: DiscordPermission) -> Self {
         Self {
             permission: Some(permission),
             ..Self::new(ActionFailure::QuackMissingPermission)
         }
     }
+
+    /// Discord refused with this status and code.
+    pub const fn discord_refused(status: u16, code: Option<u32>) -> Self {
+        Self {
+            http_status: Some(status),
+            discord_code: code,
+            ..Self::new(ActionFailure::DiscordRefused)
+        }
+    }
 }
 
 str_enum! {
-    /// How one attempt ended (`attempt_outcome`).
+    /// How one attempt ended (`attempt_outcome`, §5.5).
     pub enum AttemptOutcome {
         /// Discord confirmed the change.
         Done = "done",
-        /// Discord said the desired state already held.
+        /// The desired state already held, or the undo found Discord
+        /// changed outside this case.
         NoChange = "no_change",
         /// Discord definitely refused.
         Refused = "refused",
-        /// Rate limited before anything happened.
-        RateLimited = "rate_limited",
-        /// The result is unknown (timeout, 5xx, connection reset).
+        /// A read failed, or Discord rate limited before the change call
+        /// was sent: Discord changed nothing.
+        NotSent = "not_sent",
+        /// The change call's result is unknown (deadline, 5xx, reset).
         Unknown = "unknown",
-        /// The worker crashed mid-attempt.
+        /// The next run found the attempt still open.
         Interrupted = "interrupted",
     }
+}
+
+impl AttemptOutcome {
+    /// Whether an attempt that ended this way may have changed Discord:
+    /// `done`, `unknown`, or `interrupted`.
+    pub const fn may_have_applied(self) -> bool {
+        matches!(self, Self::Done | Self::Unknown | Self::Interrupted)
+    }
+}
+
+/// Whether any of these attempts may have applied (§5.2): an attempt that
+/// is still open (`None`, its `finished_at` is NULL) or that ended `done`,
+/// `unknown`, or `interrupted`. The void (§4.7) and the exhausted-budget
+/// failure reason (§5.5) use this one rule.
+pub fn may_have_applied(attempts: &[Option<AttemptOutcome>]) -> bool {
+    attempts
+        .iter()
+        .any(|a| a.is_none_or(AttemptOutcome::may_have_applied))
 }
 
 /// An event in the action transition table (§5.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActionEvent {
-    /// The job claimed it, every check passed, and the attempt is recorded.
-    AttemptStarted,
-    /// The case is voided before the action started (on claim or by §4.7).
+    /// The original's case is voided: at start, or by the void itself.
     CaseVoided,
-    /// The undo guard found another valid case that still applies.
-    UndoSkipped,
-    /// The Quack-side pre-check refused, or a timeout's window passed.
-    PrecheckFailed,
-    /// An attempt finished.
-    AttemptFinished {
+    /// Start: the undo guard found another valid case's action in force.
+    OtherCaseApplies,
+    /// Start: the Quack-side pre-check refused, or the timeout end passed.
+    StartRefused,
+    /// Start: every check passed; the attempt row is open.
+    AttemptStarted,
+    /// Settle: the open attempt finished.
+    Settled {
         /// How it ended.
         outcome: AttemptOutcome,
-        /// Whether the case is still valid.
+        /// The undo found the timeout or ban changed outside this case.
+        changed_outside_case: bool,
+        /// Whether the case is still valid (read under the case lock).
         case_valid: bool,
-        /// Whether the job's retry budget allows another attempt.
+        /// Whether the round's budget allows another attempt.
         attempts_left: bool,
     },
     /// Staff retried a failed action.
@@ -215,19 +275,20 @@ impl ActionEvent {
     /// The event's name, for errors and logs.
     pub const fn name(self) -> &'static str {
         match self {
-            Self::AttemptStarted => "attempt_started",
             Self::CaseVoided => "case_voided",
-            Self::UndoSkipped => "undo_skipped",
-            Self::PrecheckFailed => "precheck_failed",
-            Self::AttemptFinished { .. } => "attempt_finished",
+            Self::OtherCaseApplies => "other_case_applies",
+            Self::StartRefused => "start_refused",
+            Self::AttemptStarted => "attempt_started",
+            Self::Settled { .. } => "settled",
             Self::StaffRetry => "staff_retry",
             Self::StaffDismiss => "staff_dismiss",
         }
     }
 }
 
-/// Applies one event to an action of `kind` in `state` (§5.3). Any pair
-/// the table does not list is an [`InvalidTransition`].
+/// Applies one event to an action of `kind` in `state` (§5.3). Settle rows
+/// are tried in the table's order. Any pair the table does not list is an
+/// [`InvalidTransition`].
 pub fn transition(
     kind: ActionKind,
     state: ActionState,
@@ -235,34 +296,37 @@ pub fn transition(
 ) -> Result<ActionState, InvalidTransition> {
     use ActionEvent as E;
     use ActionState as S;
-    let original = kind.purpose() == ActionPurpose::Original;
+    use AttemptOutcome as O;
+    let original = kind.is_original();
+    let invalid = InvalidTransition {
+        machine: "action",
+        from: state.as_str(),
+        event: event.name(),
+    };
     let next = match (state, event) {
-        (S::Pending, E::AttemptStarted) => S::Running,
         (S::Pending, E::CaseVoided) if original => S::Cancelled,
-        (S::Pending, E::UndoSkipped) if !original => S::Skipped,
-        (S::Failed, E::StaffRetry) => S::Pending,
-        (S::Pending, E::PrecheckFailed) | (S::Failed, E::StaffDismiss) => S::Failed,
+        (S::Pending, E::OtherCaseApplies) if !original => S::Skipped,
+        (S::Pending, E::StartRefused) | (S::Failed, E::StaffDismiss) => S::Failed,
+        (S::Pending, E::AttemptStarted) => S::Running,
         (
             S::Running,
-            E::AttemptFinished {
+            E::Settled {
                 outcome,
+                changed_outside_case,
                 case_valid,
                 attempts_left,
             },
         ) => match outcome {
-            AttemptOutcome::Done | AttemptOutcome::NoChange => S::Done,
+            O::Done | O::NoChange if !changed_outside_case => S::Done,
+            O::NoChange if !original => S::Skipped,
+            _ if changed_outside_case => return Err(invalid),
+            O::Refused => S::Failed,
             _ if original && !case_valid => S::Cancelled,
-            AttemptOutcome::Refused => S::Failed,
             _ if attempts_left => S::Pending,
             _ => S::Failed,
         },
-        _ => {
-            return Err(InvalidTransition {
-                machine: "action",
-                from: state.as_str(),
-                event: event.name(),
-            });
-        }
+        (S::Failed, E::StaffRetry) => S::Pending,
+        _ => return Err(invalid),
     };
     Ok(next)
 }

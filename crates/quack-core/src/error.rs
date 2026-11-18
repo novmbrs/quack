@@ -34,7 +34,7 @@ pub struct InvalidTransition {
 /// Field-level validation problems ([`crate::rule::RuleProblem`],
 /// [`crate::case::ContextProblem`]) are reported separately because they come
 /// in lists.
-#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum DomainError {
     /// The actor lacks the capability the operation needs.
     #[error("missing capability {0:?}")]

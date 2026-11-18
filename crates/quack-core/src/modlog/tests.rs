@@ -9,7 +9,7 @@ use crate::ids::{ActionId, AppealId, CaseId, MemberId, ModLogId, RuleId, TicketI
 use crate::modules::{
     ChannelSetting, HoneypotFailure, LogChannelFailure, ModuleDisabledReason, ModuleName,
 };
-use crate::permissions::{MemberRefusal, MemberRefusalCode, Permission};
+use crate::permissions::{DiscordPermission, MemberRefusal, MemberRefusalCode};
 use crate::rule::FieldKey;
 
 #[allow(clippy::too_many_lines, reason = "one literal entry per kind")]
@@ -35,7 +35,7 @@ fn one_of_each() -> Vec<ModLogEntry> {
         }),
         ModLogEntry::CaseCreateRefused(
             CaseCreateRefusedDetail::from_refusal(MemberRefusal::QuackMissingPermission(
-                Permission::BanMembers,
+                DiscordPermission::BanMembers,
             ))
             .unwrap(),
         ),

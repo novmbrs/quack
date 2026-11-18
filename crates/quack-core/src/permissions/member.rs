@@ -1,6 +1,6 @@
 //! Member checks (§2.3) and the Quack-side action pre-check (§5.4 step 6).
 
-use super::{Permission, Permissions};
+use super::{DiscordPermission, Permission, Permissions};
 use crate::action::{ActionFailure, ActionKind, Failure};
 use crate::ids::{AccountId, MemberId};
 
@@ -83,7 +83,7 @@ pub enum MemberRefusal {
     /// Check 8: the member's highest role is at or above Quack's.
     QuackRoleTooLow,
     /// Check 9: Quack lacks the permission the action needs.
-    QuackMissingPermission(Permission),
+    QuackMissingPermission(DiscordPermission),
     /// Check 10: Discord never times out a member with Administrator.
     MemberIsAdministrator,
 }
@@ -142,7 +142,7 @@ impl MemberRefusal {
     }
 
     /// The permission Quack lacks, for check 9.
-    pub const fn permission(self) -> Option<Permission> {
+    pub const fn permission(self) -> Option<DiscordPermission> {
         match self {
             Self::QuackMissingPermission(p) => Some(p),
             _ => None,
@@ -220,7 +220,7 @@ pub fn check_member(facts: &ApplyFacts, purpose: CheckPurpose) -> Result<(), Mem
 pub fn check_action_permission(facts: &ApplyFacts, kind: ActionKind) -> Result<(), MemberRefusal> {
     let quack = facts.quack.ok_or(MemberRefusal::QuackNotInServer)?;
     let needed = kind.permission();
-    if !quack.permissions.allows(needed) {
+    if !quack.permissions.allows(needed.permission()) {
         return Err(MemberRefusal::QuackMissingPermission(needed));
     }
     if kind == ActionKind::Timeout
@@ -234,32 +234,24 @@ pub fn check_action_permission(facts: &ApplyFacts, kind: ActionKind) -> Result<(
     Ok(())
 }
 
-/// The Quack-side pre-check an action job runs before calling Discord
-/// (§5.4 step 6). A refusal fails the action without calling Discord.
+/// The Quack-side pre-check an action's start runs before calling Discord
+/// (§5.4 step 1.8). A refusal fails the action without calling Discord.
 ///
 /// Order: Quack in the server, Quack holds the permission, the member is
-/// not the owner; for a timeout, the member is present and not an
-/// administrator; when the member is present (except for unban), their
-/// highest role is below Quack's.
+/// not the owner, and, when the member is in the server, their highest
+/// role is below Quack's (not checked for `unban`). Whether a timeout's
+/// member is present or an administrator comes from the attempt's own read
+/// (§5.1).
 pub fn action_precheck(facts: &ApplyFacts, kind: ActionKind) -> Result<(), Failure> {
     let Some(quack) = facts.quack else {
         return Err(Failure::new(ActionFailure::QuackNotInServer));
     };
     let needed = kind.permission();
-    if !quack.permissions.allows(needed) {
+    if !quack.permissions.allows(needed.permission()) {
         return Err(Failure::missing_permission(needed));
     }
     if facts.member.id.account() == facts.owner_id {
         return Err(Failure::new(ActionFailure::MemberIsOwner));
-    }
-    if kind == ActionKind::Timeout {
-        match facts.member.present {
-            None => return Err(Failure::new(ActionFailure::MemberNotInServer)),
-            Some(m) if m.is_administrator() => {
-                return Err(Failure::new(ActionFailure::MemberIsAdministrator));
-            }
-            Some(_) => {}
-        }
     }
     if kind != ActionKind::Unban
         && let Some(member) = facts.member.present

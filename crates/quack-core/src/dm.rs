@@ -1,9 +1,10 @@
 //! DMs (§6): the one direct message per case, appeal decision, or closed
 //! ticket, sent at most once.
 
-use time::Duration;
+use time::{Duration, OffsetDateTime};
 
 use crate::InvalidTransition;
+use crate::limits::NONCE_WINDOW;
 
 str_enum! {
     /// What a DM is about (`dm_kind`).
@@ -22,14 +23,16 @@ str_enum! {
     pub enum DmState {
         /// Not yet sent. Outcome: in progress.
         Pending = "pending",
-        /// Recorded just before the send call. Outcome: in progress.
+        /// The DM channel is open and `first_attempt_at` is recorded before
+        /// the first create. Outcome: in progress.
         Sending = "sending",
         /// Discord returned the message. Outcome: done.
         Sent = "sent",
-        /// Discord definitely refused. Outcome: failed.
+        /// Discord definitely refused before any create with an unknown
+        /// result, or the DM channel could not be opened. Outcome: failed.
         Failed = "failed",
-        /// The send started but its result was never learned. Terminal: never
-        /// sent again. Outcome: couldn't confirm.
+        /// A create's result was never learned and the nonce window ended.
+        /// Terminal: never sent again. Outcome: couldn't confirm.
         Unknown = "unknown",
         /// The case was voided before the DM was sent.
         NotNeeded = "not_needed",
@@ -44,15 +47,16 @@ impl DmState {
 }
 
 str_enum! {
-    /// Why a DM failed (`dm_failure`).
+    /// Why a DM failed (`dm_failure`, §6.5).
     pub enum DmFailure {
-        /// The member's DMs are closed, or they blocked Quack.
+        /// Discord error 50007: their DMs may be closed, or they blocked Quack.
         DmsClosed = "dms_closed",
-        /// The member no longer shares a server with Quack.
+        /// Discord error 50278: they no longer share a server with Quack.
         NotInSharedServer = "not_in_shared_server",
-        /// Discord didn't open a DM channel after three tries.
-        DmChannelUnavailable = "dm_channel_unavailable",
-        /// Discord refused for another reason.
+        /// The DM channel could not be opened, or Discord kept rate
+        /// limiting, within the budget, and nothing was sent.
+        DiscordUnavailable = "discord_unavailable",
+        /// Any other 4xx except 429.
         DiscordRefused = "discord_refused",
     }
 }
@@ -61,48 +65,65 @@ const CANNOT_DM: u32 = 50_007;
 const NO_MUTUAL_GUILDS: u32 = 50_278;
 
 impl DmFailure {
-    /// Classifies a definite refusal (§6.5) by Discord error code and
-    /// whether the member is still in the server.
-    pub const fn from_refusal(code: Option<u32>, member_in_server: bool) -> Self {
+    /// Classifies a definite refusal (§6.5) by Discord error code.
+    pub const fn from_refusal(code: Option<u32>) -> Self {
         match code {
-            Some(CANNOT_DM) if member_in_server => Self::DmsClosed,
-            Some(CANNOT_DM | NO_MUTUAL_GUILDS) => Self::NotInSharedServer,
+            Some(CANNOT_DM) => Self::DmsClosed,
+            Some(NO_MUTUAL_GUILDS) => Self::NotInSharedServer,
             _ => Self::DiscordRefused,
         }
     }
 }
 
-/// Calls to open the DM channel before giving up with
-/// `dm_channel_unavailable` (the `send_dm` job's budget).
-pub const OPEN_ATTEMPTS: u32 = 3;
-/// Waits between DM job attempts, only before `sending`.
-pub const OPEN_BACKOFF: [Duration; 2] = [Duration::seconds(5), Duration::seconds(30)];
-/// After an unknown send result, wait this long and repeat once with the
-/// same nonce.
+/// Attempts of the `send_dm` job (§6.4); a run that ends with the DM still
+/// `pending` uses one.
+pub const SEND_ATTEMPTS: u32 = 3;
+/// Waits between `send_dm` job attempts.
+pub const SEND_BACKOFF: [Duration; 2] = [Duration::seconds(5), Duration::seconds(30)];
+/// After a create with an unknown result, wait this long and repeat it with
+/// the same nonce while the window lasts.
 pub const UNKNOWN_REPEAT_DELAY: Duration = Duration::seconds(2);
-/// A rate limit at most this long is waited out inside the job.
-pub const MAX_IN_JOB_RATE_LIMIT: Duration = Duration::seconds(10);
-/// Most in-job repeats after short rate limits.
-pub const MAX_RATE_LIMIT_REPEATS: u32 = 2;
+/// The longest a kick or ban waits for its case DM (§6.3): the action's
+/// job runs at `created_at + 120 s`, moved earlier when the DM settles.
+pub const ACTION_WAIT: Duration = Duration::seconds(120);
+
+/// Whether a create may still be repeated with the same nonce: less than
+/// [`NONCE_WINDOW`] has passed since `first_attempt_at` (§10.4).
+pub fn in_window(first_attempt_at: OffsetDateTime, now: OffsetDateTime) -> bool {
+    now < first_attempt_at + NONCE_WINDOW
+}
+
+/// Whether waiting `wait` from `now` still ends inside the window.
+pub fn wait_fits(first_attempt_at: OffsetDateTime, now: OffsetDateTime, wait: Duration) -> bool {
+    in_window(first_attempt_at, now + wait)
+}
 
 /// An event in the DM transition table (§6.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DmEvent {
-    /// The case was voided before sending (case DMs only).
+    /// The case was voided before sending started (case DMs only).
     CaseVoided,
-    /// The DM channel is open; about to send.
-    Sending,
-    /// Opening the DM channel was refused or never succeeded.
-    OpenFailed,
+    /// Start: the DM channel is open and, for a case DM, the case is valid.
+    Started,
+    /// Discord refused to open the DM channel.
+    OpenRefused,
     /// Discord returned the message.
-    Sent,
-    /// Discord refused the message.
-    SendRefused,
-    /// Rate limited for longer than the job waits; nothing was sent.
-    LongRateLimit,
-    /// The result is still unknown, or the job found the row already
-    /// `sending` (a crash).
-    Unconfirmed,
+    Created,
+    /// Discord refused a create.
+    CreateRefused {
+        /// Whether an earlier create of this DM had an unknown result.
+        after_unknown: bool,
+    },
+    /// A rate limit's wait does not fit in the window.
+    RetryAfterBeyondWindow {
+        /// Whether an earlier create of this DM had an unknown result.
+        after_unknown: bool,
+    },
+    /// The window ended after a create with an unknown result, or a run
+    /// found the DM `sending` after the window.
+    WindowEnded,
+    /// The job's budget is spent (§16.1 finalization).
+    BudgetSpent,
 }
 
 impl DmEvent {
@@ -110,18 +131,21 @@ impl DmEvent {
     pub const fn name(self) -> &'static str {
         match self {
             Self::CaseVoided => "case_voided",
-            Self::Sending => "sending",
-            Self::OpenFailed => "open_failed",
-            Self::Sent => "sent",
-            Self::SendRefused => "send_refused",
-            Self::LongRateLimit => "long_rate_limit",
-            Self::Unconfirmed => "unconfirmed",
+            Self::Started => "started",
+            Self::OpenRefused => "open_refused",
+            Self::Created => "created",
+            Self::CreateRefused { .. } => "create_refused",
+            Self::RetryAfterBeyondWindow { .. } => "retry_after_beyond_window",
+            Self::WindowEnded => "window_ended",
+            Self::BudgetSpent => "budget_spent",
         }
     }
 }
 
 /// Applies one event to a DM of `kind` in `state` (§6.2). Any pair the
-/// table does not list is an [`InvalidTransition`].
+/// table does not list is an [`InvalidTransition`]. A create that may have
+/// reached Discord is never followed by `failed` or `pending`, so a DM is
+/// sent at most once.
 pub fn transition(
     kind: DmKind,
     state: DmState,
@@ -131,11 +155,32 @@ pub fn transition(
     use DmState as S;
     match (state, event) {
         (S::Pending, E::CaseVoided) if kind == DmKind::Case => Ok(S::NotNeeded),
-        (S::Pending, E::Sending) => Ok(S::Sending),
-        (S::Pending, E::OpenFailed) | (S::Sending, E::SendRefused) => Ok(S::Failed),
-        (S::Sending, E::Sent) => Ok(S::Sent),
-        (S::Sending, E::LongRateLimit) => Ok(S::Pending),
-        (S::Sending, E::Unconfirmed) => Ok(S::Unknown),
+        (S::Pending, E::Started) => Ok(S::Sending),
+        (S::Pending, E::OpenRefused | E::BudgetSpent)
+        | (
+            S::Sending,
+            E::CreateRefused {
+                after_unknown: false,
+            },
+        ) => Ok(S::Failed),
+        (S::Sending, E::Created) => Ok(S::Sent),
+        (
+            S::Sending,
+            E::RetryAfterBeyondWindow {
+                after_unknown: false,
+            },
+        ) => Ok(S::Pending),
+        (
+            S::Sending,
+            E::CreateRefused {
+                after_unknown: true,
+            }
+            | E::RetryAfterBeyondWindow {
+                after_unknown: true,
+            }
+            | E::WindowEnded
+            | E::BudgetSpent,
+        ) => Ok(S::Unknown),
         _ => Err(InvalidTransition {
             machine: "dm",
             from: state.as_str(),
@@ -144,9 +189,22 @@ pub fn transition(
     }
 }
 
-/// Whether reaching `to` releases a kick or ban waiting on this DM (§6.3):
-/// a case DM settling as sent, failed, or unknown. (`not_needed` comes from
-/// a void, which already cancelled the action.)
+/// The failure a transition to `failed` records: the refusal's reason, or
+/// `discord_unavailable` when the budget ran out before anything was sent.
+pub const fn failure_for(event: DmEvent, refusal_code: Option<u32>) -> Option<DmFailure> {
+    match event {
+        DmEvent::OpenRefused
+        | DmEvent::CreateRefused {
+            after_unknown: false,
+        } => Some(DmFailure::from_refusal(refusal_code)),
+        DmEvent::BudgetSpent => Some(DmFailure::DiscordUnavailable),
+        _ => None,
+    }
+}
+
+/// Whether reaching `to` wakes a kick or ban waiting on this DM (§6.2,
+/// §6.3): a case DM settling as sent, failed, or unknown. (`not_needed`
+/// comes from a void, which already cancelled the action.)
 pub const fn releases_waiting_action(kind: DmKind, to: DmState) -> bool {
     matches!(kind, DmKind::Case) && matches!(to, DmState::Sent | DmState::Failed | DmState::Unknown)
 }
@@ -154,31 +212,63 @@ pub const fn releases_waiting_action(kind: DmKind, to: DmState) -> bool {
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
+    use time::macros::datetime;
 
     use super::*;
 
-    const EVENTS: [DmEvent; 7] = [
-        DmEvent::CaseVoided,
-        DmEvent::Sending,
-        DmEvent::OpenFailed,
-        DmEvent::Sent,
-        DmEvent::SendRefused,
-        DmEvent::LongRateLimit,
-        DmEvent::Unconfirmed,
-    ];
+    fn events() -> Vec<DmEvent> {
+        let mut events = vec![
+            DmEvent::CaseVoided,
+            DmEvent::Started,
+            DmEvent::OpenRefused,
+            DmEvent::Created,
+            DmEvent::WindowEnded,
+            DmEvent::BudgetSpent,
+        ];
+        for after_unknown in [false, true] {
+            events.push(DmEvent::CreateRefused { after_unknown });
+            events.push(DmEvent::RetryAfterBeyondWindow { after_unknown });
+        }
+        events
+    }
 
+    /// The design's table (§6.2), written out row by row.
     #[allow(clippy::match_same_arms, reason = "one arm per table row")]
     fn expected(kind: DmKind, state: DmState, event: DmEvent) -> Option<DmState> {
         use DmEvent as E;
         use DmState as S;
         Some(match (state, event) {
             (S::Pending, E::CaseVoided) if kind == DmKind::Case => S::NotNeeded,
-            (S::Pending, E::Sending) => S::Sending,
-            (S::Pending, E::OpenFailed) => S::Failed,
-            (S::Sending, E::Sent) => S::Sent,
-            (S::Sending, E::SendRefused) => S::Failed,
-            (S::Sending, E::LongRateLimit) => S::Pending,
-            (S::Sending, E::Unconfirmed) => S::Unknown,
+            (S::Pending, E::Started) => S::Sending,
+            (S::Pending, E::OpenRefused) => S::Failed,
+            (S::Pending, E::BudgetSpent) => S::Failed,
+            (S::Sending, E::Created) => S::Sent,
+            (
+                S::Sending,
+                E::CreateRefused {
+                    after_unknown: false,
+                },
+            ) => S::Failed,
+            (
+                S::Sending,
+                E::RetryAfterBeyondWindow {
+                    after_unknown: false,
+                },
+            ) => S::Pending,
+            (S::Sending, E::WindowEnded) => S::Unknown,
+            (
+                S::Sending,
+                E::CreateRefused {
+                    after_unknown: true,
+                },
+            ) => S::Unknown,
+            (
+                S::Sending,
+                E::RetryAfterBeyondWindow {
+                    after_unknown: true,
+                },
+            ) => S::Unknown,
+            (S::Sending, E::BudgetSpent) => S::Unknown,
             _ => return None,
         })
     }
@@ -187,7 +277,7 @@ mod tests {
     fn every_pair_matches_the_table() {
         for &kind in DmKind::ALL {
             for &state in DmState::ALL {
-                for event in EVENTS {
+                for event in events() {
                     let got = transition(kind, state, event);
                     match expected(kind, state, event) {
                         Some(to) => assert_eq!(got, Ok(to), "{kind:?} {state:?} {event:?}"),
@@ -210,26 +300,62 @@ mod tests {
 
     #[test]
     fn failure_reasons() {
+        assert_eq!(DmFailure::from_refusal(Some(50_007)), DmFailure::DmsClosed);
         assert_eq!(
-            DmFailure::from_refusal(Some(50_007), true),
-            DmFailure::DmsClosed
-        );
-        assert_eq!(
-            DmFailure::from_refusal(Some(50_007), false),
+            DmFailure::from_refusal(Some(50_278)),
             DmFailure::NotInSharedServer
         );
         assert_eq!(
-            DmFailure::from_refusal(Some(50_278), true),
-            DmFailure::NotInSharedServer
-        );
-        assert_eq!(
-            DmFailure::from_refusal(Some(50_013), true),
+            DmFailure::from_refusal(Some(50_013)),
             DmFailure::DiscordRefused
         );
+        assert_eq!(DmFailure::from_refusal(None), DmFailure::DiscordRefused);
         assert_eq!(
-            DmFailure::from_refusal(None, false),
-            DmFailure::DiscordRefused
+            failure_for(DmEvent::OpenRefused, Some(50_007)),
+            Some(DmFailure::DmsClosed)
         );
+        assert_eq!(
+            failure_for(DmEvent::BudgetSpent, None),
+            Some(DmFailure::DiscordUnavailable)
+        );
+        assert_eq!(
+            failure_for(
+                DmEvent::CreateRefused {
+                    after_unknown: true
+                },
+                Some(50_007)
+            ),
+            None
+        );
+        let names: Vec<&str> = DmFailure::ALL.iter().map(|f| f.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "dms_closed",
+                "not_in_shared_server",
+                "discord_unavailable",
+                "discord_refused"
+            ]
+        );
+    }
+
+    #[test]
+    fn window() {
+        let start = datetime!(2026-11-17 12:00 UTC);
+        assert!(in_window(start, start));
+        assert!(in_window(start, start + Duration::seconds(59)));
+        assert!(!in_window(start, start + Duration::seconds(60)));
+        assert!(wait_fits(
+            start,
+            start + Duration::seconds(50),
+            Duration::seconds(9)
+        ));
+        assert!(!wait_fits(
+            start,
+            start + Duration::seconds(50),
+            Duration::seconds(10)
+        ));
+        assert_eq!(ACTION_WAIT, Duration::seconds(120));
     }
 
     #[test]
@@ -247,18 +373,25 @@ mod tests {
 
     proptest! {
         #[test]
-        fn terminal_states_never_change(
+        fn a_dm_that_may_have_been_sent_is_never_sent_again(
             kind in prop::sample::select(DmKind::ALL),
-            events in prop::collection::vec(prop::sample::select(EVENTS.to_vec()), 0..30),
+            events in prop::collection::vec(prop::sample::select(events()), 0..30),
         ) {
             let mut state = DmState::Pending;
+            let mut unknown_create = false;
             for event in events {
                 if let Ok(next) = transition(kind, state, event) {
                     prop_assert!(!state.is_terminal(), "left {state:?} via {event:?}");
-                    // Only a long rate limit (nothing was sent) leads back to
-                    // pending, so a send that may have happened is never repeated.
+                    if let DmEvent::CreateRefused { after_unknown } | DmEvent::RetryAfterBeyondWindow { after_unknown } = event {
+                        unknown_create |= after_unknown;
+                    }
+                    // Back to pending only when nothing was sent.
                     if next == DmState::Pending {
-                        prop_assert_eq!(event, DmEvent::LongRateLimit);
+                        prop_assert_eq!(event, DmEvent::RetryAfterBeyondWindow { after_unknown: false });
+                    }
+                    // After an unknown create, the DM ends unknown, never failed or pending.
+                    if unknown_create {
+                        prop_assert_eq!(next, DmState::Unknown);
                     }
                     state = next;
                 }

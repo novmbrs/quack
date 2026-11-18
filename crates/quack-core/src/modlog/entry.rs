@@ -10,7 +10,7 @@ use crate::ids::{ActionId, ModLogId};
 use crate::modules::{
     ChannelSetting, HoneypotFailure, LogChannelFailure, ModuleDisabledReason, ModuleName,
 };
-use crate::permissions::{MemberRefusal, MemberRefusalCode, Permission};
+use crate::permissions::{DiscordPermission, MemberRefusal, MemberRefusalCode};
 use crate::rule::FieldKey;
 
 macro_rules! entries {
@@ -172,7 +172,7 @@ pub struct CaseCreateRefusedDetail {
     /// `quack_not_in_server`, `quack_role_too_low`, or `quack_missing_permission`.
     pub refusal: MemberRefusalCode,
     /// For `quack_missing_permission`.
-    pub permission: Option<Permission>,
+    pub permission: Option<DiscordPermission>,
 }
 
 impl CaseCreateRefusedDetail {
@@ -244,7 +244,7 @@ pub struct ActionFailedDetail {
     /// Why it failed.
     pub reason: ActionFailure,
     /// For `quack_missing_permission`.
-    pub permission: Option<Permission>,
+    pub permission: Option<DiscordPermission>,
     /// For `discord_refused`.
     pub http_status: Option<u16>,
     /// For `discord_refused`.

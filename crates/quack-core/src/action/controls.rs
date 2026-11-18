@@ -1,9 +1,9 @@
 //! Staff controls (§5.8), the undo guard (§5.6), and what a void does to
-//! each action (§5.9).
+//! each action (§4.7, §5.9).
 
 use time::OffsetDateTime;
 
-use super::{ActionFailure, ActionKind, ActionPurpose, ActionState};
+use super::{ActionFailure, ActionKind, ActionState, AttemptOutcome, may_have_applied};
 use crate::DomainError;
 use crate::ids::CaseId;
 
@@ -21,92 +21,153 @@ pub fn undo_needed(
     }
 }
 
-/// Whether staff may retry an action (§5.8). Member checks for originals
-/// run separately.
-pub fn can_retry(
-    kind: ActionKind,
-    state: ActionState,
-    dismissed: bool,
-    case_valid: bool,
-    failure: Option<ActionFailure>,
-) -> Result<(), DomainError> {
-    if state != ActionState::Failed || dismissed {
-        return Err(DomainError::ActionNotRetryable);
-    }
-    if kind.purpose() == ActionPurpose::Original {
-        if !case_valid {
-            return Err(DomainError::CaseVoided);
-        }
-        if failure == Some(ActionFailure::TimeoutWindowPassed) {
-            return Err(DomainError::TimeoutWindowPassed);
-        }
-    }
-    Ok(())
+/// An action as the staff controls see it, read inside the write's
+/// transaction after locking the case and the action.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ActionView {
+    /// The action's kind.
+    pub kind: ActionKind,
+    /// Its state.
+    pub state: ActionState,
+    /// Whether staff dismissed it.
+    pub dismissed: bool,
+    /// Why it failed, when it did.
+    pub failure: Option<ActionFailure>,
+    /// For a timeout (or its removal): the case's fixed end.
+    pub timeout_ends_at: Option<OffsetDateTime>,
+    /// For an original: whether an undo of it exists.
+    pub has_undo: bool,
 }
 
-/// Whether staff may dismiss an action (§5.8).
-pub fn can_dismiss(state: ActionState, dismissed: bool) -> Result<(), DomainError> {
-    if state == ActionState::Failed && !dismissed {
+/// Which controls an action offers, each with the refusal a write gets
+/// when it is not allowed (§5.8). Buttons are rendered for the `Ok` ones.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Controls {
+    /// Retry: a new round (`pending` + job).
+    pub retry: Result<(), DomainError>,
+    /// Dismiss: leaves the failed-actions list; history is kept.
+    pub dismiss: Result<(), DomainError>,
+    /// Undo: the undo kind to queue.
+    pub undo: Result<ActionKind, DomainError>,
+}
+
+impl Controls {
+    /// Whether the Retry button shows.
+    pub const fn can_retry(&self) -> bool {
+        self.retry.is_ok()
+    }
+
+    /// Whether the Dismiss button shows.
+    pub const fn can_dismiss(&self) -> bool {
+        self.dismiss.is_ok()
+    }
+
+    /// Whether the Undo button shows.
+    pub const fn can_undo(&self) -> bool {
+        self.undo.is_ok()
+    }
+}
+
+/// The one eligibility function for staff controls (§5.8): card and
+/// log-channel buttons are rendered from it, and every write re-evaluates
+/// it inside its transaction. Actor checks (fresh member facts) run
+/// separately.
+///
+/// - Retry: `failed` and not dismissed. An original also needs a valid case
+///   (else `case_voided`), a reason other than `timeout_window_passed`, and
+///   for a timeout an end in the future (else `timeout_window_passed`). An
+///   undo can always be retried (its case is voided by definition).
+/// - Dismiss: `failed` and not dismissed.
+/// - Undo: a `done` timeout or ban with no undo yet; a timeout's end must
+///   be in the future.
+pub fn controls(action: &ActionView, case_valid: bool, now: OffsetDateTime) -> Controls {
+    let failed_open = action.state == ActionState::Failed && !action.dismissed;
+    let retry = if !failed_open {
+        Err(DomainError::ActionNotRetryable)
+    } else if !action.kind.is_original() {
+        Ok(())
+    } else if !case_valid {
+        Err(DomainError::CaseVoided)
+    } else if action.failure == Some(ActionFailure::TimeoutWindowPassed)
+        || (action.kind == ActionKind::Timeout
+            && action.timeout_ends_at.is_none_or(|end| end <= now))
+    {
+        Err(DomainError::TimeoutWindowPassed)
+    } else {
+        Ok(())
+    };
+    let dismiss = if failed_open {
         Ok(())
     } else {
         Err(DomainError::ActionNotDismissable)
-    }
-}
-
-/// Whether staff may undo an original by hand, and with which undo kind
-/// (§5.8): the original is a done timeout or ban with no undo yet, and a
-/// timeout's end is still in the future.
-pub fn can_undo(
-    kind: ActionKind,
-    state: ActionState,
-    has_undo: bool,
-    timeout_ends_at: Option<OffsetDateTime>,
-    now: OffsetDateTime,
-) -> Result<ActionKind, DomainError> {
-    match kind.undo_kind() {
+    };
+    let undo = match action.kind.undo_kind() {
         Some(undo)
-            if state == ActionState::Done
-                && !has_undo
-                && undo_needed(kind, timeout_ends_at, now) =>
+            if action.state == ActionState::Done
+                && !action.has_undo
+                && undo_needed(action.kind, action.timeout_ends_at, now) =>
         {
             Ok(undo)
         }
         _ => Err(DomainError::ActionNotUndoable),
+    };
+    Controls {
+        retry,
+        dismiss,
+        undo,
     }
 }
 
-/// What voiding a case does to one of its actions (§5.9).
+/// What the void transaction knows about one of the case's actions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum VoidEffect {
-    /// Nothing changes.
-    Nothing,
-    /// The pending original becomes `cancelled` and never starts.
-    Cancel,
-    /// The running original is left to finish; its settle checks validity.
-    LeaveRunning,
-    /// Insert an undo action of this kind and its job.
-    QueueUndo(ActionKind),
+pub struct VoidFacts<'a> {
+    /// The action's kind.
+    pub kind: ActionKind,
+    /// Its state.
+    pub state: ActionState,
+    /// For an original: whether an undo of it exists.
+    pub has_undo: bool,
+    /// Every attempt of the action (all rounds); `None` while open.
+    pub attempts: &'a [Option<AttemptOutcome>],
+    /// For a timeout: its fixed end.
+    pub timeout_ends_at: Option<OffsetDateTime>,
+    /// The current time.
+    pub now: OffsetDateTime,
 }
 
-/// Decides what a void does to an action of `kind` in `state`. Undo
-/// actions are never cancelled by a void.
-pub fn on_void(
-    kind: ActionKind,
-    state: ActionState,
-    has_undo: bool,
-    timeout_ends_at: Option<OffsetDateTime>,
-    now: OffsetDateTime,
-) -> VoidEffect {
-    if kind.purpose() == ActionPurpose::Undo {
-        return VoidEffect::Nothing;
+/// What a void does to one action (§4.7 step 2.4–2.5, §5.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct VoidEffect {
+    /// A `pending` original becomes `cancelled`. A `running` one is left to
+    /// settle (then `done`, or `cancelled`).
+    pub cancel: bool,
+    /// Insert an undo action of this kind and its job.
+    pub queue_undo: Option<ActionKind>,
+}
+
+/// Decides what voiding the case does to one of its actions. Undo actions
+/// are never touched. An original timeout or ban gets its undo queued when
+/// none exists, at least one attempt may have applied (§5.2), and, for a
+/// timeout, its end is still in the future; a `cancelled` original never
+/// does.
+pub fn on_void(facts: &VoidFacts<'_>) -> VoidEffect {
+    if !facts.kind.is_original() {
+        return VoidEffect {
+            cancel: false,
+            queue_undo: None,
+        };
     }
-    match state {
-        ActionState::Pending => VoidEffect::Cancel,
-        ActionState::Running => VoidEffect::LeaveRunning,
-        ActionState::Done if !has_undo && undo_needed(kind, timeout_ends_at, now) => kind
-            .undo_kind()
-            .map_or(VoidEffect::Nothing, VoidEffect::QueueUndo),
-        _ => VoidEffect::Nothing,
+    let wants_undo = facts.state != ActionState::Cancelled
+        && !facts.has_undo
+        && may_have_applied(facts.attempts)
+        && undo_needed(facts.kind, facts.timeout_ends_at, facts.now);
+    VoidEffect {
+        cancel: facts.state == ActionState::Pending,
+        queue_undo: if wants_undo {
+            facts.kind.undo_kind()
+        } else {
+            None
+        },
     }
 }
 
@@ -134,13 +195,13 @@ pub struct GuardCandidate {
     pub state: ActionState,
     /// For a timeout, its fixed end.
     pub timeout_ends_at: Option<OffsetDateTime>,
-    /// Whether an undo of it is already done.
-    pub undone: bool,
 }
 
-/// The undo guard (§5.6): before an undo runs, finds the newest other valid
-/// case whose action of the same original kind is still in force for the
-/// member. `Some` means the undo is skipped. Mirrors the design's SQL.
+/// The undo guard (§5.6), mirroring the design's query: the newest other
+/// valid case of the member whose original of the undone kind is `done`
+/// and, for a timeout, not yet ended. `Some` means the undo is skipped
+/// (`other_case_applies`). Only `done` actions count: one that has not
+/// started applies after the undo, and one in flight makes the undo wait.
 pub fn undo_guard(
     undo: ActionKind,
     own_case: CaseId,
@@ -154,12 +215,8 @@ pub fn undo_guard(
             c.kind == original
                 && c.case_id != own_case
                 && c.case_valid
-                && matches!(
-                    c.state,
-                    ActionState::Pending | ActionState::Running | ActionState::Done
-                )
+                && c.state == ActionState::Done
                 && (c.kind != ActionKind::Timeout || c.timeout_ends_at.is_some_and(|end| end > now))
-                && !c.undone
         })
         .max_by_key(|c| c.case_number)
         .map(|c| StillApplies {

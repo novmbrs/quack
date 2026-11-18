@@ -1,19 +1,24 @@
-//! Running an attempt (§5.4), attempt outcomes (§5.5), and the retry
+//! Running an attempt (§5.4): the start decision, the read-first plan of
+//! §5.1 and §5.6, classifying results (§5.5), the settle, and the retry
 //! policy (§5.7).
 
 use time::{Duration, OffsetDateTime};
 
-use super::controls::{StillApplies, undo_needed};
+use super::controls::StillApplies;
 use super::{
-    ActionEvent, ActionFailure, ActionKind, ActionPurpose, ActionState, AttemptOutcome, Failure,
-    transition,
+    ActionEvent, ActionFailure, ActionKind, ActionSkipReason, ActionState, AttemptOutcome, Failure,
+    may_have_applied, transition,
 };
 use crate::InvalidTransition;
+use crate::dm::ACTION_WAIT;
+use crate::permissions::{BanFacts, MemberFacts};
 
-/// Attempts per job: one first try plus seven retries.
+/// Attempts per round: one first try plus seven retries. A staff retry
+/// starts a new round.
 pub const MAX_ATTEMPTS: u32 = 8;
 
-/// The wait after attempt n (n = 1…7) before attempt n + 1.
+/// The wait after attempt n (n = 1…7) of a round before attempt n + 1.
+/// They add up to 4 h 21 min 20 s.
 pub const RETRY_BACKOFF: [Duration; 7] = [
     Duration::seconds(5),
     Duration::seconds(15),
@@ -24,29 +29,31 @@ pub const RETRY_BACKOFF: [Duration; 7] = [
     Duration::hours(3),
 ];
 
-/// How close to a timeout's fixed end Quack stops trying: within this
-/// margin the attempt fails with `timeout_window_passed`.
-pub const TIMEOUT_END_MARGIN: Duration = Duration::seconds(5);
+/// How long a start waits while another action of the same member is
+/// running (§5.4 step 1.6). A defer does not use an attempt.
+pub const MEMBER_BUSY_DEFER: Duration = Duration::seconds(2);
 
 const UNKNOWN_GUILD: u32 = 10_004;
 const UNKNOWN_MEMBER: u32 = 10_007;
 const UNKNOWN_BAN: u32 = 10_026;
 
 /// A timeout's fixed end: the case's creation time plus the level's
-/// duration. Computed once when the case is created and sent unchanged on
-/// every attempt, so repeating the call converges on the same state.
+/// duration, truncated to whole seconds (§5.2). Computed once when the case
+/// is created and sent unchanged on every attempt.
 pub fn timeout_ends_at(case_created_at: OffsetDateTime, duration_seconds: u32) -> OffsetDateTime {
-    case_created_at + Duration::seconds(i64::from(duration_seconds))
+    let end = case_created_at + Duration::seconds(i64::from(duration_seconds));
+    end.replace_nanosecond(0).unwrap_or(end)
 }
 
 /// Whether it is too late to apply a timeout ending at `ends_at`.
 pub fn timeout_window_passed(now: OffsetDateTime, ends_at: OffsetDateTime) -> bool {
-    now >= ends_at - TIMEOUT_END_MARGIN
+    now >= ends_at
 }
 
-/// When to try again after attempt `attempt` (1-based within the job's
-/// budget) ended uncertainly; `None` once the budget is spent. A
-/// `retry_after` from Discord stretches the wait, never shortens it.
+/// The wait before the next attempt after attempt `attempt` (1-based
+/// within the round) ended uncertainly; `None` once the round's budget is
+/// spent. A `retry_after` from Discord stretches the wait, never shortens
+/// it.
 pub fn retry_delay(attempt: u32, retry_after: Option<Duration>) -> Option<Duration> {
     if attempt >= MAX_ATTEMPTS {
         return None;
@@ -54,6 +61,102 @@ pub fn retry_delay(attempt: u32, retry_after: Option<Duration>) -> Option<Durati
     let index = usize::try_from(attempt.max(1) - 1).ok()?;
     let backoff = *RETRY_BACKOFF.get(index)?;
     Some(retry_after.map_or(backoff, |d| d.max(backoff)))
+}
+
+/// What the start transaction knows after locking the case and the
+/// action (§5.4 step 1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StartFacts {
+    /// The action's kind.
+    pub kind: ActionKind,
+    /// Its stored state.
+    pub state: ActionState,
+    /// When a `pending` action's next attempt is due.
+    pub next_attempt_at: Option<OffsetDateTime>,
+    /// Whether another action of this member is `running`.
+    pub member_busy: bool,
+    /// Whether the case is valid.
+    pub case_valid: bool,
+    /// When the case was created.
+    pub case_created_at: OffsetDateTime,
+    /// Whether the case DM is still `pending` or `sending`.
+    pub dm_waiting: bool,
+    /// For an undo: the undo guard's answer (§5.6). Ignored for originals.
+    pub still_applies: Option<StillApplies>,
+    /// The Quack-side pre-check's answer
+    /// ([`crate::permissions::action_precheck`]).
+    pub precheck: Result<(), Failure>,
+    /// For a timeout: its fixed end.
+    pub timeout_ends_at: Option<OffsetDateTime>,
+    /// The current time.
+    pub now: OffsetDateTime,
+}
+
+/// What the start transaction does (§5.4 step 1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StartDecision {
+    /// Terminal or `failed`: finish the job without changes.
+    Finish,
+    /// An earlier run stopped mid-attempt: settle the open attempt as
+    /// [`AttemptResult::Interrupted`], then decide again.
+    SettleInterrupted,
+    /// Not due yet: run the job again at this time.
+    RetryAt(OffsetDateTime),
+    /// Wait without using an attempt: another action of the member is
+    /// running, or a kick or ban waits for its DM (§6.3).
+    DeferUntil(OffsetDateTime),
+    /// An original on a voided case: `cancelled`.
+    Cancel,
+    /// An undo another valid case blocks: `skipped` (`other_case_applies`).
+    Skip(StillApplies),
+    /// Refused before calling Discord: `failed`.
+    Fail(Failure),
+    /// Open the attempt (`running`) and commit; then read and act.
+    Open,
+}
+
+/// Decides the start in the design's order: settled, open attempt, not
+/// due, member busy, waiting for the DM, voided original, undo guard,
+/// timeout end, pre-check.
+pub fn start(facts: &StartFacts) -> StartDecision {
+    match facts.state {
+        ActionState::Pending => {}
+        ActionState::Running => return StartDecision::SettleInterrupted,
+        _ => return StartDecision::Finish,
+    }
+    if let Some(due) = facts.next_attempt_at
+        && due > facts.now
+    {
+        return StartDecision::RetryAt(due);
+    }
+    if facts.member_busy {
+        return StartDecision::DeferUntil(facts.now + MEMBER_BUSY_DEFER);
+    }
+    let dm_deadline = facts.case_created_at + ACTION_WAIT;
+    if matches!(facts.kind, ActionKind::Kick | ActionKind::Ban)
+        && facts.dm_waiting
+        && facts.now < dm_deadline
+    {
+        return StartDecision::DeferUntil(dm_deadline);
+    }
+    if facts.kind.is_original() {
+        if !facts.case_valid {
+            return StartDecision::Cancel;
+        }
+    } else if let Some(still) = facts.still_applies {
+        return StartDecision::Skip(still);
+    }
+    if facts.kind == ActionKind::Timeout
+        && facts
+            .timeout_ends_at
+            .is_none_or(|end| timeout_window_passed(facts.now, end))
+    {
+        return StartDecision::Fail(Failure::new(ActionFailure::TimeoutWindowPassed));
+    }
+    match facts.precheck {
+        Err(failure) => StartDecision::Fail(failure),
+        Ok(()) => StartDecision::Open,
+    }
 }
 
 /// A definite refusal from Discord: its HTTP status and JSON error code.
@@ -65,71 +168,289 @@ pub struct DiscordRefusal {
     pub code: Option<u32>,
 }
 
-/// The result of one Discord call for an action, as the port reports it.
+/// The result of one Discord call, as the `Discord` port reports it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AttemptResult {
+pub enum CallOutcome {
     /// Discord confirmed it.
     Done,
-    /// Discord definitely refused.
+    /// Discord definitely refused; nothing changed.
     Refused(DiscordRefusal),
-    /// Rate limited before anything happened; wait at least this long.
-    RateLimited(Duration),
-    /// The call may or may not have taken effect.
+    /// Rate limited before anything was sent.
+    RetryAfter(Duration),
+    /// Never sent (connection refused, shutting down); nothing changed.
+    NotSent,
+    /// May or may not have taken effect.
     Unknown,
-    /// A previous worker crashed mid-attempt (found on the next claim).
+}
+
+/// What the action is about, from its case and action rows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ActionTarget {
+    /// The action's kind.
+    pub kind: ActionKind,
+    /// The case's number: its marker in a ban reason.
+    pub case_number: u64,
+    /// For a timeout and its removal: the case's fixed end.
+    pub timeout_ends_at: Option<OffsetDateTime>,
+    /// For a kick: the member's `joined_at` when the case was created;
+    /// `None` for an imported case.
+    pub member_joined_at: Option<OffsetDateTime>,
+    /// When the case was created.
+    pub case_created_at: OffsetDateTime,
+}
+
+/// How one attempt ended, before it is settled.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AttemptResult {
+    /// The change call returned `Done`, or the ban read found this case's
+    /// own earlier ban.
+    Done,
+    /// The desired state already held.
+    NoChange,
+    /// An undo found a timeout or ban that is not this case's (§5.6).
+    ChangedOutsideCase,
+    /// Discord refused a read or the change call, or Quack's read showed it
+    /// can't be done.
+    Refused {
+        /// The failure to record.
+        failure: Failure,
+        /// Discord's answer, for the attempt row, when there was one.
+        discord: Option<DiscordRefusal>,
+    },
+    /// Nothing reached Discord: a read failed, or a rate limit came before
+    /// the change call.
+    NotSent {
+        /// Discord's requested wait, when it rate limited.
+        retry_after: Option<Duration>,
+    },
+    /// The change call's result is unknown.
+    Unknown,
+    /// The next run found the attempt still open.
     Interrupted,
 }
 
 impl AttemptResult {
-    /// Classifies the result for an action of `kind` (§5.5): a refusal that
-    /// means the desired state already holds is `no_change`.
-    pub fn outcome(self, kind: ActionKind) -> (AttemptOutcome, Option<Failure>) {
+    /// The attempt row's outcome.
+    pub const fn outcome(self) -> AttemptOutcome {
         match self {
-            Self::Done => (AttemptOutcome::Done, None),
-            Self::Refused(r) => match (kind, r.code) {
-                (ActionKind::Kick | ActionKind::RemoveTimeout, Some(UNKNOWN_MEMBER))
-                | (ActionKind::Unban, Some(UNKNOWN_BAN)) => (AttemptOutcome::NoChange, None),
-                (_, Some(UNKNOWN_GUILD)) => (
-                    AttemptOutcome::Refused,
-                    Some(Failure::new(ActionFailure::QuackNotInServer)),
-                ),
-                (ActionKind::Timeout, Some(UNKNOWN_MEMBER)) => (
-                    AttemptOutcome::Refused,
-                    Some(Failure::new(ActionFailure::MemberNotInServer)),
-                ),
-                _ => (
-                    AttemptOutcome::Refused,
-                    Some(Failure {
-                        http_status: Some(r.status),
-                        discord_code: r.code,
-                        ..Failure::new(ActionFailure::DiscordRefused)
-                    }),
-                ),
-            },
-            Self::RateLimited(_) => (AttemptOutcome::RateLimited, None),
-            Self::Unknown => (AttemptOutcome::Unknown, None),
-            Self::Interrupted => (AttemptOutcome::Interrupted, None),
+            Self::Done => AttemptOutcome::Done,
+            Self::NoChange | Self::ChangedOutsideCase => AttemptOutcome::NoChange,
+            Self::Refused { .. } => AttemptOutcome::Refused,
+            Self::NotSent { .. } => AttemptOutcome::NotSent,
+            Self::Unknown => AttemptOutcome::Unknown,
+            Self::Interrupted => AttemptOutcome::Interrupted,
+        }
+    }
+
+    /// Discord's refusal, for the attempt row's `http_status` and
+    /// `discord_code`.
+    pub const fn discord(self) -> Option<DiscordRefusal> {
+        match self {
+            Self::Refused { discord, .. } => discord,
+            _ => None,
+        }
+    }
+
+    fn refused(reason: ActionFailure, discord: Option<DiscordRefusal>) -> Self {
+        Self::Refused {
+            failure: Failure::new(reason),
+            discord,
         }
     }
 }
 
-/// What the action job knows when it settles an attempt.
+/// The next step of an attempt after its read (§5.1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct AttemptContext {
+pub enum Plan {
+    /// Make the change call.
+    Call,
+    /// The ban carries the marker of case #N: check whether that case is a
+    /// voided case of this member in this server with a ban action, then
+    /// call [`plan_after_marker`] (unban only).
+    CheckMarker(u64),
+    /// No change call: settle with this result.
+    Finish(AttemptResult),
+}
+
+fn wrong_read(kind: ActionKind, event: &'static str) -> InvalidTransition {
+    InvalidTransition {
+        machine: "action",
+        from: kind.as_str(),
+        event,
+    }
+}
+
+/// Plans a timeout, kick, or remove timeout from the member read
+/// (`None` is 404 Unknown Member).
+///
+/// - Timeout: absent → `member_not_in_server`; Administrator →
+///   `member_is_administrator`; a timeout already ending at or after this
+///   case's end → `no_change` (Quack never shortens a timeout).
+/// - Kick: absent, or joined after the case's membership (they left and
+///   rejoined) → `no_change`.
+/// - Remove timeout: no timeout, or one that has ended → `no_change`; one
+///   whose end differs from this case's (whole seconds) →
+///   `changed_outside_case`; equal → remove it.
+pub fn plan_from_member(
+    target: &ActionTarget,
+    member: Option<&MemberFacts>,
+    now: OffsetDateTime,
+) -> Result<Plan, InvalidTransition> {
+    let plan = match target.kind {
+        ActionKind::Timeout => match member {
+            None => Plan::Finish(AttemptResult::refused(
+                ActionFailure::MemberNotInServer,
+                None,
+            )),
+            Some(m) if m.is_administrator() => Plan::Finish(AttemptResult::refused(
+                ActionFailure::MemberIsAdministrator,
+                None,
+            )),
+            Some(m) => match (m.timeout_until, target.timeout_ends_at) {
+                (Some(current), Some(end)) if whole_seconds(current) >= whole_seconds(end) => {
+                    Plan::Finish(AttemptResult::NoChange)
+                }
+                _ => Plan::Call,
+            },
+        },
+        ActionKind::Kick => {
+            let membership_start = target.member_joined_at.unwrap_or(target.case_created_at);
+            match member {
+                Some(m) if m.joined_at.is_none_or(|joined| joined <= membership_start) => {
+                    Plan::Call
+                }
+                _ => Plan::Finish(AttemptResult::NoChange),
+            }
+        }
+        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until) {
+            Some(current) if current > now => match target.timeout_ends_at {
+                Some(end) if whole_seconds(current) == whole_seconds(end) => Plan::Call,
+                _ => Plan::Finish(AttemptResult::ChangedOutsideCase),
+            },
+            _ => Plan::Finish(AttemptResult::NoChange),
+        },
+        ActionKind::Ban | ActionKind::Unban => return Err(wrong_read(target.kind, "member_read")),
+    };
+    Ok(plan)
+}
+
+/// Plans a ban or unban from the ban read (`None` is 404 Unknown Ban).
+///
+/// - Ban: a ban exists → `done` when its reason carries this case's marker
+///   (an earlier attempt placed it), else `no_change`; so messages are
+///   never deleted twice. No ban → place it.
+/// - Unban: no ban → `no_change`; a ban with a case marker → check that
+///   case ([`Plan::CheckMarker`]); without one → `changed_outside_case`.
+pub fn plan_from_ban(
+    target: &ActionTarget,
+    ban: Option<&BanFacts>,
+) -> Result<Plan, InvalidTransition> {
+    let marker = ban.and_then(BanFacts::case_marker);
+    let plan = match (target.kind, ban) {
+        (ActionKind::Ban, None) => Plan::Call,
+        (ActionKind::Ban, Some(_)) if marker == Some(target.case_number) => {
+            Plan::Finish(AttemptResult::Done)
+        }
+        (ActionKind::Ban, Some(_)) | (ActionKind::Unban, None) => {
+            Plan::Finish(AttemptResult::NoChange)
+        }
+        (ActionKind::Unban, Some(_)) => marker
+            .map_or(Plan::Finish(AttemptResult::ChangedOutsideCase), |n| {
+                Plan::CheckMarker(n)
+            }),
+        _ => return Err(wrong_read(target.kind, "ban_read")),
+    };
+    Ok(plan)
+}
+
+/// Finishes an unban's plan once the marker's case is known: remove the
+/// ban when that case is a voided case of this member in this server with
+/// a ban action, otherwise leave it (`changed_outside_case`).
+pub const fn plan_after_marker(voided_ban_case_of_member: bool) -> Plan {
+    if voided_ban_case_of_member {
+        Plan::Call
+    } else {
+        Plan::Finish(AttemptResult::ChangedOutsideCase)
+    }
+}
+
+/// Classifies a read that did not answer (§5.5): a refusal fails the
+/// action (Unknown Guild → `quack_not_in_server`, else `discord_refused`);
+/// anything else changed nothing (`not_sent`).
+pub fn after_read_failure(outcome: CallOutcome) -> AttemptResult {
+    match outcome {
+        CallOutcome::Refused(r) if r.code == Some(UNKNOWN_GUILD) => {
+            AttemptResult::refused(ActionFailure::QuackNotInServer, Some(r))
+        }
+        CallOutcome::Refused(r) => AttemptResult::Refused {
+            failure: Failure::discord_refused(r.status, r.code),
+            discord: Some(r),
+        },
+        CallOutcome::RetryAfter(d) => AttemptResult::NotSent {
+            retry_after: Some(d),
+        },
+        CallOutcome::Done | CallOutcome::NotSent | CallOutcome::Unknown => {
+            AttemptResult::NotSent { retry_after: None }
+        }
+    }
+}
+
+/// Classifies the change call's result (§5.5). Unknown Member on a kick and
+/// Unknown Ban on an unban mean the desired state already holds. A timeout
+/// Discord refuses after its end has passed is `timeout_window_passed`.
+pub fn after_call(
+    target: &ActionTarget,
+    outcome: CallOutcome,
+    now: OffsetDateTime,
+) -> AttemptResult {
+    match outcome {
+        CallOutcome::Done => AttemptResult::Done,
+        CallOutcome::Refused(r) => match (target.kind, r.code) {
+            (ActionKind::Kick, Some(UNKNOWN_MEMBER)) | (ActionKind::Unban, Some(UNKNOWN_BAN)) => {
+                AttemptResult::NoChange
+            }
+            (_, Some(UNKNOWN_GUILD)) => {
+                AttemptResult::refused(ActionFailure::QuackNotInServer, Some(r))
+            }
+            (ActionKind::Timeout, _)
+                if target
+                    .timeout_ends_at
+                    .is_some_and(|end| timeout_window_passed(now, end)) =>
+            {
+                AttemptResult::refused(ActionFailure::TimeoutWindowPassed, Some(r))
+            }
+            (ActionKind::Timeout, Some(UNKNOWN_MEMBER)) => {
+                AttemptResult::refused(ActionFailure::MemberNotInServer, Some(r))
+            }
+            _ => AttemptResult::Refused {
+                failure: Failure::discord_refused(r.status, r.code),
+                discord: Some(r),
+            },
+        },
+        CallOutcome::RetryAfter(d) => AttemptResult::NotSent {
+            retry_after: Some(d),
+        },
+        CallOutcome::NotSent => AttemptResult::NotSent { retry_after: None },
+        CallOutcome::Unknown => AttemptResult::Unknown,
+    }
+}
+
+/// What the settle transaction knows (§5.4 step 3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SettleFacts<'a> {
     /// The action's kind.
     pub kind: ActionKind,
-    /// Whether its case is still valid (read inside the settle transaction).
+    /// Whether its case is still valid (read under the case lock).
     pub case_valid: bool,
-    /// This attempt's number within the job's budget (1-based).
+    /// This attempt's number within the round (the action's `attempts`).
     pub attempt: u32,
-    /// The original timeout's fixed end, for deciding whether a voided
-    /// case's timeout still needs undoing.
-    pub timeout_ends_at: Option<OffsetDateTime>,
+    /// The outcomes of this round's earlier attempts.
+    pub earlier: &'a [AttemptOutcome],
     /// The current time.
     pub now: OffsetDateTime,
 }
 
-/// The settle transaction's decision for one finished attempt.
+/// The settle transaction's writes for one finished attempt.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Settlement {
     /// The action's new state.
@@ -138,130 +459,63 @@ pub struct Settlement {
     pub outcome: AttemptOutcome,
     /// Set when the new state is `failed`.
     pub failure: Option<Failure>,
+    /// Set when the new state is `skipped`.
+    pub skip_reason: Option<ActionSkipReason>,
     /// Done because the desired state already held.
     pub no_change: bool,
-    /// Set when the new state is `pending`: retry after this long.
-    pub retry_in: Option<Duration>,
-    /// The original is done but its case was voided meanwhile: queue the
-    /// undo in the same transaction (§4.7 step 5).
-    pub queue_undo: Option<ActionKind>,
+    /// Set when the new state is `pending`: when the next attempt is due.
+    pub next_attempt_at: Option<OffsetDateTime>,
 }
 
-/// Settles a running action's attempt (§5.4 step 10).
+/// Settles a running action's attempt through the settle rows of §5.3.
 pub fn settle(
-    ctx: &AttemptContext,
+    facts: &SettleFacts<'_>,
     result: AttemptResult,
 ) -> Result<Settlement, InvalidTransition> {
-    let (outcome, refusal) = result.outcome(ctx.kind);
+    let outcome = result.outcome();
     let retry_after = match result {
-        AttemptResult::RateLimited(d) => Some(d),
+        AttemptResult::NotSent { retry_after } => retry_after,
         _ => None,
     };
-    let retry_in = retry_delay(ctx.attempt, retry_after);
-    let event = ActionEvent::AttemptFinished {
+    let retry_in = retry_delay(facts.attempt, retry_after);
+    let event = ActionEvent::Settled {
         outcome,
-        case_valid: ctx.case_valid,
+        changed_outside_case: result == AttemptResult::ChangedOutsideCase,
+        case_valid: facts.case_valid,
         attempts_left: retry_in.is_some(),
     };
-    let state = transition(ctx.kind, ActionState::Running, event)?;
-    let failure = match state {
-        ActionState::Failed => {
-            Some(refusal.unwrap_or(Failure::new(ActionFailure::RetriesExhausted)))
+    let state = transition(facts.kind, ActionState::Running, event)?;
+    let failure = match (state, result) {
+        (ActionState::Failed, AttemptResult::Refused { failure, .. }) => Some(failure),
+        (ActionState::Failed, _) => {
+            let round: Vec<Option<AttemptOutcome>> = facts
+                .earlier
+                .iter()
+                .copied()
+                .chain([outcome])
+                .map(Some)
+                .collect();
+            Some(Failure::new(if may_have_applied(&round) {
+                ActionFailure::Unconfirmed
+            } else {
+                ActionFailure::RetriesExhausted
+            }))
         }
         _ => None,
     };
-    let voided_original = !ctx.case_valid && ctx.kind.purpose() == ActionPurpose::Original;
     Ok(Settlement {
         state,
         outcome,
         failure,
+        skip_reason: (state == ActionState::Skipped)
+            .then_some(ActionSkipReason::ChangedOutsideCase),
         no_change: state == ActionState::Done && outcome == AttemptOutcome::NoChange,
-        retry_in: if state == ActionState::Pending {
-            retry_in
-        } else {
-            None
-        },
-        queue_undo: if state == ActionState::Done
-            && voided_original
-            && undo_needed(ctx.kind, ctx.timeout_ends_at, ctx.now)
-        {
-            ctx.kind.undo_kind()
-        } else {
-            None
-        },
+        next_attempt_at: retry_in
+            .filter(|_| state == ActionState::Pending)
+            .map(|wait| facts.now + wait),
     })
 }
 
-/// What the action job knows after claiming, before calling Discord
-/// (§5.4 steps 2–7).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ClaimFacts {
-    /// The action's kind.
-    pub kind: ActionKind,
-    /// Its stored state.
-    pub state: ActionState,
-    /// Whether its case is valid.
-    pub case_valid: bool,
-    /// For an undo: the undo guard's answer (§5.6). Ignored for originals.
-    pub still_applies: Option<StillApplies>,
-    /// The Quack-side pre-check's answer (§5.4 step 6).
-    pub precheck: Result<(), Failure>,
-    /// For a timeout: its fixed end.
-    pub timeout_ends_at: Option<OffsetDateTime>,
-    /// The current time.
-    pub now: OffsetDateTime,
-}
-
-/// The job's next step after claiming an action.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ClaimDecision {
-    /// Already settled (re-delivery): finish the job without changes.
-    AlreadySettled,
-    /// A previous attempt crashed: settle it with
-    /// [`AttemptResult::Interrupted`] first.
-    Interrupted,
-    /// Original on a voided case: `cancelled`.
-    Cancel,
-    /// Undo that another valid case blocks: `skipped`.
-    Skip(StillApplies),
-    /// Refused before calling Discord: `failed`.
-    Fail(Failure),
-    /// Record the attempt (`running`) and call Discord. A timeout is sent
-    /// with its stored end, never a recomputed one.
-    Attempt {
-        /// The `communication_disabled_until` value for a timeout.
-        timeout_until: Option<OffsetDateTime>,
-    },
-}
-
-/// Decides what a claimed action job does next, in the design's order:
-/// settled state, crashed attempt, voided original, undo guard, pre-check,
-/// timeout window.
-pub fn before_attempt(facts: &ClaimFacts) -> ClaimDecision {
-    match facts.state {
-        ActionState::Pending => {}
-        ActionState::Running => return ClaimDecision::Interrupted,
-        _ => return ClaimDecision::AlreadySettled,
-    }
-    match facts.kind.purpose() {
-        ActionPurpose::Original if !facts.case_valid => return ClaimDecision::Cancel,
-        ActionPurpose::Undo => {
-            if let Some(still) = facts.still_applies {
-                return ClaimDecision::Skip(still);
-            }
-        }
-        ActionPurpose::Original => {}
-    }
-    if let Err(failure) = facts.precheck {
-        return ClaimDecision::Fail(failure);
-    }
-    if facts.kind == ActionKind::Timeout {
-        match facts.timeout_ends_at {
-            Some(end) if !timeout_window_passed(facts.now, end) => {}
-            _ => return ClaimDecision::Fail(Failure::new(ActionFailure::TimeoutWindowPassed)),
-        }
-    }
-    ClaimDecision::Attempt {
-        timeout_until: facts.timeout_ends_at,
-    }
+fn whole_seconds(at: OffsetDateTime) -> i64 {
+    at.unix_timestamp()
 }

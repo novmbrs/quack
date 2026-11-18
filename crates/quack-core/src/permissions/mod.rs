@@ -8,6 +8,7 @@
 
 mod capabilities;
 mod channel;
+mod facts;
 mod member;
 
 use std::ops::BitOr;
@@ -18,6 +19,9 @@ pub use capabilities::{
 };
 pub use channel::{
     ChannelProblem, Overwrite, OverwriteTarget, StaffChannelFacts, check_staff_channel,
+};
+pub use facts::{
+    AccountFacts, BanFacts, ChannelFacts, GuildFacts, MemberFacts, RoleFacts, TEXT_CHANNEL,
 };
 pub use member::{
     ActorPresence, ApplyFacts, CheckPurpose, MemberRefusal, MemberRefusalCode, MemberSubject,
@@ -76,8 +80,37 @@ impl FromIterator<Permission> for Permissions {
 }
 
 str_enum! {
-    /// A Discord permission Quack checks or asks for. The three action
-    /// permissions are also the `discord_permission` database enum.
+    /// A permission an action needs (`discord_permission`): what a
+    /// `quack_missing_permission` failure or refusal names.
+    pub enum DiscordPermission {
+        /// Moderate Members (timeout, remove timeout).
+        ModerateMembers = "moderate_members",
+        /// Kick Members.
+        KickMembers = "kick_members",
+        /// Ban Members (ban, unban).
+        BanMembers = "ban_members",
+    }
+}
+
+impl DiscordPermission {
+    /// The same permission among every permission Quack checks.
+    pub const fn permission(self) -> Permission {
+        match self {
+            Self::ModerateMembers => Permission::ModerateMembers,
+            Self::KickMembers => Permission::KickMembers,
+            Self::BanMembers => Permission::BanMembers,
+        }
+    }
+}
+
+impl From<DiscordPermission> for Permission {
+    fn from(p: DiscordPermission) -> Self {
+        p.permission()
+    }
+}
+
+str_enum! {
+    /// A Discord permission Quack checks or asks for.
     pub enum Permission {
         /// Kick Members.
         KickMembers = "kick_members",
@@ -168,6 +201,15 @@ mod tests {
         assert_eq!(Permission::ViewChannel.bit(), 0x400);
         let all: Permissions = Permission::ALL.iter().copied().collect();
         assert_eq!(all.0.count_ones() as usize, Permission::ALL.len());
+    }
+
+    #[test]
+    fn action_permissions_are_the_database_enum() {
+        let names: Vec<&str> = DiscordPermission::ALL.iter().map(|p| p.as_str()).collect();
+        assert_eq!(names, ["moderate_members", "kick_members", "ban_members"]);
+        for p in DiscordPermission::ALL {
+            assert_eq!(p.permission().as_str(), p.as_str());
+        }
     }
 
     #[test]

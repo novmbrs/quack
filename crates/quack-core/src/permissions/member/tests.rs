@@ -285,7 +285,7 @@ fn action_permission_checks() {
             K::Timeout,
             &[Permission::BanMembers][..],
             Err(MemberRefusal::QuackMissingPermission(
-                Permission::ModerateMembers,
+                DiscordPermission::ModerateMembers,
             )),
         ),
         (K::Kick, &[Permission::KickMembers][..], Ok(())),
@@ -293,7 +293,7 @@ fn action_permission_checks() {
             K::Kick,
             &[][..],
             Err(MemberRefusal::QuackMissingPermission(
-                Permission::KickMembers,
+                DiscordPermission::KickMembers,
             )),
         ),
         (K::Ban, &[Permission::BanMembers][..], Ok(())),
@@ -301,7 +301,7 @@ fn action_permission_checks() {
             K::Ban,
             &[Permission::KickMembers][..],
             Err(MemberRefusal::QuackMissingPermission(
-                Permission::BanMembers,
+                DiscordPermission::BanMembers,
             )),
         ),
         (K::Ban, &[Permission::Administrator][..], Ok(())),
@@ -335,7 +335,7 @@ fn action_permission_checks() {
 fn refusal_codes_and_quack_access() {
     assert!(MemberRefusal::QuackNotInServer.is_quack_access());
     assert!(MemberRefusal::QuackRoleTooLow.is_quack_access());
-    assert!(MemberRefusal::QuackMissingPermission(Permission::BanMembers).is_quack_access());
+    assert!(MemberRefusal::QuackMissingPermission(DiscordPermission::BanMembers).is_quack_access());
     for r in [
         MemberRefusal::ActorNotInServer,
         MemberRefusal::MemberNotInServer,
@@ -349,7 +349,7 @@ fn refusal_codes_and_quack_access() {
         assert_eq!(r.permission(), None);
     }
     assert_eq!(
-        MemberRefusal::QuackMissingPermission(Permission::KickMembers)
+        MemberRefusal::QuackMissingPermission(DiscordPermission::KickMembers)
             .code()
             .as_str(),
         "quack_missing_permission"
@@ -374,15 +374,20 @@ fn precheck_order_and_reasons() {
     let no_perm = action_precheck(&with(|f| f.quack = quack_with(&[])), K::Kick).unwrap_err();
     assert_eq!(
         (no_perm.reason, no_perm.permission),
-        (F::QuackMissingPermission, Some(Permission::KickMembers))
+        (
+            F::QuackMissingPermission,
+            Some(DiscordPermission::KickMembers)
+        )
     );
     assert_eq!(
         reason(&with(|f| f.member.id = member_id(OWNER)), K::Ban),
         Err(F::MemberIsOwner)
     );
+    // A timeout's absent or administrator member is found by the
+    // attempt's own read (§5.1), not by the pre-check.
     assert_eq!(
         reason(&with(|f| f.member.present = None), K::Timeout),
-        Err(F::MemberNotInServer)
+        Ok(())
     );
     assert_eq!(reason(&with(|f| f.member.present = None), K::Ban), Ok(()));
     assert_eq!(
@@ -395,7 +400,7 @@ fn precheck_order_and_reasons() {
             permissions: Permission::Administrator.into(),
         });
     });
-    assert_eq!(reason(&admin, K::Timeout), Err(F::MemberIsAdministrator));
+    assert_eq!(reason(&admin, K::Timeout), Ok(()));
     let high = with(|f| f.member.present = present(10));
     assert_eq!(reason(&high, K::Kick), Err(F::QuackRoleTooLow));
     assert_eq!(reason(&high, K::RemoveTimeout), Err(F::QuackRoleTooLow));

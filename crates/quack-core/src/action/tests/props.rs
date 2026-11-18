@@ -1,8 +1,7 @@
-//! Property tests for the action state machine and job flow.
+//! Property tests for the action state machine and the attempt flow.
 
 use proptest::prelude::*;
 use time::Duration;
-use uuid::Uuid;
 
 use super::*;
 
@@ -18,101 +17,161 @@ fn event_strategy() -> impl Strategy<Value = ActionEvent> {
     prop::sample::select(all_events())
 }
 
-fn result_strategy() -> impl Strategy<Value = AttemptResult> {
+fn call_strategy() -> impl Strategy<Value = CallOutcome> {
     prop_oneof![
-        Just(AttemptResult::Done),
-        Just(AttemptResult::Unknown),
-        Just(AttemptResult::Interrupted),
-        (0_i64..100_000).prop_map(|s| AttemptResult::RateLimited(Duration::seconds(s))),
+        Just(CallOutcome::Done),
+        Just(CallOutcome::Unknown),
+        Just(CallOutcome::NotSent),
+        (0_i64..100_000).prop_map(|s| CallOutcome::RetryAfter(Duration::seconds(s))),
         (
             400_u16..500,
             prop::option::of(prop::sample::select(vec![
-                10_004_u32, 10_007, 10_026, 50_013, 50_001
+                10_004_u32, 10_007, 10_026, 50_013, 50_001, 50_035
             ]))
         )
-            .prop_map(|(status, code)| AttemptResult::Refused(DiscordRefusal { status, code })),
+            .prop_map(|(status, code)| CallOutcome::Refused(DiscordRefusal { status, code })),
+    ]
+}
+
+fn result_strategy() -> impl Strategy<Value = AttemptResult> {
+    prop_oneof![
+        (kind_strategy(), call_strategy(), -7_200_i64..7_200).prop_map(|(kind, call, offset)| {
+            after_call(&target(kind), call, NOW + Duration::seconds(offset))
+        }),
+        call_strategy().prop_map(after_read_failure),
+        Just(AttemptResult::Interrupted),
+        Just(AttemptResult::NoChange),
     ]
 }
 
 proptest! {
     #[test]
-    fn never_leaves_a_terminal_state(kind in kind_strategy(), events in prop::collection::vec(event_strategy(), 0..40)) {
+    fn random_events_never_leave_the_table(
+        kind in kind_strategy(),
+        events in prop::collection::vec(event_strategy(), 0..60),
+    ) {
         let mut state = ActionState::Pending;
         for event in events {
             let before = state;
             if let Ok(next) = transition(kind, state, event) {
                 prop_assert!(!before.is_terminal(), "left terminal {before:?} via {event:?}");
+                prop_assert_eq!(Some(next), expected(kind, before, event));
+                if before == ActionState::Failed && next != ActionState::Failed {
+                    prop_assert_eq!(event, ActionEvent::StaffRetry, "left failed without a staff retry");
+                }
+                if next == ActionState::Skipped {
+                    prop_assert!(!kind.is_original());
+                }
+                if next == ActionState::Cancelled {
+                    prop_assert!(kind.is_original());
+                }
                 state = next;
             }
         }
     }
 
     #[test]
-    fn never_starts_on_a_voided_case(
+    fn never_starts_an_original_on_a_voided_case(
         kind in kind_strategy(),
         state in state_strategy(),
         guard in any::<bool>(),
         precheck_ok in any::<bool>(),
+        busy in any::<bool>(),
+        dm_waiting in any::<bool>(),
         offset in -100_000_i64..100_000,
     ) {
-        let facts = ClaimFacts {
+        let facts = StartFacts {
             kind,
             state,
+            next_attempt_at: None,
+            member_busy: busy,
             case_valid: false,
-            still_applies: guard.then_some(StillApplies { case_id: CaseId::from_uuid(Uuid::nil()), case_number: 1 }),
+            case_created_at: NOW + Duration::seconds(offset),
+            dm_waiting,
+            still_applies: guard.then_some(still()),
             precheck: if precheck_ok { Ok(()) } else { Err(Failure::new(ActionFailure::QuackRoleTooLow)) },
             timeout_ends_at: Some(NOW + Duration::seconds(offset)),
             now: NOW,
         };
-        let decision = before_attempt(&facts);
-        if kind.purpose() == ActionPurpose::Original {
-            let started = matches!(decision, ClaimDecision::Attempt { .. });
-            prop_assert!(!started, "started {:?} on a voided case", kind);
+        if kind.is_original() {
+            prop_assert_ne!(start(&facts), StartDecision::Open, "started {:?} on a voided case", kind);
         }
     }
 
     #[test]
-    fn timeout_end_never_moves(
-        created_offset in -1_000_000_i64..1_000_000,
+    fn timeout_end_never_moves_and_is_whole_seconds(
+        created_ms in -1_000_000_000_i64..1_000_000_000,
         duration in 1_u32..=2_419_200,
         now_offset in -3_000_000_i64..3_000_000,
     ) {
-        let created = NOW + Duration::seconds(created_offset);
+        let created = NOW + Duration::milliseconds(created_ms);
         let end = timeout_ends_at(created, duration);
-        let facts = ClaimFacts { timeout_ends_at: Some(end), now: NOW + Duration::seconds(now_offset), ..claim(ActionKind::Timeout, ActionState::Pending) };
-        match before_attempt(&facts) {
-            ClaimDecision::Attempt { timeout_until } => prop_assert_eq!(timeout_until, Some(end)),
-            ClaimDecision::Fail(f) => prop_assert_eq!(f.reason, ActionFailure::TimeoutWindowPassed),
+        prop_assert_eq!(end.nanosecond(), 0);
+        prop_assert!(end <= created + Duration::seconds(i64::from(duration)));
+        prop_assert!(end > created + Duration::seconds(i64::from(duration) - 1));
+        let now = NOW + Duration::seconds(now_offset);
+        let facts = StartFacts { timeout_ends_at: Some(end), now, ..super::facts(ActionKind::Timeout, ActionState::Pending) };
+        match start(&facts) {
+            StartDecision::Open => prop_assert!(now < end),
+            StartDecision::Fail(f) => {
+                prop_assert_eq!(f.reason, ActionFailure::TimeoutWindowPassed);
+                prop_assert!(now >= end);
+            }
             other => prop_assert!(false, "unexpected {other:?}"),
         }
-        prop_assert_eq!(end - created, Duration::seconds(i64::from(duration)));
     }
 
     #[test]
-    fn retry_budget_is_respected(kind in kind_strategy(), valid in any::<bool>(), attempt in 1_u32..20, result in result_strategy()) {
-        let s = settle(&ctx(kind, valid, attempt), result).unwrap();
+    fn settle_respects_the_round_budget(
+        kind in kind_strategy(),
+        valid in any::<bool>(),
+        attempt in 1_u32..20,
+        result in result_strategy(),
+    ) {
+        let facts = settle_facts(kind, valid, attempt);
+        let Ok(s) = settle(&facts, result) else {
+            // Only an original can't take an undo's provenance answer.
+            prop_assert!(result == AttemptResult::ChangedOutsideCase && kind.is_original());
+            return Ok(());
+        };
         if attempt >= MAX_ATTEMPTS {
             prop_assert_ne!(s.state, ActionState::Pending);
         }
-        prop_assert_eq!(s.state == ActionState::Pending, s.retry_in.is_some());
+        prop_assert_eq!(s.state == ActionState::Pending, s.next_attempt_at.is_some());
         prop_assert_eq!(s.state == ActionState::Failed, s.failure.is_some());
-        if let (AttemptResult::RateLimited(d), Some(wait)) = (result, s.retry_in) {
-            prop_assert!(wait >= d);
+        prop_assert_eq!(s.state == ActionState::Skipped, s.skip_reason.is_some());
+        if s.state == ActionState::Cancelled {
+            prop_assert!(kind.is_original() && !valid);
+        }
+        if let (AttemptResult::NotSent { retry_after: Some(d) }, Some(at)) = (result, s.next_attempt_at) {
+            prop_assert!(at - NOW >= d);
+        }
+        if let Some(f) = s.failure
+            && f.reason == ActionFailure::RetriesExhausted
+        {
+            prop_assert!(!s.outcome.may_have_applied());
         }
     }
 
     #[test]
-    fn job_run_never_exceeds_the_budget(results in prop::collection::vec(result_strategy(), 1..30)) {
-        // Simulate one job: attempts continue only while the action is pending.
+    fn a_round_never_exceeds_its_budget(results in prop::collection::vec(result_strategy(), 1..30)) {
+        // Simulate one round: attempts continue only while the action is pending.
         let mut state = ActionState::Pending;
-        let mut attempts = 0;
+        let mut outcomes = Vec::new();
         for result in results {
             if state != ActionState::Pending {
                 break;
             }
-            attempts += 1;
-            state = settle(&ctx(ActionKind::Ban, true, attempts), result).unwrap().state;
+            let attempt = u32::try_from(outcomes.len()).unwrap() + 1;
+            let facts = SettleFacts { earlier: &outcomes, ..settle_facts(ActionKind::Ban, true, attempt) };
+            let s = settle(&facts, result).unwrap();
+            if s.state == ActionState::Failed && s.failure.is_some_and(|f| f.reason == ActionFailure::Unconfirmed) {
+                let round: Vec<_> = outcomes.iter().copied().chain([s.outcome]).map(Some).collect();
+                prop_assert!(may_have_applied(&round));
+            }
+            outcomes.push(s.outcome);
+            state = s.state;
         }
-        prop_assert!(attempts <= MAX_ATTEMPTS);
+        prop_assert!(outcomes.len() <= MAX_ATTEMPTS as usize);
     }
 }
