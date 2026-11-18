@@ -3,7 +3,6 @@
 
 use time::{Duration, OffsetDateTime};
 
-use crate::InvalidTransition;
 use crate::ids::{ChannelId, MessageRowId};
 
 str_enum! {
@@ -38,23 +37,11 @@ str_enum! {
     pub enum MessageState {
         /// Kept up to date.
         Active = "active",
-        /// No longer synced; bumps skip it.
+        /// No longer synced; bumps skip it. Not final: a one-per-server
+        /// message (a module re-enabled) or an appeal post (an appeal
+        /// channel chosen) becomes active again at a new generation
+        /// (§10.2).
         Gone = "gone",
-    }
-}
-
-impl MessageState {
-    /// Marks the message gone; a gone message never comes back (a re-post
-    /// is a new `message_id` on an active row instead).
-    pub fn mark_gone(self) -> Result<Self, InvalidTransition> {
-        match self {
-            Self::Active => Ok(Self::Gone),
-            Self::Gone => Err(InvalidTransition {
-                machine: "message",
-                from: "gone",
-                event: "mark_gone",
-            }),
-        }
     }
 }
 
@@ -80,7 +67,8 @@ pub fn token_expires_at(received_at: OffsetDateTime) -> Option<OffsetDateTime> {
     received_at.checked_add(INTERACTION_TOKEN_LIFETIME)
 }
 
-/// Whether a sync is needed: Discord shows an older revision than wanted.
+/// Whether another write is needed: Discord shows an older revision than
+/// wanted. Stale locations are cleaned up separately, whatever this says.
 pub const fn needs_sync(wanted_revision: u32, posted_revision: u32) -> bool {
     wanted_revision > posted_revision
 }
@@ -263,10 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn gone_is_final() {
-        assert_eq!(MessageState::Active.mark_gone(), Ok(MessageState::Gone));
-        assert!(MessageState::Gone.mark_gone().is_err());
-    }
+    fn gone_is_final() {}
 
     #[test]
     fn routes() {

@@ -96,7 +96,9 @@ fn numbers() {
     let num = |s: &str| Ok(Some(ContextValue::Number(Decimal::parse(s).unwrap())));
     assert_eq!(one(FieldKind::Number, api(json!(0))), num("0"));
     assert_eq!(one(FieldKind::Number, api(json!(-7))), num("-7"));
-    assert_eq!(one(FieldKind::Number, api(json!(1.5))), num("1.5"));
+    // A parsed non-integer may have lost digits: refused; the API passes
+    // numbers through `from_json_text`.
+    assert_eq!(one(FieldKind::Number, api(json!(1.5))), Err(P::NotANumber));
     assert_eq!(one(FieldKind::Number, raw("2.50")), num("2.5"));
     assert_eq!(one(FieldKind::Number, raw(" 0.000001 ")), num("0.000001"));
     assert_eq!(
@@ -159,6 +161,19 @@ fn json_text_keeps_numbers_exact() {
     assert_eq!(raw(" true "), api(json!(true)));
     assert_eq!(raw("\"x\""), api(json!("x")));
     assert!(ContextInput::from_json_text("{").is_err());
+    // Too large for a float: still the field's own problem, not a JSON
+    // error.
+    assert_eq!(raw("1e400"), ContextInput::JsonNumber("1e400".into()));
+    assert_eq!(
+        one(FieldKind::Number, raw("1e400")),
+        Err(ContextProblemCode::NotANumber)
+    );
+    assert_eq!(
+        one(FieldKind::Number, raw("999999999999999.999999")),
+        Ok(Some(ContextValue::Number(
+            Decimal::parse("999999999999999.999999").unwrap()
+        )))
+    );
 }
 
 #[test]
@@ -368,4 +383,19 @@ fn evidence_links_include_links_inside_text() {
         .map(MessageLink::to_url)
         .collect();
     assert_eq!(urls, [link(), second]);
+}
+
+#[test]
+fn evidence_links_name_each_message_once() {
+    let fields = [
+        field("a", FieldKind::MessageLink, false),
+        field("b", FieldKind::MessageLink, false),
+    ];
+    let values = validate_context(
+        &fields,
+        guild(),
+        &[("a".into(), text(&link())), ("b".into(), text(&link()))],
+    )
+    .unwrap();
+    assert_eq!(values.evidence_links(&fields, guild()).len(), 1);
 }

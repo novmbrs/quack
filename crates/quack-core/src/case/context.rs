@@ -27,15 +27,16 @@ pub enum ContextInput {
 
 impl ContextInput {
     /// Reads one API answer from its JSON text (for example a
-    /// `serde_json::value::RawValue`), keeping a number's original text so
-    /// it is never parsed through a binary float.
+    /// `serde_json::value::RawValue`). A number token is recognized by its
+    /// first character and kept as its original text, never parsed through
+    /// a binary float, so `1e400` gets the field's `not_a_number` rather
+    /// than a JSON error, and `2.50` keeps its digits.
     pub fn from_json_text(raw: &str) -> Result<Self, serde_json::Error> {
-        let value: serde_json::Value = serde_json::from_str(raw)?;
-        Ok(if value.is_number() {
-            Self::JsonNumber(raw.trim().to_owned())
-        } else {
-            Self::Json(value)
-        })
+        let token = raw.trim();
+        if token.starts_with(|c: char| c == '-' || c.is_ascii_digit()) {
+            return Ok(Self::JsonNumber(token.to_owned()));
+        }
+        serde_json::from_str(raw).map(Self::Json)
     }
 }
 
@@ -98,7 +99,12 @@ impl ContextValues {
     /// (§4.6), in field order, without repeated messages. Links inside text
     /// that point outside `guild` are ignored.
     pub fn evidence_links(&self, fields: &[Field], guild: GuildId) -> Vec<MessageLink> {
-        let mut links = self.message_links(fields);
+        let mut links: Vec<MessageLink> = Vec::new();
+        for link in self.message_links(fields) {
+            if !links.iter().any(|l| l.message_id == link.message_id) {
+                links.push(link);
+            }
+        }
         for field in fields
             .iter()
             .filter(|f| matches!(f.kind, FieldKind::ShortText | FieldKind::LongText))
@@ -298,7 +304,11 @@ fn validate_one(
         FieldKind::Number => {
             let text = match input {
                 ContextInput::JsonNumber(raw) => raw.trim().to_owned(),
-                ContextInput::Json(serde_json::Value::Number(n)) => n.to_string(),
+                // Only an integer is exact once parsed; any other parsed
+                // number may have lost digits, so it is refused.
+                ContextInput::Json(serde_json::Value::Number(n)) if n.is_i64() || n.is_u64() => {
+                    n.to_string()
+                }
                 ContextInput::Json(serde_json::Value::String(s)) | ContextInput::Text(s) => {
                     s.trim().to_owned()
                 }

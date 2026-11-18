@@ -137,8 +137,11 @@ pub fn copy_eligibility(size_bytes: u64, content_type: Option<&str>) -> Result<(
     }
 }
 
-/// Checks an add-evidence call before any write (§7.1): 1–10 links, and
-/// room under the per-case cap for the new (not already saved) items.
+/// Checks evidence about to be admitted before any write (§7.1): at most
+/// 10 links in one call, and room under the per-case cap for the new (not
+/// already saved) items. Zero links is legal here (a case edit that names
+/// no new message); the add-evidence entry point refuses an empty call
+/// itself before calling this.
 pub fn check_room(
     existing_items: u32,
     new_items: usize,
