@@ -1,5 +1,6 @@
 //! The `honeypot_cleanup` job (§13.4.2 step 4): deletes one honeypot post
-//! after its case saved it. Safe to repeat: a delete is idempotent (404
+//! only after its case saved it; a post whose capture failed or never
+//! finished stays. Safe to repeat: a delete is idempotent (404
 //! counts as done) and the record is a compare-and-set.
 
 use std::time::Duration;
@@ -29,7 +30,10 @@ const EVIDENCE_WAIT: time::Duration = time::Duration::minutes(10);
 /// How often it looks again while waiting.
 const EVIDENCE_POLL: Duration = Duration::from_secs(5);
 
-/// Deletes the post once the case's evidence for it is no longer saving.
+/// Deletes the post once the case's evidence for it is saved (a burst's
+/// later posts have no evidence row of their own). A capture that failed,
+/// or is still saving after [`EVIDENCE_WAIT`], keeps the post: the cleanup
+/// is recorded failed and staff can delete it.
 pub(crate) async fn run(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError> {
     let (Some(guild), Ok(p)) = (job.guild, job.payload::<Payload>()) else {
         return Ok(dead("bad_payload"));
@@ -43,15 +47,24 @@ pub(crate) async fn run(engine: &Engine, job: &ClaimedJob) -> Result<Handled, Db
             // Only hits that became cases are cleaned up.
             return Ok(Handled::Settle(JobResult::Done));
         };
-        let saving = evidence::for_case(&mut conn, guild, case)
+        let state = evidence::for_case(&mut conn, guild, case)
             .await?
             .iter()
-            .any(|e| e.message == p.message_id && e.state == EvidenceState::Saving);
+            .find(|e| e.message == p.message_id)
+            .map(|e| e.state);
         drop(conn);
-        if saving && OffsetDateTime::now_utc() - job.created_at < EVIDENCE_WAIT {
-            return Ok(Handled::Settle(JobResult::Defer {
-                at: RunAt::In(EVIDENCE_POLL),
-            }));
+        match state {
+            Some(EvidenceState::Saving)
+                if OffsetDateTime::now_utc() - job.created_at < EVIDENCE_WAIT =>
+            {
+                return Ok(Handled::Settle(JobResult::Defer {
+                    at: RunAt::In(EVIDENCE_POLL),
+                }));
+            }
+            Some(EvidenceState::Saving | EvidenceState::Failed) => {
+                return record(engine, job, guild, p.message_id, true).await;
+            }
+            Some(EvidenceState::Saved) | None => {}
         }
         let failed = match engine
             .discord()

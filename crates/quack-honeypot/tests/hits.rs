@@ -74,6 +74,21 @@ async fn a_burst_from_one_member_is_one_case() -> Result<()> {
 }
 
 #[tokio::test]
+async fn a_burst_hit_admitted_before_the_module_went_off_is_kept() -> Result<()> {
+    let w = world().await?;
+    w.post(MEMBER).await?;
+    w.h.settle().await?;
+    assert_eq!(w.cases().await?, 1);
+    // Admitted while on, settled after the module was turned off.
+    let (late, _) = w.post(MEMBER).await?;
+    w.enable(false).await?;
+    w.h.settle().await?;
+    assert_eq!(w.failures().await?, ["policy_changed"]);
+    assert!(w.exists(late), "its message is kept");
+    Ok(())
+}
+
+#[tokio::test]
 async fn bots_webhooks_and_staff_never_get_a_case_or_a_deletion() -> Result<()> {
     let w = world().await?;
     w.h.fake.world(|world| {
@@ -174,6 +189,36 @@ async fn the_post_is_kept_until_the_case_saved_it() -> Result<()> {
     assert_eq!(w.h.fake.count(Call::DeleteMessage), 0);
     w.h.settle().await?;
     assert!(!w.exists(message));
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_post_whose_capture_failed_is_kept() -> Result<()> {
+    let w = world().await?;
+    let (message, _) = w.post(MEMBER).await?;
+    w.h.run_one(JobKind::HoneypotCase)
+        .await?
+        .context("the case job ran")?;
+    // The capture failed (the fetch was refused, say) before cleanup ran.
+    w.h.db
+        .execute(&format!(
+            "UPDATE evidence SET state = 'failed', failure = 'message_deleted' WHERE message_id = {message}"
+        ))
+        .await?;
+    w.h.db
+        .execute("DELETE FROM jobs WHERE kind = 'capture_evidence'")
+        .await?;
+    w.h.settle().await?;
+    assert!(w.exists(message), "the only copy stays");
+    assert_eq!(w.h.fake.count(Call::DeleteMessage), 0);
+    let failed = w
+        .h
+        .db
+        .count(&format!(
+            "SELECT count(*) FROM honeypot_hits WHERE message_id = {message} AND cleanup_failed_at IS NOT NULL"
+        ))
+        .await?;
+    assert_eq!(failed, 1, "recorded for staff");
     Ok(())
 }
 

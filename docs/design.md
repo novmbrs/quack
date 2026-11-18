@@ -8044,3 +8044,12 @@ folds these into the sections (or changes the code) and removes them here.
     `index.html`) is served only when its real path, with symlinks
     resolved, is inside the real `QUACK_DASHBOARD_DIR`; a symlink that
     leads out is a 404.
+50. §13.4.2 steps 3.3 and 4 (application review MAJORs 8, 9) → a burst
+    attach (step 3.3) checks, under the same `FOR SHARE` lock on
+    `honeypot_settings` that case creation takes, that the module is still
+    on with the version, channel, and rule the hits were admitted under;
+    otherwise the hits fail `policy_changed` and their messages are kept.
+    The cleanup deletes a post only when the case's evidence for it is
+    `saved` (a burst's later posts have no evidence row and are deleted
+    as before); a capture that `failed`, or is still `saving` after 10
+    minutes, records `cleanup_failed_at` and keeps the post.

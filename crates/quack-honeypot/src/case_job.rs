@@ -34,6 +34,9 @@ struct Payload {
 enum Settled {
     /// The hits joined this case.
     Case(CaseId),
+    /// The hits join this earlier case of a burst, if the policy they were
+    /// admitted under still holds when they settle.
+    Burst(CaseId),
     /// The hits failed with this code.
     Failed(HoneypotFailure),
 }
@@ -117,7 +120,7 @@ async fn decide(engine: &Engine, guild: GuildId, batch: &[Hit]) -> Result<Settle
         .map_err(|e| e.to_string())?
     };
     if let Some(case) = burst {
-        return Ok(Settled::Case(case));
+        return Ok(Settled::Burst(case));
     }
     let Some(rule) = first.rule else {
         return Ok(refused(HoneypotRefusal::RuleUnavailable));
@@ -203,8 +206,30 @@ async fn settle(
     next: JobResult,
 ) -> Result<Handled, DbError> {
     let ids: Vec<MessageId> = batch.iter().map(|h| h.message).collect();
+    // A burst attach checks, under the same share lock case creation takes,
+    // that the module is still on with the policy the hits came in under;
+    // otherwise they fail and their messages are kept.
+    let resolved;
+    let settled = match settled {
+        Settled::Burst(case) => {
+            let s = honeypot::lock_settings(&mut tx, guild, false).await?;
+            let holds = s.is_some_and(|s| {
+                s.enabled
+                    && s.version == first.settings_version
+                    && s.channel == Some(first.channel)
+                    && s.rule == first.rule
+            });
+            resolved = if holds {
+                Settled::Case(*case)
+            } else {
+                refused(HoneypotRefusal::PolicyChanged)
+            };
+            &resolved
+        }
+        other => other,
+    };
     let (changed, outcome) = match settled {
-        Settled::Case(case) => {
+        Settled::Case(case) | Settled::Burst(case) => {
             let changed = honeypot::mark_case_created(&mut tx, guild, &ids, *case).await?;
             let cleanups: Vec<NewJob> = batch
                 .iter()
