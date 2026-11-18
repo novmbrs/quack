@@ -7,6 +7,7 @@ use anyhow::{Result, bail};
 use quack_db::DbError;
 use quack_db::jobs::{self, ClaimedJob, Handled, JobKind, JobResult, Phase, RunAt};
 use quack_engine::Engine;
+use quack_engine::jobs::ModuleJobs;
 use tokio::task::JoinHandle;
 
 use crate::Harness;
@@ -44,13 +45,24 @@ pub struct Ran {
 /// spent or the last run asks for a retry; settle results the handler
 /// didn't settle itself.
 pub async fn run_claimed(engine: &Engine, job: ClaimedJob) -> Ran {
+    run_claimed_with(engine, &[], job).await
+}
+
+/// [`run_claimed`] with the optional modules' job kinds dispatched to
+/// their handlers, as the binary's runner does.
+pub async fn run_claimed_with(engine: &Engine, modules: &[ModuleJobs], job: ClaimedJob) -> Ran {
+    let module = modules.iter().find(|m| m.kinds.contains(&job.kind));
     let mut phase = if job.budget_spent() {
         Phase::Finalize
     } else {
         Phase::Run
     };
     loop {
-        let result = match quack_engine::jobs::handle(engine, &job, phase).await {
+        let handled = match module {
+            Some(m) => (m.handler)(job.clone(), phase).await,
+            None => quack_engine::jobs::handle(engine, &job, phase).await,
+        };
+        let result = match handled {
             Ok(Handled::Settled(result)) => {
                 return Ran {
                     job,
@@ -100,15 +112,20 @@ impl Harness {
         let Some(job) = self.claim(kind).await? else {
             return Ok(None);
         };
-        Ok(Some(run_claimed(&self.engine, job).await))
+        let modules = self.modules();
+        Ok(Some(run_claimed_with(&self.engine, &modules, job).await))
     }
 
     /// Runs due jobs, one at a time, until none is due. Returns what ran.
     pub async fn run_jobs(&self) -> Result<Vec<Ran>> {
         let mut ran = Vec::new();
+        let mut kinds = ENGINE_KINDS.to_vec();
+        for m in self.modules() {
+            kinds.extend_from_slice(m.kinds);
+        }
         for _ in 0..10_000 {
             let mut any = false;
-            for kind in ENGINE_KINDS {
+            for kind in &kinds {
                 if let Some(r) = self.run_one(*kind).await? {
                     ran.push(r);
                     any = true;
@@ -175,7 +192,10 @@ impl Harness {
             bail!("no {kind} job is due");
         };
         let engine = self.engine.clone();
-        Ok(tokio::spawn(async move { run_claimed(&engine, job).await }))
+        let modules = self.modules();
+        Ok(tokio::spawn(async move {
+            run_claimed_with(&engine, &modules, job).await
+        }))
     }
 
     /// Runs the next due job of `kind` until its call reaches `gate`, then

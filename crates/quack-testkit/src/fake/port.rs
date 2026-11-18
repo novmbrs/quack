@@ -331,11 +331,12 @@ impl Discord for FakeDiscord {
     fn create_private_thread<'a>(
         &'a self,
         parent: ChannelId,
-        _name: &'a str,
+        name: &'a str,
     ) -> BoxFuture<'a, Outcome<ChannelId>> {
         let r = with(Call::CreateThread, |r| r.channel = Some(parent));
-        Box::pin(self.call(r, move |w| {
-            Outcome::Done(ChannelId::new(w.next_id()).unwrap_or_else(|| unreachable!()))
+        Box::pin(self.call(r, move |w| match w.add_thread(parent, name) {
+            Some(id) => Outcome::Done(id),
+            None => refused(RefusalKind::UnknownChannel),
         }))
     }
 
@@ -343,13 +344,13 @@ impl Discord for FakeDiscord {
         &'a self,
         guild: GuildId,
         parent: ChannelId,
-        _name: &'a str,
+        name: &'a str,
     ) -> BoxFuture<'a, Outcome<Vec<ChannelId>>> {
         let r = with(Call::FindThreads, |r| {
             r.guild = Some(guild);
             r.channel = Some(parent);
         });
-        Box::pin(self.call(r, move |_| Outcome::Done(Vec::new())))
+        Box::pin(self.call(r, move |w| Outcome::Done(w.threads_named(parent, name))))
     }
 
     fn add_thread_member(&self, thread: ChannelId, member: MemberId) -> BoxFuture<'_, Outcome<()>> {
@@ -387,11 +388,18 @@ impl Discord for FakeDiscord {
     fn set_thread_state(
         &self,
         thread: ChannelId,
-        _archived: bool,
-        _locked: bool,
+        archived: bool,
+        locked: bool,
     ) -> BoxFuture<'_, Outcome<()>> {
         let r = with(Call::SetThreadState, |r| r.channel = Some(thread));
-        Box::pin(self.call(r, move |_| Outcome::Done(())))
+        Box::pin(self.call(r, move |w| {
+            let exists = w.guilds.values().any(|g| g.channels.contains_key(&thread));
+            if !exists {
+                return refused(RefusalKind::UnknownChannel);
+            }
+            w.thread_states.insert(thread, (archived, locked));
+            Outcome::Done(())
+        }))
     }
 
     fn delete_channel(&self, channel: ChannelId) -> BoxFuture<'_, Outcome<()>> {

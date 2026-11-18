@@ -18,4 +18,4 @@ pub use harness::{
     ADMIN, GUILD, Harness, MEMBER, MEMBER_2, MODERATOR, MODERATOR_2, OWNER, QUACK,
     quack_permissions, rules_for_tests, sf,
 };
-pub use queue::{ENGINE_KINDS, Ran, RunEnd, run_claimed};
+pub use queue::{ENGINE_KINDS, Ran, RunEnd, run_claimed, run_claimed_with};

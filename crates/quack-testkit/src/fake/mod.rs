@@ -27,7 +27,9 @@ use quack_text::Msg;
 use time::OffsetDateTime;
 use tokio::sync::Notify;
 
-pub use state::{FakeMessage, GuildSetup, GuildState, MemberSetup, World, everyone_permissions};
+pub use state::{
+    FakeMessage, GuildSetup, GuildState, MemberSetup, PRIVATE_THREAD, World, everyone_permissions,
+};
 
 /// Every kind of port call, for scripting and assertions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

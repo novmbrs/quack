@@ -11,6 +11,9 @@ use quack_engine::port::{FetchedAttachment, FetchedMessage};
 use quack_text::Msg;
 use time::OffsetDateTime;
 
+/// Discord's channel type of a private thread.
+pub const PRIVATE_THREAD: u8 = 12;
+
 /// What @everyone may do in the fake's servers.
 pub fn everyone_permissions() -> Permissions {
     Permission::ViewChannel | Permission::SendMessages | Permission::ReadMessageHistory
@@ -143,6 +146,8 @@ pub struct World {
     pub files: HashMap<String, Vec<u8>>,
     /// Members of each thread.
     pub thread_members: HashMap<ChannelId, Vec<MemberId>>,
+    /// Each thread's last `(archived, locked)` state Quack set.
+    pub thread_states: HashMap<ChannelId, (bool, bool)>,
     next_id: u64,
 }
 
@@ -158,6 +163,7 @@ impl World {
             interaction_edits: Vec::new(),
             files: HashMap::new(),
             thread_members: HashMap::new(),
+            thread_states: HashMap::new(),
             next_id: 900_000_000_000_000_000,
         }
     }
@@ -303,11 +309,50 @@ impl World {
         id
     }
 
+    /// Adds a private thread named `name` under `parent`; `None` when the
+    /// parent is not a channel of any server.
+    pub fn add_thread(&mut self, parent: ChannelId, name: &str) -> Option<ChannelId> {
+        let id = ChannelId::new(self.next_id()).unwrap_or_else(|| unreachable!());
+        let (guild, parent_facts) = self
+            .guilds
+            .iter_mut()
+            .find_map(|(gid, g)| g.channels.get(&parent).cloned().map(|p| (*gid, p)))?;
+        let g = self.guilds.get_mut(&guild)?;
+        g.channels.insert(
+            id,
+            ChannelFacts {
+                id,
+                guild_id: guild,
+                kind: PRIVATE_THREAD,
+                name: name.to_owned(),
+                parent_id: Some(parent),
+                overwrites: Vec::new(),
+                quack_permissions: parent_facts.quack_permissions,
+            },
+        );
+        Some(id)
+    }
+
+    /// Threads under `parent` named `name`, oldest first.
+    pub fn threads_named(&self, parent: ChannelId, name: &str) -> Vec<ChannelId> {
+        let mut found: Vec<ChannelId> = self
+            .guilds
+            .values()
+            .flat_map(|g| g.channels.values())
+            .filter(|c| c.kind == PRIVATE_THREAD && c.parent_id == Some(parent) && c.name == name)
+            .map(|c| c.id)
+            .collect();
+        found.sort_unstable();
+        found
+    }
+
     /// Deletes a channel (its messages go with it).
     pub fn delete_channel(&mut self, guild: GuildId, channel: ChannelId) {
         if let Some(g) = self.guilds.get_mut(&guild) {
             g.channels.remove(&channel);
         }
+        self.thread_states.remove(&channel);
+        self.thread_members.remove(&channel);
         self.messages.retain(|_, m| m.fetched.channel_id != channel);
     }
 

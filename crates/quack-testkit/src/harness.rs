@@ -11,6 +11,7 @@ use quack_core::rule::{Level, LevelAction, RuleDefinition};
 use quack_db::guilds::{self, GuildFacts as DbGuildFacts};
 use quack_db::rules::{self, NewRule};
 use quack_engine::cases::{Actor, Applied, ApplyRule, CaseCreated, apply_rule};
+use quack_engine::jobs::ModuleJobs;
 use quack_engine::{Engine, EngineConfig, OpKey, Origin, Principal};
 
 use crate::db::TestDb;
@@ -72,6 +73,7 @@ pub struct Harness {
     /// The standard server.
     pub guild: GuildId,
     next_key: std::sync::atomic::AtomicU64,
+    modules: std::sync::Mutex<Vec<ModuleJobs>>,
 }
 
 impl Harness {
@@ -123,6 +125,7 @@ impl Harness {
             engine,
             guild,
             next_key: std::sync::atomic::AtomicU64::new(1),
+            modules: std::sync::Mutex::new(Vec::new()),
         };
         h.install(guild).await?;
         Ok(h)
@@ -145,6 +148,23 @@ impl Harness {
         guilds::ensure_children(&mut tx, guild).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    /// Registers an optional module's jobs, so the queue driver runs its
+    /// kinds with its handler (after the engine's kinds in each pass).
+    pub fn register(&self, jobs: ModuleJobs) {
+        self.modules
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(jobs);
+    }
+
+    /// The registered modules' jobs.
+    pub fn modules(&self) -> Vec<ModuleJobs> {
+        self.modules
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     /// A fresh operation key.
