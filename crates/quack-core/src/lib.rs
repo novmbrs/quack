@@ -27,4 +27,7 @@ pub mod permissions;
 pub mod rule;
 pub mod settings;
 
+#[cfg(test)]
+mod sql_enums;
+
 pub use error::{DomainError, InvalidTransition, UnknownValue};
