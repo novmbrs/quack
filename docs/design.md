@@ -8115,3 +8115,12 @@ folds these into the sections (or changes the code) and removes them here.
     concurrent request holding the same key), the reservation goes
     through the same contention retry, and COMMIT gets exactly what is
     left (none left: it is never sent, `Deadline`).
+61. §5.8 undo, §5.6 (engine review MAJOR 15) → the undo control is
+    offered only when the undo guard, read under the write's locks as the
+    undo's start would, lets it run: with another valid case's timeout or
+    ban still in force the write is `409 action_not_undoable` instead of
+    creating an undo that is then skipped (a property test checks
+    "offered ⇔ the undo lifts it"). A void-driven undo still runs and is
+    skipped with its reason (§5.6). A manual undo of a valid case's own
+    ban passes the provenance check because the marker names that case
+    (note 15); a voided marker is required only for other cases.
