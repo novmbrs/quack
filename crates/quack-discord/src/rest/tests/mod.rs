@@ -2,6 +2,7 @@
 //! outcome classification, without Discord.
 
 mod lookups;
+mod messages;
 mod outcomes;
 mod shapes;
 
