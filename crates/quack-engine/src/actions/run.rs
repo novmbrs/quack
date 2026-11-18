@@ -58,6 +58,11 @@ async fn run_action(
         Ok(facts) => facts,
         Err(code) => return Ok(Handled::Settle(retry(job, code))),
     };
+    // The attempt makes a read and a write; with no room for both, it
+    // isn't opened, and a new claim starts over.
+    if !crate::jobs::has_room(job, 2) {
+        return Ok(Handled::Settle(JobResult::Continue));
+    }
     let number = match begin(engine, job, &action, &facts).await? {
         Begun::Settled(result) => return Ok(Handled::Settled(result)),
         Begun::Opened(number) => number,

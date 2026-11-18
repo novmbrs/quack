@@ -168,6 +168,10 @@ async fn write(
     rendered: &Rendered,
 ) -> Result<Written, DbError> {
     let discord = engine.discord();
+    // A staff check, the write, and the moderator's confirmation.
+    if !crate::jobs::has_room(job, 3) {
+        return Ok(Written::Finished(Handled::Settle(JobResult::Continue)));
+    }
     if route == SyncRoute::EditOriginal {
         let Some((token, _)) = &row.interaction_token else {
             return Ok(Written::Posted(None));

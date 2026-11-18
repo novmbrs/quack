@@ -212,6 +212,9 @@ pub(super) async fn clean_stale(
     row: &TrackedMessage,
 ) -> Result<Option<Handled>, DbError> {
     for location in &row.stale {
+        if !crate::jobs::has_room(job, 1) {
+            return Ok(Some(Handled::Settle(JobResult::Continue)));
+        }
         let outcome = cleanup(engine, row, *location).await;
         match outcome {
             Outcome::Done(()) => {}

@@ -100,6 +100,16 @@ const HOUSEKEEPING_BUDGET: std::time::Duration = std::time::Duration::from_secs(
 const HOUSEKEEPING_EVERY: std::time::Duration = std::time::Duration::from_mins(10);
 
 /// Retry with the kind's backoff after this attempt.
+/// Whether the run has room for `calls` more Discord calls at the port's
+/// 10-second deadline each, plus a 5-second margin before the claim's own
+/// deadline (§16.1). Without it, the run continues in a new claim rather
+/// than start a call the deadline could cut off mid-flight.
+pub(crate) fn has_room(job: &ClaimedJob, calls: u32) -> bool {
+    const CALL: std::time::Duration = std::time::Duration::from_secs(10);
+    const MARGIN: std::time::Duration = std::time::Duration::from_secs(5);
+    job.time_left() >= CALL * calls + MARGIN
+}
+
 pub(crate) fn retry(job: &ClaimedJob, error: impl Into<String>) -> JobResult {
     JobResult::Retry {
         at: RunAt::In(job.kind.policy().backoff(job.attempt)),

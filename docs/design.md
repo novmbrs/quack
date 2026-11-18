@@ -8124,3 +8124,10 @@ folds these into the sections (or changes the code) and removes them here.
     skipped with its reason (§5.6). A manual undo of a valid case's own
     ban passes the provenance check because the marker names that case
     (note 15); a voided marker is required only for other cases.
+62. §16.1 (engine review MAJOR 16, the rest) → before opening an action
+    attempt (a read and a write), before a tracked message's write (staff
+    check, write, confirmation), and before each stale cleanup, the run
+    checks it has 10 seconds per call plus a 5-second margin left before
+    its deadline; without it, it ends `Continue` (nothing opened, nothing
+    counted) and a new claim starts over, so the hard deadline never cuts
+    off a mutation in flight.

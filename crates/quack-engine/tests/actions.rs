@@ -359,3 +359,33 @@ async fn a_ban_retry_after_a_lost_answer_deletes_no_messages() -> Result<()> {
     assert!(reasons[1].ends_with("(delete 0s)"), "{reasons:?}");
     Ok(())
 }
+
+/// Engine review MAJOR 16: a run without room for its calls before the
+/// claim's deadline opens no attempt and calls nothing; a new claim does.
+#[tokio::test]
+async fn a_run_short_of_time_starts_no_attempt() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(one("Spam", BAN, false)).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    let id = created.action.expect("an action");
+    let mut job = h
+        .claim(JobKind::RunAction)
+        .await?
+        .expect("the action's job");
+    job.deadline = std::time::Instant::now() + std::time::Duration::from_secs(12);
+    let ran = quack_testkit::run_claimed(&h.engine, job).await;
+    assert!(
+        matches!(
+            ran.end,
+            RunEnd::Settled(quack_db::jobs::JobResult::Continue)
+        ),
+        "{:?}",
+        ran.end
+    );
+    assert_eq!(h.fake.count(Call::Ban), 0);
+    let opened = h.db.count("SELECT count(*) FROM action_attempts").await?;
+    assert_eq!(opened, 0);
+    h.settle().await?;
+    assert_eq!(action(&h, id).await?.state, ActionState::Done);
+    Ok(())
+}
