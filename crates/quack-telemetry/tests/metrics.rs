@@ -12,12 +12,12 @@ use opentelemetry_sdk::metrics::data::{
 use opentelemetry_sdk::metrics::{InMemoryMetricExporter, PeriodicReader, SdkMeterProvider};
 use quack_telemetry::catalog::{self, InstrumentKind};
 use quack_telemetry::labels::{
-    ActionKind, ActivityEvent, ActivityStage, AppealTransition, CacheName, CaseSource, CommandName,
-    DbCollection, DbErrorClass, DbOperation, DmKind, DmOutcome, GatewayConnectionEvent,
-    GatewayEvent, HoneypotOutcome, HttpMethod, HttpRoute, InteractionKind, InteractionOutcome,
-    JobKind, JobOutcome, ModLogKind, Outcome, PoolName, QueueName, RateLimitClass, RateLimitScope,
-    Reason, RestOutcome, SignInOutcome, TrackedMessageKind, TransactionOutcome, UrlTemplate,
-    VoidCause,
+    ActionKind, ActionState, ActivityEvent, ActivityStage, AppealTransition, AttemptOutcome,
+    CacheName, CaseSource, CommandName, DbCollection, DbErrorClass, DbOperation, DmKind, DmOutcome,
+    GatewayConnectionEvent, GatewayEvent, HoneypotOutcome, HttpMethod, HttpRoute, InteractionKind,
+    InteractionOutcome, JobKind, JobOutcome, MessageKind, ModLogKind, ModLogResult, Outcome,
+    PoolName, QueueName, RateLimitClass, RateLimitScope, Reason, RestOutcome, SignInOutcome,
+    TransactionOutcome, UrlTemplate, VoidCause,
 };
 use quack_telemetry::{JobQueueSample, Metrics, PoolSample};
 
@@ -42,29 +42,31 @@ fn exercise_moderation(m: &Metrics) {
     m.interactions
         .error(InteractionKind::SlashCommand, command, Reason::NotAllowed);
 
-    m.cases.created(
-        CaseSource::SlashCommand,
-        Some(ActionKind::Timeout),
-        2,
-        30 * MS,
-    );
+    m.cases
+        .created(CaseSource::Discord, Some(ActionKind::Timeout), 2, 30 * MS);
     m.cases.created(CaseSource::Dashboard, None, 1, 20 * MS);
+    m.cases.refused(CaseSource::Honeypot, Reason::RoleHierarchy);
     m.cases.voided(VoidCause::AppealAccepted);
 
-    m.actions.attempt(ActionKind::Ban, Outcome::Done, None);
+    m.actions
+        .attempt(ActionKind::Ban, AttemptOutcome::Done, None);
     m.actions.attempt(
         ActionKind::Kick,
-        Outcome::Failed,
+        AttemptOutcome::Refused,
         Some(Reason::RoleHierarchy),
     );
+    m.actions.finished(ActionKind::Unban, ActionState::Skipped);
     m.actions.completed(ActionKind::Ban, 900 * MS);
     m.actions.retried(ActionKind::Timeout, Reason::RateLimited);
     m.actions.undo_skipped(ActionKind::Unban);
     m.actions.observe_failed(|| vec![(ActionKind::Kick, 3)]);
 
     m.dms.outcome(DmKind::Case, DmOutcome::Sent, None);
-    m.dms
-        .outcome(DmKind::Appeal, DmOutcome::Failed, Some(Reason::DmsClosed));
+    m.dms.outcome(
+        DmKind::AppealUpdate,
+        DmOutcome::Failed,
+        Some(Reason::DmsClosed),
+    );
     m.dms.sent_in(DmKind::Case, 300 * MS);
 
     m.appeals.transition(AppealTransition::Submit);
@@ -74,11 +76,10 @@ fn exercise_moderation(m: &Metrics) {
 
     m.evidence.captured(Outcome::Done, 2, 4096);
     m.modlog
-        .entry(ModLogKind::new("case_created"), Outcome::Done);
+        .entry(ModLogKind::new("case_created"), ModLogResult::Ok);
     m.modlog.posted(Outcome::Failed);
-    m.messages
-        .synced(TrackedMessageKind::CaseReceipt, Outcome::Done);
-    m.messages.lag(TrackedMessageKind::AppealPost, 2 * MS);
+    m.messages.synced(MessageKind::CaseReceipt, Outcome::Done);
+    m.messages.lag(MessageKind::TicketPost, 2 * MS);
 
     m.tickets.opened();
     m.tickets.closed();
@@ -91,15 +92,17 @@ fn exercise_moderation(m: &Metrics) {
 }
 
 fn exercise_platform(m: &Metrics) {
-    m.jobs.enqueued(JobKind::CaseDm);
-    m.jobs.started(JobKind::CaseDm, 5 * MS);
+    m.jobs.enqueued(JobKind::SendDm);
+    m.jobs.started(JobKind::SendDm, 5 * MS);
     m.jobs
-        .finished(JobKind::CaseDm, JobOutcome::Retry, 250 * MS);
+        .finished(JobKind::SendDm, JobOutcome::Retry, 250 * MS);
+    m.jobs.lease_expired(JobKind::CloseTicket);
     m.jobs.observe_backlog(|| {
         vec![JobQueueSample {
             kind: JobKind::RunAction,
             ready: 7,
             oldest_ready_age: Duration::from_secs(3),
+            dead: 1,
         }]
     });
 

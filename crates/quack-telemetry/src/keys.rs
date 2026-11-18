@@ -20,6 +20,10 @@ pub const ACTOR_ID: &str = "quack.actor.id";
 pub const JOB_ID: &str = "quack.job.id";
 /// Job attempt number (1-based), on job spans only.
 pub const JOB_ATTEMPT: &str = "quack.job.attempt";
+/// A job's budget, on job spans only.
+pub const JOB_MAX_ATTEMPTS: &str = "quack.job.max_attempts";
+/// Discord interaction id, on interaction spans only.
+pub const INTERACTION_ID: &str = "quack.interaction.id";
 /// Seconds the job waited after it was ready, on job spans only.
 pub const JOB_QUEUE_WAIT: &str = "quack.job.queue_wait";
 /// Seconds spent waiting for a Discord rate limit, on Discord spans only.

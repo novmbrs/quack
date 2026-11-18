@@ -19,6 +19,7 @@ fn init_without_an_endpoint_exports_nothing_and_never_fails() {
         CommandName::new("help"),
         None,
         1,
+        2,
     );
     span.in_scope(|| {
         tracing::info!("logged to stderr only");

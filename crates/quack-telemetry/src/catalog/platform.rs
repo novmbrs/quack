@@ -19,7 +19,7 @@ spec!(JOBS_STARTED: Counter "quack.jobs.started", unit "{job}",
     "Job runs started (a job that retries starts more than once).");
 spec!(JOB_DURATION: Histogram "quack.job.duration", unit "s",
     [JobKind::KEY, JobOutcome::KEY],
-    "Time to run a job once; its count is finished runs, and `retry`/`dead` outcomes count retries and dead jobs.",
+    "Time to run a job once; its count is finished runs by outcome (`retry` and `dead` count retries and dead jobs).",
     buckets buckets::WORK);
 spec!(JOB_QUEUE_WAIT: Histogram "quack.job.queue.wait", unit "s",
     [JobKind::KEY],
@@ -31,6 +31,12 @@ spec!(JOBS_READY: Gauge "quack.jobs.ready", unit "{job}",
 spec!(JOBS_OLDEST_READY_AGE: Gauge "quack.jobs.oldest_ready.age", unit "s",
     [JobKind::KEY],
     "How long the oldest ready job has been waiting.");
+spec!(JOB_LEASE_EXPIRED: Counter "quack.job.lease_expired", unit "{job}",
+    [JobKind::KEY],
+    "Claimed jobs whose lease expired before their run settled them.");
+spec!(JOBS_DEAD: Gauge "quack.jobs.dead", unit "{job}",
+    [JobKind::KEY],
+    "Dead jobs kept for inspection (7 days).");
 
 // Discord REST.
 spec!(HTTP_CLIENT_REQUEST_DURATION: Histogram "http.client.request.duration", unit "s",

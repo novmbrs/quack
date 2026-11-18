@@ -97,3 +97,107 @@ fn metrics_doc_matches_the_catalog() {
         "METRICS.md is out of date; run UPDATE_METRICS_DOC=1 cargo test -p quack-telemetry metrics_doc"
     );
 }
+
+const DESIGN: &str = include_str!("../../../../docs/design.md");
+
+/// Span-only keys the design names; they never go on metrics.
+const SPAN_KEYS: &[&str] = &[
+    crate::keys::GUILD_ID,
+    crate::keys::ACTOR_ID,
+    crate::keys::INTERACTION_ID,
+    crate::keys::JOB_ID,
+    crate::keys::JOB_ATTEMPT,
+    crate::keys::JOB_MAX_ATTEMPTS,
+    crate::keys::JOB_QUEUE_WAIT,
+    "db.query.summary",
+];
+
+/// Every `quack.*`, `http.*`, `db.*`, and `process.*` name in backticks in
+/// the design.
+fn design_names() -> Vec<&'static str> {
+    let mut names = Vec::new();
+    for chunk in DESIGN.split('`').skip(1).step_by(2) {
+        let head = chunk.split(['{', '=', ' ']).next().unwrap_or_default();
+        if ["quack.", "http.", "db.", "process."]
+            .iter()
+            .any(|p| head.starts_with(p))
+            && head
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || "._*".contains(c))
+        {
+            names.push(head);
+        }
+    }
+    names
+}
+
+#[test]
+fn every_metric_name_in_the_design_is_in_the_catalog() {
+    let names = design_names();
+    assert!(names.len() > 50, "found only {names:?}");
+    for name in names {
+        let known = find(name).is_some()
+            || ATTRIBUTES.iter().any(|a| a.key == name)
+            || SPAN_KEYS.contains(&name)
+            || name
+                .strip_suffix('*')
+                .is_some_and(|prefix| INSTRUMENTS.iter().any(|s| s.name.starts_with(prefix)));
+        assert!(
+            known,
+            "the design names `{name}`, which the crate does not define"
+        );
+    }
+    for new in [
+        "quack.job.lease_expired",
+        "quack.jobs.dead",
+        "quack.actions.finished",
+        "quack.cases.refused",
+    ] {
+        assert!(find(new).is_some(), "{new}");
+    }
+}
+
+#[test]
+fn attribute_values_in_the_design_are_allowed() {
+    // `instrument{key="value"}` filters in the alert table and elsewhere.
+    for chunk in DESIGN.split('`').skip(1).step_by(2) {
+        let Some((_, filters)) = chunk.split_once('{') else {
+            continue;
+        };
+        for filter in filters.trim_end_matches('}').split(',') {
+            let Some((key, value)) = filter.split_once('=') else {
+                continue;
+            };
+            let value = value.trim_matches('"');
+            if let Some(attribute) = ATTRIBUTES.iter().find(|a| a.key == key)
+                && !attribute.values.is_empty()
+            {
+                assert!(
+                    attribute.values.contains(&value),
+                    "the design filters `{key}` on {value:?}, which is not one of {:?}",
+                    attribute.values
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn design_instrument_attributes_match_the_catalog() {
+    // `instrument{a,b}` attribute lists the design gives next to metrics.
+    for chunk in DESIGN.split('`').skip(1).step_by(2) {
+        let Some((name, rest)) = chunk.split_once('{') else {
+            continue;
+        };
+        let Some(spec) = find(name) else {
+            continue;
+        };
+        for key in rest.trim_end_matches('}').split(',') {
+            let key = key.split('=').next().unwrap_or_default();
+            assert!(
+                spec.attributes.contains(&key),
+                "the design records `{name}` with `{key}`, which the catalog does not allow"
+            );
+        }
+    }
+}

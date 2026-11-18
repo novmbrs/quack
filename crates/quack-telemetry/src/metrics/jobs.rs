@@ -8,7 +8,8 @@ use super::observe::{Source, counter, f64_gauge, histogram, u64_gauge};
 use crate::catalog;
 use crate::labels::{Attribute, JobKind, JobOutcome};
 
-/// The ready backlog of one job kind, sampled by the queue's owner.
+/// The backlog of one job kind, sampled by the gauge task with the claim's
+/// predicates.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct JobQueueSample {
     /// The job kind.
@@ -17,17 +18,22 @@ pub struct JobQueueSample {
     pub ready: u64,
     /// How long the oldest ready job has been waiting.
     pub oldest_ready_age: Duration,
+    /// Dead jobs kept for inspection.
+    pub dead: u64,
 }
 
-/// Job metrics: enqueued, started, finished, queue wait, and the backlog.
+/// Job metrics: enqueued, started, finished, queue wait, lease expiries,
+/// and the backlog.
 pub struct JobMetrics {
     enqueued: Counter<u64>,
     started: Counter<u64>,
     duration: Histogram<f64>,
     queue_wait: Histogram<f64>,
+    lease_expired: Counter<u64>,
     backlog: Source<Vec<JobQueueSample>>,
     _ready: ObservableGauge<u64>,
     _oldest: ObservableGauge<f64>,
+    _dead: ObservableGauge<u64>,
 }
 
 impl JobMetrics {
@@ -45,14 +51,22 @@ impl JobMetrics {
                 observer.observe(sample.oldest_ready_age.as_secs_f64(), &[sample.kind.kv()]);
             }
         });
+        let source = backlog.clone();
+        let dead = u64_gauge(meter, &catalog::JOBS_DEAD, move |observer| {
+            for sample in source.read().unwrap_or_default() {
+                observer.observe(sample.dead, &[sample.kind.kv()]);
+            }
+        });
         Self {
             enqueued: counter(meter, &catalog::JOBS_ENQUEUED),
             started: counter(meter, &catalog::JOBS_STARTED),
             duration: histogram(meter, &catalog::JOB_DURATION),
             queue_wait: histogram(meter, &catalog::JOB_QUEUE_WAIT),
+            lease_expired: counter(meter, &catalog::JOB_LEASE_EXPIRED),
             backlog,
             _ready: ready,
             _oldest: oldest,
+            _dead: dead,
         }
     }
 
@@ -75,7 +89,12 @@ impl JobMetrics {
             .record(duration.as_secs_f64(), &[kind.kv(), outcome.kv()]);
     }
 
-    /// Installs the supplier of the ready backlog per job kind. Kinds left
+    /// Counts a claimed job whose lease expired before its run settled it.
+    pub fn lease_expired(&self, kind: JobKind) {
+        self.lease_expired.add(1, &[kind.kv()]);
+    }
+
+    /// Installs the supplier of the ready and dead backlog per job kind. Kinds left
     /// out report nothing for that collection.
     pub fn observe_backlog(
         &self,

@@ -190,18 +190,49 @@ label_enum! {
 }
 
 label_enum! {
-    /// Where a case was created.
+    /// Where a case was created. The interaction kind stays on the
+    /// interaction instruments.
     CaseSource = "quack.case.source" {
-        /// `/case add`.
-        SlashCommand => "slash_command",
-        /// The "Add case" message command.
-        MessageCommand => "message_command",
-        /// The "Add case" user command.
-        UserCommand => "user_command",
+        /// `/case add` or an "Add case" command.
+        Discord => "discord",
         /// The dashboard.
         Dashboard => "dashboard",
-        /// A module, such as the honeypot.
-        Module => "module",
+        /// The honeypot module.
+        Honeypot => "honeypot",
+    }
+}
+
+label_enum! {
+    /// How one action attempt ended (`attempt_outcome`).
+    AttemptOutcome = "quack.action.attempt.outcome" {
+        /// Discord confirmed the change.
+        Done => "done",
+        /// The desired state already held, or an undo found Discord changed
+        /// outside the case.
+        NoChange => "no_change",
+        /// Discord definitely refused.
+        Refused => "refused",
+        /// Nothing reached Discord (a read failed, or a rate limit came
+        /// first).
+        NotSent => "not_sent",
+        /// The change call's result is unknown.
+        Unknown => "unknown",
+        /// The next run found the attempt still open.
+        Interrupted => "interrupted",
+    }
+}
+
+label_enum! {
+    /// The terminal state an action reached.
+    ActionState = "quack.action.state" {
+        /// Done (including no change).
+        Done => "done",
+        /// Failed.
+        Failed => "failed",
+        /// An original that will not run because its case was voided.
+        Cancelled => "cancelled",
+        /// An undo that left Discord unchanged.
+        Skipped => "skipped",
     }
 }
 
@@ -220,8 +251,10 @@ label_enum! {
     DmKind = "quack.dm.kind" {
         /// The one DM about a new case.
         Case => "case",
-        /// A DM about a staff decision on an appeal.
-        Appeal => "appeal",
+        /// A DM about a staff decision on an appeal, or Quack closing it.
+        AppealUpdate => "appeal_update",
+        /// The DM with a closed ticket's transcript.
+        TicketClosed => "ticket_closed",
     }
 }
 
@@ -260,16 +293,30 @@ label_enum! {
 }
 
 label_enum! {
-    /// A Discord message Quack keeps up to date.
-    TrackedMessageKind = "quack.message.kind" {
+    /// A Discord message Quack keeps up to date (`message_kind`).
+    MessageKind = "quack.message.kind" {
         /// The receipt posted for a case.
         CaseReceipt => "case_receipt",
         /// The staff post for an appeal.
         AppealPost => "appeal_post",
         /// A tickets panel.
         TicketPanel => "ticket_panel",
+        /// The staff post for a ticket.
+        TicketPost => "ticket_post",
         /// The honeypot channel warning.
         HoneypotWarning => "honeypot_warning",
+    }
+}
+
+label_enum! {
+    /// The result a moderation-log entry records (`mod_log_result`).
+    ModLogResult = "quack.modlog.result" {
+        /// It happened.
+        Ok => "ok",
+        /// Quack tried and it didn't work.
+        Failed => "failed",
+        /// Quack's access stopped it.
+        Refused => "refused",
     }
 }
 
@@ -278,20 +325,22 @@ label_enum! {
     JobKind = "quack.job.kind" {
         /// Carry out a case's action or an undo action.
         RunAction => "run_action",
-        /// Send the case DM.
-        CaseDm => "case_dm",
-        /// Send an appeal-decision DM.
-        AppealDm => "appeal_dm",
+        /// Send a DM (case, appeal update, or closed ticket).
+        SendDm => "send_dm",
         /// Bring a tracked Discord message up to date.
         SyncMessage => "sync_message",
         /// Post a moderation-log entry to the log channel.
-        PostLogEntry => "post_log_entry",
+        PostModLog => "post_mod_log",
         /// Save evidence for a case.
         CaptureEvidence => "capture_evidence",
+        /// Add a case for a member's honeypot posts.
+        HoneypotCase => "honeypot_case",
         /// Delete what a honeypot visitor posted.
         HoneypotCleanup => "honeypot_cleanup",
-        /// Save a ticket's transcript.
-        TicketTranscript => "ticket_transcript",
+        /// Create a ticket's thread and welcome the member.
+        OpenTicket => "open_ticket",
+        /// Freeze a ticket, save its transcript, and close it.
+        CloseTicket => "close_ticket",
         /// Expire sessions, drafts, and operation keys.
         Housekeeping => "housekeeping",
     }
@@ -302,10 +351,23 @@ label_enum! {
     JobOutcome = "quack.job.outcome" {
         /// The job finished.
         Done => "done",
-        /// The run failed and the job is scheduled again.
+        /// The run failed and the job is scheduled again (an attempt used).
         Retry => "retry",
+        /// The job waits without using an attempt (member busy, waiting
+        /// for a DM).
+        Deferred => "deferred",
+        /// Its time slice ended with work left; it continues at once.
+        Continued => "continued",
+        /// It is not due yet and runs again at a later time.
+        Rescheduled => "rescheduled",
+        /// Its budget was spent and its finalization settled it.
+        Finalized => "finalized",
         /// The run failed and the job will not run again.
         Dead => "dead",
+        /// The run's lease expired, so another worker owns the job now.
+        LostLease => "lost_lease",
+        /// The run exceeded its handler deadline.
+        TimedOut => "timed_out",
     }
 }
 
@@ -464,8 +526,10 @@ label_enum! {
         Seen => "seen",
         /// The module posted it to the log channel.
         Posted => "posted",
-        /// The module dropped it (not configured, filtered, or queue full).
+        /// The module dropped it (queue full, route gone).
         Dropped => "dropped",
+        /// Discord refused the post, or it ran out of tries.
+        Failed => "failed",
     }
 }
 
@@ -563,10 +627,80 @@ mod tests {
         assert_unique(Reason::VALUES);
         assert_unique(ActionKind::VALUES);
         assert_unique(JobKind::VALUES);
+        assert_unique(JobOutcome::VALUES);
+        assert_unique(AttemptOutcome::VALUES);
         assert_unique(HttpMethod::VALUES);
         for (kind, value) in JobKind::ALL.iter().zip(JobKind::VALUES) {
             assert_eq!(kind.as_str(), *value);
         }
+    }
+
+    #[test]
+    fn values_named_by_the_design() {
+        assert_eq!(
+            JobKind::VALUES,
+            [
+                "run_action",
+                "send_dm",
+                "sync_message",
+                "post_mod_log",
+                "capture_evidence",
+                "honeypot_case",
+                "honeypot_cleanup",
+                "open_ticket",
+                "close_ticket",
+                "housekeeping"
+            ]
+        );
+        assert_eq!(
+            JobOutcome::VALUES,
+            [
+                "done",
+                "retry",
+                "deferred",
+                "continued",
+                "rescheduled",
+                "finalized",
+                "dead",
+                "lost_lease",
+                "timed_out"
+            ]
+        );
+        assert_eq!(CaseSource::VALUES, ["discord", "dashboard", "honeypot"]);
+        assert_eq!(DmKind::VALUES, ["case", "appeal_update", "ticket_closed"]);
+        assert_eq!(
+            MessageKind::VALUES,
+            [
+                "case_receipt",
+                "appeal_post",
+                "ticket_panel",
+                "ticket_post",
+                "honeypot_warning"
+            ]
+        );
+        assert_eq!(
+            ActivityStage::VALUES,
+            ["seen", "posted", "dropped", "failed"]
+        );
+        assert_eq!(
+            AttemptOutcome::VALUES,
+            [
+                "done",
+                "no_change",
+                "refused",
+                "not_sent",
+                "unknown",
+                "interrupted"
+            ]
+        );
+        assert_eq!(ModLogResult::VALUES, ["ok", "failed", "refused"]);
+        assert_eq!(
+            ActionState::VALUES,
+            ["done", "failed", "cancelled", "skipped"]
+        );
+        assert_eq!(AttemptOutcome::KEY, "quack.action.attempt.outcome");
+        assert_eq!(ModLogResult::KEY, "quack.modlog.result");
+        assert_eq!(ActionState::KEY, "quack.action.state");
     }
 
     #[test]

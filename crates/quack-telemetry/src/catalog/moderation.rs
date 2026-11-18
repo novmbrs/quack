@@ -2,9 +2,9 @@
 
 use super::buckets;
 use crate::labels::{
-    ActionKind, ActivityEvent, ActivityStage, AppealTransition, Attribute, CaseSource, CommandName,
-    DmKind, DmOutcome, HoneypotOutcome, InteractionKind, InteractionOutcome, ModLogKind, Outcome,
-    Reason, TrackedMessageKind, VoidCause,
+    ActionKind, ActionState, ActivityEvent, ActivityStage, AppealTransition, AttemptOutcome,
+    Attribute, CaseSource, CommandName, DmKind, DmOutcome, HoneypotOutcome, InteractionKind,
+    InteractionOutcome, MessageKind, ModLogKind, ModLogResult, Outcome, Reason, VoidCause,
 };
 
 // Interactions.
@@ -24,6 +24,9 @@ spec!(INTERACTION_ERRORS: Counter "quack.interaction.errors", unit "{error}",
 spec!(CASES_CREATED: Counter "quack.cases.created", unit "{case}",
     [CaseSource::KEY, ActionKind::KEY],
     "Cases created, by where they came from and the level's action (`none` for a warning).");
+spec!(CASES_REFUSED: Counter "quack.cases.refused", unit "{refusal}",
+    [CaseSource::KEY, Reason::KEY],
+    "Case creations refused (member checks, capabilities, 2FA, Quack's access), by source and reason.");
 spec!(CASES_VOIDED: Counter "quack.cases.voided", unit "{case}",
     [VoidCause::KEY],
     "Cases voided, by cause.");
@@ -38,8 +41,11 @@ spec!(CASE_LEVEL: Histogram "quack.case.level", unit "{level}",
 
 // Actions.
 spec!(ACTION_ATTEMPTS: Counter "quack.action.attempts", unit "{attempt}",
-    [ActionKind::KEY, Outcome::KEY, Reason::KEY],
-    "Attempts to carry out an action, by outcome and failure reason.");
+    [ActionKind::KEY, AttemptOutcome::KEY, Reason::KEY],
+    "Attempts to carry out an action, by attempt outcome and failure reason.");
+spec!(ACTIONS_FINISHED: Counter "quack.actions.finished", unit "{action}",
+    [ActionKind::KEY, ActionState::KEY],
+    "Actions that reached a terminal state (or failed), by kind and state.");
 spec!(ACTION_COMPLETION_DURATION: Histogram "quack.action.completion.duration", unit "s",
     [ActionKind::KEY],
     "Time from case creation until its action is done, retries included.",
@@ -88,7 +94,7 @@ spec!(EVIDENCE_BYTES: Counter "quack.evidence.bytes", unit "By",
 
 // Moderation log.
 spec!(MODLOG_ENTRIES: Counter "quack.modlog.entries", unit "{entry}",
-    [ModLogKind::KEY, Outcome::KEY],
+    [ModLogKind::KEY, ModLogResult::KEY],
     "Moderation-log entries written, by entry kind and the result they record.");
 spec!(MODLOG_POSTS: Counter "quack.modlog.posts", unit "{post}",
     [Outcome::KEY],
@@ -96,10 +102,10 @@ spec!(MODLOG_POSTS: Counter "quack.modlog.posts", unit "{post}",
 
 // Tracked messages.
 spec!(MESSAGE_SYNCS: Counter "quack.message.syncs", unit "{sync}",
-    [TrackedMessageKind::KEY, Outcome::KEY],
+    [MessageKind::KEY, Outcome::KEY],
     "Runs that bring a tracked Discord message up to date, by outcome.");
 spec!(MESSAGE_SYNC_LAG: Histogram "quack.message.sync.lag", unit "s",
-    [TrackedMessageKind::KEY],
+    [MessageKind::KEY],
     "Time from a change to the tracked message showing it.",
     buckets buckets::LAG);
 
@@ -119,7 +125,7 @@ spec!(TICKET_TRANSCRIPT_SIZE: Histogram "quack.ticket.transcript.size", unit "By
     buckets buckets::BYTES);
 spec!(ACTIVITY_EVENTS: Counter "quack.activity_log.events", unit "{event}",
     [ActivityEvent::KEY, ActivityStage::KEY],
-    "Server activity log events seen, posted, and dropped, by event type.");
+    "Server activity log events seen, posted, dropped, and failed, by event type.");
 spec!(HONEYPOT_HITS: Counter "quack.honeypot.hits", unit "{hit}",
     [HoneypotOutcome::KEY],
     "Posts in a honeypot channel, by what Quack did.");

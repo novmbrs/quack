@@ -17,10 +17,12 @@ times (requests, job runs, interactions handled).
 | `quack.interaction.duration` | histogram | `s` | `quack.interaction.kind`, `quack.command`, `quack.interaction.outcome` | Total time handling an interaction, through the final reply; its count is interactions handled. |
 | `quack.interaction.errors` | counter | `{error}` | `quack.interaction.kind`, `quack.command`, `quack.reason` | Interactions that ended refused or failed, by reason. |
 | `quack.cases.created` | counter | `{case}` | `quack.case.source`, `quack.action.kind` | Cases created, by where they came from and the level's action (`none` for a warning). |
+| `quack.cases.refused` | counter | `{refusal}` | `quack.case.source`, `quack.reason` | Case creations refused (member checks, capabilities, 2FA, Quack's access), by source and reason. |
 | `quack.cases.voided` | counter | `{case}` | `quack.void.cause` | Cases voided, by cause. |
 | `quack.case.create.duration` | histogram | `s` | `quack.case.source` | Time to validate, count, choose the level, and commit a new case. |
 | `quack.case.level` | histogram | `{level}` | `quack.action.kind` | The escalation level number (1-based) chosen for each new case. |
-| `quack.action.attempts` | counter | `{attempt}` | `quack.action.kind`, `quack.outcome`, `quack.reason` | Attempts to carry out an action, by outcome and failure reason. |
+| `quack.action.attempts` | counter | `{attempt}` | `quack.action.kind`, `quack.action.attempt.outcome`, `quack.reason` | Attempts to carry out an action, by attempt outcome and failure reason. |
+| `quack.actions.finished` | counter | `{action}` | `quack.action.kind`, `quack.action.state` | Actions that reached a terminal state (or failed), by kind and state. |
 | `quack.action.completion.duration` | histogram | `s` | `quack.action.kind` | Time from case creation until its action is done, retries included. |
 | `quack.action.retries` | counter | `{retry}` | `quack.action.kind`, `quack.reason` | Action attempts scheduled again after a retryable failure. |
 | `quack.actions.failed` | gauge (observed) | `{action}` | `quack.action.kind` | Actions currently in the failed state, waiting for staff to retry or dismiss. |
@@ -33,16 +35,18 @@ times (requests, job runs, interactions handled).
 | `quack.evidence.captures` | counter | `{capture}` | `quack.outcome` | Evidence capture jobs, by outcome. |
 | `quack.evidence.files` | counter | `{file}` | — | Files copied to the evidence channel. |
 | `quack.evidence.bytes` | counter | `By` | — | Bytes copied to the evidence channel. |
-| `quack.modlog.entries` | counter | `{entry}` | `quack.modlog.kind`, `quack.outcome` | Moderation-log entries written, by entry kind and the result they record. |
+| `quack.modlog.entries` | counter | `{entry}` | `quack.modlog.kind`, `quack.modlog.result` | Moderation-log entries written, by entry kind and the result they record. |
 | `quack.modlog.posts` | counter | `{post}` | `quack.outcome` | Moderation-log entries posted to the log channel, by outcome. |
 | `quack.message.syncs` | counter | `{sync}` | `quack.message.kind`, `quack.outcome` | Runs that bring a tracked Discord message up to date, by outcome. |
 | `quack.message.sync.lag` | histogram | `s` | `quack.message.kind` | Time from a change to the tracked message showing it. |
 | `quack.jobs.enqueued` | counter | `{job}` | `quack.job.kind` | Jobs added to the queue. |
 | `quack.jobs.started` | counter | `{job}` | `quack.job.kind` | Job runs started (a job that retries starts more than once). |
-| `quack.job.duration` | histogram | `s` | `quack.job.kind`, `quack.job.outcome` | Time to run a job once; its count is finished runs, and `retry`/`dead` outcomes count retries and dead jobs. |
+| `quack.job.duration` | histogram | `s` | `quack.job.kind`, `quack.job.outcome` | Time to run a job once; its count is finished runs by outcome (`retry` and `dead` count retries and dead jobs). |
 | `quack.job.queue.wait` | histogram | `s` | `quack.job.kind` | Time a job was ready to run before a worker started it. |
+| `quack.job.lease_expired` | counter | `{job}` | `quack.job.kind` | Claimed jobs whose lease expired before their run settled them. |
 | `quack.jobs.ready` | gauge (observed) | `{job}` | `quack.job.kind` | Jobs ready to run now and not yet claimed. |
 | `quack.jobs.oldest_ready.age` | gauge (observed) | `s` | `quack.job.kind` | How long the oldest ready job has been waiting. |
+| `quack.jobs.dead` | gauge (observed) | `{job}` | `quack.job.kind` | Dead jobs kept for inspection (7 days). |
 | `http.client.request.duration` | histogram | `s` | `http.request.method`, `url.template`, `http.response.status_code`, `quack.discord.outcome` | Discord REST and OAuth calls (semconv); its count is requests by route, method, status, and outcome. |
 | `quack.discord.rate_limit.hits` | counter | `{hit}` | `url.template`, `quack.discord.rate_limit.scope` | Discord REST calls that had to wait for a rate limit, by route and scope. |
 | `quack.discord.rate_limit.wait` | histogram | `s` | `url.template`, `quack.discord.rate_limit.scope` | Time spent waiting for a Discord rate limit before a call. |
@@ -72,7 +76,7 @@ times (requests, job runs, interactions handled).
 | `quack.tickets.closed` | counter | `{ticket}` | — | Tickets closed. |
 | `quack.tickets.open` | gauge (observed) | `{ticket}` | — | Tickets currently open. |
 | `quack.ticket.transcript.size` | histogram | `By` | — | Size of each saved ticket transcript. |
-| `quack.activity_log.events` | counter | `{event}` | `quack.activity.event`, `quack.activity.stage` | Server activity log events seen, posted, and dropped, by event type. |
+| `quack.activity_log.events` | counter | `{event}` | `quack.activity.event`, `quack.activity.stage` | Server activity log events seen, posted, dropped, and failed, by event type. |
 | `quack.honeypot.hits` | counter | `{hit}` | `quack.honeypot.outcome` | Posts in a honeypot channel, by what Quack did. |
 | `quack.honeypot.cleanups` | counter | `{cleanup}` | `quack.outcome` | Honeypot cleanup runs, by outcome. |
 | `quack.runtime.workers` | gauge (observed) | `{thread}` | — | Tokio worker threads. |
@@ -122,15 +126,18 @@ times (requests, job runs, interactions handled).
 | `quack.outcome` | `done`, `failed`, `unknown`, `skipped` | Terminal outcome of the work. |
 | `quack.reason` | `missing_permission`, `role_hierarchy`, `member_is_owner`, `member_not_found`, `dms_closed`, `no_shared_server`, `not_allowed`, `invalid`, `conflict`, `rate_limited`, `timeout`, `discord`, `database`, `retries_exhausted`, `internal` | Why it failed or was refused; absent on success. |
 | `quack.action.kind` | `timeout`, `kick`, `ban`, `remove_timeout`, `unban`, `none` | Action kind. |
-| `quack.case.source` | `slash_command`, `message_command`, `user_command`, `dashboard`, `module` | Where the case was created. |
+| `quack.action.attempt.outcome` | `done`, `no_change`, `refused`, `not_sent`, `unknown`, `interrupted` | How one action attempt ended. |
+| `quack.action.state` | `done`, `failed`, `cancelled`, `skipped` | The state an action finished in. |
+| `quack.case.source` | `discord`, `dashboard`, `honeypot` | Where the case was created. |
 | `quack.void.cause` | `staff`, `appeal_accepted` | Why the case was voided. |
-| `quack.dm.kind` | `case`, `appeal` | What the DM is about. |
+| `quack.dm.kind` | `case`, `appeal_update`, `ticket_closed` | What the DM is about. |
 | `quack.dm.outcome` | `sent`, `failed`, `unknown`, `not_needed` | Terminal state of the DM. |
 | `quack.appeal.transition` | `submit`, `accept`, `reject`, `request_info`, `reply`, `close`, `reopen` | Appeal change. |
 | `quack.modlog.kind` | static names chosen in code | Moderation-log entry kind. |
-| `quack.message.kind` | `case_receipt`, `appeal_post`, `ticket_panel`, `honeypot_warning` | Tracked Discord message kind. |
-| `quack.job.kind` | `run_action`, `case_dm`, `appeal_dm`, `sync_message`, `post_log_entry`, `capture_evidence`, `honeypot_cleanup`, `ticket_transcript`, `housekeeping` | Background job kind. |
-| `quack.job.outcome` | `done`, `retry`, `dead` | How one job run ended. |
+| `quack.modlog.result` | `ok`, `failed`, `refused` | The result a moderation-log entry records. |
+| `quack.message.kind` | `case_receipt`, `appeal_post`, `ticket_panel`, `ticket_post`, `honeypot_warning` | Tracked Discord message kind. |
+| `quack.job.kind` | `run_action`, `send_dm`, `sync_message`, `post_mod_log`, `capture_evidence`, `honeypot_case`, `honeypot_cleanup`, `open_ticket`, `close_ticket`, `housekeeping` | Background job kind. |
+| `quack.job.outcome` | `done`, `retry`, `deferred`, `continued`, `rescheduled`, `finalized`, `dead`, `lost_lease`, `timed_out` | How one job run ended. |
 | `http.request.method` | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `_OTHER` | HTTP method (semconv). |
 | `http.route` | static names chosen in code | API route template (semconv). |
 | `url.template` | static names chosen in code | Discord REST route template (semconv). |
@@ -152,7 +159,7 @@ times (requests, job runs, interactions handled).
 | `quack.cache.result` | `hit`, `miss` | Cache lookup result. |
 | `quack.queue.name` | static names chosen in code | Bounded in-memory queue. |
 | `quack.activity.event` | static names chosen in code | Server activity log event type. |
-| `quack.activity.stage` | `seen`, `posted`, `dropped` | How far the event got. |
+| `quack.activity.stage` | `seen`, `posted`, `dropped`, `failed` | How far the event got. |
 | `quack.honeypot.outcome` | `actioned`, `exempt`, `failed` | What Quack did about a honeypot post. |
 | `cpu.mode` | `user`, `system` | CPU mode (semconv). |
 | `service.version` | static names chosen in code | The running Quack version (semconv). |

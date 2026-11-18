@@ -73,11 +73,12 @@ fn shutdown_flushes_traces_metrics_and_logs() {
         CommandName::new("Add case"),
         Some(1),
         2,
+        3,
     );
     span.in_scope(|| {
         tracing::info!("case saved");
         metrics().cases.created(
-            CaseSource::MessageCommand,
+            CaseSource::Discord,
             Some(ActionKind::Kick),
             3,
             Duration::from_millis(12),

@@ -78,6 +78,7 @@ fn interaction_span_has_name_kind_attributes_and_events() {
             CommandName::new("case add"),
             Some(1_234_567_890_123_456_789),
             42,
+            1_300_000_000_000_000_001,
         );
         event(&span, SpanEvent::Acked, vec![]);
         record(&span, InteractionOutcome::Done);
@@ -86,6 +87,7 @@ fn interaction_span_has_name_kind_attributes_and_events() {
             SpanEvent::CaseCreated,
             vec![KeyValue::new("quack.case.number", 12)],
         );
+        event(&span, SpanEvent::Refused, vec![]);
     });
 
     let span = harness.span("interaction slash_command case add");
@@ -96,6 +98,11 @@ fn interaction_span_has_name_kind_attributes_and_events() {
     );
     assert_eq!(attribute(&span, "quack.actor.id"), Some(Value::from("42")));
     assert_eq!(
+        attribute(&span, "quack.interaction.id"),
+        Some(Value::from("1300000000000000001"))
+    );
+    assert_eq!(span.parent_span_id, SpanId::INVALID);
+    assert_eq!(
         attribute(&span, "quack.command"),
         Some(Value::from("case add"))
     );
@@ -104,7 +111,7 @@ fn interaction_span_has_name_kind_attributes_and_events() {
         Some(Value::from("done"))
     );
     let events: Vec<_> = span.events.events.iter().map(|e| e.name.as_ref()).collect();
-    assert_eq!(events, ["acked", "case.created"]);
+    assert_eq!(events, ["acked", "case.created", "refused"]);
 }
 
 #[test]
@@ -116,6 +123,7 @@ fn child_spans_nest_under_their_parent() {
             CommandName::new("case view"),
             None,
             1,
+            2,
         );
         let _entered = parent.enter();
         let query = db(DbOperation::Select, DbCollection::new("cases"));
@@ -129,8 +137,8 @@ fn child_spans_nest_under_their_parent() {
     });
 
     let parent = harness.span("interaction component case view");
-    let query = harness.span("db SELECT cases");
-    let call = harness.span("discord PUT /guilds/{guild.id}/bans/{user.id}");
+    let query = harness.span("SELECT cases");
+    let call = harness.span("PUT /guilds/{guild.id}/bans/{user.id}");
     for child in [&query, &call] {
         assert_eq!(child.parent_span_id, parent.span_context.span_id());
         assert_eq!(
@@ -166,17 +174,19 @@ fn job_span_starts_a_new_trace_linked_to_the_enqueuer() {
             let _entered = enqueuer.enter();
             current_trace_context().unwrap()
         };
-        let run = job(
-            JobKind::RunAction,
-            "0190d0c4-0000-7000-8000-000000000000",
-            2,
-            Duration::from_millis(1500),
-            Some(&stored),
-        );
+        let run = job(&JobRun {
+            kind: JobKind::RunAction,
+            job_id: "0190d0c4-0000-7000-8000-000000000000",
+            attempt: 2,
+            max_attempts: 8,
+            queue_wait: Duration::from_millis(1500),
+            guild_id: Some(99),
+            enqueued_by: Some(&stored),
+        });
         drop(run);
     });
 
-    let enqueuer = harness.span("http POST /api/guilds/{guild_id}/cases");
+    let enqueuer = harness.span("POST /api/guilds/{guild_id}/cases");
     let run = harness.span("job run_action");
     assert_eq!(run.span_kind, SpanKind::Consumer);
     assert_eq!(run.parent_span_id, SpanId::INVALID);
@@ -192,6 +202,11 @@ fn job_span_starts_a_new_trace_linked_to_the_enqueuer() {
     assert_eq!(link.span_context.span_id(), enqueuer.span_context.span_id());
     assert_eq!(attribute(&run, "quack.job.attempt"), Some(Value::I64(2)));
     assert_eq!(
+        attribute(&run, "quack.job.max_attempts"),
+        Some(Value::I64(8))
+    );
+    assert_eq!(attribute(&run, "quack.guild.id"), Some(Value::from("99")));
+    assert_eq!(
         attribute(&run, "quack.job.queue_wait"),
         Some(Value::F64(1.5))
     );
@@ -201,15 +216,72 @@ fn job_span_starts_a_new_trace_linked_to_the_enqueuer() {
 fn job_span_ignores_a_malformed_stored_context() {
     let harness = Harness::new();
     harness.run(|| {
-        drop(job(
-            JobKind::Housekeeping,
-            7,
-            1,
-            Duration::ZERO,
-            Some("garbage"),
-        ));
+        drop(job(&JobRun {
+            kind: JobKind::Housekeeping,
+            job_id: 7,
+            attempt: 1,
+            max_attempts: 1,
+            queue_wait: Duration::ZERO,
+            guild_id: None,
+            enqueued_by: Some("garbage"),
+        }));
     });
-    assert_eq!(harness.span("job housekeeping").links.links.len(), 0);
+    let run = harness.span("job housekeeping");
+    assert_eq!(run.links.links.len(), 0);
+    assert_eq!(attribute(&run, "quack.guild.id"), None);
+}
+
+#[test]
+fn use_case_spans_nest_and_carry_domain_events() {
+    let harness = Harness::new();
+    harness.run(|| {
+        let root = http(
+            HttpMethod::Post,
+            HttpRoute::new("/api/guilds/{guild_id}/cases/{case_ref}/void"),
+        );
+        let _entered = root.enter();
+        let span = use_case("void_case", Some(5));
+        event(
+            &span,
+            SpanEvent::CaseVoided,
+            vec![KeyValue::new("cause", "staff")],
+        );
+        event(
+            &span,
+            SpanEvent::ModLogEntry,
+            vec![KeyValue::new("kind", "case_voided")],
+        );
+        drop(span);
+    });
+    let root = harness.span("POST /api/guilds/{guild_id}/cases/{case_ref}/void");
+    assert_eq!(root.span_kind, SpanKind::Server);
+    let span = harness.span("use_case void_case");
+    assert_eq!(span.span_kind, SpanKind::Internal);
+    assert_eq!(span.parent_span_id, root.span_context.span_id());
+    assert_eq!(attribute(&span, "quack.guild.id"), Some(Value::from("5")));
+    let events: Vec<_> = span.events.events.iter().map(|e| e.name.as_ref()).collect();
+    assert_eq!(events, ["case.voided", "mod_log.entry"]);
+}
+
+#[test]
+fn span_event_names() {
+    let all = [
+        (SpanEvent::Acked, "acked"),
+        (SpanEvent::Replied, "replied"),
+        (SpanEvent::Refused, "refused"),
+        (SpanEvent::CaseCreated, "case.created"),
+        (SpanEvent::CaseVoided, "case.voided"),
+        (SpanEvent::ActionAttempt, "action.attempt"),
+        (SpanEvent::DmOutcome, "dm.outcome"),
+        (SpanEvent::AppealTransition, "appeal.transition"),
+        (SpanEvent::EvidenceCaptured, "evidence.captured"),
+        (SpanEvent::MessageSynced, "message.synced"),
+        (SpanEvent::ModLogEntry, "mod_log.entry"),
+        (SpanEvent::RateLimited, "rate_limited"),
+    ];
+    for (event, name) in all {
+        assert_eq!(event.as_str(), name);
+    }
 }
 
 #[test]

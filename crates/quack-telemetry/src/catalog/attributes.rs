@@ -3,12 +3,13 @@
 use super::AttributeSpec;
 use crate::keys;
 use crate::labels::{
-    ActionKind, ActivityEvent, ActivityStage, AppealTransition, Attribute, CacheName, CacheResult,
-    CaseSource, CommandName, ConnectionState, CpuMode, DbCollection, DbErrorClass, DbOperation,
-    DmKind, DmOutcome, GatewayConnectionEvent, GatewayEvent, HoneypotOutcome, HttpMethod,
-    HttpRoute, InteractionKind, InteractionOutcome, JobKind, JobOutcome, ModLogKind, Outcome,
-    PoolName, QueueName, RateLimitClass, RateLimitScope, Reason, RestOutcome, SignInOutcome,
-    TrackedMessageKind, TransactionOutcome, UrlTemplate, VoidCause,
+    ActionKind, ActionState, ActivityEvent, ActivityStage, AppealTransition, AttemptOutcome,
+    Attribute, CacheName, CacheResult, CaseSource, CommandName, ConnectionState, CpuMode,
+    DbCollection, DbErrorClass, DbOperation, DmKind, DmOutcome, GatewayConnectionEvent,
+    GatewayEvent, HoneypotOutcome, HttpMethod, HttpRoute, InteractionKind, InteractionOutcome,
+    JobKind, JobOutcome, MessageKind, ModLogKind, ModLogResult, Outcome, PoolName, QueueName,
+    RateLimitClass, RateLimitScope, Reason, RestOutcome, SignInOutcome, TransactionOutcome,
+    UrlTemplate, VoidCause,
 };
 
 /// Values `quack.action.kind` takes: the action kinds, plus `none` on
@@ -40,6 +41,16 @@ pub static ATTRIBUTES: &[AttributeSpec] = &[
     ),
     attr(ActionKind::KEY, ACTION_KIND_VALUES, "Action kind."),
     attr(
+        AttemptOutcome::KEY,
+        AttemptOutcome::VALUES,
+        "How one action attempt ended.",
+    ),
+    attr(
+        ActionState::KEY,
+        ActionState::VALUES,
+        "The state an action finished in.",
+    ),
+    attr(
         CaseSource::KEY,
         CaseSource::VALUES,
         "Where the case was created.",
@@ -62,8 +73,13 @@ pub static ATTRIBUTES: &[AttributeSpec] = &[
     ),
     attr(ModLogKind::KEY, &[], "Moderation-log entry kind."),
     attr(
-        TrackedMessageKind::KEY,
-        TrackedMessageKind::VALUES,
+        ModLogResult::KEY,
+        ModLogResult::VALUES,
+        "The result a moderation-log entry records.",
+    ),
+    attr(
+        MessageKind::KEY,
+        MessageKind::VALUES,
         "Tracked Discord message kind.",
     ),
     attr(JobKind::KEY, JobKind::VALUES, "Background job kind."),

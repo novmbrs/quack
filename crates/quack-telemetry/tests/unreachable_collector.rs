@@ -21,9 +21,10 @@ async fn an_unreachable_collector_does_not_block_or_crash() {
             CommandName::new("case view"),
             Some(1),
             2,
+            3,
         );
         span.in_scope(|| tracing::info!("handled"));
-        metrics().jobs.enqueued(JobKind::CaseDm);
+        metrics().jobs.enqueued(JobKind::SendDm);
     }
     assert!(
         started.elapsed() < Duration::from_secs(2),
