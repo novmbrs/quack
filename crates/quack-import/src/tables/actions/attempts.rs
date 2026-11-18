@@ -15,9 +15,11 @@ use crate::guild::Ctx;
 use crate::source::Cols;
 use crate::target::guarded;
 
-/// One attempt as read.
+/// One attempt as read. An attempt with an invalid number isn't written
+/// (`number` is `None`) but still counts when deciding whether the action
+/// may have applied.
 pub(super) struct Attempt {
-    pub(super) number: i32,
+    pub(super) number: Option<i32>,
     pub(super) outcome: AttemptOutcome,
     pub(super) started_at: OffsetDateTime,
     pub(super) finished_at: OffsetDateTime,
@@ -47,13 +49,16 @@ pub(super) async fn attempts_of(
         let c = Cols::new(row, "case_action_attempts", "id");
         let key = cx.key(c.key());
         let number = i32::from(u8::try_from(c.unsigned("attempt_number")?).unwrap_or(0));
-        if number < 1 {
+        let number = if number < 1 {
             cx.f.skip("case_action_attempts", "invalid_attempt_number", &key);
-            continue;
-        }
+            None
+        } else {
+            Some(number)
+        };
         let status = c.text("status")?;
         let response = c.json("response_payload_json")?;
-        let outcome = state::attempt_outcome(&status, &c.text("error_code")?, &response);
+        let open = c.opt_time("finished_at")?.is_none();
+        let outcome = state::attempt_outcome(&status, &c.text("error_code")?, &response, open);
         let started_at = c.time("started_at")?;
         let finished_at = match c.opt_time("finished_at")? {
             Some(at) if at < started_at => {
@@ -85,13 +90,14 @@ pub(super) async fn write_attempts(
     attempts: &[Attempt],
 ) -> Result<(), ImportError> {
     for a in attempts {
+        let Some(number) = a.number else { continue };
         let q = sqlx::query(
             "INSERT INTO action_attempts (guild_id, action_id, number, started_at, finished_at, outcome)
              VALUES ($1, $2, $3, $4, $5, $6::attempt_outcome)",
         )
         .bind(cx.g.id)
         .bind(id)
-        .bind(a.number)
+        .bind(number)
         .bind(a.started_at)
         .bind(a.finished_at)
         .bind(a.outcome.as_str());
@@ -99,7 +105,7 @@ pub(super) async fn write_attempts(
             &mut cx.tx,
             &mut cx.f,
             "action_attempts",
-            &format!("{key}:{}", a.number),
+            &format!("{key}:{number}"),
             q,
         )
         .await?;

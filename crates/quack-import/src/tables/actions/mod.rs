@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use quack_core::action::{ActionKind, AttemptOutcome};
 use quack_core::ids::ActionId;
+use quack_core::limits;
 use quack_db::jobs::NewJob;
 use serde_json::Value;
 use time::OffsetDateTime;
@@ -137,12 +138,8 @@ fn place(
     };
     let skip_all = |cx: &mut Ctx<'_>, why: &str| {
         cx.f.skip("case_action_executions", why, key);
-        for a in attempts {
-            cx.f.skip(
-                "case_action_attempts",
-                reason,
-                format!("{key}:{}", a.number),
-            );
+        for a in attempts.iter().filter_map(|a| a.number) {
+            cx.f.skip("case_action_attempts", reason, format!("{key}:{a}"));
         }
     };
     if action_type == "send_dm" {
@@ -351,10 +348,43 @@ fn timeout_end(
         }
         cx.f.derived("derived_timeout_end", key);
     }
-    let Some(duration) = duration else {
+    let Some(end) = end_after(case_created, duration) else {
         cx.f.derived("timeout_without_duration", key);
         return case_created.replace_nanosecond(0).unwrap_or(case_created);
     };
-    let end = case_created + time::Duration::seconds(duration);
     end.replace_nanosecond(0).unwrap_or(end)
+}
+
+/// `created + duration` when the duration is within Discord's timeout
+/// bounds. Otherwise `None`: there is no safe end, and the caller uses the
+/// case's creation (already past), so it can't time anyone out.
+fn end_after(created: OffsetDateTime, duration: Option<i64>) -> Option<OffsetDateTime> {
+    let bounds = i64::from(limits::MIN_TIMEOUT_SECONDS)..=i64::from(limits::MAX_TIMEOUT_SECONDS);
+    duration
+        .filter(|d| bounds.contains(d))
+        .and_then(|d| created.checked_add(time::Duration::seconds(d)))
+}
+
+#[cfg(test)]
+mod tests {
+    use time::macros::datetime;
+
+    #[test]
+    fn an_out_of_range_timeout_duration_has_no_end_and_never_panics() {
+        let created = datetime!(2025-01-01 00:00 UTC);
+        assert_eq!(
+            super::end_after(created, Some(60)),
+            Some(datetime!(2025-01-01 00:01 UTC))
+        );
+        for bad in [
+            None,
+            Some(0),
+            Some(-5),
+            Some(2_419_201),
+            Some(i64::MAX),
+            Some(i64::MIN),
+        ] {
+            assert_eq!(super::end_after(created, bad), None, "{bad:?}");
+        }
+    }
 }

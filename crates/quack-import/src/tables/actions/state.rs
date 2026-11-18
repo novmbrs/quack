@@ -7,28 +7,51 @@ use serde_json::Value;
 
 use crate::convert::has_class;
 
-/// An attempt's outcome from its Go status, error code, and response.
-pub(crate) fn attempt_outcome(status: &str, code: &str, response: &Value) -> AttemptOutcome {
+/// Go error classes that show Discord (or Quack, before calling it)
+/// definitely refused an attempt. Anything else that failed is `unknown`.
+const REFUSED: [&str; 11] = [
+    "permission_or_hierarchy_denied",
+    "permission_denied",
+    "unknown_member_or_resource",
+    "validation_failed",
+    "discord_failure",
+    "invalid_action_config",
+    "unsupported_action",
+    "guild_not_found",
+    "reversal_authorization_unavailable",
+    "reversal_permission_denied",
+    "reversal_ownership_conflict",
+];
+
+/// Go error classes of an attempt that never reached Discord.
+const NOT_SENT: [&str; 5] = [
+    "rate_limited",
+    "discord_unavailable",
+    "guild_lookup_failed",
+    "reversal_provenance_unavailable",
+    "case_voided",
+];
+
+/// An attempt's outcome from its Go status, error code, and response. An
+/// attempt that never finished (`open`) may have applied unless it
+/// succeeded; a failure counts as unsent or refused only for a known code
+/// that shows it (an allowlist), so an unrecognized one is `unknown`.
+pub(crate) fn attempt_outcome(
+    status: &str,
+    code: &str,
+    response: &Value,
+    open: bool,
+) -> AttemptOutcome {
+    let any = |classes: &[&str]| classes.iter().any(|c| has_class(code, c));
     match status {
         "succeeded" if response.get("reversal_noop").and_then(Value::as_bool) == Some(true) => {
             AttemptOutcome::NoChange
         }
         "succeeded" => AttemptOutcome::Done,
-        "failed" if has_class(code, "rate_limited") => AttemptOutcome::NotSent,
-        "failed"
-            if [
-                "network_error",
-                "discord_server_error",
-                "context_cancelled",
-                "discord_error",
-            ]
-            .iter()
-            .any(|c| has_class(code, c)) =>
-        {
-            AttemptOutcome::Unknown
-        }
+        _ if open => AttemptOutcome::Interrupted,
+        "failed" if any(&NOT_SENT) => AttemptOutcome::NotSent,
+        "failed" if any(&REFUSED) => AttemptOutcome::Refused,
         "failed" if code == "lease_expired" => AttemptOutcome::Interrupted,
-        "failed" => AttemptOutcome::Refused,
         // `running` never finished: the process died mid-attempt.
         "running" => AttemptOutcome::Interrupted,
         _ => AttemptOutcome::Unknown,
@@ -205,6 +228,43 @@ mod tests {
             attempts,
             no_change: false,
         }
+    }
+
+    fn attempt_outcome(status: &str, code: &str, response: &Value) -> A {
+        super::attempt_outcome(status, code, response, false)
+    }
+
+    #[test]
+    fn uncertain_attempts_are_never_read_as_safe() {
+        let none = json!({});
+        // An open attempt may have applied, whatever its status says.
+        assert_eq!(
+            super::attempt_outcome("failed", "ban_rate_limited", &none, true),
+            A::Interrupted
+        );
+        assert_eq!(
+            super::attempt_outcome("failed", "", &none, true),
+            A::Interrupted
+        );
+        assert_eq!(
+            super::attempt_outcome("succeeded", "", &none, true),
+            A::Done
+        );
+        // A failure with no code or an unrecognized one is unknown, not a
+        // refusal: a pending execution after it isn't resumed.
+        assert_eq!(attempt_outcome("failed", "", &none), A::Unknown);
+        assert_eq!(
+            attempt_outcome("failed", "ban_something_new", &none),
+            A::Unknown
+        );
+        let unknown = [attempt_outcome("failed", "", &none)];
+        assert_eq!(
+            state(&facts("retrying", "", &unknown)).0,
+            State::Failed {
+                reason: ActionFailure::Unconfirmed,
+                http: None
+            }
+        );
     }
 
     #[test]

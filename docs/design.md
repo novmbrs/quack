@@ -8012,3 +8012,15 @@ folds these into the sections (or changes the code) and removes them here.
     own (a terminal close such as 4014) also runs the shutdown sequence
     and exits 1, so a supervisor starts a working process instead of one
     that is live but never ready.
+46. §19.7, §19.9 (application review BLOCKER 3, MAJOR 14) → whether an
+    execution may have applied is decided from **every** source attempt
+    before any is filtered: an attempt with no `finished_at` is
+    `interrupted` unless it succeeded, an attempt with an invalid number
+    is not written but still counts, and a failed attempt is `not_sent`
+    or `refused` only for a known Go error class that shows it (an
+    allowlist); a missing or unrecognized code is `unknown`. So a
+    `pending`/`retrying` execution after such an attempt imports as
+    `failed` (`unconfirmed`) with no `run_action` job. A timeout duration
+    outside 1 second to 28 days has no safe end: the case's creation is
+    used and `timeout_without_duration` is reported (the importer never
+    panics on it).
