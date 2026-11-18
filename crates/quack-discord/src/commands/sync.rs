@@ -95,6 +95,29 @@ pub fn canonical(value: &Value) -> Value {
     }
 }
 
+/// A top-level definition in the shape Discord's overwrite route for
+/// `scope` documents: a guild command has no `contexts` or
+/// `integration_types` (they are global-only), and a User or Message
+/// command has no `description` (Discord echoes it back empty). Applied to
+/// both what Quack sends and what Discord returns, so they compare equal.
+pub fn for_scope(value: &Value, scope: Scope) -> Value {
+    let mut value = canonical(value);
+    if let Value::Object(map) = &mut value {
+        if matches!(scope, Scope::Guild(_)) {
+            map.remove("contexts");
+            map.remove("integration_types");
+        }
+        if map
+            .get("type")
+            .and_then(Value::as_u64)
+            .is_some_and(|t| matches!(t, 2 | 3))
+        {
+            map.remove("description");
+        }
+    }
+    value
+}
+
 fn sort_key(v: &Value) -> (u64, String) {
     (
         v.get("type").and_then(Value::as_u64).unwrap_or(1),
@@ -105,16 +128,19 @@ fn sort_key(v: &Value) -> (u64, String) {
     )
 }
 
-fn canonical_set(values: impl Iterator<Item = Value>) -> Vec<Value> {
-    let mut list: Vec<Value> = values.map(|v| canonical(&v)).collect();
+fn canonical_set(values: impl Iterator<Item = Value>, scope: Scope) -> Vec<Value> {
+    let mut list: Vec<Value> = values.map(|v| for_scope(&v, scope)).collect();
     list.sort_by_key(sort_key);
     list
 }
 
 /// Whether the registered commands already match the definitions.
-pub(crate) fn matches(local: &[Command], remote: &[RegisteredCommand]) -> bool {
-    let local = canonical_set(local.iter().filter_map(|c| serde_json::to_value(c).ok()));
-    let remote = canonical_set(remote.iter().map(|r| r.definition.clone()));
+pub(crate) fn matches(local: &[Command], remote: &[RegisteredCommand], scope: Scope) -> bool {
+    let local = canonical_set(
+        local.iter().filter_map(|c| serde_json::to_value(c).ok()),
+        scope,
+    );
+    let remote = canonical_set(remote.iter().map(|r| r.definition.clone()), scope);
     local == remote
 }
 
@@ -165,7 +191,7 @@ pub async fn sync(
         Outcome::Done(remote) => remote,
         other => return Err(SyncError::List(failure(&other))),
     };
-    if matches(definitions, &remote) {
+    if matches(definitions, &remote, scope) {
         return Ok(SyncReport {
             changed: false,
             ids: command_ids(&remote),
@@ -176,7 +202,7 @@ pub async fn sync(
     let body: Vec<Value> = definitions
         .iter()
         .filter_map(|c| serde_json::to_value(c).ok())
-        .map(|c| canonical(&c))
+        .map(|c| for_scope(&c, scope))
         .collect();
     match client.overwrite_commands(scope.guild(), &body).await {
         Outcome::Done(registered) => {

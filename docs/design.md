@@ -7964,3 +7964,9 @@ folds these into the sections (or changes the code) and removes them here.
     v4_source_id}`; the honeypot page's `eligible_rules` carry each rule's
     `levels`, so an administrator without rule access can preview the
     warning.
+39. §11.2 (Discord review MAJORs 6, 7) → command definitions are shaped per
+    route before they are compared or sent: a guild overwrite (the
+    development server) leaves out the global-only `contexts` and
+    `integration_types`, and the User and Message "Add case" commands leave
+    out `description`. A modal's selects are sent without `disabled`, which
+    Discord forbids in modals.

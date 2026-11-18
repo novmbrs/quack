@@ -20,7 +20,7 @@ use twilight_util::builder::command::{
     BooleanBuilder, CommandBuilder, IntegerBuilder, StringBuilder, SubCommandBuilder, UserBuilder,
 };
 
-pub use sync::{Scope, SyncError, SyncReport, canonical, command_ids, sync};
+pub use sync::{Scope, SyncError, SyncReport, canonical, command_ids, for_scope, sync};
 
 /// The most characters a `rule` option accepts (§11.1).
 const RULE_OPTION_MAX: u16 = 100;

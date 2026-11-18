@@ -114,10 +114,10 @@ fn every_command_is_guild_only_and_only_setup_needs_a_permission() {
 fn discords_echo_of_the_definitions_matches() {
     let local = definitions();
     let mut remote = remote();
-    assert!(matches(&local, &registered(&remote)));
+    assert!(matches(&local, &registered(&remote), Scope::Global));
     // Order of commands doesn't matter; option order does.
     remote.reverse();
-    assert!(matches(&local, &registered(&remote)));
+    assert!(matches(&local, &registered(&remote), Scope::Global));
     let mut reordered = remote.clone();
     let options = reordered
         .iter_mut()
@@ -125,7 +125,7 @@ fn discords_echo_of_the_definitions_matches() {
         .and_then(|c| c["options"].as_array_mut())
         .unwrap();
     options.swap(0, 1);
-    assert!(!matches(&local, &registered(&reordered)));
+    assert!(!matches(&local, &registered(&reordered), Scope::Global));
 }
 
 #[test]
@@ -133,16 +133,16 @@ fn any_difference_or_go_era_command_needs_an_overwrite() {
     let local = definitions();
     let mut changed = remote();
     changed[1]["description"] = json!("Old wording.");
-    assert!(!matches(&local, &registered(&changed)));
+    assert!(!matches(&local, &registered(&changed), Scope::Global));
     let mut extra = remote();
     extra.push(as_discord_returns(
         &json!({"name": "template", "description": "Go-era", "type": 1}),
         999,
     ));
-    assert!(!matches(&local, &registered(&extra)));
+    assert!(!matches(&local, &registered(&extra), Scope::Global));
     let mut missing = remote();
     missing.pop();
-    assert!(!matches(&local, &registered(&missing)));
+    assert!(!matches(&local, &registered(&missing), Scope::Global));
 }
 
 #[test]
@@ -171,7 +171,10 @@ async fn sync_keeps_equal_commands_and_overwrites_changed_ones() {
             when.method("PUT")
                 .path("/api/v10/applications/42/commands")
                 .json_body(json!(
-                    local_json().iter().map(canonical).collect::<Vec<_>>()
+                    local_json()
+                        .iter()
+                        .map(|c| for_scope(c, Scope::Global))
+                        .collect::<Vec<_>>()
                 ));
             then.status(200).json_body(json!(remote()));
         })
@@ -217,4 +220,36 @@ async fn sync_failures_are_errors() {
         .await
         .unwrap_err();
     assert!(matches!(error, SyncError::List(ref why) if why.contains("http_401")));
+}
+
+/// Discord review MAJOR 7: the overwrite body follows each route's schema.
+/// A guild overwrite carries no `contexts` or `integration_types`, and the
+/// two Add case context-menu commands carry no `description`; Discord's
+/// echo (an empty description) still compares equal.
+#[test]
+fn the_overwrite_body_follows_the_scope_and_command_type() {
+    let guild = Scope::Guild(GuildId::new(7).unwrap());
+    for c in local_json() {
+        let global = for_scope(&c, Scope::Global);
+        let dev = for_scope(&c, guild);
+        assert!(dev.get("contexts").is_none() && dev.get("integration_types").is_none());
+        assert!(global.get("contexts").is_some());
+        if matches!(c["type"].as_u64(), Some(2 | 3)) {
+            assert!(global.get("description").is_none(), "{global}");
+        }
+    }
+    let local = definitions();
+    let mut echoed: Vec<Value> = local_json()
+        .iter()
+        .enumerate()
+        .map(|(i, c)| as_discord_returns(c, 100 + i as u64))
+        .collect();
+    for c in &mut echoed {
+        if matches!(c["type"].as_u64(), Some(2 | 3)) {
+            c["description"] = json!("");
+        }
+        c.as_object_mut().unwrap().remove("contexts");
+        c.as_object_mut().unwrap().remove("integration_types");
+    }
+    assert!(matches(&local, &registered(&echoed), guild));
 }
