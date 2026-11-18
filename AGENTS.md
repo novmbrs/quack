@@ -97,7 +97,9 @@ cargo deny check
 
 - The importer's end-to-end tests also need a scratch MySQL 8.4:
   `QUACK_IMPORT_TEST_MYSQL_URL=mysql://root:root@127.0.0.1:3306` and
-  `QUACK_IMPORT_TEST_PG_URL=$QUACK_TEST_DATABASE_URL` (they skip without).
+  `QUACK_IMPORT_TEST_PG_URL=$QUACK_TEST_DATABASE_URL`. Without them they
+  pass without checking anything (each prints `SKIPPED` on stderr; run
+  with `--nocapture` to see it), and with `CI` set they fail instead.
 - After changing a query: `cargo sqlx prepare --workspace -- --all-targets`
   (sqlx-cli 0.9.0) with `DATABASE_URL` pointing at a migrated database, and
   commit `.sqlx/`.

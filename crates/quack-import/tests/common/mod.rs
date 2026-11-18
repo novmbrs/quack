@@ -6,7 +6,8 @@
 //! - `QUACK_IMPORT_TEST_MYSQL_URL`, e.g. `mysql://root:root@127.0.0.1:3307`
 //! - `QUACK_IMPORT_TEST_PG_URL`, e.g. `postgres://postgres:pg@127.0.0.1:5433/postgres`
 //!
-//! Without them every test prints why and passes, so a plain
+//! Without them every test prints `SKIPPED` and passes (it fails when `CI`
+//! is set), so a plain
 //! `cargo test --workspace` works anywhere. Each test creates its own pair
 //! of databases and drops them at the end.
 
@@ -37,7 +38,9 @@ pub struct Scratch {
     pub db: Db,
 }
 
-/// The server URLs, or `None` (and a note on stderr) when they are unset.
+/// The server URLs, or `None` (and a loud note on stderr) when they are
+/// unset. In CI (`CI` set) a skip fails the test instead, so the importer's
+/// end-to-end tests can't pass there without running.
 pub fn env() -> Option<(String, String)> {
     if let (Ok(m), Ok(p)) = (
         std::env::var("QUACK_IMPORT_TEST_MYSQL_URL"),
@@ -45,9 +48,9 @@ pub fn env() -> Option<(String, String)> {
     ) {
         Some((m, p))
     } else {
-        eprintln!(
-            "skipped: set QUACK_IMPORT_TEST_MYSQL_URL and QUACK_IMPORT_TEST_PG_URL to run the importer's end-to-end tests"
-        );
+        let note = "set QUACK_IMPORT_TEST_MYSQL_URL and QUACK_IMPORT_TEST_PG_URL to run the importer's end-to-end tests";
+        assert!(std::env::var_os("CI").is_none(), "not skipped in CI: {note}");
+        eprintln!("SKIPPED (nothing was checked): {note}");
         None
     }
 }
