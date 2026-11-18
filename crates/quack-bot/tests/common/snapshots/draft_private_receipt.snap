@@ -1,0 +1,20 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Case #1 · Scam
+A member (ID 40) · level 1 (from a case count of 1) · case count 1
+> Please follow the server rules.
+Action: This case is a warning.
+DM: Quack sent a member (ID 40) a DM about case #1.
+Case context
+Question 1: answer 1
+Question 2: answer 2
+Question 3: answer 3
+Question 4: answer 4
+Question 5: answer 5
+Question 6: answer 6
+How many times? 3
+Added by a member (ID 30) on [date]
+[Edit context] [Add evidence] [Member's case history] [Void case] <Open case on dashboard>

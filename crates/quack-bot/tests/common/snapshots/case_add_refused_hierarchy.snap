@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+No case was added. Your highest role must be above user50's highest role. Ask a moderator whose highest role is above user50's.

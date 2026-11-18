@@ -5,7 +5,7 @@
 //! [`crate::ack::Acked`] handle.
 
 use quack_discord::custom_id::{ComponentId, CustomId, Legacy};
-use quack_discord::interaction::{FieldValue, Request, SelectChoice, Source};
+use quack_discord::interaction::{FieldValue, Request, SelectChoice, Source, UnknownReason};
 use quack_telemetry::labels::Reason;
 use quack_text::actions::InputId;
 use quack_text::appeal::ModalDecision;
@@ -49,6 +49,12 @@ pub(crate) async fn route(p: Pending<'_>) -> Finish {
         Request::AddCaseForMember { member } => add_menu::for_member(p, member).await,
         Request::Component { id, values, source } => component(p, *id, values, *source).await,
         Request::ModalSubmit { id, fields, source } => modal(p, *id, fields, *source).await,
+        // A command Quack no longer registers (Go-era ones linger in
+        // clients until the sync reaches them) reads like an old button.
+        Request::Unknown(UnknownReason::UnknownCommand) => {
+            p.fail(Failure::refused(error::legacy_button(), Reason::Invalid))
+                .await
+        }
         Request::Unknown(_) => p.fail(expired()).await,
     }
 }

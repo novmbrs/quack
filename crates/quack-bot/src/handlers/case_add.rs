@@ -109,6 +109,7 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
         p.shared().forms.opened(
             draft,
             FormStart {
+                used: false,
                 guild,
                 actor: actor.account.id,
                 member: member.account.id.member(),
@@ -127,7 +128,10 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
 }
 
 /// The rule's id: picked, or found by its exact name.
-async fn rule_id(a: &Acked<'_>, rule: &RuleArg) -> Result<(RuleId, Option<CachedRule>), Failure> {
+async fn rule_id(
+    a: &Acked<'_>,
+    rule: &RuleArg,
+) -> Result<(RuleId, Option<CachedRule>, Option<String>), Failure> {
     let engine = a.engine();
     let guild = auth::guild_of(a.ix)?;
     let rules = engine
@@ -136,8 +140,19 @@ async fn rule_id(a: &Acked<'_>, rule: &RuleArg) -> Result<(RuleId, Option<Cached
         .await
         .map_err(|e| errors::db(&e))?;
     match (find(&rules, rule), rule) {
-        (Some(found), _) => Ok((found.id, Some(found.clone()))),
-        (None, RuleArg::Id(id)) => Ok((*id, None)),
+        (Some(found), _) => Ok((
+            found.id,
+            Some(found.clone()),
+            Some(found.definition.name.clone()),
+        )),
+        (None, RuleArg::Id(id)) => {
+            let archived = rules
+                .archived
+                .iter()
+                .find(|r| r.id == *id)
+                .map(|r| r.name.clone());
+            Ok((*id, None, archived))
+        }
         (None, RuleArg::Name(_)) => Err(errors::domain(
             DomainError::RuleNotFound,
             &ErrorFacts::default(),
@@ -155,8 +170,7 @@ async fn apply_now(
 ) -> Result<Option<quack_text::Msg>, Failure> {
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
-    let (rule, cached) = rule_id(a, rule).await?;
-    let name = cached.as_ref().map(|c| c.definition.name.clone());
+    let (rule, cached, name) = rule_id(a, rule).await?;
     if let Some(found) = cached.as_ref()
         && found.definition.context_fields().iter().any(|f| f.required)
     {
@@ -165,6 +179,7 @@ async fn apply_now(
         a.shared().forms.opened(
             draft,
             FormStart {
+                used: false,
                 guild: principal.guild,
                 actor: principal.account,
                 member: member.account.id.member(),

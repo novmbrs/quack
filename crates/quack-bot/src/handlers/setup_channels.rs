@@ -96,7 +96,7 @@ fn staff_roles(facts: &GuildFacts, configured: &[RoleId]) -> Vec<RoleId> {
     facts
         .roles
         .iter()
-        .filter(|r| r.id.get() != facts.guild_id.get())
+        .filter(|r| r.id != facts.guild_id.everyone_role())
         .filter(|r| r.permissions.contains(staff) || r.permissions.contains(moderate))
         .map(|r| r.id)
         .collect()

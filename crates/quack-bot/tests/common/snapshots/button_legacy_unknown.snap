@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+This button is from an older version of Quack and no longer works. Run the command again, or use the dashboard.

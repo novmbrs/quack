@@ -1,0 +1,10 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Case #1 · Timeouts
+A member (ID 40)
+> Please follow the server rules.
+Action: Quack set a member (ID 40)'s timeout to end [date].
+[Open case]

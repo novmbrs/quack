@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[warning]
+The rule Spam changed while you were filling in the form. Run /case add again to use the new version.

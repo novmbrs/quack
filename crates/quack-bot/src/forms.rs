@@ -21,6 +21,9 @@ const TTL: Duration = Duration::from_mins(15);
 /// What `/case add` knew when it opened a form.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct FormStart {
+    /// The form's case was applied: a later submit must not start a new
+    /// draft under the same id.
+    pub(crate) used: bool,
     /// The server.
     pub(crate) guild: GuildId,
     /// The moderator.
@@ -59,8 +62,16 @@ impl Forms {
         inner.order.push_back((now, draft));
     }
 
+    /// Marks the form's case as applied.
+    pub(crate) fn used(&self, draft: uuid::Uuid) {
+        let mut inner = self.inner.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(form) = inner.forms.get_mut(&draft) {
+            form.used = true;
+        }
+    }
+
     /// The form's start, when it was opened by this process for `actor`
-    /// in `guild`.
+    /// in `guild` and its case is not applied yet.
     pub(crate) fn get(
         &self,
         draft: uuid::Uuid,
@@ -72,6 +83,6 @@ impl Forms {
             .forms
             .get(&draft)
             .copied()
-            .filter(|f| f.guild == guild && f.actor == actor)
+            .filter(|f| f.guild == guild && f.actor == actor && !f.used)
     }
 }

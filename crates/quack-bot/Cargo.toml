@@ -31,5 +31,9 @@ uuid = { workspace = true }
 [dev-dependencies]
 quack-testkit = { workspace = true }
 anyhow = { workspace = true }
-insta = { workspace = true }
+insta = { workspace = true, features = ["filters"] }
+serde_json = { workspace = true }
+tracing-subscriber = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+time = { workspace = true }
+uuid = { workspace = true }

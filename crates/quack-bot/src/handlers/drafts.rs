@@ -28,6 +28,13 @@ fn cached_rule(p: &Pending<'_>, at: DraftPage) -> Option<CachedRule> {
         .filter(|r| r.version == at.version)
 }
 
+/// The rule's current name from the cache (any version), for messages.
+fn rule_name(p: &Pending<'_>, at: DraftPage) -> String {
+    p.rules()
+        .and_then(|r| r.active(at.rule).map(|c| c.definition.name.clone()))
+        .unwrap_or_default()
+}
+
 /// Continue / Fill in the form (`cn`): the page's modal from the rules
 /// cache, with no stored values. A rule that changed answers
 /// `case.draft.rule_changed`.
@@ -36,10 +43,7 @@ pub(crate) async fn open_page(p: Pending<'_>, at: DraftPage) -> Finish {
         return p.fail(auth::missing(Capability::Moderate)).await;
     }
     let Some(rule) = cached_rule(&p, at) else {
-        let name = p
-            .rules()
-            .and_then(|r| r.active(at.rule).map(|c| c.definition.name.clone()))
-            .unwrap_or_default();
+        let name = rule_name(&p, at);
         let msg = Msg::text(Tone::Warning, case::draft_rule_changed(&name));
         return p.reply(&msg, Finish::Refused(Reason::Conflict)).await;
     };
@@ -57,15 +61,16 @@ pub(crate) async fn open_page(p: Pending<'_>, at: DraftPage) -> Finish {
 pub(crate) async fn retry_page(p: Pending<'_>, at: DraftPage) -> Finish {
     let ix = p.ix;
     let rule = cached_rule(&p, at);
+    let name = rule_name(&p, at);
     p.prefilled_modal(|engine| async move {
+        let principal = auth::principal(engine, ix).await?;
+        auth::require(engine, &principal, Capability::Moderate).await?;
         let Some(rule) = rule else {
             return Err(Failure::refused(
-                case::draft_rule_changed(""),
+                case::draft_rule_changed(&name),
                 Reason::Conflict,
             ));
         };
-        let principal = auth::principal(engine, ix).await?;
-        auth::require(engine, &principal, Capability::Moderate).await?;
         let draft = read_draft(engine, principal.guild, principal.account, at.draft)
             .await?
             .ok_or_else(|| Failure::refused(case::draft_expired(), Reason::Conflict))?;
@@ -115,9 +120,15 @@ async fn draft_target(
     guild: quack_core::ids::GuildId,
     actor: quack_core::ids::AccountId,
     draft: CaseId,
+    page: u8,
 ) -> Result<Option<(MemberId, bool, ChannelId)>, Failure> {
-    let channel = a.ix.channel_id;
-    if let (Some(form), Some(channel)) = (a.shared().forms.get(draft.get(), guild, actor), channel)
+    // Only the first page may create the draft row (§11.6 step 2); a later
+    // page without a row means the draft expired or was already used.
+    if page == 1
+        && let (Some(form), Some(channel)) = (
+            a.shared().forms.get(draft.get(), guild, actor),
+            a.ix.channel_id,
+        )
     {
         return Ok(Some((form.member, form.private, channel)));
     }
@@ -154,7 +165,7 @@ pub(crate) async fn submit(
     fields: &[(InputId, FieldValue)],
     source: Source,
 ) -> Finish {
-    let rule_name = cached_rule(&p, at).map_or_else(String::new, |r| r.definition.name);
+    let rule_name = rule_name(&p, at);
     let a = match p.defer_from(source).await {
         Ok(a) => a,
         Err(finish) => return finish,
@@ -172,7 +183,7 @@ async fn save(
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
     let Some((member, private, channel)) =
-        draft_target(a, principal.guild, principal.account, at.draft).await?
+        draft_target(a, principal.guild, principal.account, at.draft, at.page).await?
     else {
         // No form and no row: the draft expired, or it was already used.
         return retry(a, &principal, at, rule, true).await;
@@ -188,7 +199,11 @@ async fn save(
         channel,
     };
     let receipt = receipt(a.ix, private, channel);
-    match save_page(engine, &principal, &submit, Some(receipt)).await {
+    let saved = save_page(engine, &principal, &submit, Some(receipt)).await;
+    if let Ok(PageSaved::Applied(_)) = &saved {
+        a.shared().forms.used(at.draft.get());
+    }
+    match saved {
         Ok(PageSaved::Expired) => retry(a, &principal, at, rule, private).await,
         Ok(PageSaved::AlreadySaved { page }) if page > total(a, principal.guild, at) => {
             retry(a, &principal, at, rule, private).await

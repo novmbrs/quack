@@ -1,0 +1,12 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Quack
+Quack keeps track of moderation cases. Rules managers define the rules on the dashboard, moderators apply them, and Quack carries out the rule's action.
+Moderators: /case add, /case view, /case list, /case history, /case void, /appeals
+Rules: /rules (rules are edited on the dashboard)
+Setup: /setup (needs Manage Server)
+Use /help with a topic for more.
+<Open the dashboard>

@@ -194,6 +194,7 @@ async fn picked_now(
     };
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
+    auth::require(engine, &principal, Capability::Moderate).await?;
     let row = draft_row(a, &principal, draft).await?;
     let rules = active_rules(a, &principal).await?;
     let Some(found) = rules.into_iter().find(|r| r.id == rule) else {
