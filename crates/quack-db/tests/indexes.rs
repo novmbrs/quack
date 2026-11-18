@@ -1,7 +1,10 @@
 //! Hot-path queries (§15.9) use their intended indexes.
 //!
-//! Each statement is the hot-path shape with literal values, explained with
-//! sequential scans disabled so a tiny test table still shows which index
+//! The escalation count, the claim, and the idle sweep are explained from
+//! their production text in `.sqlx/`, planned as the pool plans them
+//! (custom plans, sequential scans allowed) on analyzed seed data. The
+//! other shapes are hand-written with literal values and explained with
+//! sequential scans disabled, so the seed tables still show which index
 //! the planner picks.
 
 mod common;
@@ -86,6 +89,35 @@ const PLANS: &[(&str, &str)] = &[
     ),
 ];
 
+/// Hot paths checked with their production text: a substring that picks
+/// the query from `.sqlx/`, its parameter values, and the index.
+const PRODUCTION: &[(&str, &str, &str)] = &[
+    (
+        "AND source <> 'imported' AND created_at >= COALESCE($4",
+        "1, 3, '{rule}', NULL",
+        "cases_escalation",
+    ),
+    ("WITH picked AS (", "'send_dm', 8, 60", "jobs_runnable"),
+    ("WITH swept AS (", "'send_dm'", "jobs_leased"),
+];
+
+/// The production text of the one query in `.sqlx/` containing `marker`.
+fn production_query(marker: &str) -> Result<String> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.sqlx");
+    let mut found = Vec::new();
+    for entry in std::fs::read_dir(dir)? {
+        let text = std::fs::read_to_string(entry?.path())?;
+        let data: serde_json::Value = serde_json::from_str(&text)?;
+        if let Some(query) = data["query"].as_str()
+            && query.contains(marker)
+        {
+            found.push(query.to_owned());
+        }
+    }
+    anyhow::ensure!(found.len() == 1, "{} queries match {marker:?}", found.len());
+    Ok(found.remove(0))
+}
+
 #[sqlx::test(migrator = "quack_db::MIGRATOR")]
 async fn hot_path_queries_use_their_indexes(
     _: PgPoolOptions,
@@ -154,6 +186,27 @@ async fn hot_path_queries_use_their_indexes(
         sqlx::query(seed).execute(&mut *conn).await?;
     }
     sqlx::query("ANALYZE").execute(&mut *conn).await?;
+    // The production query texts (from the offline data the build checks),
+    // planned the way the pool plans them: custom plans, sequential scans
+    // allowed.
+    for (marker, values, index) in PRODUCTION {
+        let sql = production_query(marker)?;
+        sqlx::raw_sql(sqlx::AssertSqlSafe(format!("PREPARE hot AS {sql}")))
+            .execute(&mut *conn)
+            .await?;
+        let values = values.replace("{rule}", &rule_id.get().to_string());
+        let plan: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "EXPLAIN EXECUTE hot({values})"
+        )))
+        .fetch_all(&mut *conn)
+        .await?;
+        sqlx::raw_sql("DEALLOCATE hot").execute(&mut *conn).await?;
+        let plan = plan.join("\n");
+        assert!(
+            plan.contains(index),
+            "{marker}\nexpected {index}, got:\n{plan}"
+        );
+    }
     sqlx::query("SET enable_seqscan = off")
         .execute(&mut *conn)
         .await?;
