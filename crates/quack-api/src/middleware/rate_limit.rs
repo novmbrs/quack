@@ -235,8 +235,7 @@ pub(crate) async fn layer(State(state): State<ApiState>, request: Request, next:
 /// malformed one shares the account's empty bucket.
 fn guild_bucket(raw: &str) -> String {
     raw.parse::<quack_core::ids::GuildId>()
-        .map(|g| g.get().to_string())
-        .unwrap_or_default()
+        .map_or_else(|_| String::new(), |g| g.get().to_string())
 }
 
 #[cfg(test)]
