@@ -15,7 +15,7 @@ use super::render::render;
 use super::{finish, kind, synced};
 use crate::Engine;
 use crate::jobs::retry;
-use crate::port::{FileEdit, InteractionToken, Outcome};
+use crate::port::{FileEdit, InteractionToken, Outcome, RefusalKind};
 
 /// Where a message of this kind belongs now: the appeal, ticket entry,
 /// ticket queue, or honeypot channel setting.
@@ -159,7 +159,28 @@ pub(super) async fn clean_stale(
     for location in &row.stale {
         let outcome = cleanup(engine, row, *location).await;
         match outcome {
-            Outcome::Done(()) | Outcome::Refused(_) => {}
+            Outcome::Done(()) => {}
+            // Already gone: nothing is left to clean.
+            Outcome::Refused(r)
+                if matches!(
+                    r.kind,
+                    RefusalKind::UnknownMessage | RefusalKind::UnknownChannel
+                ) => {}
+            // Quack can't edit or delete it now: keep the location (a
+            // later sync tries again, say once access is back), note why,
+            // and go on with the others.
+            refused @ Outcome::Refused(_) => {
+                let mut conn = engine.db().conn().await?;
+                messages::set_error(
+                    &mut conn,
+                    row.guild,
+                    row.id,
+                    row.generation,
+                    &format!("stale_cleanup_{}", refused.code()),
+                )
+                .await?;
+                continue;
+            }
             other => return Ok(Some(Handled::Settle(retry(job, other.code())))),
         }
         let mut tx = engine.db().begin().await?;

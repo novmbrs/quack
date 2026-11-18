@@ -7981,3 +7981,8 @@ folds these into the sections (or changes the code) and removes them here.
     `Unknown`, like a 5xx. Modify Guild Member, Modify and Delete Channel,
     and the interaction webhook edits are `Done` only when their success
     body is a JSON object; otherwise `Unknown(Malformed)`.
+42. §10.3 step 5 (engine review MAJOR 9) → an earlier location is removed
+    only when its cleanup is `Done` or Discord says the message or channel
+    is gone; any other refusal keeps it in `stale`, writes
+    `last_error = stale_cleanup_<code>`, and goes on with the others, so a
+    later sync tries again (for example once access is back).

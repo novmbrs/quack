@@ -212,3 +212,41 @@ async fn a_deleted_public_receipt_is_gone_and_the_case_stands() -> Result<()> {
     assert_eq!(posted(&h, channel), 0);
     Ok(())
 }
+
+/// Engine review MAJOR 9: a stale copy Quack can't delete (403) stays
+/// listed with the reason, so a later sync tries again; one already gone
+/// (404) is cleaned up.
+#[tokio::test]
+async fn a_refused_stale_cleanup_keeps_the_location() -> Result<()> {
+    let h = Harness::new().await?;
+    let (id, channel, case) = public(&h).await?;
+    h.settle().await?;
+    let elsewhere = h.fake.world(|w| w.add_text_channel(h.guild, false));
+    let r = row(&h, id).await?;
+    let mut tx = h.db.db.begin().await?;
+    assert!(messages::relocate(&mut tx, h.guild, id, r.generation, Some(elsewhere)).await?);
+    tx.commit().await?;
+    h.fake.script(
+        Call::DeleteMessage,
+        Script::refuse(RefusalKind::MissingPermissions),
+    );
+    h.settle().await?;
+    let r = row(&h, id).await?;
+    assert_eq!(r.stale.len(), 1, "kept for a later try");
+    assert_eq!(posted(&h, channel), 1, "the old copy is still there");
+    assert!(
+        r.last_error
+            .as_deref()
+            .is_some_and(|e| e.starts_with("stale_cleanup_")),
+        "{:?}",
+        r.last_error
+    );
+    // Access is back: the next sync cleans it up.
+    let mut tx = h.db.db.begin().await?;
+    messages::bump(&mut tx, h.guild, messages::Owner::Case(case)).await?;
+    tx.commit().await?;
+    h.settle().await?;
+    assert_eq!(row(&h, id).await?.stale.len(), 0);
+    assert_eq!(posted(&h, channel), 0);
+    Ok(())
+}
