@@ -2,7 +2,7 @@
 //! transaction, so progress survives a crash; each upload follows §10.4
 //! with the file's id as its nonce.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use quack_core::evidence::FileCopyState;
 use quack_core::ids::ChannelId;
@@ -52,7 +52,6 @@ pub(super) async fn copy_pending(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
-    started: Instant,
 ) -> Result<Copied, DbError> {
     let (pending, channel) = {
         let mut conn = engine.db().conn().await?;
@@ -87,10 +86,11 @@ pub(super) async fn copy_pending(
             ))));
         }
     }
-    let deadline = job.kind.policy().deadline();
     let (mut files, mut bytes) = (0, 0);
     for file in &pending {
-        if started.elapsed() + CALL_ROOM > deadline {
+        // The claim's own deadline (§16.1): less room than one copy needs
+        // saves progress and continues in a new run.
+        if job.time_left() < CALL_ROOM {
             return Ok(Copied::Stop(Handled::Settle(JobResult::Continue)));
         }
         start(engine, job, item, file).await?;

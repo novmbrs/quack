@@ -2,8 +2,6 @@
 //! the message, store the snapshot once under the case lock, copy files
 //! one per transaction, and settle.
 
-use std::time::Instant;
-
 use quack_core::evidence::{
     EvidenceFailure, EvidenceState, FileCopyState, copy_eligibility, files_within_caps,
 };
@@ -33,7 +31,6 @@ pub async fn capture(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbErr
         return Ok(dead("bad_payload"));
     };
     obs::use_case("capture_evidence", Some(guild), async {
-        let started = Instant::now();
         let item = {
             let mut conn = engine.db().conn().await?;
             evidence::get(&mut conn, guild, payload.evidence_id).await?
@@ -49,7 +46,7 @@ pub async fn capture(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbErr
         {
             return Ok(handled);
         }
-        let copied = match copy_pending(engine, job, &item, started).await? {
+        let copied = match copy_pending(engine, job, &item).await? {
             Copied::All(copied) => copied,
             Copied::Stop(handled) => return Ok(handled),
         };
