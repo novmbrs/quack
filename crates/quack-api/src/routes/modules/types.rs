@@ -1,6 +1,4 @@
-//! Wire types of the module routes (§14.3). `ModuleState` is built here
-//! from the engine; the module-specific types are filled by the module
-//! crates once they are wired (see the parent module).
+//! Wire types of the module routes (§14.3).
 
 use quack_core::ids::{ChannelId, MemberId, RuleId, TicketId};
 use serde::{Deserialize, Serialize};
@@ -85,7 +83,6 @@ pub(crate) struct TicketSettings {
 }
 
 /// The tickets module (route 41).
-#[allow(dead_code, reason = "filled once quack-tickets is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct TicketsModule {
     #[serde(flatten)]
@@ -132,7 +129,6 @@ pub(crate) struct ActivityLogSettings {
 
 /// The server activity log module (route 43). Counters are in-process
 /// and reset when Quack restarts.
-#[allow(dead_code, reason = "filled once quack-activity-log is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct ActivityLogModule {
     #[serde(flatten)]
@@ -178,7 +174,6 @@ pub(crate) struct HoneypotSettings {
 }
 
 /// A rule the honeypot may use.
-#[allow(dead_code, reason = "filled once quack-honeypot is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct EligibleRule {
     #[schema(value_type = uuid::Uuid)]
@@ -191,7 +186,6 @@ pub(crate) struct EligibleRule {
 }
 
 /// The honeypot module (route 45).
-#[allow(dead_code, reason = "filled once quack-honeypot is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct HoneypotModule {
     #[serde(flatten)]
@@ -207,7 +201,6 @@ pub(crate) struct HoneypotModule {
 }
 
 /// A ticket's transcript, in brief.
-#[allow(dead_code, reason = "filled once quack-tickets is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct TicketTranscriptInfo {
     /// `available` or `expired`.
@@ -222,7 +215,6 @@ pub(crate) struct TicketTranscriptInfo {
 
 /// A ticket. The ticket's member gets it without `closed_by` and with
 /// `closed_by_you` instead.
-#[allow(dead_code, reason = "filled once quack-tickets is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct Ticket {
     #[schema(value_type = uuid::Uuid)]
@@ -259,7 +251,6 @@ pub(crate) struct Ticket {
 }
 
 /// A page of tickets (route 47).
-#[allow(dead_code, reason = "filled once quack-tickets is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct TicketPage {
     pub tickets: Vec<Ticket>,
@@ -267,7 +258,6 @@ pub(crate) struct TicketPage {
 }
 
 /// A ticket's transcript (route 49).
-#[allow(dead_code, reason = "filled once quack-tickets is wired")]
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct Transcript {
     pub content: String,

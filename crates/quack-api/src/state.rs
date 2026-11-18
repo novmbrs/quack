@@ -17,6 +17,7 @@ use crate::routes::modules::ModuleServices;
 #[derive(Clone)]
 pub struct ApiState {
     inner: Arc<Inner>,
+    modules: Arc<ModuleServices>,
 }
 
 struct Inner {
@@ -26,7 +27,6 @@ struct Inner {
     readiness: Arc<Readiness>,
     limits: RateLimits,
     account_guilds: AccountGuildsCache,
-    modules: ModuleServices,
     fingerprint: [u8; 8],
 }
 
@@ -57,9 +57,9 @@ impl ApiState {
                 readiness,
                 limits: RateLimits::new(),
                 account_guilds: AccountGuildsCache::new(),
-                modules: ModuleServices::default(),
                 fingerprint,
             }),
+            modules: Arc::default(),
         })
     }
 
@@ -67,18 +67,9 @@ impl ApiState {
     /// (the integration point in [`ModuleServices`]).
     #[must_use]
     pub fn with_modules(self, modules: ModuleServices) -> Self {
-        let inner = &self.inner;
         Self {
-            inner: Arc::new(Inner {
-                engine: inner.engine.clone(),
-                config: inner.config.clone(),
-                oauth: inner.oauth.clone(),
-                readiness: inner.readiness.clone(),
-                limits: RateLimits::new(),
-                account_guilds: AccountGuildsCache::new(),
-                modules,
-                fingerprint: inner.fingerprint,
-            }),
+            modules: Arc::new(modules),
+            ..self
         }
     }
 
@@ -109,7 +100,7 @@ impl ApiState {
     }
 
     pub(crate) fn modules(&self) -> &ModuleServices {
-        &self.inner.modules
+        &self.modules
     }
 
     /// The session secret's fingerprint (sessions sealed under another
