@@ -153,6 +153,14 @@ async fn action_attempts_follow_the_state_table(
         (ActionState::Failed, Some(failure), 2)
     );
     assert_eq!(actions::count_failed(&mut conn, g).await?, 1);
+    let by_kind = actions::failed_by_kind(&mut conn).await?;
+    assert_eq!(
+        by_kind.len(),
+        ActionKind::ALL.len(),
+        "every kind, even at zero"
+    );
+    assert!(by_kind.contains(&(ActionKind::Ban, 1)));
+    assert!(by_kind.contains(&(ActionKind::Kick, 0)));
     let listed = actions::list(&mut conn, g, ActionState::Failed, false, None, 50).await?;
     assert_eq!(
         listed

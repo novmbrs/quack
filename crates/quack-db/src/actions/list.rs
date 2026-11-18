@@ -117,7 +117,7 @@ pub async fn count_failed(conn: &mut PgConnection, guild: GuildId) -> Result<u64
 }
 
 /// Failed, undismissed actions across servers per kind, for the
-/// `quack.actions.failed` gauge. Kinds without rows are left out.
+/// `quack.actions.failed` gauge: every kind, zero when it has no rows.
 pub async fn failed_by_kind(conn: &mut PgConnection) -> Result<Vec<(ActionKind, u64)>, DbError> {
     let rows = obs::run(
         Select,
@@ -128,7 +128,11 @@ pub async fn failed_by_kind(conn: &mut PgConnection) -> Result<Vec<(ActionKind, 
         .fetch_all(conn),
     )
     .await?;
-    rows.into_iter()
-        .map(|r| Ok((r.kind.0, count(r.n)?)))
+    ActionKind::ALL
+        .iter()
+        .map(|kind| {
+            let n = rows.iter().find(|r| r.kind.0 == *kind).map_or(0, |r| r.n);
+            Ok((*kind, count(n)?))
+        })
         .collect()
 }
