@@ -45,8 +45,25 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      # The importer's end-to-end tests load the Go schema into a scratch
+      # MySQL database.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
     env:
+      # Every database-backed test makes its own database on this server.
+      QUACK_TEST_DATABASE_URL: postgres://quack:quack@localhost:5432/quack
       DATABASE_URL: postgres://quack:quack@localhost:5432/quack
+      QUACK_IMPORT_TEST_MYSQL_URL: mysql://root:root@127.0.0.1:3306
+      QUACK_IMPORT_TEST_PG_URL: postgres://quack:quack@localhost:5432/quack
     steps:
       - uses: actions/checkout@v4
       - name: Install the pinned toolchain (rust-toolchain.toml)
@@ -54,6 +71,33 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Test
         run: cargo test --workspace --locked
+
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: The committed OpenAPI document matches the API
+        run: cargo test -p quack-api --test openapi --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+      - name: The dashboard's API client matches the OpenAPI document
+        working-directory: apps/dashboard
+        run: |
+          bun install --frozen-lockfile
+          bun run api
+          git diff --exit-code src/api/schema.gen.ts
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t quack:ci .
 
   deny:
     runs-on: ubuntu-latest
