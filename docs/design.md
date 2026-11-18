@@ -8080,3 +8080,11 @@ folds these into the sections (or changes the code) and removes them here.
     are ordered among themselves, not against a server's other events.
     `READY`'s "missing servers left" pass goes on past a server it couldn't
     update (logged).
+55. §13.2.4 steps 1–2 (application review MAJOR 10, Discord review
+    MAJOR 15) → the freeze counts as done only on success or a gone
+    thread. An archived thread (Discord's 400 for changing one) is
+    unarchived and locked in one request, then archived; any other
+    refusal is retried, and the job's finalization keeps the thread
+    (`thread_delete_failed`) and closes with a partial transcript. A
+    message sent before `frozen_at` whose event arrives after the freeze
+    is still journaled until the transcript is saved.

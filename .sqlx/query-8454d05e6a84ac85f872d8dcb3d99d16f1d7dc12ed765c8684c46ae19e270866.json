@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ticket_messages (guild_id, ticket_id, message_id, author_id, author_name, text, files, sent_at)\n             SELECT $1, $2, $3, $4, $5, $6, $7, $8 FROM tickets\n             WHERE guild_id = $1 AND id = $2 AND state IN ('opening', 'open', 'closing')\n               AND (frozen_at IS NULL OR ($8 < frozen_at AND transcript_saved_at IS NULL))\n             FOR SHARE\n             ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int8",
+        "Int8",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8454d05e6a84ac85f872d8dcb3d99d16f1d7dc12ed765c8684c46ae19e270866"
+}

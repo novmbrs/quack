@@ -38,12 +38,14 @@ pub struct JournalMessage {
     pub sent_at: OffsetDateTime,
 }
 
-/// Journals a message of a live, not yet frozen ticket (`ON CONFLICT DO
-/// NOTHING`). Returns whether it was stored.
+/// Journals a message of a live ticket (`ON CONFLICT DO NOTHING`): one
+/// not yet frozen, or a frozen one whose transcript isn't saved yet when
+/// the message was sent before the freeze (its event arrived late).
+/// Returns whether it was stored.
 ///
-/// The ticket row is read `FOR SHARE`: a concurrent freeze either waits
-/// for this insert to commit (so the transcript sees it) or wins, and then
-/// the recheck finds the ticket frozen and nothing is stored.
+/// The ticket row is read `FOR SHARE`: a concurrent freeze or transcript
+/// save either waits for this insert to commit (so the transcript sees it)
+/// or wins, and then the recheck decides.
 pub async fn add_journal_message(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -56,7 +58,8 @@ pub async fn add_journal_message(
         sqlx::query!(
             "INSERT INTO ticket_messages (guild_id, ticket_id, message_id, author_id, author_name, text, files, sent_at)
              SELECT $1, $2, $3, $4, $5, $6, $7, $8 FROM tickets
-             WHERE guild_id = $1 AND id = $2 AND state IN ('opening', 'open', 'closing') AND frozen_at IS NULL
+             WHERE guild_id = $1 AND id = $2 AND state IN ('opening', 'open', 'closing')
+               AND (frozen_at IS NULL OR ($8 < frozen_at AND transcript_saved_at IS NULL))
              FOR SHARE
              ON CONFLICT DO NOTHING",
             i64::from(guild),

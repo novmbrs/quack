@@ -144,6 +144,73 @@ async fn messages_arriving_while_closing_come_from_history() -> Result<()> {
 }
 
 #[tokio::test]
+async fn a_message_sent_before_the_freeze_still_reaches_the_transcript() -> Result<()> {
+    let w = world().await?;
+    let t = w.opened(M).await?;
+    let thread = t.thread.context("thread")?;
+    // Posted before the freeze and deleted before the history is read; its
+    // event arrives after the freeze.
+    let late = w
+        .h
+        .fake
+        .world(|world| world.post(w.h.guild, thread, sf(M), "posted, then deleted", Vec::new()));
+    let mut entry = w.entry_for(thread, late, M, "posted, then deleted");
+    entry.sent_at -= time::Duration::minutes(1);
+    w.h.fake
+        .world(|world| world.messages.retain(|id, _| *id != late));
+    w.close_as(&t, M).await?;
+    let history = w.h.fake.hold(Call::FetchHistory);
+    let job = w.h.spawn_one(JobKind::CloseTicket).await?;
+    history.reached().await;
+    w.journal.on_message(&w.h.engine, &entry).await;
+    history.release();
+    job.await?;
+    w.h.settle().await?;
+    let transcript = w.transcript(&t).await?;
+    assert!(
+        transcript.content.contains("posted, then deleted"),
+        "{}",
+        transcript.content
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn an_archived_thread_is_unarchived_and_locked_before_it_is_archived() -> Result<()> {
+    let w = world().await?;
+    let t = w.opened(M).await?;
+    w.close_as(&t, M).await?;
+    // Auto-archived: Discord takes no other change until it is unarchived.
+    w.h.fake
+        .script(Call::SetThreadState, Script::refuse(RefusalKind::Other));
+    w.h.settle().await?;
+    assert_eq!(w.h.fake.count(Call::SetThreadState), 3);
+    assert!(w.ticket(t.id).await?.frozen_at.is_some());
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_refused_freeze_is_not_taken_as_frozen() -> Result<()> {
+    let w = world().await?;
+    let t = w.opened(M).await?;
+    w.close_as(&t, M).await?;
+    w.h.fake.script(
+        Call::SetThreadState,
+        Script::refuse(RefusalKind::MissingPermissions),
+    );
+    w.h.run_one(JobKind::CloseTicket)
+        .await?
+        .context("the close job ran")?;
+    let after = w.ticket(t.id).await?;
+    assert!(after.frozen_at.is_none(), "members could still post");
+    assert_eq!(after.state, TicketState::Closing);
+    // Once Discord lets Quack, the close goes on.
+    w.h.settle().await?;
+    assert!(w.ticket(t.id).await?.frozen_at.is_some());
+    Ok(())
+}
+
+#[tokio::test]
 async fn journal_text_wins_over_an_edited_history() -> Result<()> {
     let w = world().await?;
     let t = w.opened(M).await?;

@@ -73,12 +73,28 @@ fn open_failed(t: &Ticket) -> bool {
 }
 
 /// Step 1: archive and lock the thread so members can no longer post.
-/// `None` when done (a gone thread, or a refusal Quack can't fix by
-/// retrying, counts as frozen); else the code to retry with.
+/// `None` when done (a gone thread counts as frozen); else the code to
+/// retry with. Any other refusal is never taken as frozen: the job
+/// retries, and its finalization keeps the thread and records the close
+/// as partial.
 async fn freeze(engine: &Engine, t: &Ticket) -> Option<String> {
     let thread = t.thread?;
-    match engine.discord().set_thread_state(thread, true, true).await {
-        Outcome::Done(()) | Outcome::Refused(_) => None,
+    let discord = engine.discord();
+    match discord.set_thread_state(thread, true, true).await {
+        Outcome::Done(()) => None,
+        Outcome::Refused(r) if r.kind == RefusalKind::UnknownChannel => None,
+        // An archived thread takes no other change until it is unarchived
+        // (Discord answers 400): unarchive and lock it in one request, then
+        // archive it.
+        Outcome::Refused(r) if r.kind == RefusalKind::Other => {
+            match discord.set_thread_state(thread, false, true).await {
+                Outcome::Done(()) => match discord.set_thread_state(thread, true, true).await {
+                    Outcome::Done(()) => None,
+                    other => Some(other.code()),
+                },
+                other => Some(other.code()),
+            }
+        }
         other => Some(other.code()),
     }
 }
