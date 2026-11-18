@@ -16,7 +16,7 @@ pub use read::{EntryView, ModLogPage, entry_text, list};
 
 /// Who wrote an entry and from where.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct By {
+pub struct By {
     /// The actor; `None` = Quack.
     pub actor: Option<AccountId>,
     /// Where it came from.
@@ -25,7 +25,7 @@ pub(crate) struct By {
 
 impl By {
     /// Quack acting on its own (jobs, gateway events).
-    pub(crate) const QUACK: Self = Self {
+    pub const QUACK: Self = Self {
         actor: None,
         source: ModLogSource::Quack,
     };
@@ -33,7 +33,7 @@ impl By {
 
 /// Appends an entry in the caller's transaction (and enqueues its log
 /// channel post when it is posted and a log channel is set).
-pub(crate) async fn write(
+pub async fn write(
     tx: &mut Tx,
     guild: GuildId,
     entry: ModLogEntry,

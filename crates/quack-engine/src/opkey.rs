@@ -31,7 +31,7 @@ impl OpKey {
     }
 
     /// The key scoped to a server and account (`None` = Quack).
-    pub(crate) fn scoped(
+    pub fn scoped(
         &self,
         guild: Option<GuildId>,
         account: Option<AccountId>,
@@ -48,7 +48,7 @@ impl OpKey {
 /// SHA-256 of a request's canonical JSON (§4.3). Requests hash typed,
 /// resolved values (ids, validated bodies), so the same request always
 /// hashes the same.
-pub(crate) fn request_hash<T: Serialize>(request: &T) -> [u8; 32] {
+pub fn request_hash<T: Serialize>(request: &T) -> [u8; 32] {
     let bytes = serde_json::to_vec(request).unwrap_or_default();
     let digest = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, &bytes);
     let mut out = [0_u8; 32];
@@ -57,7 +57,7 @@ pub(crate) fn request_hash<T: Serialize>(request: &T) -> [u8; 32] {
 }
 
 /// What [`begin_keyed`] found.
-pub(crate) enum Keyed {
+pub enum Keyed {
     /// The key is new: the transaction holds its reservation.
     Fresh(Tx),
     /// The same request already ran: its stored result reference.
@@ -66,7 +66,7 @@ pub(crate) enum Keyed {
 
 /// Why an operation key was refused.
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum KeyError {
+pub enum KeyError {
     /// The key was used for a different request.
     #[error("operation key reused")]
     Reused,
@@ -77,7 +77,7 @@ pub(crate) enum KeyError {
 
 /// Looks the key up, and when it is new, opens a transaction holding its
 /// reservation (§4.2 steps 2 and 7).
-pub(crate) async fn begin_keyed(
+pub async fn begin_keyed(
     db: &Db,
     key: &OperationKey,
     hash: &[u8; 32],
@@ -110,7 +110,7 @@ async fn lookup(
 }
 
 /// Stores the result reference before commit.
-pub(crate) async fn complete(
+pub async fn complete(
     tx: &mut Tx,
     key: &OperationKey,
     status: u16,

@@ -1,6 +1,7 @@
 //! The staff-only channel check from current facts (§13.1.3), run when a
 //! channel is saved and before every post to a staff destination (log
-//! channel, appeal posts, evidence copies, ticket posts).
+//! channel, appeal posts, evidence copies, ticket posts, server activity
+//! posts). Public so the optional modules check their own destinations.
 
 use quack_core::ids::{ChannelId, GuildId, RoleId};
 use quack_core::permissions::{
@@ -14,7 +15,7 @@ use crate::principal::staff_roles;
 
 /// What the check found.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum ChannelCheck {
+pub enum ChannelCheck {
     /// A staff-only text channel where Quack holds what it needs.
     Ok,
     /// Why it is not a usable staff destination.
@@ -27,7 +28,7 @@ pub(crate) enum ChannelCheck {
 
 /// A channel's facts gathered for the check, before any lock.
 #[derive(Clone, Debug)]
-pub(crate) enum Gathered {
+pub enum Gathered {
     /// The facts the pure check takes.
     Facts(Box<StaffChannelFacts>),
     /// The channel no longer exists.
@@ -39,7 +40,7 @@ pub(crate) enum Gathered {
 }
 
 /// Gathers what the staff-only check needs about `channel` (§13.1.3).
-pub(crate) async fn gather(engine: &Engine, guild: GuildId, channel: ChannelId) -> Gathered {
+pub async fn gather(engine: &Engine, guild: GuildId, channel: ChannelId) -> Gathered {
     let discord = engine.discord();
     let Outcome::Done(facts) = discord.guild_facts(guild).await else {
         return Gathered::Unavailable;
@@ -59,7 +60,7 @@ pub(crate) async fn gather(engine: &Engine, guild: GuildId, channel: ChannelId) 
 
 /// Checks gathered facts with these moderator roles (the ones a settings
 /// change is saving, or the saved ones).
-pub(crate) fn check(
+pub fn check(
     gathered: &Gathered,
     moderator_roles: &[RoleId],
     needs: Permissions,
@@ -81,7 +82,7 @@ pub(crate) fn check(
 
 /// Checks `channel` of `guild` as a staff destination where Quack needs
 /// `needs`, from current facts and the saved moderator roles.
-pub(crate) async fn staff_channel(
+pub async fn staff_channel(
     engine: &Engine,
     guild: GuildId,
     channel: ChannelId,
