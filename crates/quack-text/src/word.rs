@@ -20,17 +20,6 @@ pub const fn action(kind: ActionKind) -> &'static str {
     }
 }
 
-/// An action as the subject or object of a sentence ("this ban", "the
-/// failed remove timeout action"); "remove timeout" alone isn't a noun.
-pub const fn action_noun(kind: ActionKind) -> &'static str {
-    match kind {
-        ActionKind::RemoveTimeout => "remove timeout action",
-        ActionKind::Timeout | ActionKind::Kick | ActionKind::Ban | ActionKind::Unban => {
-            action(kind)
-        }
-    }
-}
-
 /// `case.button.retry`: "Retry ban", "Retry removing timeout".
 pub fn retry_label(kind: ActionKind) -> String {
     match kind {

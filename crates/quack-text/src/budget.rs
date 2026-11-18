@@ -45,8 +45,6 @@ pub const CHOICE_NAME: usize = 100;
 pub const CHANNEL_NAME: usize = 100;
 /// Most characters in a channel topic.
 pub const CHANNEL_TOPIC: usize = 1_024;
-/// Most characters in an `X-Audit-Log-Reason`.
-pub const AUDIT_LOG_REASON: usize = 512;
 /// Most characters in a link button's URL.
 pub const LINK_URL: usize = 512;
 /// Most characters of text in one message, counted after escaping.

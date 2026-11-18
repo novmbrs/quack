@@ -249,14 +249,6 @@ pub fn transcript_time(at: OffsetDateTime) -> String {
     )
 }
 
-/// Lowercases the first letter, for reusing a sentence after a colon.
-pub fn lower_first(s: &str) -> String {
-    let mut chars = s.chars();
-    chars.next().map_or_else(String::new, |first| {
-        first.to_lowercase().chain(chars).collect()
-    })
-}
-
 /// Uppercases the first letter, for a name that starts a sentence.
 pub fn upper_first(s: &str) -> String {
     let mut chars = s.chars();

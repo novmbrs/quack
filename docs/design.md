@@ -6065,14 +6065,14 @@ Root re-exports: `Msg`, `Text`, `Inline`, `Block`, `Row`, `Button`,
   `SELECT_OPTION_LABEL`, `SELECT_OPTION_DESCRIPTION`, `SELECT_PLACEHOLDER`,
   `SELECT_OPTIONS`, `INPUT_LABEL`, `INPUT_DESCRIPTION`, `INPUT_PLACEHOLDER`,
   `INPUT_MAX_LENGTH`, `MODAL_INPUTS`, `COMMAND_NAME`, `COMMAND_DESCRIPTION`,
-  `CHOICE_NAME`, `CHANNEL_NAME`, `CHANNEL_TOPIC`, `AUDIT_LOG_REASON`,
+  `CHOICE_NAME`, `CHANNEL_NAME`, `CHANNEL_TOPIC`,
   `LINK_URL`, `TEXT_BUDGET`, `COMPONENT_BUDGET`; `text_len`,
   `component_count`, `check_msg`, `check_modal`, `cut_text`, `fit(&mut Msg)`.
 - `fmt` — shared formatting: `clean`, `one_line`, `escape_markdown`,
   `defuse_mentions`, `safe_url`, `cut`, `count`, `plural`, `case_ref`,
   `level`, `list`, `duration(seconds: u64) -> String`, `last`, `date`,
-  `datetime`, `transcript_time`, `lower_first`, `upper_first`.
-- `word` — shared words (§12.2): `action`, `action_noun`,
+  `datetime`, `transcript_time`, `upper_first`.
+- `word` — shared words (§12.2): `action`,
   `Outcome::{InProgress, Done, Failed, CouldntConfirm, NotNeeded, Cancelled,
   LeftInPlace}`, `outcome`, `yes_no`, `VOIDED`, `IMPORTED`, `page`, `pager`,
   `open_case_button`, `dashboard_button`, `failed_actions_button`,
