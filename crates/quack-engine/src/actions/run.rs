@@ -63,8 +63,24 @@ async fn run_action(
         Begun::Opened(number) => number,
     };
     let target = super::act::target(engine, &action, &case).await?;
-    let result = act(engine, &action, &case, &target, &rule_name).await;
+    let first_write = no_earlier_write(engine, &action, number).await?;
+    let result = act(engine, &action, &case, &target, &rule_name, first_write).await;
     settle_attempt(engine, job, id, number, result).await
+}
+
+/// Whether no earlier attempt of this action may have reached Discord
+/// (§5.2): only then may a ban delete messages, so a retry after a lost
+/// answer (or a crash after the call) never deletes them a second time,
+/// even if someone lifted the ban in between.
+async fn no_earlier_write(engine: &Engine, action: &Action, open: u32) -> Result<bool, DbError> {
+    let mut conn = engine.db().conn().await?;
+    let earlier: Vec<_> = actions::attempts(&mut conn, action.id)
+        .await?
+        .into_iter()
+        .filter(|a| a.number != open)
+        .map(|a| a.outcome)
+        .collect();
+    Ok(!quack_core::action::may_have_applied(&earlier))
 }
 
 async fn rule_name(conn: &mut quack_db::PgConnection, case: &Case) -> Result<String, DbError> {

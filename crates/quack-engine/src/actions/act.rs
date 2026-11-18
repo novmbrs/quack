@@ -123,13 +123,15 @@ pub(super) async fn target(
 }
 
 /// Reads what the attempt is about to change, and changes it only when
-/// that is still needed (§5.1, §5.6).
+/// that is still needed (§5.1, §5.6). `first_write`: no earlier attempt
+/// may have reached Discord, so a ban may delete messages.
 pub(super) async fn act(
     engine: &Engine,
     action: &Action,
     case: &Case,
     target: &ActionTarget,
     rule_name: &str,
+    first_write: bool,
 ) -> AttemptResult {
     let discord = engine.discord();
     let (guild, member) = (case.guild, case.member);
@@ -160,7 +162,7 @@ pub(super) async fn act(
         Plan::CheckMarker(_) => AttemptResult::NotSent { retry_after: None },
         Plan::Call => {
             let reason = audit_reason(action.kind, case.number, rule_name);
-            let outcome = change(engine, action, target, &reason).await;
+            let outcome = change(engine, action, target, &reason, first_write).await;
             after_call(target, outcome.call(), OffsetDateTime::now_utc())
         }
     }
@@ -184,12 +186,13 @@ async fn marker_case(engine: &Engine, case: &Case, number: u64) -> Result<bool, 
     actions::voided_ban_case(&mut conn, case.guild, case.member, number).await
 }
 
-/// The change call itself.
+/// The change call itself. A ban deletes messages only on its first write.
 async fn change(
     engine: &Engine,
     action: &Action,
     target: &ActionTarget,
     reason: &str,
+    first_write: bool,
 ) -> Outcome<()> {
     let discord = engine.discord();
     let (guild, member) = (action.guild, action.member);
@@ -200,7 +203,11 @@ async fn change(
         },
         ActionKind::Kick => discord.kick(guild, member, reason).await,
         ActionKind::Ban => {
-            let delete = action.delete_message_seconds.unwrap_or(0);
+            let delete = if first_write {
+                action.delete_message_seconds.unwrap_or(0)
+            } else {
+                0
+            };
             discord.ban_member(guild, member, delete, reason).await
         }
         ActionKind::RemoveTimeout => discord.remove_timeout(guild, member, reason).await,

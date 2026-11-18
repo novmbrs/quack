@@ -325,3 +325,37 @@ async fn a_void_during_the_call_never_leaves_a_ban_on_a_voided_case() -> Result<
     assert!(h.fake.world(|w| w.ban(h.guild, sf(MEMBER)).is_none()));
     Ok(())
 }
+
+/// Engine review MAJOR 13: Discord bans and deletes messages but the answer
+/// is lost; someone lifts the ban outside Quack before the retry. The
+/// retry bans again (the case still applies) but never deletes messages a
+/// second time.
+#[tokio::test]
+async fn a_ban_retry_after_a_lost_answer_deletes_no_messages() -> Result<()> {
+    let h = Harness::new().await?;
+    let ban = quack_core::rule::LevelAction::Ban {
+        delete_message_seconds: 3600,
+    };
+    let rule = h
+        .rule(quack_testkit::rules_for_tests::one("Spam", ban, false))
+        .await?;
+    h.apply(MEMBER, rule).await?;
+    h.fake.script(Call::Ban, Script::LoseResponse);
+    h.run_one(JobKind::RunAction).await?;
+    h.fake.world(|w| {
+        if let Some(g) = w.guilds.get_mut(&h.guild) {
+            g.bans.remove(&sf(MEMBER));
+        }
+    });
+    h.settle().await?;
+    let reasons: Vec<String> = h
+        .fake
+        .calls_of(Call::Ban)
+        .into_iter()
+        .filter_map(|c| c.reason)
+        .collect();
+    assert_eq!(reasons.len(), 2, "{reasons:?}");
+    assert!(reasons[0].ends_with("(delete 3600s)"), "{reasons:?}");
+    assert!(reasons[1].ends_with("(delete 0s)"), "{reasons:?}");
+    Ok(())
+}

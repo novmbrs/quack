@@ -7970,3 +7970,8 @@ folds these into the sections (or changes the code) and removes them here.
     `integration_types`, and the User and Message "Add case" commands leave
     out `description`. A modal's selects are sent without `disabled`, which
     Discord forbids in modals.
+40. §5.1 ban, §5.2 (engine review MAJOR 13) → a ban sends its
+    `delete_message_seconds` only when no earlier attempt of the action may
+    have reached Discord; a retry after a lost answer or a crash sends 0, so
+    messages are deleted at most once even if the ban was lifted outside
+    Quack in between (a missed deletion is preferred to a second one).
