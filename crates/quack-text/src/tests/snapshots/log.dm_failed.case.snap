@@ -1,0 +1,70 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## DmsClosed · post
+tone: Danger
+--- discord ---
+Quack couldn't send <@222> a DM about **[case #12](<https://quack.example/guilds/111/cases/12>)** because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack couldn't send Sam a DM about case #12 because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## DmsClosed · dashboard text
+discord: Quack couldn't send <@222> a DM about case #12 because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM about case #12 because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12 because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.")]
+
+## NotInSharedServer · post
+tone: Danger
+--- discord ---
+Quack couldn't send <@222> a DM about **[case #12](<https://quack.example/guilds/111/cases/12>)** because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack couldn't send Sam a DM about case #12 because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## NotInSharedServer · dashboard text
+discord: Quack couldn't send <@222> a DM about case #12 because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM about case #12 because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12 because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.")]
+
+## DiscordUnavailable · post
+tone: Danger
+--- discord ---
+Quack couldn't send <@222> a DM about **[case #12](<https://quack.example/guilds/111/cases/12>)** because Discord wasn't available. They can still see the case by signing in to the dashboard.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack couldn't send Sam a DM about case #12 because Discord wasn't available. They can still see the case by signing in to the dashboard.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" because Discord wasn't available. They can still see the case by signing in to the dashboard.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## DiscordUnavailable · dashboard text
+discord: Quack couldn't send <@222> a DM about case #12 because Discord wasn't available. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM about case #12 because Discord wasn't available. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12 because Discord wasn't available. They can still see the case by signing in to the dashboard.")]
+
+## DiscordRefused · post
+tone: Danger
+--- discord ---
+Quack couldn't send <@222> a DM about **[case #12](<https://quack.example/guilds/111/cases/12>)** because Discord refused the message. They can still see the case by signing in to the dashboard.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack couldn't send Sam a DM about case #12 because Discord refused the message. They can still see the case by signing in to the dashboard.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" because Discord refused the message. They can still see the case by signing in to the dashboard.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## DiscordRefused · dashboard text
+discord: Quack couldn't send <@222> a DM about case #12 because Discord refused the message. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM about case #12 because Discord refused the message. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12 because Discord refused the message. They can still see the case by signing in to the dashboard.")]

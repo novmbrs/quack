@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't find that action in this server. Open the case again to see its actions.
+plain:   Quack couldn't find that action in this server. Open the case again to see its actions.
+model:   [Fixed("Quack couldn't find that action in this server. Open the case again to see its actions.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You rejected the appeal for case #12. Quack will try to send <@222> a DM.
+plain:   You rejected the appeal for case #12. Quack will try to send Sam a DM.
+model:   [Fixed("You rejected the appeal for case #12. Quack will try to send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]

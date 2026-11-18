@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+Tickets moved to <#444>. Open a ticket there.
+--- plain ---
+Tickets moved to #support. Open a ticket there.
+--- model ---
+Text [Fixed("Tickets moved to "), Channel(ChannelRef { id: ChannelId(444), name: Some("support") }), Fixed(". Open a ticket there.")]

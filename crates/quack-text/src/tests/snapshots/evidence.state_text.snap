@@ -1,0 +1,17 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Saving
+discord: Quack is still saving this message.
+plain:   Quack is still saving this message.
+model:   [Fixed("Quack is still saving this message.")]
+
+## Saved
+discord: Saved.
+plain:   Saved.
+model:   [Fixed("Saved.")]
+
+## Failed
+discord: Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry.
+plain:   Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry.
+model:   [Fixed("Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry.")]

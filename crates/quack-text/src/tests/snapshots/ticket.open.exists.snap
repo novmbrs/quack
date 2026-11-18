@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You already have an open ticket: <#555>.
+plain:   You already have an open ticket: #ticket-abc.
+model:   [Fixed("You already have an open ticket: "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(".")]

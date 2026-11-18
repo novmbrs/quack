@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+rule — The rule to apply.
+
+## description
+The rule to apply.

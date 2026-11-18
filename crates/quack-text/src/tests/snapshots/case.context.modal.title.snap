@@ -1,0 +1,15 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+modal "Edit context · case #12" EditContext { case: CaseId(01930000-0000-7000-8000-000000000001), revision: 4 }
+- Field(FieldKey("what")) "What happened?" (required)
+  Paragraph text, 1–4000 characters, placeholder None, value None
+- Field(FieldKey("short")) "Long text with *stars* and <@1> mentions. Lo…" (optional)
+  description: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
+  Short text, 0–500 characters, placeholder None, value Some("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti…")
+- Field(FieldKey("repeat")) "Repeat offence?" (optional)
+  Yes/No select, placeholder "Choose Yes or No", value Some(false)
+- Field(FieldKey("count")) "Links posted" (optional)
+  Short text, 0–40 characters, placeholder Some("A number, like 3 or 2.5"), value None
+- Field(FieldKey("message")) "Message link" (required)
+  Short text, 1–4000 characters, placeholder Some("https://discord.com/channels/…"), value None

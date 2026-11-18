@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Your last ticket is still closing. Try again in a minute.
+plain:   Your last ticket is still closing. Try again in a minute.
+model:   [Fixed("Your last ticket is still closing. Try again in a minute.")]

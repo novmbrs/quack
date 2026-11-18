@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The moderators haven't asked for more information on this appeal.
+plain:   The moderators haven't asked for more information on this appeal.
+model:   [Fixed("The moderators haven't asked for more information on this appeal.")]

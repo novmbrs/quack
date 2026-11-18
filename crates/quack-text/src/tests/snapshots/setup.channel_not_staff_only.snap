@@ -1,0 +1,16 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: <#444> isn't staff-only, so Quack didn't save it:
+It isn't a text channel in this server.
+@everyone can view it. Deny View Channel for @everyone.
+The role <@&666> can view it but isn't a staff role.
+<@222> can view it but isn't staff.
+Fix its permissions, then choose it again.
+plain:   #staff isn't staff-only, so Quack didn't save it:
+It isn't a text channel in this server.
+@everyone can view it. Deny View Channel for @everyone.
+The role @Helpers can view it but isn't a staff role.
+Sam can view it but isn't staff.
+Fix its permissions, then choose it again.
+model:   [Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" isn't staff-only, so Quack didn't save it:\nIt isn't a text channel in this server.\n@everyone can view it. Deny View Channel for @everyone.\nThe role "), Role(RoleRef { id: RoleId(666), name: Some("Helpers") }), Fixed(" can view it but isn't a staff role.\n"), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can view it but isn't staff.\nFix its permissions, then choose it again.")]

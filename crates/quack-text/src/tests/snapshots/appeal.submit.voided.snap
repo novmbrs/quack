@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 was voided, so there's nothing to appeal.
+plain:   Case #12 was voided, so there's nothing to appeal.
+model:   [Fixed("Case #12 was voided, so there's nothing to appeal.")]

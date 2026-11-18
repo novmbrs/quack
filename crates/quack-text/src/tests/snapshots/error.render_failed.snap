@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 is saved, but Quack couldn't show it here. Use </case view:1001> number:12 to see it.
+plain:   Case #12 is saved, but Quack couldn't show it here. Use /case view number:12 to see it.
+model:   [Fixed("Case #12 is saved, but Quack couldn't show it here. Use "), Command(CaseView), Fixed(" number:12 to see it.")]

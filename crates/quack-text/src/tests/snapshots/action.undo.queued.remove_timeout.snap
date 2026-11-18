@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack is removing <@222>'s timeout. Case #12 shows the result.
+plain:   Quack is removing Sam's timeout. Case #12 shows the result.
+model:   [Fixed("Quack is removing "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Case #12 shows the result.")]

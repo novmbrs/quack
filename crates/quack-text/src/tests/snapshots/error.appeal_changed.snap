@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This appeal changed since you opened it. Open it again to see where it stands.
+plain:   This appeal changed since you opened it. Open it again to see where it stands.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see where it stands.")]

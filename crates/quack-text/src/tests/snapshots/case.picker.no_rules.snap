@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This server has no active rules yet. Ask a rules manager to create one on the dashboard.
+plain:   This server has no active rules yet. Ask a rules manager to create one on the dashboard.
+model:   [Fixed("This server has no active rules yet. Ask a rules manager to create one on the dashboard.")]

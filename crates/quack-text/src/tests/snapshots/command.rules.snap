@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+rules — List this server's rules.
+
+## description
+List this server's rules.

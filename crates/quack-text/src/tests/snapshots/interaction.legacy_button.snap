@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead.
+plain:   This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead.
+model:   [Fixed("This button is from an older version of Quack and no longer works. Use the commands or the dashboard instead.")]

@@ -1,0 +1,29 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Tickets
+discord: Tickets can't be turned on yet:
+Choose the channel where members open tickets.
+Choose the staff channel for new tickets.
+plain:   Tickets can't be turned on yet:
+Choose the channel where members open tickets.
+Choose the staff channel for new tickets.
+model:   [Fixed("Tickets can't be turned on yet:\nChoose the channel where members open tickets.\nChoose the staff channel for new tickets.")]
+
+## ActivityLog
+discord: The server activity log can't be turned on yet:
+Choose the channel where members open tickets.
+Choose the staff channel for new tickets.
+plain:   The server activity log can't be turned on yet:
+Choose the channel where members open tickets.
+Choose the staff channel for new tickets.
+model:   [Fixed("The server activity log can't be turned on yet:\nChoose the channel where members open tickets.\nChoose the staff channel for new tickets.")]
+
+## Honeypot
+discord: The honeypot can't be turned on yet:
+Choose the channel where members open tickets.
+Choose the staff channel for new tickets.
+plain:   The honeypot can't be turned on yet:
+Choose the channel where members open tickets.
+Choose the staff channel for new tickets.
+model:   [Fixed("The honeypot can't be turned on yet:\nChoose the channel where members open tickets.\nChoose the staff channel for new tickets.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Someone else changed this case's context. Open it again before you save.
+plain:   Someone else changed this case's context. Open it again before you save.
+model:   [Fixed("Someone else changed this case's context. Open it again before you save.")]

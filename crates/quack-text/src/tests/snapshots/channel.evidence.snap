@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+evidence
+
+## topic
+Copies of evidence files for Quack cases.
+
+## first message
+tone: Neutral
+--- discord ---
+### Evidence
+Quack copies evidence files here so they last after the original message is deleted. Please don't delete messages here.
+--- plain ---
+Evidence
+Quack copies evidence files here so they last after the original message is deleted. Please don't delete messages here.
+--- model ---
+Heading [Fixed("Evidence")]
+Text [Fixed("Quack copies evidence files here so they last after the original message is deleted. Please don't delete messages here.")]

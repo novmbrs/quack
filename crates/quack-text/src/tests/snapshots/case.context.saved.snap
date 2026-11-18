@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The context of case #12 is saved.
+plain:   The context of case #12 is saved.
+model:   [Fixed("The context of case #12 is saved.")]

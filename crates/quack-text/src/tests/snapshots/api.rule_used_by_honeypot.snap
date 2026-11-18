@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+plain:   The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+model:   [Fixed("The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.")]

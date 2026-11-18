@@ -1,0 +1,20 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Your appeal for case #12 in **Duck Pond** was accepted
+> We reviewed it.
+The case no longer counts. Open your case to see what happened to any timeout or ban.
+-# Case #12 · Duck Pond · <t:1795014309:f>
+buttons: [View appeal](https://quack.example/guilds/111/cases/12/appeal)
+--- plain ---
+Your appeal for case #12 in Duck Pond was accepted
+> We reviewed it.
+The case no longer counts. Open your case to see what happened to any timeout or ban.
+Case #12 · Duck Pond · 18 Nov 2026 at 15:05 UTC
+--- model ---
+Heading [Fixed("Your appeal for case #12 in "), Bold([User("Duck Pond")]), Fixed(" was accepted")]
+Quote [User("We reviewed it.")]
+Text [Fixed("The case no longer counts. Open your case to see what happened to any timeout or ban.")]
+Subtext [Fixed("Case #12 · "), User("Duck Pond"), Fixed(" · "), Time(2026-11-18 15:05:09.0 +00:00:00, Full)]

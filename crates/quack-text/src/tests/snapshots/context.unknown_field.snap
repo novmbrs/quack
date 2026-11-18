@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ShortText
+discord: what\_happened isn't a field of this rule.
+plain:   what_happened isn't a field of this rule.
+model:   [User("what_happened"), Fixed(" isn't a field of this rule.")]

@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MemberIsBot
+discord: No case was added. <@222> is a bot, and cases are only for people.
+plain:   No case was added. Sam is a bot, and cases are only for people.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+
+## MemberIsBot, no member known
+discord: No case was added. The member is a bot, and cases are only for people.
+plain:   No case was added. The member is a bot, and cases are only for people.
+model:   [Fixed("No case was added. The member is a bot, and cases are only for people.")]

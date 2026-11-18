@@ -1,0 +1,4 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+  file: screenshot.png (123,456 bytes)

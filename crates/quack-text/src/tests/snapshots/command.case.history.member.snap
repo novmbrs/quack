@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+member — The member whose cases to show.
+
+## description
+The member whose cases to show.

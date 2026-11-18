@@ -1,0 +1,53 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Tickets · post
+tone: Neutral
+--- discord ---
+Quack turned off tickets because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack turned off tickets because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack turned off tickets because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Tickets · dashboard text
+discord: Quack turned off tickets because its channel was deleted.
+plain:   Quack turned off tickets because its channel was deleted.
+model:   [Fixed("Quack turned off tickets because its channel was deleted.")]
+
+## ActivityLog · post
+tone: Neutral
+--- discord ---
+Quack turned off the server activity log because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack turned off the server activity log because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack turned off the server activity log because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## ActivityLog · dashboard text
+discord: Quack turned off the server activity log because its channel was deleted.
+plain:   Quack turned off the server activity log because its channel was deleted.
+model:   [Fixed("Quack turned off the server activity log because its channel was deleted.")]
+
+## Honeypot · post
+tone: Neutral
+--- discord ---
+Quack turned off the honeypot because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack turned off the honeypot because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack turned off the honeypot because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Honeypot · dashboard text
+discord: Quack turned off the honeypot because its channel was deleted.
+plain:   Quack turned off the honeypot because its channel was deleted.
+model:   [Fixed("Quack turned off the honeypot because its channel was deleted.")]

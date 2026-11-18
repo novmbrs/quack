@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## timeout
+discord: This timeout can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+plain:   This timeout can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+model:   [Fixed("This timeout can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+
+## kick
+discord: This kick can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+plain:   This kick can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+model:   [Fixed("This kick can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+
+## ban
+discord: This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+plain:   This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+model:   [Fixed("This ban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+
+## remove timeout
+discord: This remove timeout action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+plain:   This remove timeout action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+model:   [Fixed("This remove timeout action can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]
+
+## unban
+discord: This unban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+plain:   This unban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.
+model:   [Fixed("This unban can't be retried: it isn't failed anymore, or it was dismissed. Open the case to see where it stands.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack created <#444> so members can see it, and saved it.
+plain:   Quack created #staff so members can see it, and saved it.
+model:   [Fixed("Quack created "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" so members can see it, and saved it.")]

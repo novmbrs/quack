@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## LongText
+discord: What happened?: an answer is required.
+plain:   What happened?: an answer is required.
+model:   [User("What happened?"), Fixed(": an answer is required.")]

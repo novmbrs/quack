@@ -1,0 +1,101 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## everything on
+tone: Neutral
+--- discord ---
+### Set up Quack
+Choose what to set up. Changes save right away and also show on the dashboard.
+**Log channel:** <#444>
+**Appeals:** <#444>, rejoin invite set
+**Evidence copies:** <#444>
+**Tickets:** On · members open tickets in <#444> · new tickets go to <#444>
+**Honeypot:** On · <#444> · rule **Honeypot**
+**Server activity log:** On · <#444>
+buttons: [Log channel · Secondary] Setup(Log, Open) | [Appeals · Secondary] Setup(Appeals, Open) | [Evidence copies · Secondary] Setup(Evidence, Open) | [Tickets · Secondary] Setup(Tickets, Open) | [Honeypot · Secondary] Setup(Honeypot, Open)
+buttons: [Server activity log · Secondary] Setup(ActivityLog, Open) | [Open settings](https://quack.example/guilds/111/settings)
+--- plain ---
+Set up Quack
+Choose what to set up. Changes save right away and also show on the dashboard.
+Log channel: #moderation-log
+Appeals: #appeals, rejoin invite set
+Evidence copies: #evidence
+Tickets: On · members open tickets in #support · new tickets go to #ticket-log
+Honeypot: On · #honeypot · rule Honeypot
+Server activity log: On · #server-log
+--- model ---
+Heading [Fixed("Set up Quack")]
+Text [Fixed("Choose what to set up. Changes save right away and also show on the dashboard.")]
+Field "Log channel" [Channel(ChannelRef { id: ChannelId(444), name: Some("moderation-log") })]
+Field "Appeals" [Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(", rejoin invite set")]
+Field "Evidence copies" [Channel(ChannelRef { id: ChannelId(444), name: Some("evidence") })]
+Field "Tickets" [Fixed("On · members open tickets in "), Channel(ChannelRef { id: ChannelId(444), name: Some("support") }), Fixed(" · new tickets go to "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") })]
+Field "Honeypot" [Fixed("On · "), Channel(ChannelRef { id: ChannelId(444), name: Some("honeypot") }), Fixed(" · rule "), Bold([User("Honeypot")])]
+Field "Server activity log" [Fixed("On · "), Channel(ChannelRef { id: ChannelId(444), name: Some("server-log") })]
+
+## nothing set, with a result
+tone: Neutral
+--- discord ---
+### Set up Quack
+Quack stopped posting moderation log entries.
+Choose what to set up. Changes save right away and also show on the dashboard.
+**Log channel:** Not set
+**Appeals:** Not set
+**Evidence copies:** Off
+**Tickets:** Off
+**Honeypot:** Off
+**Server activity log:** Off
+buttons: [Log channel · Secondary] Setup(Log, Open) | [Appeals · Secondary] Setup(Appeals, Open) | [Evidence copies · Secondary] Setup(Evidence, Open) | [Tickets · Secondary] Setup(Tickets, Open) | [Honeypot · Secondary] Setup(Honeypot, Open)
+buttons: [Server activity log · Secondary] Setup(ActivityLog, Open) | [Open settings](https://quack.example/guilds/111/settings)
+--- plain ---
+Set up Quack
+Quack stopped posting moderation log entries.
+Choose what to set up. Changes save right away and also show on the dashboard.
+Log channel: Not set
+Appeals: Not set
+Evidence copies: Off
+Tickets: Off
+Honeypot: Off
+Server activity log: Off
+--- model ---
+Heading [Fixed("Set up Quack")]
+Text [Fixed("Quack stopped posting moderation log entries.")]
+Text [Fixed("Choose what to set up. Changes save right away and also show on the dashboard.")]
+Field "Log channel" [Fixed("Not set")]
+Field "Appeals" [Fixed("Not set")]
+Field "Evidence copies" [Fixed("Off")]
+Field "Tickets" [Fixed("Off")]
+Field "Honeypot" [Fixed("Off")]
+Field "Server activity log" [Fixed("Off")]
+
+## several activity channels
+tone: Neutral
+--- discord ---
+### Set up Quack
+Choose what to set up. Changes save right away and also show on the dashboard.
+**Log channel:** <#444>
+**Appeals:** <#444>, rejoin invite set
+**Evidence copies:** <#444>
+**Tickets:** On · members open tickets in <#444> · new tickets go to <#444>
+**Honeypot:** On · <#444> · rule **Honeypot**
+**Server activity log:** On · several channels
+buttons: [Log channel · Secondary] Setup(Log, Open) | [Appeals · Secondary] Setup(Appeals, Open) | [Evidence copies · Secondary] Setup(Evidence, Open) | [Tickets · Secondary] Setup(Tickets, Open) | [Honeypot · Secondary] Setup(Honeypot, Open)
+buttons: [Server activity log · Secondary] Setup(ActivityLog, Open) | [Open settings](https://quack.example/guilds/111/settings)
+--- plain ---
+Set up Quack
+Choose what to set up. Changes save right away and also show on the dashboard.
+Log channel: #moderation-log
+Appeals: #appeals, rejoin invite set
+Evidence copies: #evidence
+Tickets: On · members open tickets in #support · new tickets go to #ticket-log
+Honeypot: On · #honeypot · rule Honeypot
+Server activity log: On · several channels
+--- model ---
+Heading [Fixed("Set up Quack")]
+Text [Fixed("Choose what to set up. Changes save right away and also show on the dashboard.")]
+Field "Log channel" [Channel(ChannelRef { id: ChannelId(444), name: Some("moderation-log") })]
+Field "Appeals" [Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(", rejoin invite set")]
+Field "Evidence copies" [Channel(ChannelRef { id: ChannelId(444), name: Some("evidence") })]
+Field "Tickets" [Fixed("On · members open tickets in "), Channel(ChannelRef { id: ChannelId(444), name: Some("support") }), Fixed(" · new tickets go to "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") })]
+Field "Honeypot" [Fixed("On · "), Channel(ChannelRef { id: ChannelId(444), name: Some("honeypot") }), Fixed(" · rule "), Bold([User("Honeypot")])]
+Field "Server activity log" [Fixed("On · several channels")]

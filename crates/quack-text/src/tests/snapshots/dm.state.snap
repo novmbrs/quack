@@ -1,0 +1,52 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## level sends no DM
+discord: This level doesn't send a DM.
+plain:   This level doesn't send a DM.
+model:   [Fixed("This level doesn't send a DM.")]
+
+## Pending
+discord: Quack is sending <@222> a DM.
+plain:   Quack is sending Sam a DM.
+model:   [Fixed("Quack is sending "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+
+## Sending
+discord: Quack is sending <@222> a DM.
+plain:   Quack is sending Sam a DM.
+model:   [Fixed("Quack is sending "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+
+## Sent
+discord: Quack sent <@222> a DM.
+plain:   Quack sent Sam a DM.
+model:   [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM.")]
+
+## Failed DmsClosed
+discord: Quack couldn't send <@222> a DM because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM because Discord didn't let Quack message them (their DMs may be closed, or they may have blocked Quack). They can still see the case by signing in to the dashboard.")]
+
+## Failed NotInSharedServer
+discord: Quack couldn't send <@222> a DM because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM because they no longer share a server with Quack. They can still see the case by signing in to the dashboard.")]
+
+## Failed DiscordUnavailable
+discord: Quack couldn't send <@222> a DM because Discord wasn't available. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM because Discord wasn't available. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM because Discord wasn't available. They can still see the case by signing in to the dashboard.")]
+
+## Failed DiscordRefused
+discord: Quack couldn't send <@222> a DM because Discord refused the message. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't send Sam a DM because Discord refused the message. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM because Discord refused the message. They can still see the case by signing in to the dashboard.")]
+
+## Unknown
+discord: Quack couldn't confirm whether Discord accepted the DM to <@222>, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
+plain:   Quack couldn't confirm whether Discord accepted the DM to Sam, and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.
+model:   [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", and won't send it again so it can't arrive twice. They can still see the case by signing in to the dashboard.")]
+
+## NotNeeded
+discord: Quack didn't send a DM because the case was voided first.
+plain:   Quack didn't send a DM because the case was voided first.
+model:   [Fixed("Quack didn't send a DM because the case was voided first.")]

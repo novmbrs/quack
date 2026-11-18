@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MessageLink
+discord: What happened?: paste a Discord message link. Right-click the message and choose Copy Message Link.
+plain:   What happened?: paste a Discord message link. Right-click the message and choose Copy Message Link.
+model:   [User("What happened?"), Fixed(": paste a Discord message link. Right-click the message and choose Copy Message Link.")]

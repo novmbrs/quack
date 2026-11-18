@@ -1,0 +1,14 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## number known
+modal "Void case #12" VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
+- Reason "Why is this case wrong?" (required)
+  description: The member can see this reason.
+  Paragraph text, 1–1000 characters, placeholder None, value None
+
+## number unknown
+modal "Void case" VoidCase(CaseId(01930000-0000-7000-8000-000000000001))
+- Reason "Why is this case wrong?" (required)
+  description: The member can see this reason.
+  Paragraph text, 1–1000 characters, placeholder None, value None

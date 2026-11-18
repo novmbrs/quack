@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only the member who opened this ticket and moderators can close it.
+plain:   Only the member who opened this ticket and moderators can close it.
+model:   [Fixed("Only the member who opened this ticket and moderators can close it.")]

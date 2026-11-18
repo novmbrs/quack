@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## QuackNotInServer
+discord: No case was added. Quack isn't in this server.
+plain:   No case was added. Quack isn't in this server.
+model:   [Fixed("No case was added. Quack isn't in this server.")]
+
+## QuackNotInServer, no member known
+discord: No case was added. Quack isn't in this server.
+plain:   No case was added. Quack isn't in this server.
+model:   [Fixed("No case was added. Quack isn't in this server.")]

@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one permission
+discord: Quack couldn't create #moderation-log because it needs the Manage Channels permission. Give it to Quack's role, or choose an existing channel instead.
+plain:   Quack couldn't create #moderation-log because it needs the Manage Channels permission. Give it to Quack's role, or choose an existing channel instead.
+model:   [Fixed("Quack couldn't create #moderation-log because it needs the Manage Channels permission. Give it to Quack's role, or choose an existing channel instead.")]
+
+## two permissions
+discord: Quack couldn't create #support because it needs the Manage Channels and Manage Threads permissions. Give it to Quack's role, or choose an existing channel instead.
+plain:   Quack couldn't create #support because it needs the Manage Channels and Manage Threads permissions. Give it to Quack's role, or choose an existing channel instead.
+model:   [Fixed("Quack couldn't create #support because it needs the Manage Channels and Manage Threads permissions. Give it to Quack's role, or choose an existing channel instead.")]

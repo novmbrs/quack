@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: That rule doesn't exist anymore. Choose another rule.
+plain:   That rule doesn't exist anymore. Choose another rule.
+model:   [Fixed("That rule doesn't exist anymore. Choose another rule.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot is off. Posts there no longer add cases.
+plain:   The honeypot is off. Posts there no longer add cases.
+model:   [Fixed("The honeypot is off. Posts there no longer add cases.")]

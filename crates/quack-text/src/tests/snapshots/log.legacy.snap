@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+Imported from the previous version of Quack: case action retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Imported from the previous version of Quack: case action retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Imported from the previous version of Quack: "), User("case action retry"), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: Imported from the previous version of Quack: case action retry.
+plain:   Imported from the previous version of Quack: case action retry.
+model:   [Fixed("Imported from the previous version of Quack: "), User("case action retry"), Fixed(".")]

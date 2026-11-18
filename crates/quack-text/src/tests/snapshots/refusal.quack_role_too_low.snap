@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## QuackRoleTooLow
+discord: No case was added. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
+plain:   No case was added. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it.")]
+
+## QuackRoleTooLow, no member known
+discord: No case was added. The member's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
+plain:   No case was added. The member's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.
+model:   [Fixed("No case was added. The member's highest role is at or above Quack's. Ask an administrator to move Quack's role above it.")]

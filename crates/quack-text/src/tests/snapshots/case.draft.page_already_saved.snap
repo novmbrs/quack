@@ -1,0 +1,22 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## next page
+tone: Neutral
+--- discord ---
+This form page was already saved. Continue with the next page.
+buttons: [Continue · Primary] DraftContinue(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 2 })
+--- plain ---
+This form page was already saved. Continue with the next page.
+--- model ---
+Text [Fixed("This form page was already saved. Continue with the next page.")]
+
+## case already added
+tone: Neutral
+--- discord ---
+This form page was already saved.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+This form page was already saved.
+--- model ---
+Text [Fixed("This form page was already saved.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only moderators can do this. Ask a server administrator to give you a moderator role.
+plain:   Only moderators can do this. Ask a server administrator to give you a moderator role.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to give you a moderator role.")]

@@ -1,0 +1,52 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## level sends no DM
+discord: This case didn't need a DM.
+plain:   This case didn't need a DM.
+model:   [Fixed("This case didn't need a DM.")]
+
+## Pending
+discord: Quack is sending you a DM about this case.
+plain:   Quack is sending you a DM about this case.
+model:   [Fixed("Quack is sending you a DM about this case.")]
+
+## Sending
+discord: Quack is sending you a DM about this case.
+plain:   Quack is sending you a DM about this case.
+model:   [Fixed("Quack is sending you a DM about this case.")]
+
+## Sent
+discord: Quack sent you a DM about this case.
+plain:   Quack sent you a DM about this case.
+model:   [Fixed("Quack sent you a DM about this case.")]
+
+## Failed DmsClosed
+discord: Quack couldn't send you a DM about this case. You can see your case here.
+plain:   Quack couldn't send you a DM about this case. You can see your case here.
+model:   [Fixed("Quack couldn't send you a DM about this case. You can see your case here.")]
+
+## Failed NotInSharedServer
+discord: Quack couldn't send you a DM about this case. You can see your case here.
+plain:   Quack couldn't send you a DM about this case. You can see your case here.
+model:   [Fixed("Quack couldn't send you a DM about this case. You can see your case here.")]
+
+## Failed DiscordUnavailable
+discord: Quack couldn't send you a DM about this case. You can see your case here.
+plain:   Quack couldn't send you a DM about this case. You can see your case here.
+model:   [Fixed("Quack couldn't send you a DM about this case. You can see your case here.")]
+
+## Failed DiscordRefused
+discord: Quack couldn't send you a DM about this case. You can see your case here.
+plain:   Quack couldn't send you a DM about this case. You can see your case here.
+model:   [Fixed("Quack couldn't send you a DM about this case. You can see your case here.")]
+
+## Unknown
+discord: Quack couldn't confirm whether you got a DM about this case. You can see your case here.
+plain:   Quack couldn't confirm whether you got a DM about this case. You can see your case here.
+model:   [Fixed("Quack couldn't confirm whether you got a DM about this case. You can see your case here.")]
+
+## NotNeeded
+discord: This case didn't need a DM.
+plain:   This case didn't need a DM.
+model:   [Fixed("This case didn't need a DM.")]

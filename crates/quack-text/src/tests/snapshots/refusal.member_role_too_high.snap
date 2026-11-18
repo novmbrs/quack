@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MemberRoleTooHigh
+discord: No case was added. <@222>'s highest role is at or above yours. Ask a moderator with a higher role.
+plain:   No case was added. Sam's highest role is at or above yours. Ask a moderator with a higher role.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above yours. Ask a moderator with a higher role.")]
+
+## MemberRoleTooHigh, no member known
+discord: No case was added. The member's highest role is at or above yours. Ask a moderator with a higher role.
+plain:   No case was added. The member's highest role is at or above yours. Ask a moderator with a higher role.
+model:   [Fixed("No case was added. The member's highest role is at or above yours. Ask a moderator with a higher role.")]

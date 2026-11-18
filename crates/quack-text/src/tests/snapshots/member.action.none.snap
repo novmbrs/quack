@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This case is a warning. No other action was taken.
+plain:   This case is a warning. No other action was taken.
+model:   [Fixed("This case is a warning. No other action was taken.")]

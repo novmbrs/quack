@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ChangedOutsideCase None · post
+tone: Neutral
+--- discord ---
+Quack left <@222>'s timeout in place after **[case #12](<https://quack.example/guilds/111/cases/12>)** was voided, because someone changed the timeout outside the case. Check it in Discord.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack left Sam's timeout in place after case #12 was voided, because someone changed the timeout outside the case. Check it in Discord.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in place after "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" was voided, because someone changed the timeout outside the case. Check it in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## ChangedOutsideCase None · dashboard text
+discord: Quack left <@222>'s timeout in place after case #12 was voided, because someone changed the timeout outside the case. Check it in Discord.
+plain:   Quack left Sam's timeout in place after case #12 was voided, because someone changed the timeout outside the case. Check it in Discord.
+model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in place after case #12 was voided, because someone changed the timeout outside the case. Check it in Discord.")]

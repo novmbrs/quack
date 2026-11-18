@@ -1,0 +1,193 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## warning, DM sent
+tone: Neutral
+--- discord ---
+### Case #12 · **Spam**
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** No action. This case is a warning.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam
+Sam
+> Posting spam or unsolicited advertising.
+Action: No action. This case is a warning.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Fixed("No action. This case is a warning.")]
+
+## timeout done, DM failed, context, appeal pending, replaced
+tone: Success
+--- discord ---
+### Case #12 · **Spam**
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** <@222> is timed out until <t:1795014309:f> (<t:1795014309:R>).
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam
+Sam
+> Posting spam or unsolicited advertising.
+Action: Sam is timed out until 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is timed out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## ban failed (missing permission), DM unknown, partial evidence
+tone: Danger
+--- discord ---
+### Case #12 · **Spam**
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** Quack couldn't ban <@222>.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam
+Sam
+> Posting spam or unsolicited advertising.
+Action: Quack couldn't ban Sam.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## voided ban, unban retrying, appeal closed
+tone: Neutral
+--- discord ---
+### Case #12 · **Spam** · Voided
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** Quack banned <@222>.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam · Voided
+Sam
+> Posting spam or unsolicited advertising.
+Action: Quack banned Sam.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")]), Fixed(" · Voided")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Fixed("Quack banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## honeypot kick
+tone: Success
+--- discord ---
+### Case #12 · **Spam**
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** Quack removed <@222> from the server.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam
+Sam
+> Posting spam or unsolicited advertising.
+Action: Quack removed Sam from the server.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Fixed("Quack removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
+
+## imported
+tone: Neutral
+--- discord ---
+### Case #12 · **Spam**
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** No action. This case is a warning.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam
+Sam
+> Posting spam or unsolicited advertising.
+Action: No action. This case is a warning.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Fixed("No action. This case is a warning.")]
+
+## maximal
+tone: Neutral
+--- discord ---
+### Case #12 · **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*** · Voided
+<@222>
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> me
+**Action:** <@222> is timed out until <t:1795014309:f> (<t:1795014309:R>).
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · Voided
+Sam
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me
+Action: Sam is timed out until 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")]), Fixed(" · Voided")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me")]
+Field "Action" [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is timed out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## hostile text
+tone: Neutral
+--- discord ---
+### Case #12 · **\@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
+\# Heading
+\> quote
+\- list
+1\. one
+hidden**
+<@222>
+> \@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
+> \# Heading
+> \> quote
+> \- list
+> 1\. one
+> hidden
+**Action:** No action. This case is a warning.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
+# Heading
+> quote
+- list
+1. one
+hidden
+@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden
+> @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
+> # Heading
+> > quote
+> - list
+> 1. one
+> hidden
+Action: No action. This case is a warning.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")])]
+Text [Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") })]
+Quote [User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")]
+Field "Action" [Fixed("No action. This case is a warning.")]
+
+## ban unconfirmed
+tone: Danger
+--- discord ---
+### Case #12 · **Spam**
+<@222>
+> Posting spam or unsolicited advertising.
+**Action:** Quack couldn't confirm whether Discord applied the ban to <@222>.
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 · Spam
+Sam
+> Posting spam or unsolicited advertising.
+Action: Quack couldn't confirm whether Discord applied the ban to Sam.
+--- model ---
+Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") })]
+Quote [User("Posting spam or unsolicited advertising.")]
+Field "Action" [Fixed("Quack couldn't confirm whether Discord applied the ban to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]

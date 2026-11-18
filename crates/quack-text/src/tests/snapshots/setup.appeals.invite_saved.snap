@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Members whose appeal is accepted will get this invite: [https://discord.gg/abc123](<https://discord.gg/abc123>)
+plain:   Members whose appeal is accepted will get this invite: https://discord.gg/abc123
+model:   [Fixed("Members whose appeal is accepted will get this invite: "), Link { text: [Fixed("https://discord.gg/abc123")], url: "https://discord.gg/abc123" }]

@@ -1,0 +1,24 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Unban no_change=true · post
+tone: Neutral
+--- discord ---
+<@222> wasn't banned anymore when Quack tried to undo the ban from **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Sam wasn't banned anymore when Quack tried to undo the ban from case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" wasn't banned anymore when Quack tried to undo the ban from "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban no_change=true · dashboard text
+discord: <@222> wasn't banned anymore when Quack tried to undo the ban from case #12.
+plain:   Sam wasn't banned anymore when Quack tried to undo the ban from case #12.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" wasn't banned anymore when Quack tried to undo the ban from case #12.")]
+
+## Unban no_change=true · no names known
+discord: A member wasn't banned anymore when Quack tried to undo the ban from case #12.
+plain:   A member wasn't banned anymore when Quack tried to undo the ban from case #12.
+model:   [Fixed("A member wasn't banned anymore when Quack tried to undo the ban from case #12.")]

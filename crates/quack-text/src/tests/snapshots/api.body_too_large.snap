@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: That's too much to save at once. The limit is 256 KB.
+plain:   That's too much to save at once. The limit is 256 KB.
+model:   [Fixed("That's too much to save at once. The limit is 256 KB.")]

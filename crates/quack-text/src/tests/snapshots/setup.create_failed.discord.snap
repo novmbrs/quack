@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Discord didn't let Quack create #moderation-log. Choose an existing channel instead.
+plain:   Discord didn't let Quack create #moderation-log. Choose an existing channel instead.
+model:   [Fixed("Discord didn't let Quack create #moderation-log. Choose an existing channel instead.")]

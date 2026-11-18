@@ -1,0 +1,37 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## TooManyRoles
+discord: Choose at most 25 roles.
+plain:   Choose at most 25 roles.
+model:   [Fixed("Choose at most 25 roles.")]
+
+## DuplicateRole
+discord: A role is listed more than once.
+plain:   A role is listed more than once.
+model:   [Fixed("A role is listed more than once.")]
+
+## EveryoneRole
+discord: @everyone can't be a staff role.
+plain:   @everyone can't be a staff role.
+model:   [Fixed("@everyone can't be a staff role.")]
+
+## UnknownRole
+discord: One of these roles isn't in the server anymore. Choose a current role.
+plain:   One of these roles isn't in the server anymore. Choose a current role.
+model:   [Fixed("One of these roles isn't in the server anymore. Choose a current role.")]
+
+## InviteUrl
+discord: That isn't a Discord invite link. Use a link like https://discord.gg/abc123.
+plain:   That isn't a Discord invite link. Use a link like https://discord.gg/abc123.
+model:   [Fixed("That isn't a Discord invite link. Use a link like https://discord.gg/abc123.")]
+
+## TooLong
+discord: Use at most 1,000 characters.
+plain:   Use at most 1,000 characters.
+model:   [Fixed("Use at most 1,000 characters.")]
+
+## RetentionDays
+discord: Keep transcripts for 1 to 365 days.
+plain:   Keep transcripts for 1 to 365 days.
+model:   [Fixed("Keep transcripts for 1 to 365 days.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.
+plain:   Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.
+model:   [Fixed("Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.")]

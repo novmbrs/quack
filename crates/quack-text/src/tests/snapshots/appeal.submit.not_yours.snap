@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This button isn't for your account. Sign in to the dashboard to see your own cases.
+plain:   This button isn't for your account. Sign in to the dashboard to see your own cases.
+model:   [Fixed("This button isn't for your account. Sign in to the dashboard to see your own cases.")]

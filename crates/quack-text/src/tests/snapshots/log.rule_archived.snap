@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+<@333> archived the rule **Spam**. It can't be applied until someone restores it.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana archived the rule Spam. It can't be applied until someone restores it.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" archived the rule "), Bold([User("Spam")]), Fixed(". It can't be applied until someone restores it.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: <@333> archived the rule **Spam**. It can't be applied until someone restores it.
+plain:   Ana archived the rule Spam. It can't be applied until someone restores it.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" archived the rule "), Bold([User("Spam")]), Fixed(". It can't be applied until someone restores it.")]

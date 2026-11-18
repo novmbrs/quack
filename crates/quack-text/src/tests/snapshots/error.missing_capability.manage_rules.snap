@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You need the Manage Server permission or a rules manager role to manage rules.
+plain:   You need the Manage Server permission or a rules manager role to manage rules.
+model:   [Fixed("You need the Manage Server permission or a rules manager role to manage rules.")]

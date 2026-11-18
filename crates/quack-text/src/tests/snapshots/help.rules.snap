@@ -1,0 +1,17 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Rules
+A rule is one kind of problem, like spam. Each rule has levels that start at a case count: for example a warning for the first case, a 1-hour timeout from the third, and a ban from the fifth. Counts are per member and per rule, and voided cases don't count. A rule can count only recent cases, like the last 30 days.
+Rules are edited on the dashboard, and editing a rule never changes old cases. Use </rules:1003> to see this server's rules.
+buttons: [Open the dashboard](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Rules
+A rule is one kind of problem, like spam. Each rule has levels that start at a case count: for example a warning for the first case, a 1-hour timeout from the third, and a ban from the fifth. Counts are per member and per rule, and voided cases don't count. A rule can count only recent cases, like the last 30 days.
+Rules are edited on the dashboard, and editing a rule never changes old cases. Use /rules to see this server's rules.
+--- model ---
+Heading [Fixed("Rules")]
+Text [Fixed("A rule is one kind of problem, like spam. Each rule has levels that start at a case count: for example a warning for the first case, a 1-hour timeout from the third, and a ban from the fifth. Counts are per member and per rule, and voided cases don't count. A rule can count only recent cases, like the last 30 days.")]
+Text [Fixed("Rules are edited on the dashboard, and editing a rule never changes old cases. Use "), Command(Rules), Fixed(" to see this server's rules.")]

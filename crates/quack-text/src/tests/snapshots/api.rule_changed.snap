@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Someone else saved this rule. Reload it to see the latest version before you save.
+plain:   Someone else saved this rule. Reload it to see the latest version before you save.
+model:   [Fixed("Someone else saved this rule. Reload it to see the latest version before you save.")]

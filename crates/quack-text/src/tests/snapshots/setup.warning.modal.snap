@@ -1,0 +1,13 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+modal "Honeypot warning" SetupWarning
+- Warning "Warning text" (optional)
+  description: Shown in the honeypot channel. Leave it empty to use Quack's default warning.
+  Paragraph text, 0–1500 characters, placeholder None, value None
+
+## prefilled, maximal
+modal "Honeypot warning" SetupWarning
+- Warning "Warning text" (optional)
+  description: Shown in the honeypot channel. Leave it empty to use Quack's default warning.
+  Paragraph text, 0–1500 characters, placeholder None, value Some("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti…")

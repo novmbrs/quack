@@ -1,0 +1,8 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## History
+Some messages may be missing: Quack couldn't read the thread's full history.
+
+## Trimmed
+Some messages may be missing: it was cut to 8 MB.

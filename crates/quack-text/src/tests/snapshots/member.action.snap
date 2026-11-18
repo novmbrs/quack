@@ -1,0 +1,482 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout Pending
+discord: Quack is timing you out until <t:1795014309:f> (<t:1795014309:R>).
+plain:   Quack is timing you out until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack is timing you out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Pending retry scheduled
+discord: Quack is timing you out until <t:1795014309:f> (<t:1795014309:R>).
+plain:   Quack is timing you out until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack is timing you out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Running
+discord: Quack is timing you out until <t:1795014309:f> (<t:1795014309:R>).
+plain:   Quack is timing you out until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack is timing you out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Done
+discord: You're timed out until <t:1795014309:f> (<t:1795014309:R>).
+plain:   You're timed out until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("You're timed out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Done no change
+discord: You're timed out until <t:1795014309:f> (<t:1795014309:R>).
+plain:   You're timed out until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("You're timed out until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Failed QuackNotInServer
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed QuackMissingPermission
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed QuackRoleTooLow
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed MemberIsOwner
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed MemberNotInServer
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed MemberIsAdministrator
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed TimeoutWindowPassed
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed DiscordRefused
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed DiscordRefused dismissed
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed RetriesExhausted
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord applied this action.
+plain:   Quack couldn't confirm whether Discord applied this action.
+model:   [Fixed("Quack couldn't confirm whether Discord applied this action.")]
+
+## Timeout Cancelled
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Skipped OtherCaseApplies
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Timeout Skipped ChangedOutsideCase
+discord: The timeout wasn't applied.
+plain:   The timeout wasn't applied.
+model:   [Fixed("The timeout wasn't applied.")]
+
+## Kick Pending
+discord: Quack is removing you from the server.
+plain:   Quack is removing you from the server.
+model:   [Fixed("Quack is removing you from the server.")]
+
+## Kick Pending retry scheduled
+discord: Quack is removing you from the server.
+plain:   Quack is removing you from the server.
+model:   [Fixed("Quack is removing you from the server.")]
+
+## Kick Running
+discord: Quack is removing you from the server.
+plain:   Quack is removing you from the server.
+model:   [Fixed("Quack is removing you from the server.")]
+
+## Kick Done
+discord: You were removed from the server.
+plain:   You were removed from the server.
+model:   [Fixed("You were removed from the server.")]
+
+## Kick Done no change
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed QuackNotInServer
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed QuackMissingPermission
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed QuackRoleTooLow
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed MemberIsOwner
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed MemberNotInServer
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed MemberIsAdministrator
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed TimeoutWindowPassed
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed DiscordRefused
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed DiscordRefused dismissed
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed RetriesExhausted
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord applied this action.
+plain:   Quack couldn't confirm whether Discord applied this action.
+model:   [Fixed("Quack couldn't confirm whether Discord applied this action.")]
+
+## Kick Cancelled
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Skipped OtherCaseApplies
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Kick Skipped ChangedOutsideCase
+discord: You weren't removed from the server.
+plain:   You weren't removed from the server.
+model:   [Fixed("You weren't removed from the server.")]
+
+## Ban Pending
+discord: Quack is banning you from the server.
+plain:   Quack is banning you from the server.
+model:   [Fixed("Quack is banning you from the server.")]
+
+## Ban Pending retry scheduled
+discord: Quack is banning you from the server.
+plain:   Quack is banning you from the server.
+model:   [Fixed("Quack is banning you from the server.")]
+
+## Ban Running
+discord: Quack is banning you from the server.
+plain:   Quack is banning you from the server.
+model:   [Fixed("Quack is banning you from the server.")]
+
+## Ban Done
+discord: You're banned from the server.
+plain:   You're banned from the server.
+model:   [Fixed("You're banned from the server.")]
+
+## Ban Done no change
+discord: You're banned from the server.
+plain:   You're banned from the server.
+model:   [Fixed("You're banned from the server.")]
+
+## Ban Done deleting a day of messages
+discord: You're banned from the server.
+plain:   You're banned from the server.
+model:   [Fixed("You're banned from the server.")]
+
+## Ban Failed QuackNotInServer
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed QuackMissingPermission
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed QuackRoleTooLow
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed MemberIsOwner
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed MemberNotInServer
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed MemberIsAdministrator
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed TimeoutWindowPassed
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed DiscordRefused
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed DiscordRefused dismissed
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed RetriesExhausted
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord applied this action.
+plain:   Quack couldn't confirm whether Discord applied this action.
+model:   [Fixed("Quack couldn't confirm whether Discord applied this action.")]
+
+## Ban Cancelled
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Skipped OtherCaseApplies
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## Ban Skipped ChangedOutsideCase
+discord: The ban wasn't applied.
+plain:   The ban wasn't applied.
+model:   [Fixed("The ban wasn't applied.")]
+
+## RemoveTimeout Pending
+discord: Quack is removing your timeout.
+plain:   Quack is removing your timeout.
+model:   [Fixed("Quack is removing your timeout.")]
+
+## RemoveTimeout Pending retry scheduled
+discord: Quack is removing your timeout.
+plain:   Quack is removing your timeout.
+model:   [Fixed("Quack is removing your timeout.")]
+
+## RemoveTimeout Running
+discord: Quack is removing your timeout.
+plain:   Quack is removing your timeout.
+model:   [Fixed("Quack is removing your timeout.")]
+
+## RemoveTimeout Done
+discord: Your timeout was removed.
+plain:   Your timeout was removed.
+model:   [Fixed("Your timeout was removed.")]
+
+## RemoveTimeout Done no change
+discord: Your timeout had already ended.
+plain:   Your timeout had already ended.
+model:   [Fixed("Your timeout had already ended.")]
+
+## RemoveTimeout Failed QuackNotInServer
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed QuackMissingPermission
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed QuackRoleTooLow
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed MemberIsOwner
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed MemberNotInServer
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed MemberIsAdministrator
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed TimeoutWindowPassed
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed DiscordRefused
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed DiscordRefused dismissed
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed RetriesExhausted
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord applied this action.
+plain:   Quack couldn't confirm whether Discord applied this action.
+model:   [Fixed("Quack couldn't confirm whether Discord applied this action.")]
+
+## RemoveTimeout Cancelled
+discord: Your timeout hasn't been removed yet. The moderators can see why.
+plain:   Your timeout hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your timeout hasn't been removed yet. The moderators can see why.")]
+
+## RemoveTimeout Skipped OtherCaseApplies
+discord: Your timeout stays because another case still applies.
+plain:   Your timeout stays because another case still applies.
+model:   [Fixed("Your timeout stays because another case still applies.")]
+
+## RemoveTimeout Skipped ChangedOutsideCase
+discord: Your timeout stays. The moderators can see why.
+plain:   Your timeout stays. The moderators can see why.
+model:   [Fixed("Your timeout stays. The moderators can see why.")]
+
+## Unban Pending
+discord: Quack is unbanning you.
+plain:   Quack is unbanning you.
+model:   [Fixed("Quack is unbanning you.")]
+
+## Unban Pending retry scheduled
+discord: Quack is unbanning you.
+plain:   Quack is unbanning you.
+model:   [Fixed("Quack is unbanning you.")]
+
+## Unban Running
+discord: Quack is unbanning you.
+plain:   Quack is unbanning you.
+model:   [Fixed("Quack is unbanning you.")]
+
+## Unban Done
+discord: You're no longer banned.
+plain:   You're no longer banned.
+model:   [Fixed("You're no longer banned.")]
+
+## Unban Done no change
+discord: You're no longer banned.
+plain:   You're no longer banned.
+model:   [Fixed("You're no longer banned.")]
+
+## Unban Failed QuackNotInServer
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed QuackMissingPermission
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed QuackRoleTooLow
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed MemberIsOwner
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed MemberNotInServer
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed MemberIsAdministrator
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed TimeoutWindowPassed
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed DiscordRefused
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed DiscordRefused dismissed
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed RetriesExhausted
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord applied this action.
+plain:   Quack couldn't confirm whether Discord applied this action.
+model:   [Fixed("Quack couldn't confirm whether Discord applied this action.")]
+
+## Unban Cancelled
+discord: Your ban hasn't been removed yet. The moderators can see why.
+plain:   Your ban hasn't been removed yet. The moderators can see why.
+model:   [Fixed("Your ban hasn't been removed yet. The moderators can see why.")]
+
+## Unban Skipped OtherCaseApplies
+discord: Your ban stays because another case still applies.
+plain:   Your ban stays because another case still applies.
+model:   [Fixed("Your ban stays because another case still applies.")]
+
+## Unban Skipped ChangedOutsideCase
+discord: Your ban stays. The moderators can see why.
+plain:   Your ban stays. The moderators can see why.
+model:   [Fixed("Your ban stays. The moderators can see why.")]

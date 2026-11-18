@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot warning is updated.
+plain:   The honeypot warning is updated.
+model:   [Fixed("The honeypot warning is updated.")]

@@ -1,0 +1,86 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Case history for <@222>
+3 cases · 1 valid · 2 voided
+**#12** · <@222> · Spam · <t:1794924309:d>
+**#11** · <@222> · Spam · <t:1794924309:d> · Voided
+**#3** · <@222> · Spam · <t:1794924309:d> · Voided · Imported
+select OpenCase "Open a case": #12 · Spam | #11 · Spam | #3 · Spam
+--- plain ---
+Case history for Sam
+3 cases · 1 valid · 2 voided
+#12 · Sam · Spam · 17 Nov 2026
+#11 · Sam · Spam · 17 Nov 2026 · Voided
+#3 · Sam · Spam · 17 Nov 2026 · Voided · Imported
+--- model ---
+Heading [Fixed("Case history for "), Person(Person { id: AccountId(222), name: Some("Sam") })]
+Text [Fixed("3 cases · 1 valid · 2 voided")]
+Text [Bold([Fixed("#12")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), User("Spam"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("#11")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), User("Spam"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided")]
+Text [Bold([Fixed("#3")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), User("Spam"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+
+## one case
+tone: Neutral
+--- discord ---
+### Case history for <@222>
+1 case · 1 valid · 0 voided
+**#12** · <@222> · Spam · <t:1794924309:d>
+select OpenCase "Open a case": #12 · Spam
+--- plain ---
+Case history for Sam
+1 case · 1 valid · 0 voided
+#12 · Sam · Spam · 17 Nov 2026
+--- model ---
+Heading [Fixed("Case history for "), Person(Person { id: AccountId(222), name: Some("Sam") })]
+Text [Fixed("1 case · 1 valid · 0 voided")]
+Text [Bold([Fixed("#12")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), User("Spam"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+
+## maximal
+tone: Neutral
+--- discord ---
+### Case history for <@222>
+1,234 cases · 1,000 valid · 234 voided
+**#9007199254740991** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740990** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740989** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740988** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740987** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740986** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740985** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740984** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740983** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+**#9007199254740982** · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · <t:1794924309:d> · Voided · Imported
+-# Page 5 of 124
+select OpenCase "Open a case": #9007199254740991 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740990 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740989 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740988 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740987 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740986 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740985 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740984 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740983 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… | #9007199254740982 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti…
+buttons: [Previous · Secondary] History { member: MemberId(222), page: 4 } | [Next · Secondary] History { member: MemberId(222), page: 6 }
+--- plain ---
+Case history for Sam
+1,234 cases · 1,000 valid · 234 voided
+#9007199254740991 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740990 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740989 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740988 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740987 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740986 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740985 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740984 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740983 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+#9007199254740982 · Long text with *stars* and <@1>  · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · 17 Nov 2026 · Voided · Imported
+Page 5 of 124
+--- model ---
+Heading [Fixed("Case history for "), Person(Person { id: AccountId(222), name: Some("Sam") })]
+Text [Fixed("1,234 cases · 1,000 valid · 234 voided")]
+Text [Bold([Fixed("#9007199254740991")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740990")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740989")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740988")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740987")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740986")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740985")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740984")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740983")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Text [Bold([Fixed("#9007199254740982")]), Fixed(" · "), Person(Person { id: AccountId(222), name: Some("Long text with *stars* and <@1> ") }), Fixed(" · "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *"), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · Voided · Imported")]
+Subtext [Fixed("Page 5 of 124")]

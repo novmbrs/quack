@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ShortText
+discord: what\_happened is answered more than once.
+plain:   what_happened is answered more than once.
+model:   [User("what_happened"), Fixed(" is answered more than once.")]

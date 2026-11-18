@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+modal "Add evidence · case #12" AddEvidence(CaseId(01930000-0000-7000-8000-000000000001))
+- Links "Message links" (required)
+  description: One Discord message link per line, up to 10.
+  Paragraph text, 1–4000 characters, placeholder Some("https://discord.com/channels/…"), value None

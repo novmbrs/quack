@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Your answer is added to the appeal for case #12. The moderators will review it.
+plain:   Your answer is added to the appeal for case #12. The moderators will review it.
+model:   [Fixed("Your answer is added to the appeal for case #12. The moderators will review it.")]

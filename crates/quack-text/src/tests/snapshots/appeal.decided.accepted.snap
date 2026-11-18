@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You accepted the appeal for case #12. The case is voided, and Quack will try to send <@222> a DM. Open the case to see what happens to any timeout or ban.
+plain:   You accepted the appeal for case #12. The case is voided, and Quack will try to send Sam a DM. Open the case to see what happens to any timeout or ban.
+model:   [Fixed("You accepted the appeal for case #12. The case is voided, and Quack will try to send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM. Open the case to see what happens to any timeout or ban.")]

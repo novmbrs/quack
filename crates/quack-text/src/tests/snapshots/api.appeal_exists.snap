@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You already appealed this case.
+plain:   You already appealed this case.
+model:   [Fixed("You already appealed this case.")]

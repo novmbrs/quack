@@ -1,0 +1,142 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Submitted by staff, staff view
+discord: <@222> appealed the case.
+plain:   Sam appealed the case.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" appealed the case.")]
+
+## Submitted by staff, member view
+discord: You appealed the case.
+plain:   You appealed the case.
+model:   [Fixed("You appealed the case.")]
+
+## Submitted by Quack, staff view
+discord: <@222> appealed the case.
+plain:   Sam appealed the case.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" appealed the case.")]
+
+## Submitted by Quack, member view
+discord: You appealed the case.
+plain:   You appealed the case.
+model:   [Fixed("You appealed the case.")]
+
+## InformationRequested by staff, staff view
+discord: <@333> asked for more information.
+plain:   Ana asked for more information.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" asked for more information.")]
+
+## InformationRequested by staff, member view
+discord: The moderators asked for more information.
+plain:   The moderators asked for more information.
+model:   [Fixed("The moderators asked for more information.")]
+
+## InformationRequested by Quack, staff view
+discord: Quack asked for more information.
+plain:   Quack asked for more information.
+model:   [Fixed("Quack asked for more information.")]
+
+## InformationRequested by Quack, member view
+discord: The moderators asked for more information.
+plain:   The moderators asked for more information.
+model:   [Fixed("The moderators asked for more information.")]
+
+## InformationProvided by staff, staff view
+discord: <@222> added information.
+plain:   Sam added information.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" added information.")]
+
+## InformationProvided by staff, member view
+discord: You added information.
+plain:   You added information.
+model:   [Fixed("You added information.")]
+
+## InformationProvided by Quack, staff view
+discord: <@222> added information.
+plain:   Sam added information.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" added information.")]
+
+## InformationProvided by Quack, member view
+discord: You added information.
+plain:   You added information.
+model:   [Fixed("You added information.")]
+
+## Accepted by staff, staff view
+discord: <@333> accepted the appeal. The case is voided.
+plain:   Ana accepted the appeal. The case is voided.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" accepted the appeal. The case is voided.")]
+
+## Accepted by staff, member view
+discord: The moderators accepted the appeal. The case is voided.
+plain:   The moderators accepted the appeal. The case is voided.
+model:   [Fixed("The moderators accepted the appeal. The case is voided.")]
+
+## Accepted by Quack, staff view
+discord: Quack accepted the appeal. The case is voided.
+plain:   Quack accepted the appeal. The case is voided.
+model:   [Fixed("Quack accepted the appeal. The case is voided.")]
+
+## Accepted by Quack, member view
+discord: The moderators accepted the appeal. The case is voided.
+plain:   The moderators accepted the appeal. The case is voided.
+model:   [Fixed("The moderators accepted the appeal. The case is voided.")]
+
+## Rejected by staff, staff view
+discord: <@333> rejected the appeal. The case still counts.
+plain:   Ana rejected the appeal. The case still counts.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" rejected the appeal. The case still counts.")]
+
+## Rejected by staff, member view
+discord: The moderators rejected the appeal. The case still counts.
+plain:   The moderators rejected the appeal. The case still counts.
+model:   [Fixed("The moderators rejected the appeal. The case still counts.")]
+
+## Rejected by Quack, staff view
+discord: Quack rejected the appeal. The case still counts.
+plain:   Quack rejected the appeal. The case still counts.
+model:   [Fixed("Quack rejected the appeal. The case still counts.")]
+
+## Rejected by Quack, member view
+discord: The moderators rejected the appeal. The case still counts.
+plain:   The moderators rejected the appeal. The case still counts.
+model:   [Fixed("The moderators rejected the appeal. The case still counts.")]
+
+## Closed by staff, staff view
+discord: <@333> closed the appeal.
+plain:   Ana closed the appeal.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" closed the appeal.")]
+
+## Closed by staff, member view
+discord: The moderators closed the appeal.
+plain:   The moderators closed the appeal.
+model:   [Fixed("The moderators closed the appeal.")]
+
+## Closed by Quack, staff view
+discord: Closed because the case was voided.
+plain:   Closed because the case was voided.
+model:   [Fixed("Closed because the case was voided.")]
+
+## Closed by Quack, member view
+discord: Closed because the case was voided.
+plain:   Closed because the case was voided.
+model:   [Fixed("Closed because the case was voided.")]
+
+## Reopened by staff, staff view
+discord: <@333> reopened the appeal and asked for more information.
+plain:   Ana reopened the appeal and asked for more information.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" reopened the appeal and asked for more information.")]
+
+## Reopened by staff, member view
+discord: The moderators reopened the appeal and asked for more information.
+plain:   The moderators reopened the appeal and asked for more information.
+model:   [Fixed("The moderators reopened the appeal and asked for more information.")]
+
+## Reopened by Quack, staff view
+discord: Quack reopened the appeal and asked for more information.
+plain:   Quack reopened the appeal and asked for more information.
+model:   [Fixed("Quack reopened the appeal and asked for more information.")]
+
+## Reopened by Quack, member view
+discord: The moderators reopened the appeal and asked for more information.
+plain:   The moderators reopened the appeal and asked for more information.
+model:   [Fixed("The moderators reopened the appeal and asked for more information.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Discord sign-in didn't finish. Start again.
+plain:   Discord sign-in didn't finish. Start again.
+model:   [Fixed("Discord sign-in didn't finish. Start again.")]

@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+Case #12 has more context fields than fit in a Discord form. Edit it on the dashboard.
+buttons: [Open in dashboard](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Case #12 has more context fields than fit in a Discord form. Edit it on the dashboard.
+--- model ---
+Text [Fixed("Case #12 has more context fields than fit in a Discord form. Edit it on the dashboard.")]

@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+<@222> joined the server. Their account was created <t:1794924309:R>.
+--- plain ---
+Sam joined the server. Their account was created on 17 Nov 2026 at 14:05 UTC.
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" joined the server. Their account was created "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(".")]

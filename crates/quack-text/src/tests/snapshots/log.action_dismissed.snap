@@ -1,0 +1,87 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout · post
+tone: Neutral
+--- discord ---
+<@333> dismissed the failed timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana dismissed the failed timeout for case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout · dashboard text
+discord: <@333> dismissed the failed timeout for case #12.
+plain:   Ana dismissed the failed timeout for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed timeout for case #12.")]
+
+## Kick · post
+tone: Neutral
+--- discord ---
+<@333> dismissed the failed kick for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana dismissed the failed kick for case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed kick for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick · dashboard text
+discord: <@333> dismissed the failed kick for case #12.
+plain:   Ana dismissed the failed kick for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed kick for case #12.")]
+
+## Ban · post
+tone: Neutral
+--- discord ---
+<@333> dismissed the failed ban for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana dismissed the failed ban for case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed ban for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban · dashboard text
+discord: <@333> dismissed the failed ban for case #12.
+plain:   Ana dismissed the failed ban for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed ban for case #12.")]
+
+## RemoveTimeout · post
+tone: Neutral
+--- discord ---
+<@333> dismissed the failed remove timeout action for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana dismissed the failed remove timeout action for case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed remove timeout action for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout · dashboard text
+discord: <@333> dismissed the failed remove timeout action for case #12.
+plain:   Ana dismissed the failed remove timeout action for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed remove timeout action for case #12.")]
+
+## Unban · post
+tone: Neutral
+--- discord ---
+<@333> dismissed the failed unban for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana dismissed the failed unban for case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed unban for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban · dashboard text
+discord: <@333> dismissed the failed unban for case #12.
+plain:   Ana dismissed the failed unban for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed unban for case #12.")]

@@ -1,0 +1,126 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## LogChannel · post
+tone: Neutral
+--- discord ---
+Quack stopped using the log channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the log channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the log channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## LogChannel · dashboard text
+discord: Quack stopped using the log channel because its channel was deleted.
+plain:   Quack stopped using the log channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the log channel because its channel was deleted.")]
+
+## AppealChannel · post
+tone: Neutral
+--- discord ---
+Quack stopped using the appeal channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the appeal channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the appeal channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## AppealChannel · dashboard text
+discord: Quack stopped using the appeal channel because its channel was deleted.
+plain:   Quack stopped using the appeal channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the appeal channel because its channel was deleted.")]
+
+## EvidenceChannel · post
+tone: Neutral
+--- discord ---
+Quack stopped using the evidence channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the evidence channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the evidence channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## EvidenceChannel · dashboard text
+discord: Quack stopped using the evidence channel because its channel was deleted.
+plain:   Quack stopped using the evidence channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the evidence channel because its channel was deleted.")]
+
+## TicketEntryChannel · post
+tone: Neutral
+--- discord ---
+Quack stopped using the ticket entry channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the ticket entry channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the ticket entry channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## TicketEntryChannel · dashboard text
+discord: Quack stopped using the ticket entry channel because its channel was deleted.
+plain:   Quack stopped using the ticket entry channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the ticket entry channel because its channel was deleted.")]
+
+## TicketQueueChannel · post
+tone: Neutral
+--- discord ---
+Quack stopped using the ticket staff channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the ticket staff channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the ticket staff channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## TicketQueueChannel · dashboard text
+discord: Quack stopped using the ticket staff channel because its channel was deleted.
+plain:   Quack stopped using the ticket staff channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the ticket staff channel because its channel was deleted.")]
+
+## HoneypotChannel · post
+tone: Neutral
+--- discord ---
+Quack stopped using the honeypot channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the honeypot channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the honeypot channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## HoneypotChannel · dashboard text
+discord: Quack stopped using the honeypot channel because its channel was deleted.
+plain:   Quack stopped using the honeypot channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the honeypot channel because its channel was deleted.")]
+
+## ActivityLogRoute · post
+tone: Neutral
+--- discord ---
+Quack stopped using the server activity channel because its channel was deleted.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack stopped using the server activity channel because its channel was deleted.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## ActivityLogRoute · dashboard text
+discord: Quack stopped using the server activity channel because its channel was deleted.
+plain:   Quack stopped using the server activity channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]
+
+## ActivityLogRoute · no names known
+discord: Quack stopped using the server activity channel because its channel was deleted.
+plain:   Quack stopped using the server activity channel because its channel was deleted.
+model:   [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]

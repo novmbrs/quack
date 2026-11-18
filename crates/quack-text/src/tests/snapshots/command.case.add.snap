@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+add — Apply a rule to a member.
+
+## description
+Apply a rule to a member.

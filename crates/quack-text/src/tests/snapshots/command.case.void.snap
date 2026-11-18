@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+void — Void a case so it stops counting.
+
+## description
+Void a case so it stops counting.

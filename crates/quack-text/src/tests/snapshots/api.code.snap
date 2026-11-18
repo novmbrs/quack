@@ -1,0 +1,102 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## validation_failed
+discord: Some fields need fixing.
+plain:   Some fields need fixing.
+model:   [Fixed("Some fields need fixing.")]
+
+## invalid_json
+discord: Quack couldn't read what was sent. Reload the dashboard and try again.
+plain:   Quack couldn't read what was sent. Reload the dashboard and try again.
+model:   [Fixed("Quack couldn't read what was sent. Reload the dashboard and try again.")]
+
+## sign_in_required
+discord: Sign in with Discord to continue.
+plain:   Sign in with Discord to continue.
+model:   [Fixed("Sign in with Discord to continue.")]
+
+## session_expired
+discord: Your session has ended. Sign in again.
+plain:   Your session has ended. Sign in again.
+model:   [Fixed("Your session has ended. Sign in again.")]
+
+## origin_rejected
+discord: Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.
+plain:   Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.
+model:   [Fixed("Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.")]
+
+## csrf_rejected
+discord: Quack couldn't verify this came from your session. Reload the page and try again.
+plain:   Quack couldn't verify this came from your session. Reload the page and try again.
+model:   [Fixed("Quack couldn't verify this came from your session. Reload the page and try again.")]
+
+## not_found
+discord: Quack couldn't find that.
+plain:   Quack couldn't find that.
+model:   [Fixed("Quack couldn't find that.")]
+
+## action_not_found
+discord: Quack couldn't find that action in this server. Open the case again to see its actions.
+plain:   Quack couldn't find that action in this server. Open the case again to see its actions.
+model:   [Fixed("Quack couldn't find that action in this server. Open the case again to see its actions.")]
+
+## server_not_found
+discord: Quack isn't in that server, or you're not a member of it.
+plain:   Quack isn't in that server, or you're not a member of it.
+model:   [Fixed("Quack isn't in that server, or you're not a member of it.")]
+
+## file_unavailable
+discord: That file isn't available anymore.
+plain:   That file isn't available anymore.
+model:   [Fixed("That file isn't available anymore.")]
+
+## idempotency_key_reused
+discord: This looks like a repeat of an earlier, different change. Reload the dashboard and try again.
+plain:   This looks like a repeat of an earlier, different change. Reload the dashboard and try again.
+model:   [Fixed("This looks like a repeat of an earlier, different change. Reload the dashboard and try again.")]
+
+## context_changed
+discord: Someone else changed this case's context. Open it again before you save.
+plain:   Someone else changed this case's context. Open it again before you save.
+model:   [Fixed("Someone else changed this case's context. Open it again before you save.")]
+
+## body_too_large
+discord: That's too much to save at once. The limit is 256 KB.
+plain:   That's too much to save at once. The limit is 256 KB.
+model:   [Fixed("That's too much to save at once. The limit is 256 KB.")]
+
+## unsupported_media_type
+discord: Quack couldn't read what was sent. Reload the dashboard and try again.
+plain:   Quack couldn't read what was sent. Reload the dashboard and try again.
+model:   [Fixed("Quack couldn't read what was sent. Reload the dashboard and try again.")]
+
+## idempotency_key_required
+discord: Quack couldn't tell whether this was already saved. Reload the dashboard and try again.
+plain:   Quack couldn't tell whether this was already saved. Reload the dashboard and try again.
+model:   [Fixed("Quack couldn't tell whether this was already saved. Reload the dashboard and try again.")]
+
+## rate_limited
+discord: You're doing that too often. Try again in 30 seconds.
+plain:   You're doing that too often. Try again in 30 seconds.
+model:   [Fixed("You're doing that too often. Try again in 30 seconds.")]
+
+## module_not_ready
+discord: The honeypot can't be turned on yet.
+plain:   The honeypot can't be turned on yet.
+model:   [Fixed("The honeypot can't be turned on yet.")]
+
+## discord_unavailable
+discord: Quack couldn't reach Discord, so nothing changed. Try again in a moment.
+plain:   Quack couldn't reach Discord, so nothing changed. Try again in a moment.
+model:   [Fixed("Quack couldn't reach Discord, so nothing changed. Try again in a moment.")]
+
+## unavailable
+discord: Quack is having trouble right now, so nothing changed. Try again in a moment.
+plain:   Quack is having trouble right now, so nothing changed. Try again in a moment.
+model:   [Fixed("Quack is having trouble right now, so nothing changed. Try again in a moment.")]
+
+## internal_error
+discord: Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.
+plain:   Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.
+model:   [Fixed("Something went wrong inside Quack. If you changed something, check whether it was saved before you try again.")]

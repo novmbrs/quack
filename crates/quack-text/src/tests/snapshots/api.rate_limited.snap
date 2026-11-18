@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## 12 seconds
+discord: You're doing that too often. Try again in 12 seconds.
+plain:   You're doing that too often. Try again in 12 seconds.
+model:   [Fixed("You're doing that too often. Try again in 12 seconds.")]
+
+## 1 second
+discord: You're doing that too often. Try again in 1 second.
+plain:   You're doing that too often. Try again in 1 second.
+model:   [Fixed("You're doing that too often. Try again in 1 second.")]

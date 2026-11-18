@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Some details are only on the dashboard.
+plain:   Some details are only on the dashboard.
+model:   [Fixed("Some details are only on the dashboard.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This ticket is already closed or closing.
+plain:   This ticket is already closed or closing.
+model:   [Fixed("This ticket is already closed or closing.")]

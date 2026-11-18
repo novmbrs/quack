@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't confirm whether that was saved. Check before you try again.
+plain:   Quack couldn't confirm whether that was saved. Check before you try again.
+model:   [Fixed("Quack couldn't confirm whether that was saved. Check before you try again.")]

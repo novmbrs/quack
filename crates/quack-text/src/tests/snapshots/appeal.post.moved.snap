@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+-# This appeal moved to <#444>.
+--- plain ---
+This appeal moved to #appeals.
+--- model ---
+Subtext [Fixed("This appeal moved to "), Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(".")]

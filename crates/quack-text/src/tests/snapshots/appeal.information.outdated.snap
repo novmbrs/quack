@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This appeal changed since you opened it. Reload the page to see the latest question before you answer.
+plain:   This appeal changed since you opened it. Reload the page to see the latest question before you answer.
+model:   [Fixed("This appeal changed since you opened it. Reload the page to see the latest question before you answer.")]

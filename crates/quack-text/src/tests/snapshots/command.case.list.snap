@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+list — List recent cases.
+
+## description
+List recent cases.

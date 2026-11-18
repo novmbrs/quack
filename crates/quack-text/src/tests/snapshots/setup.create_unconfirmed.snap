@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't confirm whether Discord created #moderation-log. Open the channel list: choose #moderation-log if it's there, or try again.
+plain:   Quack couldn't confirm whether Discord created #moderation-log. Open the channel list: choose #moderation-log if it's there, or try again.
+model:   [Fixed("Quack couldn't confirm whether Discord created #moderation-log. Open the channel list: choose #moderation-log if it's there, or try again.")]

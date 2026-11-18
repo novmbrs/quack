@@ -1,0 +1,80 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one outcome (ban), one case
+tone: Danger
+--- discord ---
+### Don't post here
+Posting here adds a case under **Honeypot**, and Quack will ban you.
+This channel catches spam accounts. Staff can post here safely.
+-# 1 honeypot case so far.
+--- plain ---
+Don't post here
+Posting here adds a case under Honeypot, and Quack will ban you.
+This channel catches spam accounts. Staff can post here safely.
+1 honeypot case so far.
+--- model ---
+Heading [Fixed("Don't post here")]
+Text [Fixed("Posting here adds a case under "), Bold([User("Honeypot")]), Fixed(", and Quack will ban you.")]
+Text [Fixed("This channel catches spam accounts. Staff can post here safely.")]
+Subtext [Fixed("1 honeypot case so far.")]
+
+## many outcomes
+tone: Danger
+--- discord ---
+### Don't post here
+Posting here adds a case under **Honeypot**. Depending on earlier cases, Quack will give you a warning, time you out for 1 hour, remove you from the server, or ban you.
+This channel catches spam accounts. Staff can post here safely.
+-# 42 honeypot cases so far.
+--- plain ---
+Don't post here
+Posting here adds a case under Honeypot. Depending on earlier cases, Quack will give you a warning, time you out for 1 hour, remove you from the server, or ban you.
+This channel catches spam accounts. Staff can post here safely.
+42 honeypot cases so far.
+--- model ---
+Heading [Fixed("Don't post here")]
+Text [Fixed("Posting here adds a case under "), Bold([User("Honeypot")]), Fixed(". Depending on earlier cases, Quack will give you a warning, time you out for 1 hour, remove you from the server, or ban you.")]
+Text [Fixed("This channel catches spam accounts. Staff can post here safely.")]
+Subtext [Fixed("42 honeypot cases so far.")]
+
+## warning only
+tone: Danger
+--- discord ---
+### Don't post here
+Posting here adds a case under **Honeypot**.
+This channel catches spam accounts. Staff can post here safely.
+-# No honeypot cases yet.
+--- plain ---
+Don't post here
+Posting here adds a case under Honeypot.
+This channel catches spam accounts. Staff can post here safely.
+No honeypot cases yet.
+--- model ---
+Heading [Fixed("Don't post here")]
+Text [Fixed("Posting here adds a case under "), Bold([User("Honeypot")]), Fixed(".")]
+Text [Fixed("This channel catches spam accounts. Staff can post here safely.")]
+Subtext [Fixed("No honeypot cases yet.")]
+
+## custom warning
+tone: Danger
+--- discord ---
+**Bots only.** Posting here gets you banned. \@everyone
+-# 3 honeypot cases so far.
+--- plain ---
+**Bots only.** Posting here gets you banned. @everyone
+3 honeypot cases so far.
+--- model ---
+Text [ServerMarkdown("**Bots only.** Posting here gets you banned. @everyone")]
+Subtext [Fixed("3 honeypot cases so far.")]
+
+## custom warning, maximal
+tone: Danger
+--- discord ---
+Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1> mentions. Long text with *stars* and \<\@1
+-# 1,234 honeypot cases so far.
+--- plain ---
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1
+1,234 honeypot cases so far.
+--- model ---
+Text [ServerMarkdown("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1")]
+Subtext [Fixed("1,234 honeypot cases so far.")]

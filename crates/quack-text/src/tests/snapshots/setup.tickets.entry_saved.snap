@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Members will open tickets from <#444>.
+plain:   Members will open tickets from #staff.
+model:   [Fixed("Members will open tickets from "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

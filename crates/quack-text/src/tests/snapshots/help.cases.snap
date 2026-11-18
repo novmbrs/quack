@@ -1,0 +1,23 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Cases
+Use </case add:1001>, or right-click a message or member and choose **Apps → Add case**. Choose the rule, and Quack counts the member's earlier cases under it, picks the level, and carries out its action. Set private to True to keep the receipt to yourself.
+When you add a case from a message, Quack saves that message as evidence. Add more with **Add evidence** on the case. The member can see the case context, but not who added the case or who wrote the evidence.
+Made a mistake? Use </case void:1001> or **Void case**. The case stays in the history but stops counting. Open the case afterwards to check whether Quack removed its timeout or ban; a kick can't be undone.
+If Quack couldn't carry out an action, the case shows **Retry** and **Dismiss**, and the dashboard's failed actions page lists every one.
+buttons: [Open the dashboard](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Cases
+Use /case add, or right-click a message or member and choose Apps → Add case. Choose the rule, and Quack counts the member's earlier cases under it, picks the level, and carries out its action. Set private to True to keep the receipt to yourself.
+When you add a case from a message, Quack saves that message as evidence. Add more with Add evidence on the case. The member can see the case context, but not who added the case or who wrote the evidence.
+Made a mistake? Use /case void or Void case. The case stays in the history but stops counting. Open the case afterwards to check whether Quack removed its timeout or ban; a kick can't be undone.
+If Quack couldn't carry out an action, the case shows Retry and Dismiss, and the dashboard's failed actions page lists every one.
+--- model ---
+Heading [Fixed("Cases")]
+Text [Fixed("Use "), Command(CaseAdd), Fixed(", or right-click a message or member and choose "), Bold([Fixed("Apps → Add case")]), Fixed(". Choose the rule, and Quack counts the member's earlier cases under it, picks the level, and carries out its action. Set private to True to keep the receipt to yourself.")]
+Text [Fixed("When you add a case from a message, Quack saves that message as evidence. Add more with "), Bold([Fixed("Add evidence")]), Fixed(" on the case. The member can see the case context, but not who added the case or who wrote the evidence.")]
+Text [Fixed("Made a mistake? Use "), Command(CaseVoid), Fixed(" or "), Bold([Fixed("Void case")]), Fixed(". The case stays in the history but stops counting. Open the case afterwards to check whether Quack removed its timeout or ban; a kick can't be undone.")]
+Text [Fixed("If Quack couldn't carry out an action, the case shows "), Bold([Fixed("Retry")]), Fixed(" and "), Bold([Fixed("Dismiss")]), Fixed(", and the dashboard's failed actions page lists every one.")]

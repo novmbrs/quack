@@ -1,0 +1,17 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## removed 0
+discord: Quack added <@222> to the thread.
+plain:   Quack added Sam to the thread.
+model:   [Fixed("Quack added "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" to the thread.")]
+
+## removed 1
+discord: Quack added <@222> to the thread. It removed 1 person who isn't staff.
+plain:   Quack added Sam to the thread. It removed 1 person who isn't staff.
+model:   [Fixed("Quack added "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" to the thread. It removed 1 person who isn't staff.")]
+
+## removed 3
+discord: Quack added <@222> to the thread. It removed 3 people who aren't staff.
+plain:   Quack added Sam to the thread. It removed 3 people who aren't staff.
+model:   [Fixed("Quack added "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" to the thread. It removed 3 people who aren't staff.")]

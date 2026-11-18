@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+The rule **Spam** needs some answers. Fill in the form to finish the case about <@222>.
+buttons: [Fill in the form · Primary] DraftContinue(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 1 })
+--- plain ---
+The rule Spam needs some answers. Fill in the form to finish the case about Sam.
+--- model ---
+Text [Fixed("The rule "), Bold([User("Spam")]), Fixed(" needs some answers. Fill in the form to finish the case about "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]

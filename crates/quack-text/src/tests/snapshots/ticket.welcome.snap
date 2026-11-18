@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+<@222>, your ticket is open. Tell us what you need help with, and a moderator will reply here.
+buttons: [Close ticket · Danger] CloseTicket(TicketId(01930000-0000-7000-8000-000000000005))
+--- plain ---
+Sam, your ticket is open. Tell us what you need help with, and a moderator will reply here.
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", your ticket is open. Tell us what you need help with, and a moderator will reply here.")]

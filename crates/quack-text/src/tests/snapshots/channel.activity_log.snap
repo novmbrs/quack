@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+server-log
+
+## topic
+Server activity: edits, deletions, joins, leaves, bans, and server changes.
+
+## first message
+tone: Neutral
+--- discord ---
+### Server activity log
+Quack posts server activity here. Only staff can see this channel.
+--- plain ---
+Server activity log
+Quack posts server activity here. Only staff can see this channel.
+--- model ---
+Heading [Fixed("Server activity log")]
+Text [Fixed("Quack posts server activity here. Only staff can see this channel.")]

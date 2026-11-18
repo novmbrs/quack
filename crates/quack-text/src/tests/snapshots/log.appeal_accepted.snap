@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+<@333> accepted <@222>'s appeal for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana accepted Sam's appeal for case #12.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" accepted "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s appeal for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: <@333> accepted <@222>'s appeal for case #12.
+plain:   Ana accepted Sam's appeal for case #12.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" accepted "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s appeal for case #12.")]

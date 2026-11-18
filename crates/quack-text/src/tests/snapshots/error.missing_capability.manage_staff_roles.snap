@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only the server owner and administrators can change the moderator roles.
+plain:   Only the server owner and administrators can change the moderator roles.
+model:   [Fixed("Only the server owner and administrators can change the moderator roles.")]

@@ -1,0 +1,32 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one
+discord: Quack is saving 1 evidence item for case #12. Open View evidence to check each one.
+plain:   Quack is saving 1 evidence item for case #12. Open View evidence to check each one.
+model:   [Fixed("Quack is saving 1 evidence item for case #12. Open View evidence to check each one.")]
+
+## other
+discord: Quack is saving 3 evidence items for case #12. Open View evidence to check each one.
+plain:   Quack is saving 3 evidence items for case #12. Open View evidence to check each one.
+model:   [Fixed("Quack is saving 3 evidence items for case #12. Open View evidence to check each one.")]
+
+## with already saved
+discord: Quack is saving 2 evidence items for case #12. Open View evidence to check each one. 1 of these was already saved.
+plain:   Quack is saving 2 evidence items for case #12. Open View evidence to check each one. 1 of these was already saved.
+model:   [Fixed("Quack is saving 2 evidence items for case #12. Open View evidence to check each one. 1 of these was already saved.")]
+
+## all already saved
+discord: 3 of these were already saved.
+plain:   3 of these were already saved.
+model:   [Fixed("3 of these were already saved.")]
+
+## retrying one
+discord: Quack is trying again to save 1 message that failed before. Open View evidence to check each one.
+plain:   Quack is trying again to save 1 message that failed before. Open View evidence to check each one.
+model:   [Fixed("Quack is trying again to save 1 message that failed before. Open View evidence to check each one.")]
+
+## retrying several
+discord: Quack is saving 1 evidence item for case #12. Quack is trying again to save 2 messages that failed before. Open View evidence to check each one.
+plain:   Quack is saving 1 evidence item for case #12. Quack is trying again to save 2 messages that failed before. Open View evidence to check each one.
+model:   [Fixed("Quack is saving 1 evidence item for case #12. Quack is trying again to save 2 messages that failed before. Open View evidence to check each one.")]

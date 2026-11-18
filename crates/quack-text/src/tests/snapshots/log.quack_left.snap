@@ -1,0 +1,24 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+Quack left the server.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack left the server.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack left the server.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: Quack left the server.
+plain:   Quack left the server.
+model:   [Fixed("Quack left the server.")]
+
+##  · no names known
+discord: Quack left the server.
+plain:   Quack left the server.
+model:   [Fixed("Quack left the server.")]

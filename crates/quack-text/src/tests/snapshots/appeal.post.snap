@@ -1,0 +1,201 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## pending
+tone: Warning
+--- discord ---
+### Appeal for case #12 · **Spam**
+From <@222> · submitted <t:1794924309:R>
+Waiting for a decision.
+**Statement**
+> I posted that link by mistake.
+buttons: [Accept · Success] AcceptAppeal { appeal: AppealId(01930000-0000-7000-8000-000000000004), version: 3 } | [Reject · Danger] RejectAppeal { appeal: AppealId(01930000-0000-7000-8000-000000000004), version: 3 } | [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Spam
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Waiting for a decision.
+Statement
+> I posted that link by mistake.
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Waiting for a decision.")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("I posted that link by mistake.")]
+
+## needs information
+tone: Neutral
+--- discord ---
+### Appeal for case #12 · **Spam**
+From <@222> · submitted <t:1794924309:R>
+Waiting for <@222> to add information.
+**Statement**
+> I posted that link by mistake.
+**Reason given to the member**
+> Which link?
+buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Spam
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Waiting for Sam to add information.
+Statement
+> I posted that link by mistake.
+Reason given to the member
+> Which link?
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Waiting for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" to add information.")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("I posted that link by mistake.")]
+Text [Bold([Fixed("Reason given to the member")])]
+Quote [User("Which link?")]
+
+## accepted
+tone: Success
+--- discord ---
+### Appeal for case #12 · **Spam**
+From <@222> · submitted <t:1794924309:R>
+Accepted by <@333> <t:1795014309:R>.
+**Statement**
+> I posted that link by mistake.
+**Added information**
+> It was the wrong link.
+**Reason given to the member**
+> We reviewed your appeal and voided the case.
+buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Spam
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Accepted by Ana on 18 Nov 2026 at 15:05 UTC.
+Statement
+> I posted that link by mistake.
+Added information
+> It was the wrong link.
+Reason given to the member
+> We reviewed your appeal and voided the case.
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Accepted by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("I posted that link by mistake.")]
+Text [Bold([Fixed("Added information")])]
+Quote [User("It was the wrong link.")]
+Text [Bold([Fixed("Reason given to the member")])]
+Quote [User("We reviewed your appeal and voided the case.")]
+
+## rejected
+tone: Danger
+--- discord ---
+### Appeal for case #12 · **Spam**
+From <@222> · submitted <t:1794924309:R>
+Rejected by <@333> <t:1795014309:R>.
+**Statement**
+> I posted that link by mistake.
+**Reason given to the member**
+> We reviewed your appeal, and the case stands.
+buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Spam
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Rejected by Ana on 18 Nov 2026 at 15:05 UTC.
+Statement
+> I posted that link by mistake.
+Reason given to the member
+> We reviewed your appeal, and the case stands.
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Rejected by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("I posted that link by mistake.")]
+Text [Bold([Fixed("Reason given to the member")])]
+Quote [User("We reviewed your appeal, and the case stands.")]
+
+## closed
+tone: Neutral
+--- discord ---
+### Appeal for case #12 · **Spam**
+From <@222> · submitted <t:1794924309:R>
+Closed by <@333> <t:1795014309:R>.
+**Statement**
+> I posted that link by mistake.
+**Reason given to the member**
+> Closing this.
+buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Spam
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Closed by Ana on 18 Nov 2026 at 15:05 UTC.
+Statement
+> I posted that link by mistake.
+Reason given to the member
+> Closing this.
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Closed by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("I posted that link by mistake.")]
+Text [Bold([Fixed("Reason given to the member")])]
+Quote [User("Closing this.")]
+
+## closed by void
+tone: Neutral
+--- discord ---
+### Appeal for case #12 · **Spam**
+From <@222> · submitted <t:1794924309:R>
+Closed <t:1795014309:R> because the case was voided.
+**Statement**
+> I posted that link by mistake.
+buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Spam
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Closed on 18 Nov 2026 at 15:05 UTC because the case was voided.
+Statement
+> I posted that link by mistake.
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Closed "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(" because the case was voided.")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("I posted that link by mistake.")]
+
+## maximal
+tone: Danger
+--- discord ---
+### Appeal for case #12 · **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \***
+From <@222> · submitted <t:1794924309:R>
+Rejected by <@333> <t:1795014309:R>.
+**Statement**
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@…
+**Added information**
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@…
+**Reason given to the member**
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*s…
+Some details are only on the dashboard.
+buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeal for case #12 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
+From Sam · submitted on 17 Nov 2026 at 14:05 UTC
+Rejected by Ana on 18 Nov 2026 at 15:05 UTC.
+Statement
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@…
+The full statement is on the dashboard.
+Added information
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@…
+Reason given to the member
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and
+--- model ---
+Heading [Fixed("Appeal for case #12 · "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")])]
+Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Rejected by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Bold([Fixed("Statement")])]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@…")]
+Subtext [Fixed("The full statement is on the dashboard.")]
+Text [Bold([Fixed("Added information")])]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@…")]
+Text [Bold([Fixed("Reason given to the member")])]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and")]

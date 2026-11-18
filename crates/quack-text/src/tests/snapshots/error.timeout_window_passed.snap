@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The timeout's end time has passed. Add a new case if <@222> still needs a timeout.
+plain:   The timeout's end time has passed. Add a new case if Sam still needs a timeout.
+model:   [Fixed("The timeout's end time has passed. Add a new case if "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" still needs a timeout.")]

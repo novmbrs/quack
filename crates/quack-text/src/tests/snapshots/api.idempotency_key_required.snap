@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't tell whether this was already saved. Reload the dashboard and try again.
+plain:   Quack couldn't tell whether this was already saved. Reload the dashboard and try again.
+model:   [Fixed("Quack couldn't tell whether this was already saved. Reload the dashboard and try again.")]

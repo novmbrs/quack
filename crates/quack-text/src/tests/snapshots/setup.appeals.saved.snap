@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Appeals will be posted in <#444>, including open appeals that weren't posted yet.
+plain:   Appeals will be posted in #staff, including open appeals that weren't posted yet.
+model:   [Fixed("Appeals will be posted in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(", including open appeals that weren't posted yet.")]

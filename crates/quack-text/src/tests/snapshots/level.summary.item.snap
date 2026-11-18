@@ -1,0 +1,17 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## level.outcome.warning
+from case 1: warning
+
+## level.outcome.timeout
+from case 3: timeout for 1 hour 30 minutes
+
+## level.outcome.kick
+from case 4: kick
+
+## level.outcome.ban
+from case 5: ban
+
+## level.outcome.ban_delete
+from case 6: ban and delete the last day of messages

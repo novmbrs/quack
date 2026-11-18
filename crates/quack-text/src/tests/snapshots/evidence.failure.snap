@@ -1,0 +1,82 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MessageDeleted
+tone: Danger
+--- discord ---
+### Evidence 2 of 3 · case #12
+Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+Quack couldn't save this message because it was deleted before Quack fetched it.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Quack couldn't save this message because it was deleted before Quack fetched it.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Text [Fixed("Quack couldn't save this message because it was deleted before Quack fetched it.")]
+
+## ModeratorNoAccess
+tone: Danger
+--- discord ---
+### Evidence 2 of 3 · case #12
+Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+Quack didn't save this message because the moderator who added it can't read that channel.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Quack didn't save this message because the moderator who added it can't read that channel.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Text [Fixed("Quack didn't save this message because the moderator who added it can't read that channel.")]
+
+## QuackNoAccess
+tone: Danger
+--- discord ---
+### Evidence 2 of 3 · case #12
+Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Text [Fixed("Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry.")]
+
+## OtherServer
+tone: Danger
+--- discord ---
+### Evidence 2 of 3 · case #12
+Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+Quack didn't save this message because it's in another server.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Quack didn't save this message because it's in another server.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Text [Fixed("Quack didn't save this message because it's in another server.")]
+
+## DiscordError
+tone: Danger
+--- discord ---
+### Evidence 2 of 3 · case #12
+Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+Quack couldn't save this message because Discord kept failing. Add the link again to retry.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Quack couldn't save this message because Discord kept failing. Add the link again to retry.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Text [Fixed("Quack couldn't save this message because Discord kept failing. Add the link again to retry.")]

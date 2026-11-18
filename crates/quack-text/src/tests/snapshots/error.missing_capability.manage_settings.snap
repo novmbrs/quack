@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You need the Manage Server permission to change Quack's settings.
+plain:   You need the Manage Server permission to change Quack's settings.
+model:   [Fixed("You need the Manage Server permission to change Quack's settings.")]

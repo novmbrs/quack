@@ -1,0 +1,15 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Your ticket in **Duck Pond** is closed
+Here's a copy of the conversation for your records.
+--- plain ---
+Your ticket in Duck Pond is closed
+Here's a copy of the conversation for your records.
+[file: transcript.txt]
+--- model ---
+Heading [Fixed("Your ticket in "), Bold([User("Duck Pond")]), Fixed(" is closed")]
+Text [Fixed("Here's a copy of the conversation for your records.")]
+File "transcript.txt"

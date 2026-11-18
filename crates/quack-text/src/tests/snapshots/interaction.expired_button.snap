@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This button has expired. Run the command again.
+plain:   This button has expired. Run the command again.
+model:   [Fixed("This button has expired. Run the command again.")]

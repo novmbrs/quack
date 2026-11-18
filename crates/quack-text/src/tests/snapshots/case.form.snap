@@ -1,0 +1,21 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## every field kind
+modal "Spam (1/2)" DraftPage(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 1 })
+- Field(FieldKey("what")) "What happened?" (required)
+  Paragraph text, 1–4000 characters, placeholder None, value None
+- Field(FieldKey("short")) "Long text with *stars* and <@1> mentions. Lo…" (optional)
+  description: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *
+  Short text, 0–500 characters, placeholder None, value Some("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti…")
+- Field(FieldKey("repeat")) "Repeat offence?" (optional)
+  Yes/No select, placeholder "Choose Yes or No", value Some(false)
+- Field(FieldKey("count")) "Links posted" (optional)
+  Short text, 0–40 characters, placeholder Some("A number, like 3 or 2.5"), value None
+- Field(FieldKey("message")) "Message link" (required)
+  Short text, 1–4000 characters, placeholder Some("https://discord.com/channels/…"), value None
+
+## rule with no fields
+modal "Spam" DraftPage(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 1 })
+- Field(FieldKey("details")) "Details" (optional)
+  Paragraph text, 0–4000 characters, placeholder None, value None

@@ -1,0 +1,31 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+<@222> closed their ticket. The transcript is saved on the dashboard.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Sam closed their ticket. The transcript is saved on the dashboard.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" closed their ticket. The transcript is saved on the dashboard.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: <@333> closed <@222>'s ticket. The transcript is saved on the dashboard.
+plain:   Ana closed Sam's ticket. The transcript is saved on the dashboard.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" closed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ticket. The transcript is saved on the dashboard.")]
+
+## closed by staff · post
+tone: Neutral
+--- discord ---
+<@333> closed <@222>'s ticket. The transcript is saved on the dashboard.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana closed Sam's ticket. The transcript is saved on the dashboard.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" closed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ticket. The transcript is saved on the dashboard.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]

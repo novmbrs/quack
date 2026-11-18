@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 is saved. Quack posted the receipt in this channel.
+plain:   Case #12 is saved. Quack posted the receipt in this channel.
+model:   [Fixed("Case #12 is saved. Quack posted the receipt in this channel.")]

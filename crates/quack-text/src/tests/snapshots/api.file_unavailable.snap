@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: That file isn't available anymore.
+plain:   That file isn't available anymore.
+model:   [Fixed("That file isn't available anymore.")]

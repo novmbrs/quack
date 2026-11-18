@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: That appeal doesn't exist in this server.
+plain:   That appeal doesn't exist in this server.
+model:   [Fixed("That appeal doesn't exist in this server.")]

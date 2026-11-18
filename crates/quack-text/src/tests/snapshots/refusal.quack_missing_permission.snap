@@ -1,0 +1,37 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## QuackMissingPermission(ModerateMembers)
+discord: No case was added. This rule would time out <@222>, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would time out Sam, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]
+
+## QuackMissingPermission(ModerateMembers), no member known
+discord: No case was added. This rule would time out the member, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would time out the member, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would time out the member, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]
+
+## QuackMissingPermission(KickMembers)
+discord: No case was added. This rule would kick <@222>, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would kick Sam, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would kick "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.")]
+
+## QuackMissingPermission(KickMembers), no member known
+discord: No case was added. This rule would kick the member, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would kick the member, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would kick the member, but Quack doesn't have the Kick Members permission. Ask an administrator to give it to Quack's role.")]
+
+## QuackMissingPermission(BanMembers)
+discord: No case was added. This rule would ban <@222>, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would ban Sam, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.")]
+
+## QuackMissingPermission(BanMembers), no member known
+discord: No case was added. This rule would ban the member, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would ban the member, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would ban the member, but Quack doesn't have the Ban Members permission. Ask an administrator to give it to Quack's role.")]
+
+## for a timeout level
+discord: No case was added. This rule would time out <@222>, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+plain:   No case was added. This rule would time out Sam, but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.
+model:   [Fixed("No case was added. This rule would time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(", but Quack doesn't have the Moderate Members permission. Ask an administrator to give it to Quack's role.")]

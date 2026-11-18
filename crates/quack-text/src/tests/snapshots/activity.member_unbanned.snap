@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+<@222> was unbanned by <@333>.
+--- plain ---
+Sam was unbanned by Ana.
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was unbanned by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(".")]

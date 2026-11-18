@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+The channel <#444> was created.
+--- plain ---
+The channel #new-channel was created.
+--- model ---
+Text [Fixed("The channel "), Channel(ChannelRef { id: ChannelId(444), name: Some("new-channel") }), Fixed(" was created.")]

@@ -42,3 +42,5 @@ pub use model::{
 };
 pub use render::{CommandIds, Surface};
 
+#[cfg(test)]
+mod tests;

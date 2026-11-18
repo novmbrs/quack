@@ -1,0 +1,52 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ticket_entry_missing
+discord: Choose the channel where members open tickets.
+plain:   Choose the channel where members open tickets.
+model:   [Fixed("Choose the channel where members open tickets.")]
+
+## ticket_queue_missing
+discord: Choose the staff channel for new tickets.
+plain:   Choose the staff channel for new tickets.
+model:   [Fixed("Choose the staff channel for new tickets.")]
+
+## ticket_same_channel
+discord: The entry channel and the staff channel must be different.
+plain:   The entry channel and the staff channel must be different.
+model:   [Fixed("The entry channel and the staff channel must be different.")]
+
+## honeypot_channel_missing
+discord: Choose the honeypot channel.
+plain:   Choose the honeypot channel.
+model:   [Fixed("Choose the honeypot channel.")]
+
+## honeypot_rule_missing
+discord: Choose the rule the honeypot applies.
+plain:   Choose the rule the honeypot applies.
+model:   [Fixed("Choose the rule the honeypot applies.")]
+
+## honeypot_rule_required_fields
+discord: The rule **Honeypot** has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
+plain:   The rule Honeypot has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
+model:   [Fixed("The rule "), Bold([User("Honeypot")]), Fixed(" has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.")]
+
+## activity_no_route
+discord: Choose a channel for server activity.
+plain:   Choose a channel for server activity.
+model:   [Fixed("Choose a channel for server activity.")]
+
+## activity_needs_audit_log
+discord: Quack needs the View Audit Log permission to show who banned or unbanned a member.
+plain:   Quack needs the View Audit Log permission to show who banned or unbanned a member.
+model:   [Fixed("Quack needs the View Audit Log permission to show who banned or unbanned a member.")]
+
+## channel_permissions
+discord: Quack needs Manage Messages and Read Message History in <#444>.
+plain:   Quack needs Manage Messages and Read Message History in #staff.
+model:   [Fixed("Quack needs Manage Messages and Read Message History in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]
+
+## channel_not_staff_only
+discord: <#444> isn't staff-only.
+plain:   #staff isn't staff-only.
+model:   [Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" isn't staff-only.")]

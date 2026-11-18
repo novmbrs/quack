@@ -1,0 +1,837 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout QuackNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack isn't in this server anymore.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Quack isn't in this server anymore.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack isn't in this server anymore.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout QuackNotInServer · dashboard text
+discord: Quack couldn't time out <@222> for case #12. Quack isn't in this server anymore.
+plain:   Quack couldn't time out Sam for case #12. Quack isn't in this server anymore.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack isn't in this server anymore.")]
+
+## Timeout QuackMissingPermission · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout QuackMissingPermission · dashboard text
+discord: Quack couldn't time out <@222> for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+plain:   Quack couldn't time out Sam for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+
+## Timeout QuackRoleTooLow · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout QuackRoleTooLow · dashboard text
+discord: Quack couldn't time out <@222> for case #12. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+plain:   Quack couldn't time out Sam for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+
+## Timeout MemberIsOwner · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout MemberIsOwner · dashboard text
+discord: Quack couldn't time out <@222> for case #12. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+plain:   Quack couldn't time out Sam for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+
+## Timeout MemberNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> isn't in the server, so there's no one to time out.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Sam isn't in the server, so there's no one to time out.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout MemberNotInServer · dashboard text
+discord: Quack couldn't time out <@222> for case #12. <@222> isn't in the server, so there's no one to time out.
+plain:   Quack couldn't time out Sam for case #12. Sam isn't in the server, so there's no one to time out.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+
+## Timeout MemberIsAdministrator · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout MemberIsAdministrator · dashboard text
+discord: Quack couldn't time out <@222> for case #12. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+plain:   Quack couldn't time out Sam for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+
+## Timeout TimeoutWindowPassed · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout would already have ended by now, so Quack didn't apply it.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The timeout would already have ended by now, so Quack didn't apply it.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout TimeoutWindowPassed · dashboard text
+discord: Quack couldn't time out <@222> for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't time out Sam for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Timeout DiscordRefused · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout DiscordRefused · dashboard text
+discord: Quack couldn't time out <@222> for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+plain:   Quack couldn't time out Sam for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+
+## Timeout RetriesExhausted · post
+tone: Danger
+--- discord ---
+Quack couldn't time out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't time out Sam for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Timeout RetriesExhausted · dashboard text
+discord: Quack couldn't time out <@222> for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+plain:   Quack couldn't time out Sam for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+
+## Kick QuackNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack isn't in this server anymore.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Quack isn't in this server anymore.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack isn't in this server anymore.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick QuackNotInServer · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. Quack isn't in this server anymore.
+plain:   Quack couldn't remove Sam from the server for case #12. Quack isn't in this server anymore.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. Quack isn't in this server anymore.")]
+
+## Kick QuackMissingPermission · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack needs the Kick Members permission. Ask an administrator to give it to Quack's role, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Quack needs the Kick Members permission. Ask an administrator to give it to Quack's role, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack needs the Kick Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick QuackMissingPermission · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. Quack needs the Kick Members permission. Ask an administrator to give it to Quack's role, then retry.
+plain:   Quack couldn't remove Sam from the server for case #12. Quack needs the Kick Members permission. Ask an administrator to give it to Quack's role, then retry.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. Quack needs the Kick Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+
+## Kick QuackRoleTooLow · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick QuackRoleTooLow · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+plain:   Quack couldn't remove Sam from the server for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+
+## Kick MemberIsOwner · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick MemberIsOwner · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+plain:   Quack couldn't remove Sam from the server for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+
+## Kick MemberNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> isn't in the server, so there's no one to time out.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Sam isn't in the server, so there's no one to time out.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick MemberNotInServer · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. <@222> isn't in the server, so there's no one to time out.
+plain:   Quack couldn't remove Sam from the server for case #12. Sam isn't in the server, so there's no one to time out.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+
+## Kick MemberIsAdministrator · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick MemberIsAdministrator · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+plain:   Quack couldn't remove Sam from the server for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+
+## Kick TimeoutWindowPassed · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout would already have ended by now, so Quack didn't apply it.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The timeout would already have ended by now, so Quack didn't apply it.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick TimeoutWindowPassed · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't remove Sam from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Kick DiscordRefused · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick DiscordRefused · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+plain:   Quack couldn't remove Sam from the server for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+
+## Kick RetriesExhausted · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam from the server for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Kick RetriesExhausted · dashboard text
+discord: Quack couldn't remove <@222> from the server for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+plain:   Quack couldn't remove Sam from the server for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+
+## Ban QuackNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack isn't in this server anymore.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Quack isn't in this server anymore.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack isn't in this server anymore.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban QuackNotInServer · dashboard text
+discord: Quack couldn't ban <@222> for case #12. Quack isn't in this server anymore.
+plain:   Quack couldn't ban Sam for case #12. Quack isn't in this server anymore.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack isn't in this server anymore.")]
+
+## Ban QuackMissingPermission · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban QuackMissingPermission · dashboard text
+discord: Quack couldn't ban <@222> for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+plain:   Quack couldn't ban Sam for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+
+## Ban QuackRoleTooLow · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban QuackRoleTooLow · dashboard text
+discord: Quack couldn't ban <@222> for case #12. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+plain:   Quack couldn't ban Sam for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+
+## Ban MemberIsOwner · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban MemberIsOwner · dashboard text
+discord: Quack couldn't ban <@222> for case #12. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+plain:   Quack couldn't ban Sam for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+
+## Ban MemberNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> isn't in the server, so there's no one to time out.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Sam isn't in the server, so there's no one to time out.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban MemberNotInServer · dashboard text
+discord: Quack couldn't ban <@222> for case #12. <@222> isn't in the server, so there's no one to time out.
+plain:   Quack couldn't ban Sam for case #12. Sam isn't in the server, so there's no one to time out.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+
+## Ban MemberIsAdministrator · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban MemberIsAdministrator · dashboard text
+discord: Quack couldn't ban <@222> for case #12. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+plain:   Quack couldn't ban Sam for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+
+## Ban TimeoutWindowPassed · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout would already have ended by now, so Quack didn't apply it.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The timeout would already have ended by now, so Quack didn't apply it.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban TimeoutWindowPassed · dashboard text
+discord: Quack couldn't ban <@222> for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't ban Sam for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Ban DiscordRefused · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban DiscordRefused · dashboard text
+discord: Quack couldn't ban <@222> for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+plain:   Quack couldn't ban Sam for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+
+## Ban RetriesExhausted · post
+tone: Danger
+--- discord ---
+Quack couldn't ban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't ban Sam for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Ban RetriesExhausted · dashboard text
+discord: Quack couldn't ban <@222> for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+plain:   Quack couldn't ban Sam for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+
+## RemoveTimeout QuackNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack isn't in this server anymore.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Quack isn't in this server anymore.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack isn't in this server anymore.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout QuackNotInServer · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. Quack isn't in this server anymore.
+plain:   Quack couldn't remove Sam's timeout for case #12. Quack isn't in this server anymore.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. Quack isn't in this server anymore.")]
+
+## RemoveTimeout QuackMissingPermission · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout QuackMissingPermission · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+plain:   Quack couldn't remove Sam's timeout for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. Quack needs the Moderate Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+
+## RemoveTimeout QuackRoleTooLow · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout QuackRoleTooLow · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+plain:   Quack couldn't remove Sam's timeout for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+
+## RemoveTimeout MemberIsOwner · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout MemberIsOwner · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+plain:   Quack couldn't remove Sam's timeout for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+
+## RemoveTimeout MemberNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> isn't in the server, so there's no one to time out.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Sam isn't in the server, so there's no one to time out.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout MemberNotInServer · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. <@222> isn't in the server, so there's no one to time out.
+plain:   Quack couldn't remove Sam's timeout for case #12. Sam isn't in the server, so there's no one to time out.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+
+## RemoveTimeout MemberIsAdministrator · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout MemberIsAdministrator · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+plain:   Quack couldn't remove Sam's timeout for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+
+## RemoveTimeout TimeoutWindowPassed · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout would already have ended by now, so Quack didn't apply it.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The timeout would already have ended by now, so Quack didn't apply it.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout TimeoutWindowPassed · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't remove Sam's timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## RemoveTimeout DiscordRefused · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout DiscordRefused · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+plain:   Quack couldn't remove Sam's timeout for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+
+## RemoveTimeout RetriesExhausted · post
+tone: Danger
+--- discord ---
+Quack couldn't remove <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry remove timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't remove Sam's timeout for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## RemoveTimeout RetriesExhausted · dashboard text
+discord: Quack couldn't remove <@222>'s timeout for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+plain:   Quack couldn't remove Sam's timeout for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+
+## Unban QuackNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack isn't in this server anymore.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Quack isn't in this server anymore.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack isn't in this server anymore.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban QuackNotInServer · dashboard text
+discord: Quack couldn't unban <@222> for case #12. Quack isn't in this server anymore.
+plain:   Quack couldn't unban Sam for case #12. Quack isn't in this server anymore.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack isn't in this server anymore.")]
+
+## Unban QuackMissingPermission · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban QuackMissingPermission · dashboard text
+discord: Quack couldn't unban <@222> for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+plain:   Quack couldn't unban Sam for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Quack needs the Ban Members permission. Ask an administrator to give it to Quack's role, then retry.")]
+
+## Unban QuackRoleTooLow · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban QuackRoleTooLow · dashboard text
+discord: Quack couldn't unban <@222> for case #12. <@222>'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+plain:   Quack couldn't unban Sam for case #12. Sam's highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role is at or above Quack's. Ask an administrator to move Quack's role above it, then retry.")]
+
+## Unban MemberIsOwner · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban MemberIsOwner · dashboard text
+discord: Quack couldn't unban <@222> for case #12. <@222> owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+plain:   Quack couldn't unban Sam for case #12. Sam owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns the server, and Discord doesn't let anyone time out, kick, or ban the owner.")]
+
+## Unban MemberNotInServer · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> isn't in the server, so there's no one to time out.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Sam isn't in the server, so there's no one to time out.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban MemberNotInServer · dashboard text
+discord: Quack couldn't unban <@222> for case #12. <@222> isn't in the server, so there's no one to time out.
+plain:   Quack couldn't unban Sam for case #12. Sam isn't in the server, so there's no one to time out.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so there's no one to time out.")]
+
+## Unban MemberIsAdministrator · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban MemberIsAdministrator · dashboard text
+discord: Quack couldn't unban <@222> for case #12. <@222> has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+plain:   Quack couldn't unban Sam for case #12. Sam has the Administrator permission, and Discord doesn't allow timeouts for administrators.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has the Administrator permission, and Discord doesn't allow timeouts for administrators.")]
+
+## Unban TimeoutWindowPassed · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. The timeout would already have ended by now, so Quack didn't apply it.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". The timeout would already have ended by now, so Quack didn't apply it.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban TimeoutWindowPassed · dashboard text
+discord: Quack couldn't unban <@222> for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't unban Sam for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Unban DiscordRefused · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban DiscordRefused · dashboard text
+discord: Quack couldn't unban <@222> for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+plain:   Quack couldn't unban Sam for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Discord didn't let Quack do this. Check Quack's role and permissions, then retry.")]
+
+## Unban RetriesExhausted · post
+tone: Danger
+--- discord ---
+Quack couldn't unban <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't unban Sam for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Unban RetriesExhausted · dashboard text
+discord: Quack couldn't unban <@222> for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+plain:   Quack couldn't unban Sam for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Discord turned Quack away 8 times, so nothing changed. Retry when Discord is available again.")]
+
+## Timeout TimeoutWindowPassed · no names known
+discord: Quack couldn't time out the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't time out the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't time out the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Kick TimeoutWindowPassed · no names known
+discord: Quack couldn't remove the member from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't remove the member from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't remove the member from the server for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Ban TimeoutWindowPassed · no names known
+discord: Quack couldn't ban the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't ban the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't ban the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## RemoveTimeout TimeoutWindowPassed · no names known
+discord: Quack couldn't remove the member's timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't remove the member's timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't remove the member's timeout for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]
+
+## Unban TimeoutWindowPassed · no names known
+discord: Quack couldn't unban the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+plain:   Quack couldn't unban the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't unban the member for case #12. The timeout would already have ended by now, so Quack didn't apply it.")]

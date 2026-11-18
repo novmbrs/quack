@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+The server settings changed.
+--- plain ---
+The server settings changed.
+--- model ---
+Text [Fixed("The server settings changed.")]

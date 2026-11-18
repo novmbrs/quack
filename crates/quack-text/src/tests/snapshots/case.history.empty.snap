@@ -1,0 +1,13 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Case history for <@222>
+<@222> has no cases in this server.
+--- plain ---
+Case history for Sam
+Sam has no cases in this server.
+--- model ---
+Heading [Fixed("Case history for "), Person(Person { id: AccountId(222), name: Some("Sam") })]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has no cases in this server.")]

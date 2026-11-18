@@ -1,0 +1,17 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## 60 messages
+tone: Neutral
+--- discord ---
+60 messages were deleted in <#444>. Quack hadn't seen them, so their authors and text aren't known.
+-# Message IDs: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50
+-# <t:1794924309:f>
+--- plain ---
+60 messages were deleted in #general. Quack hadn't seen them, so their authors and text aren't known.
+Message IDs: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50
+17 Nov 2026 at 14:05 UTC
+--- model ---
+Text [Fixed("60 messages were deleted in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(". Quack hadn't seen them, so their authors and text aren't known.")]
+Subtext [Fixed("Message IDs: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full)]

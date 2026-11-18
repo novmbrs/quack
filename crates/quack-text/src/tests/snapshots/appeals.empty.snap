@@ -1,0 +1,13 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Appeals waiting for a decision
+No appeals are waiting for a decision.
+--- plain ---
+Appeals waiting for a decision
+No appeals are waiting for a decision.
+--- model ---
+Heading [Fixed("Appeals waiting for a decision")]
+Text [Fixed("No appeals are waiting for a decision.")]

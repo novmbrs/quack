@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## timeout
+discord: There's nothing to undo: the timeout isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+plain:   There's nothing to undo: the timeout isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+model:   [Fixed("There's nothing to undo: the timeout isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+
+## kick
+discord: There's nothing to undo: the kick isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+plain:   There's nothing to undo: the kick isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+model:   [Fixed("There's nothing to undo: the kick isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+
+## ban
+discord: There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+plain:   There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+model:   [Fixed("There's nothing to undo: the ban isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+
+## remove timeout
+discord: There's nothing to undo: the remove timeout action isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+plain:   There's nothing to undo: the remove timeout action isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+model:   [Fixed("There's nothing to undo: the remove timeout action isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]
+
+## unban
+discord: There's nothing to undo: the unban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+plain:   There's nothing to undo: the unban isn't in place, or Quack is already undoing it. Open the case to see where it stands.
+model:   [Fixed("There's nothing to undo: the unban isn't in place, or Quack is already undoing it. Open the case to see where it stands.")]

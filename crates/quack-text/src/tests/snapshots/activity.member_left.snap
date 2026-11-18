@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+**samtheduck** (222) left the server.
+--- plain ---
+samtheduck (222) left the server.
+--- model ---
+Text [Bold([User("samtheduck")]), Fixed(" (222) left the server.")]

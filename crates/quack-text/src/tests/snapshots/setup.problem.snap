@@ -1,0 +1,42 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## not_text
+discord: It isn't a text channel in this server.
+plain:   It isn't a text channel in this server.
+model:   [Fixed("It isn't a text channel in this server.")]
+
+## everyone_can_view
+discord: @everyone can view it. Deny View Channel for @everyone.
+plain:   @everyone can view it. Deny View Channel for @everyone.
+model:   [Fixed("@everyone can view it. Deny View Channel for @everyone.")]
+
+## role_can_view
+discord: The role <@&666> can view it but isn't a staff role.
+plain:   The role @Helpers can view it but isn't a staff role.
+model:   [Fixed("The role "), Role(RoleRef { id: RoleId(666), name: Some("Helpers") }), Fixed(" can view it but isn't a staff role.")]
+
+## member_can_view
+discord: <@222> can view it but isn't staff.
+plain:   Sam can view it but isn't staff.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can view it but isn't staff.")]
+
+## quack_missing
+discord: Quack needs View Channel, Send Messages, and Attach Files in <#444>. Update the channel's permissions, then choose it again.
+plain:   Quack needs View Channel, Send Messages, and Attach Files in #staff. Update the channel's permissions, then choose it again.
+model:   [Fixed("Quack needs View Channel, Send Messages, and Attach Files in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(". Update the channel's permissions, then choose it again.")]
+
+## inaccessible
+discord: Discord doesn't let Quack see this channel, so Quack can't check it. Give Quack the View Channel permission there.
+plain:   Discord doesn't let Quack see this channel, so Quack can't check it. Give Quack the View Channel permission there.
+model:   [Fixed("Discord doesn't let Quack see this channel, so Quack can't check it. Give Quack the View Channel permission there.")]
+
+## missing
+discord: This channel doesn't exist anymore. Choose another channel.
+plain:   This channel doesn't exist anymore. Choose another channel.
+model:   [Fixed("This channel doesn't exist anymore. Choose another channel.")]
+
+## role and member without names
+discord: The role <@&666> can view it but isn't a staff role.
+plain:   The role @666 can view it but isn't a staff role.
+model:   [Fixed("The role "), Role(RoleRef { id: RoleId(666), name: None }), Fixed(" can view it but isn't a staff role.")]

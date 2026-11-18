@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## timeout
+discord: Case #12 is voided, so Quack won't run its timeout. Add a new case if it still applies.
+plain:   Case #12 is voided, so Quack won't run its timeout. Add a new case if it still applies.
+model:   [Fixed("Case #12 is voided, so Quack won't run its timeout. Add a new case if it still applies.")]
+
+## kick
+discord: Case #12 is voided, so Quack won't run its kick. Add a new case if it still applies.
+plain:   Case #12 is voided, so Quack won't run its kick. Add a new case if it still applies.
+model:   [Fixed("Case #12 is voided, so Quack won't run its kick. Add a new case if it still applies.")]
+
+## ban
+discord: Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
+plain:   Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.
+model:   [Fixed("Case #12 is voided, so Quack won't run its ban. Add a new case if it still applies.")]
+
+## remove timeout
+discord: Case #12 is voided, so Quack won't run its remove timeout action. Add a new case if it still applies.
+plain:   Case #12 is voided, so Quack won't run its remove timeout action. Add a new case if it still applies.
+model:   [Fixed("Case #12 is voided, so Quack won't run its remove timeout action. Add a new case if it still applies.")]
+
+## unban
+discord: Case #12 is voided, so Quack won't run its unban. Add a new case if it still applies.
+plain:   Case #12 is voided, so Quack won't run its unban. Add a new case if it still applies.
+model:   [Fixed("Case #12 is voided, so Quack won't run its unban. Add a new case if it still applies.")]

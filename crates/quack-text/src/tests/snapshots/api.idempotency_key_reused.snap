@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This looks like a repeat of an earlier, different change. Reload the dashboard and try again.
+plain:   This looks like a repeat of an earlier, different change. Reload the dashboard and try again.
+model:   [Fixed("This looks like a repeat of an earlier, different change. Reload the dashboard and try again.")]

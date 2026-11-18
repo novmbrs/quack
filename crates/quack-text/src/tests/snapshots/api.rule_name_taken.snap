@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Another active rule is already called **Spam**. Choose a different name.
+plain:   Another active rule is already called Spam. Choose a different name.
+model:   [Fixed("Another active rule is already called "), Bold([User("Spam")]), Fixed(". Choose a different name.")]

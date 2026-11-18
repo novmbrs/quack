@@ -1,0 +1,16 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Rules
+This server has no active rules. Create one on the dashboard.
+-# Rules are edited on the dashboard.
+--- plain ---
+Rules
+This server has no active rules. Create one on the dashboard.
+Rules are edited on the dashboard.
+--- model ---
+Heading [Fixed("Rules")]
+Text [Fixed("This server has no active rules. Create one on the dashboard.")]
+Subtext [Fixed("Rules are edited on the dashboard.")]

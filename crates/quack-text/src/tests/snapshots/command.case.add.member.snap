@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+member — The member this case is about.
+
+## description
+The member this case is about.

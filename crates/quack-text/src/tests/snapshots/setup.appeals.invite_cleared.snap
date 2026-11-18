@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The rejoin invite is removed.
+plain:   The rejoin invite is removed.
+model:   [Fixed("The rejoin invite is removed.")]

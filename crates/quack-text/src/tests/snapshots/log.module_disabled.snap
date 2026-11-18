@@ -1,0 +1,53 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Tickets · post
+tone: Neutral
+--- discord ---
+<@333> turned off tickets.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana turned off tickets.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned off tickets.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Tickets · dashboard text
+discord: <@333> turned off tickets.
+plain:   Ana turned off tickets.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned off tickets.")]
+
+## ActivityLog · post
+tone: Neutral
+--- discord ---
+<@333> turned off the server activity log.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana turned off the server activity log.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned off the server activity log.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## ActivityLog · dashboard text
+discord: <@333> turned off the server activity log.
+plain:   Ana turned off the server activity log.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned off the server activity log.")]
+
+## Honeypot · post
+tone: Neutral
+--- discord ---
+<@333> turned off the honeypot.
+-# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana turned off the honeypot.
+17 Nov 2026 at 14:05 UTC · Open in dashboard
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned off the honeypot.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
+
+## Honeypot · dashboard text
+discord: <@333> turned off the honeypot.
+plain:   Ana turned off the honeypot.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" turned off the honeypot.")]

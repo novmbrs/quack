@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 can't be appealed.
+plain:   Case #12 can't be appealed.
+model:   [Fixed("Case #12 can't be appealed.")]

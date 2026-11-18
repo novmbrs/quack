@@ -1,0 +1,37 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## warning
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(".")]
+
+## timeout cancelled
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**. Quack won't run the timeout.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam. Quack won't run the timeout.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(". Quack won't run the timeout.")]
+
+## ban running
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**. Quack had already started the ban. If it went through, Quack will undo it. Quack is unbanning <@222>.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam. Quack had already started the ban. If it went through, Quack will undo it. Quack is unbanning Sam.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(". Quack had already started the ban. If it went through, Quack will undo it. Quack is unbanning "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## kick running
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**. Quack had already started the kick, so <@222> may still be removed. A kick can't be undone.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam. Quack had already started the kick, so Sam may still be removed. A kick can't be undone.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(". Quack had already started the kick, so "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" may still be removed. A kick can't be undone.")]
+
+## kick done
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**. <@222> was already removed from the server. A kick can't be undone.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam. Sam was already removed from the server. A kick can't be undone.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was already removed from the server. A kick can't be undone.")]
+
+## timeout undone, appeal closed
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**. Quack is removing <@222>'s timeout. The open appeal is closed, and <@222> gets a DM about it.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam. Quack is removing Sam's timeout. The open appeal is closed, and Sam gets a DM about it.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(". Quack is removing "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. The open appeal is closed, and "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" gets a DM about it.")]
+
+## ban undone
+discord: Case #12 is voided. It stays in the history but no longer counts toward **Spam**. Quack is unbanning <@222>.
+plain:   Case #12 is voided. It stays in the history but no longer counts toward Spam. Quack is unbanning Sam.
+model:   [Fixed("Case #12 is voided. It stays in the history but no longer counts toward "), Bold([User("Spam")]), Fixed(". Quack is unbanning "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
