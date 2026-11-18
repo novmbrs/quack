@@ -33,7 +33,7 @@ fn outcomes_map_variant_for_variant() {
     );
     assert_eq!(
         convert::unknown(UnknownCause::Malformed),
-        engine::UnknownCause::Connection
+        engine::UnknownCause::Malformed
     );
     assert_eq!(
         convert::unknown(UnknownCause::ServerError(502)),
@@ -41,7 +41,7 @@ fn outcomes_map_variant_for_variant() {
     );
     assert_eq!(
         convert::not_sent(NotSentCause::Invalid),
-        engine::NotSentCause::Connection
+        engine::NotSentCause::Invalid
     );
     assert_eq!(
         convert::not_sent(NotSentCause::ShuttingDown),

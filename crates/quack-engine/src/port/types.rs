@@ -148,6 +148,9 @@ pub enum NotSentCause {
     Connection,
     /// The client is shutting down.
     ShuttingDown,
+    /// Quack refused to build the request (a disallowed download URL, an
+    /// unencodable header): nothing changed, and retrying won't help.
+    Invalid,
 }
 
 /// Why a request's result is unknown.
@@ -159,6 +162,8 @@ pub enum UnknownCause {
     ServerError(u16),
     /// The connection broke after sending.
     Connection,
+    /// Discord answered success with a body Quack couldn't read.
+    Malformed,
 }
 
 /// A member lookup.

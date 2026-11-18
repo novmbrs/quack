@@ -33,23 +33,22 @@ pub(crate) const fn refusal(r: Refusal) -> engine::Refusal {
     }
 }
 
-/// Why a result is unknown. Discord confirmed a `Malformed` answer but
-/// Quack couldn't read it: the nearest port cause is a connection that
-/// broke after sending.
+/// Why a result is unknown.
 pub(crate) const fn unknown(cause: UnknownCause) -> engine::UnknownCause {
     match cause {
         UnknownCause::Timeout => engine::UnknownCause::Timeout,
         UnknownCause::ServerError(status) => engine::UnknownCause::ServerError(status),
-        UnknownCause::Connection | UnknownCause::Malformed => engine::UnknownCause::Connection,
+        UnknownCause::Connection => engine::UnknownCause::Connection,
+        UnknownCause::Malformed => engine::UnknownCause::Malformed,
     }
 }
 
-/// Why a request was never sent. `Invalid` (Quack refused to build the
-/// request) changed nothing, like a refused connection.
+/// Why a request was never sent.
 pub(crate) const fn not_sent(cause: NotSentCause) -> engine::NotSentCause {
     match cause {
-        NotSentCause::Connection | NotSentCause::Invalid => engine::NotSentCause::Connection,
+        NotSentCause::Connection => engine::NotSentCause::Connection,
         NotSentCause::ShuttingDown => engine::NotSentCause::ShuttingDown,
+        NotSentCause::Invalid => engine::NotSentCause::Invalid,
     }
 }
 
