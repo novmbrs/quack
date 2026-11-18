@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actions SET dismissed_at = now(), dismissed_by = $3, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'failed' AND dismissed_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "03cd5afaf2b4b1d7949c74104c3a76b54efd6938b0e7d504f0133b6d650de1fe"
+}

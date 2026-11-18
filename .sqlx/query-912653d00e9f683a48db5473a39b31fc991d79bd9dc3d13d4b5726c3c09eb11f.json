@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM honeypot_hits WHERE ctid IN\n                   (SELECT ctid FROM honeypot_hits WHERE created_at < now() - interval '30 days' LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "912653d00e9f683a48db5473a39b31fc991d79bd9dc3d13d4b5726c3c09eb11f"
+}

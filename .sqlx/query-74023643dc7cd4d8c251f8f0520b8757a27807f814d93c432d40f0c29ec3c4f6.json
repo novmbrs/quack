@@ -1,0 +1,174 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, actor_id, member_id, rule_id, rule_version, private, receipt_channel_id,\n                    source_channel_id, source_message_id, values, page, expires_at\n             FROM case_drafts\n             WHERE id = $1 AND guild_id = $2 AND actor_id = $3 AND expires_at > now()\n             FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "actor_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "actor_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "rule_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "rule_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "rule_version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "rule_version"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "private",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "private"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "receipt_channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "receipt_channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "source_channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "source_channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "source_message_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "source_message_id"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "values",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "values"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "page",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "page"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "74023643dc7cd4d8c251f8f0520b8757a27807f814d93c432d40f0c29ec3c4f6"
+}

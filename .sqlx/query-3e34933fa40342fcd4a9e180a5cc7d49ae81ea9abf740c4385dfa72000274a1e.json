@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT h.case_id AS \"case_id!\" FROM honeypot_hits h\n               JOIN cases c ON c.guild_id = h.guild_id AND c.id = h.case_id\n               WHERE h.guild_id = $1 AND h.member_id = $2 AND h.state = 'case_created'\n                 AND h.created_at >= $4::timestamptz - interval '30 seconds' AND h.settings_version = $3\n                 AND c.voided_at IS NULL\n               GROUP BY h.case_id\n               HAVING min(h.created_at) > $4::timestamptz - interval '30 seconds'\n               ORDER BY min(h.created_at) DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "case_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "honeypot_hits",
+            "name": "case_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "3e34933fa40342fcd4a9e180a5cc7d49ae81ea9abf740c4385dfa72000274a1e"
+}

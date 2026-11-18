@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET posted_revision = GREATEST(posted_revision, $3),\n                                 message_id = COALESCE(message_id, $4), create_started_at = NULL,\n                                 last_error = NULL, updated_at = now()\n             WHERE id = $1 AND generation = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "421f295e4e977ac6f49bc7abbbd5e878ea43581172df785b816f79a0fced7eb3"
+}

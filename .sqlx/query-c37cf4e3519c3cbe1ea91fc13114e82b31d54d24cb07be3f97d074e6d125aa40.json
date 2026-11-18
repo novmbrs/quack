@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE activity_log_settings SET include_message_content = $3, include_file_names = $4,\n                                              include_embed_types = $5, version = version + 1, updated_at = now(),\n                                              updated_by = $6\n             WHERE guild_id = $1 AND version = $2 RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Bool",
+        "Bool",
+        "Bool",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c37cf4e3519c3cbe1ea91fc13114e82b31d54d24cb07be3f97d074e6d125aa40"
+}

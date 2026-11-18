@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE honeypot_hits SET state = 'case_created', case_id = $3, updated_at = now()\n             WHERE guild_id = $1 AND message_id = ANY($2) AND state = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "672784bee2a39fe341841db2afc87592be8e60d51bb16c181eadfef9d4738b24"
+}

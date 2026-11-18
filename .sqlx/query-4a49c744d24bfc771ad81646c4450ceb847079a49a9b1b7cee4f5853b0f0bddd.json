@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM jobs WHERE id = $1 AND claim_token = $2 AND locked_until > now() AND rerun_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4a49c744d24bfc771ad81646c4450ceb847079a49a9b1b7cee4f5853b0f0bddd"
+}

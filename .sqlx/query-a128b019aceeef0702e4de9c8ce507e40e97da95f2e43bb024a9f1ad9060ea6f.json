@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO activity_log_routes (guild_id, event, channel_id)\n             SELECT $1, e, c FROM unnest($2::activity_event[], $3::bigint[]) AS r(e, c)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        {
+          "Custom": {
+            "name": "activity_event[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "activity_event",
+                  "kind": {
+                    "Enum": [
+                      "message_edited",
+                      "message_deleted",
+                      "messages_bulk_deleted",
+                      "member_joined",
+                      "member_left",
+                      "member_banned",
+                      "member_unbanned",
+                      "server_changed",
+                      "channel_changed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a128b019aceeef0702e4de9c8ce507e40e97da95f2e43bb024a9f1ad9060ea6f"
+}

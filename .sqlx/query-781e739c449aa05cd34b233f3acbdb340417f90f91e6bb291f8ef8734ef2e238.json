@@ -1,0 +1,125 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id, r.guild_id, r.current_version, r.archived_at, r.created_at, r.created_by,\n                      r.updated_at, r.updated_by, v.definition AS \"definition: Json<RuleDefinition>\"\n               FROM rules r JOIN rule_versions v ON v.rule_id = r.id AND v.version = r.current_version\n               WHERE r.guild_id = $1 AND (r.archived_at IS NOT NULL) = $2\n               ORDER BY lower(r.name), r.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "current_version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "current_version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "archived_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "archived_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "created_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "created_by"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "updated_by"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "definition: Json<RuleDefinition>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "rule_versions",
+            "name": "definition"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "781e739c449aa05cd34b233f3acbdb340417f90f91e6bb291f8ef8734ef2e238"
+}

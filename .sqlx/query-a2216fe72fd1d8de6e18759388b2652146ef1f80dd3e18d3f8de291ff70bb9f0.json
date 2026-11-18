@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM sessions WHERE ctid IN (SELECT ctid FROM sessions\n                   WHERE expires_at < now() OR key_fingerprint <> $1 LIMIT $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a2216fe72fd1d8de6e18759388b2652146ef1f80dd3e18d3f8de291ff70bb9f0"
+}

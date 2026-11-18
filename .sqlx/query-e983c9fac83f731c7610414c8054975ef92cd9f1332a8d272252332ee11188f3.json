@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE rules SET archived_at = now(), updated_at = now(), updated_by = $3\n             WHERE guild_id = $1 AND id = $2 AND archived_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e983c9fac83f731c7610414c8054975ef92cd9f1332a8d272252332ee11188f3"
+}

@@ -1,0 +1,371 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, case_id, member_id, kind, undo_of_action_id, state, timeout_ends_at,\n                             delete_message_seconds, requested_by, attempts, next_attempt_at, last_attempt_at,\n                             failure_reason, failure_permission, failure_http_status, failure_discord_code,\n                             skip_reason, skipped_because_case_id, no_change, done_at, dismissed_at,\n                             dismissed_by, created_at\n                      FROM actions WHERE guild_id = $1 AND case_id = $2 ORDER BY undo_of_action_id IS NOT NULL, created_at, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "undo_of_action_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "undo_of_action_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "timeout_ends_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "timeout_ends_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "delete_message_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "delete_message_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "requested_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "requested_by"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "next_attempt_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "next_attempt_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "last_attempt_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "last_attempt_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "failure_reason",
+        "type_info": {
+          "Custom": {
+            "name": "action_failure",
+            "kind": {
+              "Enum": [
+                "quack_not_in_server",
+                "quack_missing_permission",
+                "quack_role_too_low",
+                "member_is_owner",
+                "member_not_in_server",
+                "member_is_administrator",
+                "timeout_window_passed",
+                "discord_refused",
+                "retries_exhausted",
+                "unconfirmed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "failure_permission",
+        "type_info": {
+          "Custom": {
+            "name": "discord_permission",
+            "kind": {
+              "Enum": [
+                "moderate_members",
+                "kick_members",
+                "ban_members"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_permission"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "failure_http_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_http_status"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "failure_discord_code",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_discord_code"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "skip_reason",
+        "type_info": {
+          "Custom": {
+            "name": "action_skip_reason",
+            "kind": {
+              "Enum": [
+                "other_case_applies",
+                "changed_outside_case"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "skip_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "skipped_because_case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "skipped_because_case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "no_change",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "no_change"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "done_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "done_at"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "dismissed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "dismissed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "dismissed_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "dismissed_by"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "501eaa37f80af58002526d7afb28fda5483f3e92b009f8b5f3ebe511a9157f0c"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ticket_transcripts (ticket_id, guild_id, content, complete, partial_cause, expires_at)\n             VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6))\n             ON CONFLICT (ticket_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Text",
+        "Bool",
+        {
+          "Custom": {
+            "name": "transcript_partial",
+            "kind": {
+              "Enum": [
+                "history",
+                "trimmed"
+              ]
+            }
+          }
+        },
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "854e48fe01463763121b21472691b3f0a4c6c8408dd46446fe5264396677d82d"
+}

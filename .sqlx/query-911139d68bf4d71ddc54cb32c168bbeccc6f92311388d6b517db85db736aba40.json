@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets SET journal_gaps = true, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND NOT journal_gaps",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "911139d68bf4d71ddc54cb32c168bbeccc6f92311388d6b517db85db736aba40"
+}

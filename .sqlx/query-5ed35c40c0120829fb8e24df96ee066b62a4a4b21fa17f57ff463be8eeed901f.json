@@ -1,0 +1,186 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, case_id, member_id, state, version, statement, decided_by, decided_at,\n                             decision_reason, first_decided_at, created_at, updated_at\n                      FROM appeals WHERE guild_id = $1 AND id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "statement",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "statement"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "decided_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "decided_by"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "decided_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "decided_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "decision_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "decision_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "first_decided_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "first_decided_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "5ed35c40c0120829fb8e24df96ee066b62a4a4b21fa17f57ff463be8eeed901f"
+}

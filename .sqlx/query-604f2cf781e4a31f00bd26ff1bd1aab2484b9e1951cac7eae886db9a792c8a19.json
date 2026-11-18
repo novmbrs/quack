@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET interaction_token = NULL, token_expires_at = NULL, updated_at = now()\n             WHERE id = $1 AND interaction_token IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "604f2cf781e4a31f00bd26ff1bd1aab2484b9e1951cac7eae886db9a792c8a19"
+}

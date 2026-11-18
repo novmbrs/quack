@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dms SET state = 'failed', failure = $4, failure_discord_code = $5, settled_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "dm_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "sending",
+                "sent",
+                "failed",
+                "unknown",
+                "not_needed"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "dm_failure",
+            "kind": {
+              "Enum": [
+                "dms_closed",
+                "not_in_shared_server",
+                "discord_unavailable",
+                "discord_refused"
+              ]
+            }
+          }
+        },
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "948332b155b6d7315848edf2e509ad5cab55c380f993c4752477d3ac37817f99"
+}

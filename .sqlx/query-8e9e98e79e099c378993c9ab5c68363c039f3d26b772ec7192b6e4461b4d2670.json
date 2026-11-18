@@ -1,0 +1,376 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, number, member_id, member_joined_at, source, moderator_id, rule_id,\n                         rule_version, case_count, level_index, level_from_case_count, action_kind,\n                         timeout_seconds, ban_delete_message_seconds, sends_dm,\n                         context AS \"context: Json<ContextValues>\", context_revision, operation_key,\n                         request_hash, replaces_case_id, voided_at, voided_by, void_reason, void_cause,\n                         imported, created_at\n                  FROM cases WHERE id = $1 AND member_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "member_joined_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "member_joined_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "source",
+        "type_info": {
+          "Custom": {
+            "name": "case_source",
+            "kind": {
+              "Enum": [
+                "discord",
+                "dashboard",
+                "honeypot",
+                "imported"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "moderator_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "moderator_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "rule_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "rule_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "rule_version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "rule_version"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "case_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "case_count"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "level_index",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "level_index"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "level_from_case_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "level_from_case_count"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "action_kind",
+        "type_info": {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "action_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "timeout_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "timeout_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "ban_delete_message_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "ban_delete_message_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "sends_dm",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "sends_dm"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "context: Json<ContextValues>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "context"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "context_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "context_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "operation_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "operation_key"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "request_hash",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "request_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "replaces_case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "replaces_case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "voided_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "voided_at"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "voided_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "voided_by"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "void_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "void_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "void_cause",
+        "type_info": {
+          "Custom": {
+            "name": "void_cause",
+            "kind": {
+              "Enum": [
+                "staff",
+                "appeal_accepted"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "void_cause"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "imported",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "imported"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "8e9e98e79e099c378993c9ab5c68363c039f3d26b772ec7192b6e4461b4d2670"
+}

@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.rule_id, max(r.name) AS rule_name,\n                      count(*) FILTER (WHERE c.voided_at IS NULL) AS \"valid!\",\n                      count(*) FILTER (WHERE c.voided_at IS NOT NULL) AS \"voided!\"\n               FROM cases c LEFT JOIN rules r ON r.id = c.rule_id\n               WHERE c.guild_id = $1 AND c.member_id = $2\n               GROUP BY c.rule_id\n               ORDER BY max(r.name) NULLS LAST",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rule_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "rule_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "rule_name",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "valid!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "voided!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "463bea3ea786803f22f73cb641831470db9360e9ce027817a12e089fc0be65d6"
+}

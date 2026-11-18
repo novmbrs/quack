@@ -1,0 +1,116 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, appeal_id, kind, actor_id, text, closed_by_void, created_at FROM appeal_events\n             WHERE guild_id = $1 AND id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "appeal_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "appeal_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "appeal_event_kind",
+            "kind": {
+              "Enum": [
+                "submitted",
+                "information_requested",
+                "information_provided",
+                "accepted",
+                "rejected",
+                "closed",
+                "reopened"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "actor_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "actor_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "text",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "text"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "closed_by_void",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "closed_by_void"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeal_events",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a3ccf8821e8f1b09c07534e1729e8ad114658bfff15e34488b19cbec5bf28372"
+}

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE case_drafts SET values = values || $3, page = CASE WHEN $4 THEN page + 1 ELSE page END,\n                                    updated_at = now()\n             WHERE id = $1 AND page = $2 AND expires_at > now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int2",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0f02487586d463d606dd88da246bc84aebb01ee55aa146f30a406f5fb4eb7bae"
+}

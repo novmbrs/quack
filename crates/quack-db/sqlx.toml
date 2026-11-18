@@ -1,0 +1,36 @@
+# Query macro settings for quack-db.
+#
+# Every Postgres enum of the schema maps to its quack-core type through the
+# crate's `Pg<T>` wrapper (src/pg.rs), so queries read and bind typed values
+# and no state leaves this crate as a string.
+
+[macros.type-overrides]
+'case_source' = "crate::pg::Pg<quack_core::case::CaseSource>"
+'void_cause' = "crate::pg::Pg<quack_core::case::VoidCause>"
+'action_kind' = "crate::pg::Pg<quack_core::action::ActionKind>"
+'action_state' = "crate::pg::Pg<quack_core::action::ActionState>"
+'action_failure' = "crate::pg::Pg<quack_core::action::ActionFailure>"
+'action_skip_reason' = "crate::pg::Pg<quack_core::action::ActionSkipReason>"
+'attempt_outcome' = "crate::pg::Pg<quack_core::action::AttemptOutcome>"
+'discord_permission' = "crate::pg::Pg<quack_core::permissions::DiscordPermission>"
+'dm_kind' = "crate::pg::Pg<quack_core::dm::DmKind>"
+'dm_state' = "crate::pg::Pg<quack_core::dm::DmState>"
+'dm_failure' = "crate::pg::Pg<quack_core::dm::DmFailure>"
+'evidence_state' = "crate::pg::Pg<quack_core::evidence::EvidenceState>"
+'evidence_failure' = "crate::pg::Pg<quack_core::evidence::EvidenceFailure>"
+'file_copy_state' = "crate::pg::Pg<quack_core::evidence::FileCopyState>"
+'appeal_state' = "crate::pg::Pg<quack_core::appeal::AppealState>"
+'appeal_event_kind' = "crate::pg::Pg<quack_core::appeal::AppealEventKind>"
+'mod_log_kind' = "crate::pg::Pg<quack_core::modlog::ModLogKind>"
+'mod_log_kind[]' = "Vec<crate::pg::Pg<quack_core::modlog::ModLogKind>>"
+'mod_log_result' = "crate::pg::Pg<quack_core::modlog::ModLogResult>"
+'mod_log_source' = "crate::pg::Pg<quack_core::modlog::ModLogSource>"
+'message_kind' = "crate::pg::Pg<quack_core::messages::MessageKind>"
+'message_state' = "crate::pg::Pg<quack_core::messages::MessageState>"
+'job_kind' = "crate::pg::Pg<crate::jobs::JobKind>"
+'ticket_state' = "crate::pg::Pg<quack_core::modules::TicketState>"
+'ticket_close_reason' = "crate::pg::Pg<quack_core::modules::TicketCloseReason>"
+'transcript_partial' = "crate::pg::Pg<quack_core::modules::TranscriptPartial>"
+'module_disabled_reason' = "crate::pg::Pg<quack_core::modules::ModuleDisabledReason>"
+'activity_event' = "crate::pg::Pg<quack_core::modules::ActivityEvent>"
+'honeypot_hit_state' = "crate::pg::Pg<quack_core::modules::HoneypotHitState>"

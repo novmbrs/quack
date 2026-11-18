@@ -1,0 +1,221 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id, p.guild_id, p.case_id, p.member_id, p.state, p.version, p.statement, p.decided_by,\n                      p.decided_at, p.decision_reason, p.first_decided_at, p.created_at, p.updated_at,\n                      c.number AS case_number, v.definition->>'name' AS rule_name\n               FROM appeals p\n               JOIN cases c ON c.guild_id = p.guild_id AND c.id = p.case_id\n               LEFT JOIN rule_versions v ON v.rule_id = c.rule_id AND v.version = c.rule_version\n               WHERE p.guild_id = $1 AND ($2::appeal_state IS NULL OR p.state = $2)\n                 AND ($3::timestamptz IS NULL OR (p.created_at, p.id) < ($3, $4))\n               ORDER BY p.created_at DESC, p.id DESC\n               LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "statement",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "statement"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "decided_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "decided_by"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "decided_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "decided_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "decision_reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "decision_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "first_decided_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "first_decided_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "case_number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "rule_name",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "Timestamptz",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "da9ca50e8ea2164e20ffd5026638b9ff5cebfda9468c4472d662c16d00946a91"
+}

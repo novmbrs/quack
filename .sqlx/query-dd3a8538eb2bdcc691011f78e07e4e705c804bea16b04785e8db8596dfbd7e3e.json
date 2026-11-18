@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET wanted_revision = wanted_revision + 1, wanted_at = now(), updated_at = now()\n             WHERE guild_id = $1 AND kind = $2 AND state = 'active'\n               AND case_id IS NOT DISTINCT FROM $3 AND appeal_id IS NOT DISTINCT FROM $4\n               AND ticket_id IS NOT DISTINCT FROM $5\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        {
+          "Custom": {
+            "name": "message_kind",
+            "kind": {
+              "Enum": [
+                "case_receipt",
+                "appeal_post",
+                "ticket_panel",
+                "ticket_post",
+                "honeypot_warning"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dd3a8538eb2bdcc691011f78e07e4e705c804bea16b04785e8db8596dfbd7e3e"
+}

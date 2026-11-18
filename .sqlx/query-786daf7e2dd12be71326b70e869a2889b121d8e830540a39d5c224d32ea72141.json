@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT state, count(*) AS \"n!\" FROM appeals\n               WHERE guild_id = $1 AND created_at >= $2 AND created_at < $3 GROUP BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "786daf7e2dd12be71326b70e869a2889b121d8e830540a39d5c224d32ea72141"
+}

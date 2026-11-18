@@ -1,0 +1,63 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actions SET state = 'failed', failure_reason = $4, failure_permission = $5,\n                                failure_http_status = $6, failure_discord_code = $7, next_attempt_at = NULL,\n                                updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "action_failure",
+            "kind": {
+              "Enum": [
+                "quack_not_in_server",
+                "quack_missing_permission",
+                "quack_role_too_low",
+                "member_is_owner",
+                "member_not_in_server",
+                "member_is_administrator",
+                "timeout_window_passed",
+                "discord_refused",
+                "retries_exhausted",
+                "unconfirmed"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "discord_permission",
+            "kind": {
+              "Enum": [
+                "moderate_members",
+                "kick_members",
+                "ban_members"
+              ]
+            }
+          }
+        },
+        "Int2",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "872859d2fecfcff1cdd9f2e1642511a15221878274b183fbb8ecac8b4c57d83e"
+}

@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO jobs (id, kind, key, guild_id, payload, run_at, max_attempts, trace_context)\n               VALUES ($1, $2, $3, $4, $5, COALESCE($6, now() + make_interval(secs => $7)), $8, $9)\n               ON CONFLICT (key) DO UPDATE SET\n                 run_at     = CASE WHEN jobs.locked_until IS NULL\n                                   THEN LEAST(jobs.run_at, EXCLUDED.run_at) ELSE jobs.run_at END,\n                 rerun_at   = CASE WHEN jobs.locked_until IS NOT NULL\n                                   THEN LEAST(COALESCE(jobs.rerun_at, EXCLUDED.run_at), EXCLUDED.run_at)\n                                   ELSE jobs.rerun_at END,\n                 attempts   = CASE WHEN jobs.dead_at IS NOT NULL THEN 0 ELSE jobs.attempts END,\n                 dead_at    = NULL,\n                 updated_at = now()\n               RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "job_kind",
+            "kind": {
+              "Enum": [
+                "run_action",
+                "send_dm",
+                "sync_message",
+                "post_mod_log",
+                "capture_evidence",
+                "honeypot_case",
+                "honeypot_cleanup",
+                "open_ticket",
+                "close_ticket",
+                "housekeeping"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Int8",
+        "Jsonb",
+        "Timestamptz",
+        "Float8",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "77b47ead62f31a053ac01bbbba43390f6757c83ffde1a7b7f621e715217a58cd"
+}

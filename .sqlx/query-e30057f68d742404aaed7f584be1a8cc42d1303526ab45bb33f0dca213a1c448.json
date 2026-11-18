@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT current_version, archived_at FROM rules WHERE guild_id = $1 AND id = $2 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "current_version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "current_version"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "archived_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "archived_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "e30057f68d742404aaed7f584be1a8cc42d1303526ab45bb33f0dca213a1c448"
+}

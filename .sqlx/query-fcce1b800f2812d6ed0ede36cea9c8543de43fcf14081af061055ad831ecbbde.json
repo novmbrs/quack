@@ -1,0 +1,225 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, c.guild_id, g.name AS guild_name, g.icon_hash, c.number,\n                      v.definition->>'name' AS rule_name, v.definition->>'reason' AS reason,\n                      COALESCE((v.definition->>'appealable')::boolean, false) AS \"appealable!\",\n                      c.source, c.created_at, c.voided_at,\n                      a.kind AS \"action_kind?\", a.state AS \"action_state?\", ap.state AS \"appeal_state?\"\n               FROM cases c\n               JOIN guilds g ON g.guild_id = c.guild_id\n               LEFT JOIN rule_versions v ON v.rule_id = c.rule_id AND v.version = c.rule_version\n               LEFT JOIN actions a ON a.case_id = c.id AND a.undo_of_action_id IS NULL\n               LEFT JOIN appeals ap ON ap.case_id = c.id\n               WHERE c.member_id = $1\n                 AND ($2::bigint IS NULL OR c.guild_id = $2)\n                 AND ($3::timestamptz IS NULL OR (c.created_at, c.id) < ($3, $4))\n               ORDER BY c.created_at DESC, c.id DESC\n               LIMIT $5",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "guild_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "icon_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "icon_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "rule_name",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "reason",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "appealable!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "source",
+        "type_info": {
+          "Custom": {
+            "name": "case_source",
+            "kind": {
+              "Enum": [
+                "discord",
+                "dashboard",
+                "honeypot",
+                "imported"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "voided_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "voided_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "action_kind?",
+        "type_info": {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "action_state?",
+        "type_info": {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "appeal_state?",
+        "type_info": {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "state"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Timestamptz",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      null,
+      null,
+      null,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "fcce1b800f2812d6ed0ede36cea9c8543de43fcf14081af061055ad831ecbbde"
+}

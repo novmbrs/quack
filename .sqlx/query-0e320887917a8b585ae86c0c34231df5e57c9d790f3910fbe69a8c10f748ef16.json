@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence_files SET copy_started_at = now() WHERE id = $1 AND copy_state = 'pending'\n               RETURNING copy_started_at AS \"started!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "started!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence_files",
+            "name": "copy_started_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "0e320887917a8b585ae86c0c34231df5e57c9d790f3910fbe69a8c10f748ef16"
+}

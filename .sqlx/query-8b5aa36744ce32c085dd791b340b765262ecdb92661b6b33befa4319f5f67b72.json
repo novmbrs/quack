@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets SET welcome_started_at = now(), updated_at = now()\n               WHERE guild_id = $1 AND id = $2 AND state = 'opening' AND welcome_posted_at IS NULL\n               RETURNING welcome_started_at AS \"started!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "started!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "welcome_started_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "8b5aa36744ce32c085dd791b340b765262ecdb92661b6b33befa4319f5f67b72"
+}

@@ -14,3 +14,18 @@ workspace = true
 [dependencies]
 quack-core = { workspace = true }
 quack-telemetry = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# `sqlx-toml` reads `sqlx.toml`, which maps Quack's Postgres enums to their
+# quack-core types for the query macros.
+sqlx = { workspace = true, features = ["sqlx-toml"] }
+thiserror = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }

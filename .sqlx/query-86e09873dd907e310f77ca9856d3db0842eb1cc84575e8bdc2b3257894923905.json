@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actions SET state = 'cancelled', next_attempt_at = NULL, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "86e09873dd907e310f77ca9856d3db0842eb1cc84575e8bdc2b3257894923905"
+}

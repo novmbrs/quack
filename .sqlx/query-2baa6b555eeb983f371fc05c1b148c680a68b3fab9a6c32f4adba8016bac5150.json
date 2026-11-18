@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence SET copy_skipped_not_staff_only = true WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2baa6b555eeb983f371fc05c1b148c680a68b3fab9a6c32f4adba8016bac5150"
+}

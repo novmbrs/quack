@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets SET welcome_posted_at = now(), updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'opening' AND welcome_posted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6e00e77d6be64dbcb70b349d9bc46f7f13c5ad98d586c7cdc7a96828b6984ed1"
+}

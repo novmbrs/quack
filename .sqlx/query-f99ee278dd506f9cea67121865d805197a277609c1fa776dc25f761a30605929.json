@@ -1,0 +1,408 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.id, a.guild_id, a.case_id, a.member_id, a.kind, a.undo_of_action_id, a.state,\n                      a.timeout_ends_at, a.delete_message_seconds, a.requested_by, a.attempts, a.next_attempt_at,\n                      a.last_attempt_at, a.failure_reason, a.failure_permission, a.failure_http_status,\n                      a.failure_discord_code, a.skip_reason, a.skipped_because_case_id, a.no_change, a.done_at,\n                      a.dismissed_at, a.dismissed_by, a.created_at,\n                      c.number AS case_number, v.definition->>'name' AS rule_name\n               FROM actions a\n               JOIN cases c ON c.guild_id = a.guild_id AND c.id = a.case_id\n               LEFT JOIN rule_versions v ON v.rule_id = c.rule_id AND v.version = c.rule_version\n               WHERE a.guild_id = $1 AND a.state = $2\n                 AND ($2 <> 'failed' OR (a.dismissed_at IS NOT NULL) = $3)\n                 AND ($4::timestamptz IS NULL OR (a.created_at, a.id) < ($4, $5))\n               ORDER BY a.created_at DESC, a.id DESC\n               LIMIT $6",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "undo_of_action_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "undo_of_action_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "timeout_ends_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "timeout_ends_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "delete_message_seconds",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "delete_message_seconds"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "requested_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "requested_by"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "next_attempt_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "next_attempt_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "last_attempt_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "last_attempt_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "failure_reason",
+        "type_info": {
+          "Custom": {
+            "name": "action_failure",
+            "kind": {
+              "Enum": [
+                "quack_not_in_server",
+                "quack_missing_permission",
+                "quack_role_too_low",
+                "member_is_owner",
+                "member_not_in_server",
+                "member_is_administrator",
+                "timeout_window_passed",
+                "discord_refused",
+                "retries_exhausted",
+                "unconfirmed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "failure_permission",
+        "type_info": {
+          "Custom": {
+            "name": "discord_permission",
+            "kind": {
+              "Enum": [
+                "moderate_members",
+                "kick_members",
+                "ban_members"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_permission"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "failure_http_status",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_http_status"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "failure_discord_code",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_discord_code"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "skip_reason",
+        "type_info": {
+          "Custom": {
+            "name": "action_skip_reason",
+            "kind": {
+              "Enum": [
+                "other_case_applies",
+                "changed_outside_case"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "skip_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "skipped_because_case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "skipped_because_case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "no_change",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "no_change"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "done_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "done_at"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "dismissed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "dismissed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "dismissed_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "dismissed_by"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "case_number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "rule_name",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        },
+        "Bool",
+        "Timestamptz",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "f99ee278dd506f9cea67121865d805197a277609c1fa776dc25f761a30605929"
+}

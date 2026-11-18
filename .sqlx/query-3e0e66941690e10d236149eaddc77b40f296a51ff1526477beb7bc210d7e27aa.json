@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT enabled, disabled_reason, entry_channel_id, queue_channel_id, transcript_retention_days, version\n             FROM ticket_settings WHERE guild_id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enabled",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "enabled"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "disabled_reason",
+        "type_info": {
+          "Custom": {
+            "name": "module_disabled_reason",
+            "kind": {
+              "Enum": [
+                "channel_deleted",
+                "quack_left"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "disabled_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "entry_channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "entry_channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "queue_channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "queue_channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "transcript_retention_days",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "transcript_retention_days"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "3e0e66941690e10d236149eaddc77b40f296a51ff1526477beb7bc210d7e27aa"
+}

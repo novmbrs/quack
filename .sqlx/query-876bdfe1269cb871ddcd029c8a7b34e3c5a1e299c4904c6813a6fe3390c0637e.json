@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO import_guilds (guild_id, run_id, source_fingerprint) VALUES ($1, $2, $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "876bdfe1269cb871ddcd029c8a7b34e3c5a1e299c4904c6813a6fe3390c0637e"
+}

@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE rules SET current_version = current_version + 1, name = $4, updated_at = now(), updated_by = $5\n             WHERE guild_id = $1 AND id = $2 AND current_version = $3\n             RETURNING current_version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "current_version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "current_version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int4",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "85a4d5420506f32a583ec4eeb01501d6c0de43351201120523fb4da3956ea432"
+}

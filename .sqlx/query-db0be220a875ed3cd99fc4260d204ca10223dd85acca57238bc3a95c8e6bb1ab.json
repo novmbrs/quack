@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE honeypot_settings SET channel_id = $3, rule_id = $4, warning_text = $5, version = version + 1,\n                                          updated_at = now(), updated_by = $6\n             WHERE guild_id = $1 AND version = $2 RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "honeypot_settings",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "db0be220a875ed3cd99fc4260d204ca10223dd85acca57238bc3a95c8e6bb1ab"
+}

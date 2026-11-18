@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET create_started_at = CASE WHEN $3 THEN now() ELSE COALESCE(create_started_at, now()) END,\n                                   updated_at = now()\n               WHERE id = $1 AND generation = $2\n               RETURNING create_started_at AS \"started!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "started!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "create_started_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "33b0bb3de7a08ce97f2366e55e254cad69b881eb2bafe0f53c041fcb278e274b"
+}

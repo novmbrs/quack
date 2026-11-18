@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guilds SET installed = false, left_at = now(), updated_at = now()\n             WHERE guild_id = $1 AND installed",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a569c3d95a3d99b6576bd2d27f885e00470f05171de30153258d21e62189ffde"
+}

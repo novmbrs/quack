@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_settings SET starter_notice_acknowledged_at = now(), version = version + 1,\n                                       updated_at = now(), updated_by = $2\n             WHERE guild_id = $1 AND starter_notice_acknowledged_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ac8e5d406be951ccea4ba7fa894a7d8081967b4f46b181a4a6010f0845833a4e"
+}

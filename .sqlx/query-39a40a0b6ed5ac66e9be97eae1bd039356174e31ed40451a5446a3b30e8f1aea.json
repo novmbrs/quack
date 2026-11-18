@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE activity_log_settings SET enabled = false, disabled_reason = 'channel_deleted',\n                                              version = version + 1, updated_at = now(), updated_by = NULL\n             WHERE guild_id = $1 AND enabled\n               AND NOT EXISTS (SELECT 1 FROM activity_log_routes WHERE guild_id = $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "39a40a0b6ed5ac66e9be97eae1bd039356174e31ed40451a5446a3b30e8f1aea"
+}

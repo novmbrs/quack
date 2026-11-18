@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO case_counters (guild_id, last_number) VALUES ($1, $2)\n             ON CONFLICT (guild_id) DO UPDATE SET last_number = GREATEST(case_counters.last_number, EXCLUDED.last_number)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "81554af4b67612058bc534fc67bf40931cd6a3b5dc86be13173dc5f7b86d00aa"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET state = 'gone', interaction_token = NULL, token_expires_at = NULL, updated_at = now()\n             WHERE ctid IN (SELECT ctid FROM messages WHERE private AND token_expires_at < now() LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d6262e3a62cbe44f1f1f117f3324fd4bbb3360a24d94a9ddd0428a4a6d090f97"
+}

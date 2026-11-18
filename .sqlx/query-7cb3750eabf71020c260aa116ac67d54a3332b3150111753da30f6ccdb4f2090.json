@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_settings SET\n               moderator_role_ids     = COALESCE($3, moderator_role_ids),\n               rules_manager_role_ids = COALESCE($4, rules_manager_role_ids),\n               log_channel_id         = CASE WHEN $5 THEN $6 ELSE log_channel_id END,\n               appeal_channel_id      = CASE WHEN $7 THEN $8 ELSE appeal_channel_id END,\n               evidence_channel_id    = CASE WHEN $9 THEN $10 ELSE evidence_channel_id END,\n               appeal_invite_url      = CASE WHEN $11 THEN $12 ELSE appeal_invite_url END,\n               dm_intro               = CASE WHEN $13 THEN $14 ELSE dm_intro END,\n               dm_footer              = CASE WHEN $15 THEN $16 ELSE dm_footer END,\n               version = version + 1, updated_at = now(), updated_by = $17\n             WHERE guild_id = $1 AND ($2::bigint IS NULL OR version = $2)\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "guild_settings",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8Array",
+        "Int8Array",
+        "Bool",
+        "Int8",
+        "Bool",
+        "Int8",
+        "Bool",
+        "Int8",
+        "Bool",
+        "Text",
+        "Bool",
+        "Text",
+        "Bool",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7cb3750eabf71020c260aa116ac67d54a3332b3150111753da30f6ccdb4f2090"
+}

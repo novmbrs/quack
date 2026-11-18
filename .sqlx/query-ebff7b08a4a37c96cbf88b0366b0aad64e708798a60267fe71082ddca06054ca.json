@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT definition AS \"definition: Json<RuleDefinition>\", reconstructed, created_at, created_by\n               FROM rule_versions WHERE guild_id = $1 AND rule_id = $2 AND version = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "definition: Json<RuleDefinition>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "rule_versions",
+            "name": "definition"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "reconstructed",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "rule_versions",
+            "name": "reconstructed"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rule_versions",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "created_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "rule_versions",
+            "name": "created_by"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "ebff7b08a4a37c96cbf88b0366b0aad64e708798a60267fe71082ddca06054ca"
+}
