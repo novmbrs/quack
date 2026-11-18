@@ -1,60 +1,17 @@
 //! The fake's `Discord` implementation.
 
-use quack_core::ids::{AccountId, AttachmentId, ChannelId, GuildId, MemberId, MessageId};
+use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId, MessageId};
 use quack_core::permissions::{AccountFacts, BanFacts, ChannelFacts, GuildFacts, MemberFacts};
 use quack_engine::port::{
     BoxFuture, ChannelSpec, Discord, FetchedMessage, FileEdit, Fresh, InteractionToken, Membership,
-    Nonce, NotSentCause, Outcome, OutgoingFile, Refusal, RefusalKind, SentMessage, UnknownCause,
+    Nonce, Outcome, OutgoingFile, Refusal, RefusalKind, SentMessage,
 };
 use quack_text::Msg;
 use time::OffsetDateTime;
 
-use super::state::{FakeMessage, World};
-use super::{Call, FakeDiscord, Recorded, Script};
-
-impl FakeDiscord {
-    /// Runs one call: records it, applies its script, and (unless the
-    /// script stops it) applies `effect` to the world.
-    async fn call<T: Send>(
-        &self,
-        mut recorded: Recorded,
-        effect: impl FnOnce(&mut World) -> Outcome<T> + Send,
-    ) -> Outcome<T> {
-        let script = self.next_script(recorded.call);
-        recorded.scripted = script.as_ref().map(|s| format!("{s:?}"));
-        self.record(recorded);
-        match script {
-            None | Some(Script::Pass) => self.world(effect),
-            Some(Script::Refuse(r)) => Outcome::Refused(r),
-            Some(Script::RetryAfter(d)) => Outcome::RetryAfter(d),
-            Some(Script::NotSent) => Outcome::NotSent(NotSentCause::Connection),
-            Some(Script::Unknown) => Outcome::Unknown(UnknownCause::Timeout),
-            Some(Script::LoseResponse) => {
-                let _ = self.world(effect);
-                Outcome::Unknown(UnknownCause::Connection)
-            }
-            Some(Script::Hold(gate)) => {
-                gate.hold().await;
-                self.world(effect)
-            }
-            Some(Script::HoldAfter(gate)) => {
-                let outcome = self.world(effect);
-                gate.hold().await;
-                outcome
-            }
-        }
-    }
-}
-
-fn refused<T>(kind: RefusalKind) -> Outcome<T> {
-    Outcome::Refused(Refusal::of(kind))
-}
-
-fn with(call: Call, f: impl FnOnce(&mut Recorded)) -> Recorded {
-    let mut r = Recorded::new(call);
-    f(&mut r);
-    r
-}
+use super::effects::{ban, edit, kick, send, set_timeout, unban};
+use super::run::{about, refused, with};
+use super::{Call, FakeDiscord, Recorded};
 
 impl Discord for FakeDiscord {
     fn guild_facts(&self, guild: GuildId) -> BoxFuture<'_, Outcome<GuildFacts>> {
@@ -177,19 +134,9 @@ impl Discord for FakeDiscord {
         until: OffsetDateTime,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        let r = with(Call::Timeout, |r| {
-            r.guild = Some(guild);
-            r.member = Some(member);
-            r.until = Some(until);
-            r.reason = Some(reason.to_owned());
-        });
-        Box::pin(self.call(r, move |w| match w.member_mut(guild, member) {
-            Some(m) => {
-                m.timeout_until = Some(until);
-                Outcome::Done(())
-            }
-            None => refused(RefusalKind::UnknownMember),
-        }))
+        let mut r = about(Call::Timeout, guild, member, reason);
+        r.until = Some(until);
+        Box::pin(self.call(r, move |w| set_timeout(w, guild, member, Some(until))))
     }
 
     fn remove_timeout<'a>(
@@ -198,18 +145,8 @@ impl Discord for FakeDiscord {
         member: MemberId,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        let r = with(Call::RemoveTimeout, |r| {
-            r.guild = Some(guild);
-            r.member = Some(member);
-            r.reason = Some(reason.to_owned());
-        });
-        Box::pin(self.call(r, move |w| match w.member_mut(guild, member) {
-            Some(m) => {
-                m.timeout_until = None;
-                Outcome::Done(())
-            }
-            None => refused(RefusalKind::UnknownMember),
-        }))
+        let r = about(Call::RemoveTimeout, guild, member, reason);
+        Box::pin(self.call(r, move |w| set_timeout(w, guild, member, None)))
     }
 
     fn kick<'a>(
@@ -218,22 +155,8 @@ impl Discord for FakeDiscord {
         member: MemberId,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        let r = with(Call::Kick, |r| {
-            r.guild = Some(guild);
-            r.member = Some(member);
-            r.reason = Some(reason.to_owned());
-        });
-        Box::pin(self.call(r, move |w| {
-            let gone = w
-                .guilds
-                .get_mut(&guild)
-                .and_then(|g| g.members.remove(&member));
-            if gone.is_some() {
-                Outcome::Done(())
-            } else {
-                refused(RefusalKind::UnknownMember)
-            }
-        }))
+        let r = about(Call::Kick, guild, member, reason);
+        Box::pin(self.call(r, move |w| kick(w, guild, member)))
     }
 
     fn ban_member<'a>(
@@ -243,19 +166,9 @@ impl Discord for FakeDiscord {
         delete_message_seconds: u32,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        let r = with(Call::Ban, |r| {
-            r.guild = Some(guild);
-            r.member = Some(member);
-            r.reason = Some(format!("{reason} (delete {delete_message_seconds}s)"));
-        });
-        let reason = reason.to_owned();
-        Box::pin(self.call(r, move |w| {
-            if !w.guilds.contains_key(&guild) {
-                return refused(RefusalKind::UnknownGuild);
-            }
-            w.set_ban(guild, member, Some(&reason));
-            Outcome::Done(())
-        }))
+        let mut r = about(Call::Ban, guild, member, reason);
+        r.reason = Some(format!("{reason} (delete {delete_message_seconds}s)"));
+        Box::pin(self.call(r, move |w| ban(w, guild, member, reason)))
     }
 
     fn unban<'a>(
@@ -264,22 +177,8 @@ impl Discord for FakeDiscord {
         member: MemberId,
         reason: &'a str,
     ) -> BoxFuture<'a, Outcome<()>> {
-        let r = with(Call::Unban, |r| {
-            r.guild = Some(guild);
-            r.member = Some(member);
-            r.reason = Some(reason.to_owned());
-        });
-        Box::pin(self.call(r, move |w| {
-            let removed = w
-                .guilds
-                .get_mut(&guild)
-                .and_then(|g| g.bans.remove(&member));
-            if removed.is_some() {
-                Outcome::Done(())
-            } else {
-                refused(RefusalKind::UnknownBan)
-            }
-        }))
+        let r = about(Call::Unban, guild, member, reason);
+        Box::pin(self.call(r, move |w| unban(w, guild, member)))
     }
 
     fn open_dm(&self, account: AccountId) -> BoxFuture<'_, Outcome<ChannelId>> {
@@ -321,26 +220,7 @@ impl Discord for FakeDiscord {
             r.message = Some(message);
             r.msg = Some(msg.clone());
         });
-        Box::pin(self.call(r, move |w| {
-            let Some(found) = w.messages.get_mut(&message) else {
-                return refused(RefusalKind::UnknownMessage);
-            };
-            if found.fetched.channel_id != channel {
-                return refused(RefusalKind::UnknownMessage);
-            }
-            found.msg = Some(msg.clone());
-            found.fetched.edited_at = Some(OffsetDateTime::now_utc());
-            let attachments = match files {
-                FileEdit::Replace(f) => vec![(f.name.clone(), first_attachment(message))],
-                FileEdit::Keep(a) => vec![(String::new(), *a)],
-                FileEdit::None => Vec::new(),
-            };
-            Outcome::Done(SentMessage {
-                channel_id: channel,
-                message_id: message,
-                attachments,
-            })
-        }))
+        Box::pin(self.call(r, move |w| edit(w, channel, message, msg, files)))
     }
 
     fn edit_interaction_original<'a>(
@@ -531,87 +411,4 @@ impl Discord for FakeDiscord {
             }
         }))
     }
-}
-
-/// A create with `enforce_nonce`: a nonce already used in the channel
-/// returns that message instead of creating another.
-fn send(
-    w: &mut World,
-    channel: ChannelId,
-    msg: &Msg,
-    files: &[OutgoingFile],
-    nonce: &Nonce,
-) -> Outcome<SentMessage> {
-    let existing = w
-        .messages
-        .values()
-        .find(|m| m.fetched.channel_id == channel && m.nonce.as_deref() == Some(nonce.as_str()));
-    if let Some(m) = existing {
-        return Outcome::Done(SentMessage {
-            channel_id: channel,
-            message_id: m.fetched.id,
-            attachments: m
-                .fetched
-                .attachments
-                .iter()
-                .map(|a| (a.filename.clone(), a.id))
-                .collect(),
-        });
-    }
-    let dm = w.dm_channels.values().any(|c| *c == channel);
-    let guild = w
-        .guilds
-        .iter()
-        .find(|(_, g)| g.channels.contains_key(&channel))
-        .map(|(id, _)| *id);
-    if guild.is_none() && !dm {
-        return refused(RefusalKind::UnknownChannel);
-    }
-    let id = MessageId::new(w.next_id()).unwrap_or_else(|| unreachable!());
-    let attachments: Vec<quack_engine::port::FetchedAttachment> = files
-        .iter()
-        .map(|f| {
-            let aid = AttachmentId::new(w.next_id()).unwrap_or_else(|| unreachable!());
-            quack_engine::port::FetchedAttachment {
-                id: aid,
-                filename: f.name.clone(),
-                content_type: f.content_type.clone(),
-                size_bytes: u64::try_from(f.bytes.len()).unwrap_or(u64::MAX),
-                url: format!("https://cdn.discordapp.com/attachments/{aid}/{}", f.name),
-            }
-        })
-        .collect();
-    let sent = SentMessage {
-        channel_id: channel,
-        message_id: id,
-        attachments: attachments
-            .iter()
-            .map(|a| (a.filename.clone(), a.id))
-            .collect(),
-    };
-    w.messages.insert(
-        id,
-        FakeMessage {
-            fetched: FetchedMessage {
-                id,
-                channel_id: channel,
-                guild_id: guild,
-                author_id: w.quack,
-                author_name: "Quack".to_owned(),
-                author_bot: true,
-                content: String::new(),
-                created_at: OffsetDateTime::now_utc(),
-                edited_at: None,
-                embeds: Vec::new(),
-                attachments,
-            },
-            msg: Some(msg.clone()),
-            nonce: Some(nonce.as_str().to_owned()),
-        },
-    );
-    Outcome::Done(sent)
-}
-
-fn first_attachment(message: MessageId) -> AttachmentId {
-    AttachmentId::new(message.get()).unwrap_or_else(|| unreachable!())
 }

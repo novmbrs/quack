@@ -3,6 +3,7 @@
 
 mod apply;
 mod apply_tx;
+mod apply_writes;
 mod card;
 mod edit;
 mod evidence_add;
@@ -11,6 +12,7 @@ mod list;
 mod records;
 mod timeline;
 mod view;
+mod view_items;
 mod view_member;
 mod void;
 
@@ -34,9 +36,9 @@ pub use evidence_add::{EvidenceAdded, add_evidence};
 pub use list::{CasePreview, list, member_cases, member_summary, preview};
 pub(crate) use records::CaseRecords;
 pub use view::{
-    ActionItem, AppealItem, AttemptItem, CaseView, DmItem, EvidenceFileItem, EvidenceItem,
-    TimelineItem, TimelineText, VoidItem, get, get_by_number,
+    AppealItem, CaseView, DmItem, TimelineItem, TimelineText, VoidItem, get, get_by_number,
 };
+pub use view_items::{ActionItem, AttemptItem, EvidenceFileItem, EvidenceItem};
 pub use view_member::{
     MemberAppeal, MemberAppealEvent, MemberCaseView, MemberContextLine, MemberEmbed,
     MemberEvidence, MemberEvidenceFile, member_case,

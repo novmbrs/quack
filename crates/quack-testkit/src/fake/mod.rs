@@ -12,7 +12,9 @@
 //!   until the test releases its [`Gate`]. Aborting the caller while it is
 //!   held is a crash at exactly that point.
 
+mod effects;
 mod port;
+mod run;
 mod state;
 
 use std::collections::{HashMap, VecDeque};
