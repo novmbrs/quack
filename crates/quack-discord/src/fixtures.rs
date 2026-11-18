@@ -1,4 +1,5 @@
-//! Discord-shaped JSON answers, per Discord's documented objects.
+//! Discord-shaped JSON (REST answers, gateway dispatches, interactions)
+//! per Discord's documented objects, shared by the tests.
 
 use serde_json::{Value, json};
 
@@ -132,5 +133,77 @@ pub(crate) fn thread(id: u64, parent: u64, name: &str, archived_at: &str) -> Val
             "archive_timestamp": archived_at,
             "locked": false
         }
+    })
+}
+
+/// A gateway dispatch (`op` 0), parsed the way the shard parses it.
+pub(crate) fn dispatch(kind: &str, d: &Value) -> twilight_model::gateway::event::Event {
+    let json = json!({"op": 0, "s": 1, "t": kind, "d": d}).to_string();
+    twilight_gateway::parse(json, crate::gateway::wanted())
+        .expect("a readable dispatch")
+        .expect("a wanted event")
+        .into()
+}
+
+/// `READY` for Quack's account and these servers.
+pub(crate) fn ready(quack: u64, guilds: &[u64]) -> Value {
+    let mut me = user(quack, "Quack");
+    me["bot"] = json!(true);
+    me["verified"] = json!(true);
+    me["mfa_enabled"] = json!(true);
+    json!({
+        "v": 10,
+        "user": me,
+        "guilds": guilds.iter().map(|g| json!({"id": g.to_string(), "unavailable": true})).collect::<Vec<_>>(),
+        "session_id": "session",
+        "resume_gateway_url": "wss://gateway.example",
+        "application": {"id": "42", "flags": 0},
+        "shard": [0, 1]
+    })
+}
+
+/// `GUILD_CREATE` with channels and members (Quack's own member among
+/// them, as Discord always sends it).
+pub(crate) fn guild_create(
+    id: u64,
+    owner: u64,
+    roles: &[Value],
+    channels: &[Value],
+    members: &[Value],
+) -> Value {
+    let mut g = guild(id, owner, roles);
+    g["channels"] = json!(channels);
+    g["members"] = json!(members);
+    g["threads"] = json!([]);
+    g["large"] = json!(false);
+    g["member_count"] = json!(members.len());
+    g["joined_at"] = json!("2024-01-02T03:04:05.000000+00:00");
+    g
+}
+
+/// A server channel with these overwrites (`(id, type, allow, deny)`).
+pub(crate) fn channel_with(
+    id: u64,
+    guild: u64,
+    kind: u8,
+    parent: Option<u64>,
+    overwrites: &[(u64, u8, u64, u64)],
+) -> Value {
+    json!({
+        "id": id.to_string(),
+        "guild_id": guild.to_string(),
+        "type": kind,
+        "name": format!("channel-{id}"),
+        "position": 0,
+        "parent_id": parent.map(|p| p.to_string()),
+        "permission_overwrites": overwrites
+            .iter()
+            .map(|(id, kind, allow, deny)| json!({
+                "id": id.to_string(),
+                "type": kind,
+                "allow": allow.to_string(),
+                "deny": deny.to_string()
+            }))
+            .collect::<Vec<_>>()
     })
 }

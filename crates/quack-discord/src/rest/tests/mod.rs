@@ -1,7 +1,6 @@
 //! The REST client against local HTTP servers: request shapes and every
 //! outcome classification, without Discord.
 
-mod fixtures;
 mod lookups;
 mod outcomes;
 mod shapes;
@@ -14,7 +13,7 @@ use tokio::net::TcpListener;
 use super::{ClientConfig, DiscordClient, DownloadPolicy};
 
 /// A client pointed at `base` with short deadlines.
-pub(super) fn client(base: &str) -> DiscordClient {
+pub(crate) fn client(base: &str) -> DiscordClient {
     let mut config = ClientConfig::new("TOKEN", 42);
     config.api_base = format!("{base}/api/v10");
     config.request_timeout = Duration::from_millis(400);

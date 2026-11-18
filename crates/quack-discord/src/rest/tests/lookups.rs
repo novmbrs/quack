@@ -5,7 +5,7 @@ use quack_core::ids::{AccountId, ChannelId, GuildId};
 use serde_json::json;
 
 use super::client;
-use super::fixtures;
+use crate::fixtures;
 use crate::rest::{Outcome, RefusalKind};
 
 fn a(id: u64) -> AccountId {

@@ -12,6 +12,8 @@
 //! - [`cache`]: the guild cache and the bounded member cache, producing
 //!   quack-core facts; [`permissions`] computes Discord permissions.
 //! - [`commands`]: command definitions and registration.
+//! - [`facts`]: server, member, and channel facts from the caches or REST
+//!   under the freshness rules of §2.
 //!
 //! The engine's `Discord` port is implemented in the binary on top of this
 //! crate, because this crate must not depend on `quack-engine` (§17.2).
@@ -19,6 +21,7 @@
 pub mod cache;
 pub mod commands;
 pub mod custom_id;
+pub mod facts;
 pub mod gateway;
 pub mod interaction;
 pub mod model;
@@ -27,6 +30,9 @@ pub mod render;
 pub mod rest;
 
 mod convert;
+
+#[cfg(test)]
+mod fixtures;
 
 pub use rest::{
     ClientConfig, ClientError, DiscordClient, NotSentCause, Outcome, Refusal, RefusalKind,

@@ -8,7 +8,7 @@ use serde_json::json;
 use time::macros::datetime;
 
 use super::client;
-use super::fixtures;
+use crate::fixtures;
 use crate::model::{ChannelSpec, FileEdit, InteractionRef, InteractionToken, Nonce, OutgoingFile};
 use crate::render::{RenderedMessage, render};
 use crate::rest::{AutocompleteChoice, MessageBody, Outcome};

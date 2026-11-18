@@ -45,7 +45,7 @@ pub const DISALLOWED_INTENTS: u16 = 4014;
 const CLOSE_WAIT: Duration = Duration::from_secs(5);
 
 /// The events Twilight deserializes; everything else is skipped cheaply.
-fn wanted() -> EventTypeFlags {
+pub(crate) fn wanted() -> EventTypeFlags {
     EventTypeFlags::READY
         | EventTypeFlags::RESUMED
         | EventTypeFlags::GATEWAY_HEARTBEAT_ACK
