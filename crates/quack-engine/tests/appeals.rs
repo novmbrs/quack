@@ -417,3 +417,59 @@ async fn two_quick_decisions_send_two_dms_with_their_own_text() -> Result<()> {
     assert!(texts[1].contains("Second reason.") && !texts[1].contains("First reason."));
     Ok(())
 }
+
+/// Engine review MAJOR 6: an appeal submitted while a change of the appeal
+/// channel is in flight gets its post in the new channel. The test holds
+/// the settings row as a settings change does, sets the channel, and
+/// commits only after the submission has started.
+#[tokio::test]
+async fn an_appeal_during_a_channel_change_posts_in_the_new_channel() -> Result<()> {
+    let h = Arc::new(Harness::new().await?);
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    let case = h.apply(MEMBER, rule).await?.case.id;
+    let channel = h.fake.world(|w| w.add_text_channel(h.guild, true));
+    let mut change = h.db.db.begin().await?;
+    quack_db::settings::lock(&mut change, h.guild).await?;
+    sqlx::query("UPDATE guild_settings SET appeal_channel_id = $1 WHERE guild_id = $2")
+        .bind(i64::from(channel))
+        .bind(i64::try_from(GUILD)?)
+        .execute(&mut *change)
+        .await?;
+    let key = h.key("apm");
+    let submitting = {
+        let h = Arc::clone(&h);
+        tokio::spawn(async move {
+            submit(
+                &h.engine,
+                sf(MEMBER),
+                Origin::Dashboard,
+                case,
+                "Not me.",
+                &key,
+            )
+            .await
+        })
+    };
+    let waiting = "SELECT count(*) FROM pg_stat_activity
+                   WHERE datname = current_database() AND wait_event_type = 'Lock'";
+    let blocked = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        while h.db.count(waiting).await? < 1 && !submitting.is_finished() {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        anyhow::Ok(())
+    })
+    .await;
+    assert!(blocked.is_ok());
+    change.commit().await?;
+    let appeal = submitting.await??.appeal;
+    let mut conn = h.db.db.conn().await?;
+    let post = quack_db::messages::by_owner(
+        &mut conn,
+        h.guild,
+        quack_db::messages::Owner::Appeal(appeal),
+    )
+    .await?
+    .context("the appeal's post")?;
+    assert_eq!(post.channel, Some(channel));
+    Ok(())
+}

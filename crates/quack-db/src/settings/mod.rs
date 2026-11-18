@@ -132,6 +132,22 @@ pub async fn lock(
     row.map(GuildSettings::try_from).transpose()
 }
 
+/// Locks a server's settings `FOR SHARE`: a write that reads a setting
+/// (the appeal channel for a new appeal's post) waits for a settings change
+/// in flight, and a change waits for it, so neither misses the other.
+pub async fn lock_shared(
+    conn: &mut PgConnection,
+    guild: GuildId,
+) -> Result<Option<GuildSettings>, DbError> {
+    let row = obs::run(
+        Select,
+        "guild_settings",
+        query_settings!("WHERE guild_id = $1 FOR SHARE", i64::from(guild)).fetch_optional(conn),
+    )
+    .await?;
+    row.map(GuildSettings::try_from).transpose()
+}
+
 /// Settings of these servers, for the config cache.
 pub async fn for_guilds(
     conn: &mut PgConnection,

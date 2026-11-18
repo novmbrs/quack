@@ -87,6 +87,12 @@ pub async fn submit(
             }
             Keyed::Fresh(tx) => tx,
         };
+        // The settings row first (shared): a change of the appeal channel
+        // in flight finishes before this reads it, and one that starts later
+        // waits for this appeal and then moves its post (§4.12, §8.3).
+        let channel = settings::lock_shared(&mut tx, guild)
+            .await?
+            .and_then(|s| s.appeal_channel);
         let locked = cases::lock(&mut tx, guild, case)
             .await?
             .ok_or(DomainError::CaseNotFound)?;
@@ -104,7 +110,7 @@ pub async fn submit(
             has_appeal: existing.is_some(),
             source: locked.source,
         })?;
-        let id = create(&mut tx, &locked, member, origin, statement).await?;
+        let id = create(&mut tx, &locked, member, origin, statement, channel).await?;
         messages::bump(&mut tx, guild, Owner::Case(case)).await?;
         let stored = serde_json::to_value(Stored {
             appeal_id: id,
@@ -126,13 +132,15 @@ pub async fn submit(
 }
 
 /// The appeal's rows (§8.2 `submitted`): the appeal, its event, its staff
-/// post (in the appeal channel, or waiting for one), and the log entry.
+/// post (in `channel`, the appeal channel read under the settings lock, or
+/// waiting for one), and the log entry.
 async fn create(
     tx: &mut quack_db::Tx,
     case: &quack_db::cases::Case,
     member: AccountId,
     origin: Origin,
     statement: &str,
+    channel: Option<quack_core::ids::ChannelId>,
 ) -> Result<AppealId, AppealError> {
     let guild = case.guild;
     let id = AppealId::from_uuid(uuid::Uuid::now_v7());
@@ -148,9 +156,6 @@ async fn create(
         .await?
         .ok_or(quack_db::DbError::NotFound)?;
     event(tx, &appeal, AppealEventKind::Submitted, member, statement).await?;
-    let channel = settings::get(tx, guild)
-        .await?
-        .and_then(|s| s.appeal_channel);
     messages::insert(
         tx,
         &NewTrackedMessage {
@@ -214,6 +219,12 @@ pub async fn add_information(
             }
             Keyed::Fresh(tx) => tx,
         };
+        // The settings row first (shared): a change of the appeal channel
+        // in flight finishes before this reads it, and one that starts later
+        // waits for this appeal and then moves its post (§4.12, §8.3).
+        let channel = settings::lock_shared(&mut tx, guild)
+            .await?
+            .and_then(|s| s.appeal_channel);
         let locked = cases::lock(&mut tx, guild, case)
             .await?
             .ok_or(DomainError::CaseNotFound)?;
