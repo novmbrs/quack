@@ -1,6 +1,15 @@
 //! The OpenAPI document: committed copy is current, it is OpenAPI 3.1,
 //! every reference resolves, and routes use glossary words only.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 

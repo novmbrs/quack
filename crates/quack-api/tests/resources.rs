@@ -1,6 +1,15 @@
 //! Actions, rules, settings, health, statistics, the directory, and the
 //! moderation log: happy paths and their refusals.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+
 mod common;
 
 use axum::http::{Method, StatusCode};
@@ -367,7 +376,7 @@ async fn settings_health_statistics_directory_and_mod_log() {
     let by_case = app
         .send(app.get(&g("/mod-log?case_number=1")).by(&moderator))
         .await;
-    assert!(!by_case.json["entries"].as_array().unwrap().is_empty());
+    assert_ne!(by_case.json["entries"].as_array().unwrap().len(), 0);
     let none = app
         .send(app.get(&g("/mod-log?case_number=77")).by(&moderator))
         .await;

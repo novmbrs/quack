@@ -1,6 +1,15 @@
 //! Sign-in, sessions, sign-out, and the CSRF and origin checks (§14.4,
 //! §14.5) against a fake Discord OAuth server.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+
 mod common;
 
 use axum::http::{Method, StatusCode};
@@ -32,8 +41,7 @@ fn cookie_value(set_cookie: &str) -> String {
         .split(';')
         .next()
         .and_then(|kv| kv.split_once('='))
-        .map(|(_, v)| v.to_owned())
-        .unwrap_or_default()
+        .map_or_else(String::new, |(_, v)| v.to_owned())
 }
 
 /// Starts a sign-in; returns the state and the nonce cookie.

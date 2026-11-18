@@ -3,6 +3,14 @@
 //! for each kind of person, and a small request builder.
 
 #![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+#![allow(
     dead_code,
     unreachable_pub,
     reason = "a test fixture shared by several test binaries"

@@ -2,6 +2,15 @@
 //! headers, health probes, dashboard files, and replays after access is
 //! lost.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+
 mod common;
 
 use std::sync::atomic::Ordering;
@@ -181,7 +190,7 @@ async fn dashboard_files_and_spa_fallback() {
     assert_eq!(post.header("allow"), Some("GET, HEAD"));
     let head = app.send(app.req(Method::HEAD, "/")).await;
     assert_eq!(head.status, StatusCode::OK);
-    assert!(head.body.is_empty());
+    assert_eq!(head.body.len(), 0);
 }
 
 #[tokio::test]

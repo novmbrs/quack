@@ -2,6 +2,15 @@
 //! member, moderator, rules manager, administrator, owner, staff without
 //! 2FA in a 2FA server, and someone from another server.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+
 mod common;
 
 use axum::http::{Method, StatusCode};
@@ -29,8 +38,10 @@ fn allowed(who: Who, need: Need) -> Result<(), &'static str> {
     match (who, need) {
         (Anonymous, _) => Err("sign_in_required"),
         (Outsider, _) => Err("server_not_found"),
-        (_, InServer) | (Administrator | Owner, _) => Ok(()),
-        (Moderator, Moderate | ReadRules) | (RulesManager, ReadRules | ManageRules) => Ok(()),
+        (_, InServer)
+        | (Administrator | Owner, _)
+        | (Moderator, Moderate | ReadRules)
+        | (RulesManager, ReadRules | ManageRules) => Ok(()),
         (NoMfa, Moderate | ReadRules) => Err("mfa_required"),
         _ => Err("missing_capability"),
     }

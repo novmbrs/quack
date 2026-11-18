@@ -1,6 +1,15 @@
 //! The error envelope (§14.6) for every transport code and every domain
 //! refusal: status, code, message, and extras, snapshotted.
 
+#![allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::unused_self,
+    reason = "test scenarios read top to bottom and fail loudly"
+)]
+
 use axum::response::IntoResponse;
 use quack_api::ApiError;
 use quack_core::DomainError;
