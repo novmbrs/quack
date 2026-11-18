@@ -7748,3 +7748,163 @@ this document first.
     second one.
 51. **The dashboard CSP is the Go server's**, including the visitors.now
     analytics origins.
+
+---
+
+## Implementation notes
+
+Where the built system differs from the text above, as of the Rust
+integration pass. Each entry is *section → what the code does*; a designer
+folds these into the sections (or changes the code) and removes them here.
+
+**Architecture and crates**
+
+1. §17.2, §11 (`quack-discord`) → REST goes through a small `reqwest`
+   transport driven by Twilight's rate limiter (`twilight-http-ratelimiting`)
+   instead of `twilight-http`: it can send string nonces with
+   `enforce_nonce`, and it never retries on its own.
+2. §17.2 (`quack-discord`) → `Gateway::run` yields Quack's typed `Event`s
+   (not Twilight events), with an `on_dropped` hook. Fact reads go through
+   `quack_discord::facts::Facts` (guild and member caches under §2's
+   freshness rules, else REST), which the binary's `DiscordPort` uses.
+3. §13.1.6, §17.2 → there is no `Module` trait, `ModuleSpec`, `Ctx`, or
+   `ModuleEvent` in the engine. Each module crate exports plain service
+   functions, `jobs() -> ModuleJobs` (job kinds and one handler), and
+   `hooks() -> ModuleHooks` (enable check and change writes for
+   `settings::set_enabled`). The bot holds the module seam:
+   `quack_bot::Module` (component ids it owns, gateway events it wants), with
+   one adapter per module crate in `quack_bot::modules`.
+4. §11.8, §13.1.4 → the module areas of `/setup` are rendered and handled by
+   the bot's setup handler, which calls each module crate's settings
+   functions, `use_default_rule`, `route_all`, and `set_enabled` with its
+   hooks; channel creation ("Create …", including the public ticket entry
+   and honeypot channels with their overwrites) lives in `quack-bot`, not
+   `quack_engine::setup`. Each module change reloads the config cache at
+   once so the re-rendered panel is current.
+5. §17.2 → `Responder` (interaction callbacks, edits, follow-ups) lives in
+   `quack-bot`; `quack-bot` depends on `quack-db` (draft and 2FA reads).
+6. §17.5, §17.2 → `quack::compose::App::compose` builds the engine over a
+   `Discord` port, the modules, the bot, and the HTTP application; `serve`
+   uses it over the REST client and the whole-system tests over the fake.
+   Startup also runs `quack_honeypot::recover`, starts the activity log's
+   senders, the open-tickets gauge, and the journal-gap recorder; shutdown
+   calls `ActivityLog::shutdown` within the drain.
+7. §17.1 → `quack serve --discord-offline <url>` runs without the gateway
+   or any startup call to Discord and sends REST calls to `<url>` (tests and
+   smoke runs; the image's smoke run uses it).
+8. §17.2 (`quack-testkit`) → `TestDb` uses a PostgreSQL server named by
+   `QUACK_TEST_DATABASE_URL` (or `DATABASE_URL`, default
+   `127.0.0.1:55432`) and copies a migrated template database per test, not
+   Testcontainers. The testkit also has an engine-agnostic queue driver
+   (`settle_with` and friends).
+9. §17.2 → the engine exposes `cases::staff_card` (the one staff card
+   builder for receipts, `/case view`, and Open case),
+   `cases::{actions, action}` (route 28 and control answers, built from the
+   case's records), `guilds::{installed_among, summary}` (routes 5 and 6),
+   and `evidence::resolve_file` (routes 26 and 53). `void_case` returns the
+   void's effects (`VoidEffects`, the member, the rule version's name), so
+   the bot doesn't read the case back.
+
+**Discord surface**
+
+10. §11.6 → `/case add`'s first form page still opens as the
+    acknowledgement with no database work before it; right after, the bot
+    writes the draft row (member, rule version, receipt choice, channel)
+    with `drafts::start`, and the page's submit reads it. There is no
+    in-memory form map, so a restart doesn't expire an open form. Saving a
+    page of a draft that already became a case answers with that case.
+11. §11.9 → a dropped `MESSAGE_CREATE` only remembers its channel in a
+    bounded set (10,000) in the shard loop; a task records the ticket's
+    `journal_gaps`. The ticket journal tells threads from channels with the
+    guild cache and looks a thread up in the database only when the cache
+    doesn't know the channel.
+12. §13.4.2 → a honeypot post's actor facts come from the message's role
+    ids and the guild's facts; without the facts only the roles are known,
+    and the case job checks the poster again.
+13. §13.3.2 → Quack's own account (for "never posted") comes from `READY`,
+    else from the guild's facts.
+14. §11.10 → the dashboard's directory cache is not implemented.
+
+**Engine and jobs**
+
+15. §5.6 → the undo's provenance check for an unban accepts a ban whose
+    marker names this case or any voided case of the member with a ban
+    action; the "left in place" wording names the case still applying.
+16. §5.9 → a `done` ban recorded `no_change` still queues its unban on void
+    (the provenance check decides), and so does a `done` timeout (the code
+    now follows the table: "timeout with its end in the future").
+17. §6.4 → a DM found `sending` after a crash checks the DM channel's
+    history for its nonce (`SendHistory`) and records it `sent` when the
+    message is there, else `unknown`.
+18. §13.2.4 step 2 → the close job doesn't wait for the server's event
+    queue (up to 5 s) before reading history. `complete` is true when the
+    history reached the first message *or* the journal has no gaps.
+19. §16 → the runner fences leases on the database's real clock
+    (`clock_timestamp()`), bounds a claim by a deadline, sleeps through idle
+    passes (a handful of queries a second), hands kind permits out first in,
+    first out, and retries a failing finalize `FINALIZE_TRIES` (3) times
+    before keeping the job dead.
+20. §9.2, §12.10 → `ActionFailedDetail` carries `may_have_applied` (absent
+    in older entries, read as false); `log.action_failed` then starts with
+    "Quack couldn't confirm whether Discord …".
+21. §14.1 → every list fetches one row more than the page
+    (`quack_db::Page { rows, more }`), so `next_cursor` is null on the last
+    page even when it is exactly full.
+
+**HTTP API**
+
+22. §14.3 → the timeline and appeal summary wire shapes are those of the
+    committed `contracts/http/openapi.json`, which differ in detail from the
+    TypeScript sketch in §14.3.
+23. §14.3 (routes 42, 44, 46) → module settings bodies carry no version:
+    an update reads the module's current version and saves over it, so only
+    a change landing between that read and the write is refused
+    (`settings_changed`). `ModuleState.problems` is empty on the module
+    pages (it is filled only by `409 module_not_ready`).
+24. §14.3 (route 43) → `posted_since_start` and `dropped_since_start` are
+    per server, in process.
+25. §14.3 (routes 47–50) → a ticket's `transcript` summary comes from its
+    saved transcript row; once housekeeping deletes an expired transcript
+    it is `null` rather than `expired`. A replay of the same person's close
+    answers `200` with the ticket instead of `409 ticket_not_open`.
+26. §14.8 → the 10-second request deadline applies to `GET` and `HEAD`
+    only; the header-read and keep-alive timeouts are axum's defaults
+    (`axum::serve` doesn't expose them).
+27. §14.9 → the API checks the database itself on `/readyz` (1 second);
+    the other checks are the binary's readiness flags.
+28. §14.6, §12.3 → invalid IDs and filter values answer
+    `api.value_invalid`; the statistics range, rule-file format, reason, and
+    appeal text problems have their own messages (§12.3, §12.14); dashboard
+    pages use `error.case_not_found_dashboard` and
+    `error.appeal_not_found_dashboard`; adding evidence with no link is
+    `error.no_links`.
+
+**Data and import**
+
+29. §15.10 → migration `0003_historical_rows.sql` relaxes four constraints
+    for imported history: a `sent` DM may have no channel (it needs
+    `first_attempt_at`; only `sending` needs the channel), a dismissal may
+    lack `dismissed_by`, a Discord or dashboard case may lack its moderator
+    when its operation key is absent or `legacy:` (Quack's own cases always
+    have a key), and `tickets.entry_channel_id` may be NULL except while
+    `opening`. Text renders an unrecorded dismisser as "A moderator".
+30. §19.7, §19.10 → the importer keeps a Go DM `sent` when it knows the
+    message (the channel may be unknown); `unconfirmed_dm` is only a sent
+    row without its message. It keeps an unattributed dismissal
+    (`dismissed_by_unknown`), imports a Discord or dashboard case without
+    its moderator (`case_moderator_unknown`) instead of refusing the
+    server, and leaves a ticket's entry channel unknown without ticket
+    settings (`ticket_entry_channel_unknown`) instead of guessing it.
+31. §19 → other importer deviations reported by its implementer: evidence
+    copies become jump links to the copy message, Go-uploaded files are
+    imported as files of the copy message, the action-state mapping and the
+    rule reconstruction follow the cases the Go data actually has, a void's
+    state comes from its case events, appeal staff posts are imported as
+    tracked messages, and the honeypot warning keeps the Go warning channel.
+    Imported rule versions hold at most 32,767 levels.
+32. §20.3 (packaging) → the image is distroless `cc-debian13` (glibc, for
+    aws-lc and rustls), nonroot, 138 MB; Compose's `telemetry` profile runs
+    `grafana/otel-lgtm` (OTLP/HTTP on 4318, Grafana on 3001).
+33. §18 → `error.type` gains `decode` (a row Quack couldn't read back) and
+    `quack.discord.outcome` gains `not_sent` (a request that never left
+    Quack); static labels have an inherent `as_str`.
