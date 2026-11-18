@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack is opening your ticket. You'll be added to a private thread in <#444> in a moment, and Quack will mention you there.
-plain:   Quack is opening your ticket. You'll be added to a private thread in #ticket-log in a moment, and Quack will mention you there.
-model:   [Fixed("Quack is opening your ticket. You'll be added to a private thread in "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") }), Fixed(" in a moment, and Quack will mention you there.")]
+discord: Quack is opening your ticket. Look for a private thread in <#444>. Quack will mention you there.
+plain:   Quack is opening your ticket. Look for a private thread in #ticket-log. Quack will mention you there.
+model:   [Fixed("Quack is opening your ticket. Look for a private thread in "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") }), Fixed(". Quack will mention you there.")]

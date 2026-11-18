@@ -36,7 +36,7 @@ tone: Success
 **DM:** Quack couldn't send <@222> a DM about case #12. Discord didn't allow the DM. <@222> can sign in to the Quack dashboard to see the case.
 Replaced by case #13.
 **Appeal:** Waiting for a decision.
-**Evidence:** 3 items saved.
+**Evidence:** Quack saved 3 evidence items.
 **Case context**
 **What happened?**
 Posted invite links in \#general.
@@ -55,7 +55,7 @@ Action: Quack set Sam's timeout to end 18 Nov 2026 at 15:05 UTC.
 DM: Quack couldn't send Sam a DM about case #12. Discord didn't allow the DM. Sam can sign in to the Quack dashboard to see the case.
 Replaced by case #13.
 Appeal: Waiting for a decision.
-Evidence: 3 items saved.
+Evidence: Quack saved 3 evidence items.
 Case context
 What happened? Posted invite links in #general.
 Repeat offence? Yes
@@ -70,7 +70,7 @@ Field "Action" [Fixed("Quack set "), Person(Person { id: AccountId(222), name: S
 Field "DM" [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12. Discord didn't allow the DM. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]
 Text [Fixed("Replaced by case #13.")]
 Field "Appeal" [Fixed("Waiting for a decision.")]
-Field "Evidence" [Fixed("3 items saved.")]
+Field "Evidence" [Fixed("Quack saved 3 evidence items.")]
 Text [Bold([Fixed("Case context")])]
 Field "What happened?" [User("Posted invite links in #general.")]
 Field "Repeat offence?" [Fixed("Yes")]
@@ -88,7 +88,7 @@ tone: Danger
 To try again, select Retry ban. To take it off the failed actions list, select Dismiss failed ban.
 **DM:** Quack couldn't confirm whether Discord accepted the DM to <@222> about case #12. Quack won't send it again. <@222> can sign in to the Quack dashboard to see the case.
 **Appeal:** Waiting for <@222> to reply.
-**Evidence:** 2 saved, 1 couldn't be saved. Open View evidence to see why.
+**Evidence:** Quack saved 2 evidence items. It couldn't save 1. Select View evidence to see why.
 -# Added by <@333> <t:1794924309:R>
 buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Dismiss failed ban · Secondary] DismissAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 }
 buttons: [History · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Failed actions](https://quack.example/guilds/111/failures) | [Open in dashboard](https://quack.example/guilds/111/cases/12)
@@ -100,7 +100,7 @@ Action: Quack couldn't ban Sam. Quack needs Ban Members. Ask an administrator to
 To try again, select Retry ban. To take it off the failed actions list, select Dismiss failed ban.
 DM: Quack couldn't confirm whether Discord accepted the DM to Sam about case #12. Quack won't send it again. Sam can sign in to the Quack dashboard to see the case.
 Appeal: Waiting for Sam to reply.
-Evidence: 2 saved, 1 couldn't be saved. Open View evidence to see why.
+Evidence: Quack saved 2 evidence items. It couldn't save 1. Select View evidence to see why.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
@@ -110,7 +110,7 @@ Field "Action" [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222)
 Text [Fixed("To try again, select Retry ban. To take it off the failed actions list, select Dismiss failed ban.")]
 Field "DM" [Fixed("Quack couldn't confirm whether Discord accepted the DM to "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" about case #12. Quack won't send it again. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]
 Field "Appeal" [Fixed("Waiting for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" to reply.")]
-Field "Evidence" [Fixed("2 saved, 1 couldn't be saved. Open View evidence to see why.")]
+Field "Evidence" [Fixed("Quack saved 2 evidence items. It couldn't save 1. Select View evidence to see why.")]
 Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
 
 ## voided ban, unban retrying, appeal closed
@@ -218,7 +218,7 @@ Case #12 was voided. It no longer counts. <@333> voided it <t:1795014309:R>.
 Replaces case #9007199254740991.
 Replaced by case #9007199254740990.
 **Appeal:** Rejected. The case still counts.
-**Evidence:** 49 saved, 1 couldn't be saved. Open View evidence to see why.
+**Evidence:** Quack saved 49 evidence items. It couldn't save 1. Select View evidence to see why.
 **Case context**
 **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 0:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
 **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with 1:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long…
@@ -241,7 +241,7 @@ Case #12 was voided. It no longer counts. Ana voided it on 18 Nov 2026 at 15:05 
 Replaces case #9007199254740991.
 Replaced by case #9007199254740990.
 Appeal: Rejected. The case still counts.
-Evidence: 49 saved, 1 couldn't be saved. Open View evidence to see why.
+Evidence: Quack saved 49 evidence items. It couldn't save 1. Select View evidence to see why.
 Case context
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
 Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 1: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…
@@ -267,7 +267,7 @@ Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* an
 Text [Fixed("Replaces case #9007199254740991.")]
 Text [Fixed("Replaced by case #9007199254740990.")]
 Field "Appeal" [Fixed("Rejected. The case still counts.")]
-Field "Evidence" [Fixed("49 saved, 1 couldn't be saved. Open View evidence to see why.")]
+Field "Evidence" [Fixed("Quack saved 49 evidence items. It couldn't save 1. Select View evidence to see why.")]
 Text [Bold([Fixed("Case context")])]
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 0" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]
 Field "Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with 1" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long…")]

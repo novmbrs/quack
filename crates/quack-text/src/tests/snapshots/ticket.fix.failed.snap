@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Discord didn't let Quack fix the ticket's access. Check Quack's Manage Threads permission in <#444>.
-plain:   Discord didn't let Quack fix the ticket's access. Check Quack's Manage Threads permission in #ticket-log.
-model:   [Fixed("Discord didn't let Quack fix the ticket's access. Check Quack's Manage Threads permission in "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") }), Fixed(".")]
+discord: Discord didn't let Quack update ticket access. Quack needs Manage Threads in <#444>. Ask an administrator to allow it for Quack in the channel's Edit Channel → Permissions.
+plain:   Discord didn't let Quack update ticket access. Quack needs Manage Threads in #ticket-log. Ask an administrator to allow it for Quack in the channel's Edit Channel → Permissions.
+model:   [Fixed("Discord didn't let Quack update ticket access. Quack needs Manage Threads in "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") }), Fixed(". Ask an administrator to allow it for Quack in the channel's Edit Channel → Permissions.")]

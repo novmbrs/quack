@@ -143,15 +143,20 @@ fn evidence_line(e: EvidenceSummary) -> Option<Text> {
     if e.saving > 0 {
         Some(Text::fixed("Saving evidence…"))
     } else if e.failed > 0 {
-        Some(Text::fixed(format!(
-            "{} saved, {} couldn't be saved. Open View evidence to see why.",
-            fmt::count(e.saved),
-            fmt::count(e.failed)
-        )))
+        let failed = fmt::plural(u64::from(e.failed), "evidence item", "evidence items");
+        Some(Text::fixed(if e.saved > 0 {
+            format!(
+                "Quack saved {}. It couldn't save {}. Select View evidence to see why.",
+                fmt::plural(u64::from(e.saved), "evidence item", "evidence items"),
+                fmt::count(e.failed)
+            )
+        } else {
+            format!("Quack couldn't save {failed}. Select View evidence to see why.")
+        }))
     } else if e.saved > 0 {
         Some(Text::fixed(format!(
-            "{} saved.",
-            fmt::plural(u64::from(e.saved), "item", "items")
+            "Quack saved {}.",
+            fmt::plural(u64::from(e.saved), "evidence item", "evidence items")
         )))
     } else {
         None

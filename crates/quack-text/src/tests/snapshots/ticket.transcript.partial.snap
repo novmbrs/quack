@@ -2,7 +2,7 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## History
-Some messages may be missing: Quack couldn't read the thread's full history.
+Some messages may be missing because Quack couldn't read the full thread.
 
 ## Trimmed
-Some messages may be missing: it was cut to 8 MB.
+Some messages are missing because Quack reached the 8 MB limit.

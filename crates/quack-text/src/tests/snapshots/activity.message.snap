@@ -11,7 +11,7 @@ A message from <@222> was edited in <#444>.
 > new
 Files: [cat.png](<https://cdn.discordapp.com/attachments/1/2/cat.png>)
 Link previews: image
--# Message 777 · <t:1794924309:f>
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was edited in #general.
 Before:
@@ -20,7 +20,7 @@ After:
 > new
 Files: cat.png
 Link previews: image
-Message 777 · 17 Nov 2026 at 14:05 UTC
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was edited in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
 Text [Bold([Fixed("Before:")])]
@@ -29,70 +29,70 @@ Text [Bold([Fixed("After:")])]
 Quote [User("new")]
 Text [Fixed("Files: "), Link { text: [User("cat.png")], url: "https://cdn.discordapp.com/attachments/1/2/cat.png" }]
 Text [Fixed("Link previews: "), User("image")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## edited, before unknown, after empty
 tone: Neutral
 --- discord ---
 A message from <@222> was edited in <#444>.
-**Before:** Quack hadn't seen this message, so the earlier text isn't known.
-**After:** the message has no text now.
--# Message 777 · <t:1794924309:f>
+**Before:** Quack hadn't seen the earlier text.
+**After:** The message has no text.
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was edited in #general.
-Before: Quack hadn't seen this message, so the earlier text isn't known.
-After: the message has no text now.
-Message 777 · 17 Nov 2026 at 14:05 UTC
+Before: Quack hadn't seen the earlier text.
+After: The message has no text.
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was edited in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
-Field "Before" [Fixed("Quack hadn't seen this message, so the earlier text isn't known.")]
-Field "After" [Fixed("the message has no text now.")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Field "Before" [Fixed("Quack hadn't seen the earlier text.")]
+Field "After" [Fixed("The message has no text.")]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## edited, before empty, after unknown
 tone: Neutral
 --- discord ---
 A message from <@222> was edited in <#444>.
-**Before:** the message had no text.
-**After:** Discord didn't send the new text.
--# Message 777 · <t:1794924309:f>
+**Before:** The message had no text.
+**After:** Discord didn't include the new text.
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was edited in #general.
-Before: the message had no text.
-After: Discord didn't send the new text.
-Message 777 · 17 Nov 2026 at 14:05 UTC
+Before: The message had no text.
+After: Discord didn't include the new text.
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was edited in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
-Field "Before" [Fixed("the message had no text.")]
-Field "After" [Fixed("Discord didn't send the new text.")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Field "Before" [Fixed("The message had no text.")]
+Field "After" [Fixed("Discord didn't include the new text.")]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## edited, text hidden
 tone: Neutral
 --- discord ---
 A message from <@222> was edited in <#444>.
-Message text isn't shown, because this server's activity log hides it.
--# Message 777 · <t:1794924309:f>
+This server's activity log hides message text.
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was edited in #general.
-Message text isn't shown, because this server's activity log hides it.
-Message 777 · 17 Nov 2026 at 14:05 UTC
+This server's activity log hides message text.
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was edited in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
-Text [Fixed("Message text isn't shown, because this server's activity log hides it.")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Text [Fixed("This server's activity log hides message text.")]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## edited, maximal
 tone: Neutral
 --- discord ---
 A message from <@222> was edited in <#444>.
 **Before:**
-> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> me…
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long tex…
 **After:**
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
 Files: [cat.png](<https://cdn.discordapp.com/attachments/1/2/cat.png>)
 Link previews: image
-Quack shortened this message to fit in Discord.
+This post shows excerpts. Quack shortened some message text to fit in Discord.
 --- plain ---
 A message from Sam was edited in #general.
 Before:
@@ -101,7 +101,7 @@ After:
 > Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text 
 Files: cat.png
 Link previews: image
-Message 777 · 17 Nov 2026 at 14:05 UTC
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was edited in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
 Text [Bold([Fixed("Before:")])]
@@ -110,7 +110,7 @@ Text [Bold([Fixed("After:")])]
 Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text ")]
 Text [Fixed("Files: "), Link { text: [User("cat.png")], url: "https://cdn.discordapp.com/attachments/1/2/cat.png" }]
 Text [Fixed("Link previews: "), User("image")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## deleted
 tone: Neutral
@@ -124,7 +124,7 @@ A message from <@222> was deleted in <#444>.
 > hidden
 Files: [cat.png](<https://cdn.discordapp.com/attachments/1/2/cat.png>)
 Link previews: image
--# Message 777 · <t:1794924309:f>
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was deleted in #general.
 > @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
@@ -135,28 +135,28 @@ A message from Sam was deleted in #general.
 > hidden
 Files: cat.png
 Link previews: image
-Message 777 · 17 Nov 2026 at 14:05 UTC
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was deleted in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
 Quote [User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")]
 Text [Fixed("Files: "), Link { text: [User("cat.png")], url: "https://cdn.discordapp.com/attachments/1/2/cat.png" }]
 Text [Fixed("Link previews: "), User("image")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## deleted, hidden
 tone: Neutral
 --- discord ---
 A message from <@222> was deleted in <#444>.
-Message text isn't shown, because this server's activity log hides it.
--# Message 777 · <t:1794924309:f>
+This server's activity log hides message text.
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was deleted in #general.
-Message text isn't shown, because this server's activity log hides it.
-Message 777 · 17 Nov 2026 at 14:05 UTC
+This server's activity log hides message text.
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was deleted in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
-Text [Fixed("Message text isn't shown, because this server's activity log hides it.")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Text [Fixed("This server's activity log hides message text.")]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
 
 ## deleted, no text
 tone: Neutral
@@ -164,14 +164,14 @@ tone: Neutral
 A message from <@222> was deleted in <#444>.
 Files: [cat.png](<https://cdn.discordapp.com/attachments/1/2/cat.png>)
 Link previews: image
--# Message 777 · <t:1794924309:f>
+-# Message ID 777 · <t:1794924309:f>
 --- plain ---
 A message from Sam was deleted in #general.
 Files: cat.png
 Link previews: image
-Message 777 · 17 Nov 2026 at 14:05 UTC
+Message ID 777 · 17 Nov 2026 at 14:05 UTC
 --- model ---
 Text [Fixed("A message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was deleted in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]
 Text [Fixed("Files: "), Link { text: [User("cat.png")], url: "https://cdn.discordapp.com/attachments/1/2/cat.png" }]
 Text [Fixed("Link previews: "), User("image")]
-Subtext [Fixed("Message 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]
+Subtext [Fixed("Message ID 777 · "), Time(2026-11-17 14:05:09.0 +00:00:00, Full)]

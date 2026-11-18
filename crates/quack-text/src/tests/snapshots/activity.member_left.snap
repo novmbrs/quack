@@ -3,8 +3,8 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 tone: Neutral
 --- discord ---
-**samtheduck** (222) left the server.
+**samtheduck** left the server. Discord member ID: 222.
 --- plain ---
-samtheduck (222) left the server.
+samtheduck left the server. Discord member ID: 222.
 --- model ---
-Text [Bold([User("samtheduck")]), Fixed(" (222) left the server.")]
+Text [Bold([User("samtheduck")]), Fixed(" left the server. Discord member ID: 222.")]

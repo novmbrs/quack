@@ -131,6 +131,27 @@ pub fn plural(n: u64, one: &str, other: &str) -> String {
     format!("{} {}", count(n), if n == 1 { one } else { other })
 }
 
+/// A file size in the largest unit that keeps it at least 1: "512 bytes",
+/// "1.5 KB", "8 MB" (1 KB = 1,024 bytes; one decimal, dropped when zero).
+pub fn bytes(n: u64) -> String {
+    const UNITS: [&str; 3] = ["KB", "MB", "GB"];
+    if n < 1_024 {
+        return plural(n, "byte", "bytes");
+    }
+    #[allow(clippy::cast_precision_loss, reason = "a size shown to one decimal")]
+    let mut value = n as f64 / 1_024.0;
+    let mut unit = UNITS[0];
+    for next in &UNITS[1..] {
+        if value < 1_024.0 {
+            break;
+        }
+        value /= 1_024.0;
+        unit = next;
+    }
+    let shown = format!("{value:.1}");
+    format!("{} {unit}", shown.strip_suffix(".0").unwrap_or(&shown))
+}
+
 /// "case #12".
 pub fn case_ref(number: u64) -> String {
     format!("case #{number}")
@@ -278,6 +299,10 @@ mod tests {
         assert_eq!(list(&s(&["a", "b"]), "or"), "a or b");
         assert_eq!(list(&s(&["a", "b", "c"]), "and"), "a, b, and c");
         assert_eq!(case_ref(12), "case #12");
+        assert_eq!(bytes(1), "1 byte");
+        assert_eq!(bytes(512), "512 bytes");
+        assert_eq!(bytes(1_536), "1.5 KB");
+        assert_eq!(bytes(8 * 1_024 * 1_024), "8 MB");
         assert_eq!(level(2, 3), "level 2 (from a case count of 3)");
     }
 

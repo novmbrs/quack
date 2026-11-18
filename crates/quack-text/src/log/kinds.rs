@@ -206,9 +206,11 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::ModuleDisabled(d) => match d.reason {
             None => actor().s(format!(" turned off {}.", module_name(d.module))),
             Some(ModuleDisabledReason::ChannelDeleted) => Text::fixed(format!(
-                "Quack turned off {} because its channel was deleted.",
+                "Quack turned off {} because its channel was deleted. Choose a new channel in ",
                 module_name(d.module)
-            )),
+            ))
+            .command(Command::Setup)
+            .s(", then turn it on."),
             Some(ModuleDisabledReason::QuackLeft) => Text::fixed(format!(
                 "Quack turned off {} because Quack left the server.",
                 module_name(d.module)
@@ -237,20 +239,24 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         ModLogEntry::QuackJoined(_) => Text::fixed("Quack rejoined the server."),
         ModLogEntry::QuackLeft(_) => Text::fixed("Quack left the server."),
         ModLogEntry::ChannelSettingCleared(d) => Text::fixed(format!(
-            "Quack stopped using the {} because its channel was deleted.",
+            "The {} was deleted. Choose a new channel in ",
             channel_setting(d.setting)
-        )),
-        ModLogEntry::LogChannelFailed(d) => Text::fixed(match d.reason {
-            LogChannelFailure::NotStaffOnly => {
-                "Quack stopped posting in the log channel because it isn't staff-only anymore. Entries are still in the moderation log. Fix the channel's permissions to resume."
-            }
-            LogChannelFailure::DiscordRefused => {
-                "Discord didn't let Quack post in the log channel. Entries are still in the moderation log. Check Quack's permissions there."
-            }
-            LogChannelFailure::RetriesExhausted => {
-                "Quack couldn't confirm that an entry reached the log channel because Discord kept failing. Entries are still in the moderation log."
-            }
-        }),
+        ))
+        .command(Command::Setup)
+        .s("."),
+        ModLogEntry::LogChannelFailed(d) => match d.reason {
+            LogChannelFailure::NotStaffOnly => Text::fixed(
+                "Quack stopped posting to the log channel because members outside staff can see it. The entries are saved in the moderation log. Fix the channel's View Channel permissions or choose another log channel in ",
+            )
+            .command(Command::Setup)
+            .s("."),
+            LogChannelFailure::DiscordRefused => Text::fixed(
+                "Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack.",
+            ),
+            LogChannelFailure::RetriesExhausted => Text::fixed(
+                "Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.",
+            ),
+        },
         ModLogEntry::TicketOpened(_) => {
             let t = member(Text::new()).s(" opened a ticket");
             match &f.thread {
@@ -266,11 +272,11 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
             } else {
                 member(actor().s(" closed ")).s("'s ticket.")
             };
-            let t = t.s(" The transcript is saved on the dashboard.");
+            let t = t.s(" Open the ticket on the dashboard to check for a transcript.");
             if d.transcript_complete {
                 t
             } else {
-                t.s(" Some messages may be missing from the transcript.")
+                t.s(" Some messages may be missing from it.")
             }
         }
         ModLogEntry::HoneypotCaseFailed(d) => {

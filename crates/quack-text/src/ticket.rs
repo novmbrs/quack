@@ -13,8 +13,7 @@ use crate::model::{
 
 /// `ticket.panel.*`: the panel in the entry channel.
 pub fn panel(on: bool) -> Msg {
-    let msg =
-        Msg::new(Tone::Neutral).block(Block::Heading(Text::fixed("Need help from the staff?")));
+    let msg = Msg::new(Tone::Neutral).block(Block::Heading(Text::fixed("Need help?")));
     if on {
         msg.para(Text::fixed(
             "Open a ticket to talk privately with the moderators.",
@@ -39,11 +38,12 @@ pub fn panel_moved(channel: &ChannelRef) -> Msg {
     )
 }
 
-/// `ticket.open.opening`.
-pub fn open_opening(queue: &ChannelRef) -> Text {
-    Text::fixed("Quack is opening your ticket. You'll be added to a private thread in ")
-        .channel(queue)
-        .s(" in a moment, and Quack will mention you there.")
+/// `ticket.open.opening`. `entry` is the ticket entry channel, where the
+/// private thread is created (§13.2).
+pub fn open_opening(entry: &ChannelRef) -> Text {
+    Text::fixed("Quack is opening your ticket. Look for a private thread in ")
+        .channel(entry)
+        .s(". Quack will mention you there.")
 }
 
 /// `ticket.open.exists`.
@@ -55,7 +55,9 @@ pub fn open_exists(thread: &ChannelRef) -> Text {
 
 /// `ticket.open.closing`.
 pub fn open_closing() -> Text {
-    Text::fixed("Your last ticket is still closing. Try again in a minute.")
+    Text::fixed(
+        "Your previous ticket is still closing. Select Open a ticket again after it closes.",
+    )
 }
 
 /// `ticket.open.disabled`.
@@ -63,10 +65,11 @@ pub fn open_disabled() -> Text {
     Text::fixed("Tickets are turned off in this server.")
 }
 
-/// `ticket.open.failed`.
-pub fn open_failed(queue: &ChannelRef) -> Text {
-    Text::fixed("Quack couldn't open your ticket because Discord didn't let it create the thread. Ask a server administrator to check Quack's permissions in ")
-        .channel(queue)
+/// `ticket.open.failed`. `entry` is the ticket entry channel, where Quack
+/// creates the thread.
+pub fn open_failed(entry: &ChannelRef) -> Text {
+    Text::fixed("Quack couldn't open your ticket. Ask a server administrator to check Quack's permissions in ")
+        .channel(entry)
         .s(".")
 }
 
@@ -77,7 +80,7 @@ pub fn welcome(member: &Person, ticket: TicketId) -> Msg {
         Tone::Neutral,
         Text::new()
             .person(member)
-            .s(", your ticket is open. Tell us what you need help with, and a moderator will reply here."),
+            .s(", your ticket is open. Tell the moderators what you need help with here."),
     )
     .buttons(vec![close_button(ticket)])
 }
@@ -131,11 +134,15 @@ pub struct TicketPost {
     pub thread_not_deleted: bool,
 }
 
-/// `ticket.post.partial.*`.
-const fn partial_cause(p: TranscriptPartial) -> &'static str {
+/// `ticket.post.partial.*`, also the transcript's own note.
+const fn partial_sentence(p: TranscriptPartial) -> &'static str {
     match p {
-        TranscriptPartial::History => "Quack couldn't read the thread's full history",
-        TranscriptPartial::Trimmed => "it was cut to 8 MB",
+        TranscriptPartial::History => {
+            "Some messages may be missing because Quack couldn't read the full thread."
+        }
+        TranscriptPartial::Trimmed => {
+            "Some messages are missing because Quack reached the 8 MB limit."
+        }
     }
 }
 
@@ -152,17 +159,17 @@ pub fn post(p: &TicketPost) -> Msg {
     let state = match p.state {
         TicketState::Opening => Text::fixed("Opening…"),
         TicketState::Open => {
-            let t = Text::fixed("Open · ");
+            let t = Text::fixed("Ticket open · ");
             let t = match &p.thread {
-                Some(th) => t.channel(th),
-                None => t.s("its thread"),
+                Some(th) => t.channel(th).s(" · "),
+                None => t,
             };
-            t.s(" · opened ").time(p.opened_at, TimeStyle::Relative)
+            t.s("opened ").time(p.opened_at, TimeStyle::Relative)
         }
         TicketState::Closing => Text::fixed("Closing. Quack is saving the transcript."),
-        TicketState::Closed if p.open_failed => Text::fixed("Quack couldn't open this ticket. ")
-            .person(&p.member)
-            .s(" can try again."),
+        TicketState::Closed if p.open_failed => Text::fixed(
+            "Quack couldn't open this ticket. Check that Quack can create private threads in the ticket entry channel.",
+        ),
         TicketState::Closed => match &p.closed {
             Some((by, at)) => Text::fixed("Closed by ")
                 .actor(by)
@@ -175,33 +182,38 @@ pub fn post(p: &TicketPost) -> Msg {
     msg = msg.para(state);
     if p.state == TicketState::Closed && !p.open_failed {
         match p.transcript {
-            TranscriptPlace::NotYet => {}
+            TranscriptPlace::NotYet => {
+                msg = msg.para(Text::fixed(
+                    "Quack couldn't save a transcript for this ticket.",
+                ));
+            }
             TranscriptPlace::Attached => msg = msg.para(Text::fixed("The transcript is attached.")),
             TranscriptPlace::Dashboard(until) => {
                 msg = msg.para(
-                    Text::fixed("The transcript is on the dashboard until ")
-                        .time(until, TimeStyle::Full)
+                    Text::fixed("The transcript is available on the dashboard until ")
+                        .time(until, TimeStyle::Date)
                         .s("."),
                 );
             }
             TranscriptPlace::Expired(until) => {
                 msg = msg.para(
-                    Text::fixed("The transcript was kept until ")
-                        .time(until, TimeStyle::Full)
-                        .s(" and has been deleted."),
+                    Text::fixed("The transcript expired on ")
+                        .time(until, TimeStyle::Date)
+                        .s("."),
                 );
             }
         }
         if let Some(partial) = p.partial {
-            msg = msg.para(Text::fixed(format!(
-                "The transcript may be missing some messages: {}.",
-                partial_cause(partial)
-            )));
+            msg = msg.para(Text::fixed(partial_sentence(partial)));
         }
         if p.thread_not_deleted {
-            msg = msg.para(Text::fixed(
-                "Quack couldn't delete the thread. A moderator can delete it in Discord.",
-            ));
+            let t = Text::fixed(
+                "Quack closed the ticket but couldn't delete the thread. Ask someone with Manage Threads to delete ",
+            );
+            msg = msg.para(match &p.thread {
+                Some(th) => t.channel(th).s("."),
+                None => t.s("it."),
+            });
         }
     }
     let mut buttons = Vec::new();
@@ -210,7 +222,7 @@ pub fn post(p: &TicketPost) -> Msg {
             buttons.push(Button::link("Open thread", url));
         }
         buttons.push(Button::new(
-            "Fix access",
+            "Restore private access",
             ButtonStyle::Secondary,
             ButtonAction::FixTicketAccess(p.ticket),
         ));
@@ -231,29 +243,34 @@ pub fn close_not_open() -> Text {
 
 /// `ticket.close.not_allowed`.
 pub fn close_not_allowed() -> Text {
-    Text::fixed("Only the member who opened this ticket and moderators can close it.")
+    Text::fixed(
+        "Only the person who opened this ticket or a Quack moderator can close it. Ask a moderator if you need help.",
+    )
 }
 
-/// `ticket.fix.done`.
+/// `ticket.fix.done`: the member can open the thread, and who Quack took
+/// out because they can't read the ticket.
 pub fn fix_done(member: &Person, removed: u64) -> Text {
-    let t = Text::fixed("Quack added ")
-        .person(member)
-        .s(" to the thread.");
+    let t = Text::new().person(member).s(" can open the ticket thread.");
     match removed {
         0 => t,
-        1 => t.s(" It removed 1 person who isn't staff."),
+        1 => t.s(" Quack removed 1 person who didn't have permission to read this ticket."),
         n => t.s(format!(
-            " It removed {} people who aren't staff.",
+            " Quack removed {} people who didn't have permission to read this ticket.",
             fmt::count(n)
         )),
     }
 }
 
-/// `ticket.fix.failed`.
-pub fn fix_failed(queue: &ChannelRef) -> Text {
-    Text::fixed("Discord didn't let Quack fix the ticket's access. Check Quack's Manage Threads permission in ")
-        .channel(queue)
-        .s(".")
+/// `ticket.fix.failed`. `channel` is the channel the thread is in.
+pub fn fix_failed(channel: &ChannelRef) -> Text {
+    Text::fixed("Discord didn't let Quack update ticket access.").sentence(
+        crate::access::quack_channel_needs(
+            channel,
+            &[quack_core::permissions::Permission::ManageThreads],
+            crate::access::Reader::Staff,
+        ),
+    )
 }
 
 /// `dm.ticket_closed.*`: the DM to the member, with the transcript file.
@@ -265,7 +282,7 @@ pub fn closed_dm(server: &str, transcript_file: &str) -> Msg {
                 .s(" is closed"),
         ))
         .para(Text::fixed(
-            "Here's a copy of the conversation for your records.",
+            "The attached file is a copy of the conversation.",
         ))
         .block(Block::File(transcript_file.to_owned()))
 }
@@ -284,7 +301,7 @@ pub fn transcript_header(
     closed: OffsetDateTime,
 ) -> String {
     format!(
-        "Ticket transcript · {} · opened {} by {} ({member_id}) · closed {}",
+        "Ticket transcript · {} · opened {} by {} (Discord member ID {member_id}) · closed {}",
         fmt::one_line(server),
         fmt::transcript_time(opened),
         fmt::one_line(member),
@@ -305,13 +322,13 @@ pub fn transcript_line(at: OffsetDateTime, author: &str, author_id: u64, text: &
 /// `ticket.transcript.file_line`.
 pub fn transcript_file_line(name: &str, size_bytes: u64) -> String {
     format!(
-        "  file: {} ({} bytes)",
+        "  File: {} ({})",
         fmt::one_line(name),
-        fmt::count(size_bytes)
+        fmt::bytes(size_bytes)
     )
 }
 
 /// `ticket.transcript.partial`.
 pub fn transcript_partial(partial: TranscriptPartial) -> String {
-    format!("Some messages may be missing: {}.", partial_cause(partial))
+    partial_sentence(partial).to_owned()
 }

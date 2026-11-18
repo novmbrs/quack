@@ -19,6 +19,7 @@ fn message() -> MessageFacts {
 }
 
 const ACTIVITY_IDS: &[&str] = &[
+    "activity.trimmed",
     "activity.message_edited",
     "activity.before",
     "activity.before_unknown",

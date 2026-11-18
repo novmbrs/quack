@@ -62,12 +62,14 @@ pub fn warning(w: &Warning) -> Msg {
                     outcomes.push(o);
                 }
             }
-            let lead = Text::fixed("Posting here adds a case under ").bold_user(rule);
-            let sentence = match (outcomes.as_slice(), levels.iter().all(Option::is_none)) {
-                (_, true) | ([], _) => lead.s("."),
-                ([one], false) => lead.s(format!(", and Quack will {one}.")),
-                (many, false) => lead.s(format!(
-                    ". Depending on earlier cases, Quack will {}.",
+            let lead = Text::fixed("If you post here, Quack can add a case under ")
+                .bold_user(rule)
+                .s(".");
+            let sentence = match outcomes.as_slice() {
+                [] => lead,
+                [one] => lead.s(format!(" This rule can {one}.")),
+                many => lead.s(format!(
+                    " This rule can {}. What happens depends on how many of your cases count under it.",
                     fmt::list(many, "or")
                 )),
             };
@@ -75,7 +77,7 @@ pub fn warning(w: &Warning) -> Msg {
                 .block(Block::Heading(Text::fixed("Don't post here")))
                 .para(sentence)
                 .para(Text::fixed(
-                    "This channel catches spam accounts. Staff can post here safely.",
+                    "This channel catches spam accounts. Quack ignores posts from staff and bots.",
                 ));
         }
     }

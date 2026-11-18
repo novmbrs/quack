@@ -2,31 +2,31 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## one
-discord: Quack is saving 1 evidence item for case #12. Open View evidence to check each one.
-plain:   Quack is saving 1 evidence item for case #12. Open View evidence to check each one.
-model:   [Fixed("Quack is saving 1 evidence item for case #12. Open View evidence to check each one.")]
+discord: Quack is saving 1 message as evidence for case #12. Select View evidence to see the outcome.
+plain:   Quack is saving 1 message as evidence for case #12. Select View evidence to see the outcome.
+model:   [Fixed("Quack is saving 1 message as evidence for case #12. Select View evidence to see the outcome.")]
 
 ## other
-discord: Quack is saving 3 evidence items for case #12. Open View evidence to check each one.
-plain:   Quack is saving 3 evidence items for case #12. Open View evidence to check each one.
-model:   [Fixed("Quack is saving 3 evidence items for case #12. Open View evidence to check each one.")]
+discord: Quack is saving 3 messages as evidence for case #12. Select View evidence to see the outcome.
+plain:   Quack is saving 3 messages as evidence for case #12. Select View evidence to see the outcome.
+model:   [Fixed("Quack is saving 3 messages as evidence for case #12. Select View evidence to see the outcome.")]
 
 ## with already saved
-discord: Quack is saving 2 evidence items for case #12. Open View evidence to check each one. 1 of these was already saved.
-plain:   Quack is saving 2 evidence items for case #12. Open View evidence to check each one. 1 of these was already saved.
-model:   [Fixed("Quack is saving 2 evidence items for case #12. Open View evidence to check each one. 1 of these was already saved.")]
+discord: Quack is saving 2 messages as evidence for case #12. Select View evidence to see the outcome. 1 message was already saved as evidence.
+plain:   Quack is saving 2 messages as evidence for case #12. Select View evidence to see the outcome. 1 message was already saved as evidence.
+model:   [Fixed("Quack is saving 2 messages as evidence for case #12. Select View evidence to see the outcome. 1 message was already saved as evidence.")]
 
 ## all already saved
-discord: 3 of these were already saved.
-plain:   3 of these were already saved.
-model:   [Fixed("3 of these were already saved.")]
+discord: 3 messages were already saved as evidence.
+plain:   3 messages were already saved as evidence.
+model:   [Fixed("3 messages were already saved as evidence.")]
 
 ## retrying one
-discord: Quack is trying again to save 1 message that failed before. Open View evidence to check each one.
-plain:   Quack is trying again to save 1 message that failed before. Open View evidence to check each one.
-model:   [Fixed("Quack is trying again to save 1 message that failed before. Open View evidence to check each one.")]
+discord: Quack will try again to save 1 message that it couldn't save before. Select View evidence to see the outcome.
+plain:   Quack will try again to save 1 message that it couldn't save before. Select View evidence to see the outcome.
+model:   [Fixed("Quack will try again to save 1 message that it couldn't save before. Select View evidence to see the outcome.")]
 
 ## retrying several
-discord: Quack is saving 1 evidence item for case #12. Quack is trying again to save 2 messages that failed before. Open View evidence to check each one.
-plain:   Quack is saving 1 evidence item for case #12. Quack is trying again to save 2 messages that failed before. Open View evidence to check each one.
-model:   [Fixed("Quack is saving 1 evidence item for case #12. Quack is trying again to save 2 messages that failed before. Open View evidence to check each one.")]
+discord: Quack is saving 1 message as evidence for case #12. Quack will try again to save 2 messages that it couldn't save before. Select View evidence to see the outcome.
+plain:   Quack is saving 1 message as evidence for case #12. Quack will try again to save 2 messages that it couldn't save before. Select View evidence to see the outcome.
+model:   [Fixed("Quack is saving 1 message as evidence for case #12. Quack will try again to save 2 messages that it couldn't save before. Select View evidence to see the outcome.")]

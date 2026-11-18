@@ -37,31 +37,26 @@ pub fn modal(case: CaseId, number: u64) -> Modal {
 /// `evidence.added.already_saved`: what adding links did.
 pub fn added(number: u64, new: u32, retrying: u32, already_saved: u32) -> Text {
     let mut t = Text::new();
+    let messages = |n: u32| fmt::plural(u64::from(n), "message", "messages");
     if new > 0 {
-        t = t.s(match new {
-            1 => format!("Quack is saving 1 evidence item for case #{number}."),
-            n => format!(
-                "Quack is saving {} evidence items for case #{number}.",
-                fmt::count(n)
-            ),
-        });
+        t = t.s(format!(
+            "Quack is saving {} as evidence for case #{number}.",
+            messages(new)
+        ));
     }
     if retrying > 0 {
-        t = t.sentence(Text::fixed(match retrying {
-            1 => "Quack is trying again to save 1 message that failed before.".to_owned(),
-            n => format!(
-                "Quack is trying again to save {} messages that failed before.",
-                fmt::count(n)
-            ),
-        }));
+        t = t.sentence(Text::fixed(format!(
+            "Quack will try again to save {} that it couldn't save before.",
+            messages(retrying)
+        )));
     }
     if new + retrying > 0 {
-        t = t.s(" Open View evidence to check each one.");
+        t = t.s(" Select View evidence to see the outcome.");
     }
     if already_saved > 0 {
         t = t.sentence(Text::fixed(match already_saved {
-            1 => "1 of these was already saved.".to_owned(),
-            n => format!("{} of these were already saved.", fmt::count(n)),
+            1 => "1 message was already saved as evidence.".to_owned(),
+            n => format!("{} messages were already saved as evidence.", fmt::count(n)),
         }));
     }
     t
@@ -71,19 +66,19 @@ pub fn added(number: u64, new: u32, retrying: u32, already_saved: u32) -> Text {
 pub fn failure(f: EvidenceFailure) -> Text {
     Text::fixed(match f {
         EvidenceFailure::MessageDeleted => {
-            "Quack couldn't save this message because it was deleted before Quack fetched it."
+            "The message was deleted before Quack saved it. If another message shows what happened, add its link."
         }
         EvidenceFailure::ModeratorNoAccess => {
-            "Quack didn't save this message because the moderator who added it can't read that channel."
+            "Quack didn't save this message because the moderator who added it can't read the channel. Ask a moderator who can read the channel to add it."
         }
         EvidenceFailure::QuackNoAccess => {
-            "Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry."
+            "Quack couldn't save this message because it can't read the channel. Ask an administrator to allow View Channel and Read Message History for Quack there, then add the link again."
         }
         EvidenceFailure::OtherServer => {
-            "Quack didn't save this message because it's in another server."
+            "Quack didn't save this message because it's from another server. Add a message link from this server."
         }
         EvidenceFailure::DiscordError => {
-            "Quack couldn't save this message because Discord kept failing. Add the link again to retry."
+            "Quack couldn't save this message. Add the link again to retry."
         }
     })
 }
@@ -101,15 +96,13 @@ pub fn state_text(state: EvidenceState, f: Option<EvidenceFailure>) -> Text {
 pub fn file(name: &str, state: FileCopyState) -> Text {
     let t = Text::new().user(fmt::one_line(name)).s(" · ");
     t.s(match state {
-        FileCopyState::Pending => "saving…",
-        FileCopyState::Copied => "saved copy",
-        FileCopyState::LinkOnly => "original link only, because no evidence channel is set",
-        FileCopyState::TooLarge => "original link only, because Quack copies files up to 10 MB",
-        FileCopyState::UnsupportedType => {
-            "original link only, because Quack copies only images, video, audio, text, and PDF files"
-        }
+        FileCopyState::Pending => "Copying file…",
+        FileCopyState::Copied => "Copy saved",
+        FileCopyState::LinkOnly => "Original link only. No evidence channel is set.",
+        FileCopyState::TooLarge => "Original link only. Quack copies files up to 10 MB.",
+        FileCopyState::UnsupportedType => "Original link only. Quack doesn't copy this file type.",
         FileCopyState::CopyFailed => {
-            "Quack couldn't copy this file, so the original link may stop working"
+            "Quack couldn't copy this file. The original link may stop working."
         }
     })
 }
@@ -198,9 +191,13 @@ pub fn view(e: &EvidenceItem) -> Msg {
                 }));
             }
             if e.channel_not_staff_only {
-                msg = msg.para(Text::fixed(
-                    "The evidence channel is no longer staff-only, so Quack didn't copy files there.",
-                ));
+                msg = msg.para(
+                    Text::fixed(
+                        "Quack didn't copy files because the evidence channel is visible outside staff. Fix its View Channel permissions or choose another evidence channel in ",
+                    )
+                    .command(crate::model::Command::Setup)
+                    .s("."),
+                );
             }
         }
     }

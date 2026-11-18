@@ -4,123 +4,123 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## LogChannel · post
 tone: Neutral
 --- discord ---
-Quack stopped using the log channel because its channel was deleted.
+The log channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the log channel because its channel was deleted.
+The log channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the log channel because its channel was deleted.")]
+Text [Fixed("The log channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## LogChannel · dashboard text
-discord: Quack stopped using the log channel because its channel was deleted.
-plain:   Quack stopped using the log channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the log channel because its channel was deleted.")]
+discord: The log channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The log channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The log channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## AppealChannel · post
 tone: Neutral
 --- discord ---
-Quack stopped using the appeal channel because its channel was deleted.
+The appeal channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the appeal channel because its channel was deleted.
+The appeal channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the appeal channel because its channel was deleted.")]
+Text [Fixed("The appeal channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## AppealChannel · dashboard text
-discord: Quack stopped using the appeal channel because its channel was deleted.
-plain:   Quack stopped using the appeal channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the appeal channel because its channel was deleted.")]
+discord: The appeal channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The appeal channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The appeal channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## EvidenceChannel · post
 tone: Neutral
 --- discord ---
-Quack stopped using the evidence channel because its channel was deleted.
+The evidence channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the evidence channel because its channel was deleted.
+The evidence channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the evidence channel because its channel was deleted.")]
+Text [Fixed("The evidence channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## EvidenceChannel · dashboard text
-discord: Quack stopped using the evidence channel because its channel was deleted.
-plain:   Quack stopped using the evidence channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the evidence channel because its channel was deleted.")]
+discord: The evidence channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The evidence channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The evidence channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## TicketEntryChannel · post
 tone: Neutral
 --- discord ---
-Quack stopped using the ticket entry channel because its channel was deleted.
+The ticket entry channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the ticket entry channel because its channel was deleted.
+The ticket entry channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the ticket entry channel because its channel was deleted.")]
+Text [Fixed("The ticket entry channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## TicketEntryChannel · dashboard text
-discord: Quack stopped using the ticket entry channel because its channel was deleted.
-plain:   Quack stopped using the ticket entry channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the ticket entry channel because its channel was deleted.")]
+discord: The ticket entry channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The ticket entry channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The ticket entry channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## TicketQueueChannel · post
 tone: Neutral
 --- discord ---
-Quack stopped using the ticket staff channel because its channel was deleted.
+The ticket staff channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the ticket staff channel because its channel was deleted.
+The ticket staff channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the ticket staff channel because its channel was deleted.")]
+Text [Fixed("The ticket staff channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## TicketQueueChannel · dashboard text
-discord: Quack stopped using the ticket staff channel because its channel was deleted.
-plain:   Quack stopped using the ticket staff channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the ticket staff channel because its channel was deleted.")]
+discord: The ticket staff channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The ticket staff channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The ticket staff channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## HoneypotChannel · post
 tone: Neutral
 --- discord ---
-Quack stopped using the honeypot channel because its channel was deleted.
+The honeypot channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the honeypot channel because its channel was deleted.
+The honeypot channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the honeypot channel because its channel was deleted.")]
+Text [Fixed("The honeypot channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## HoneypotChannel · dashboard text
-discord: Quack stopped using the honeypot channel because its channel was deleted.
-plain:   Quack stopped using the honeypot channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the honeypot channel because its channel was deleted.")]
+discord: The honeypot channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The honeypot channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The honeypot channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## ActivityLogRoute · post
 tone: Neutral
 --- discord ---
-Quack stopped using the server activity channel because its channel was deleted.
+The server activity channel was deleted. Choose a new channel in </setup:1004>.
 -# <t:1794924309:f> · [Open in dashboard](<https://quack.example/guilds/111/mod-log>)
 --- plain ---
-Quack stopped using the server activity channel because its channel was deleted.
+The server activity channel was deleted. Choose a new channel in /setup.
 17 Nov 2026 at 14:05 UTC · Open in dashboard
 --- model ---
-Text [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]
+Text [Fixed("The server activity channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open in dashboard")], url: "https://quack.example/guilds/111/mod-log" }]
 
 ## ActivityLogRoute · dashboard text
-discord: Quack stopped using the server activity channel because its channel was deleted.
-plain:   Quack stopped using the server activity channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the server activity channel because its channel was deleted.")]
+discord: The server activity channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The server activity channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The server activity channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
 
 ## TicketEntryChannel · no names known
-discord: Quack stopped using the ticket entry channel because its channel was deleted.
-plain:   Quack stopped using the ticket entry channel because its channel was deleted.
-model:   [Fixed("Quack stopped using the ticket entry channel because its channel was deleted.")]
+discord: The ticket entry channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The ticket entry channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The ticket entry channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]

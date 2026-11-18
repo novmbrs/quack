@@ -2604,8 +2604,8 @@ context first; a trimmed card ends with `case.card.trimmed`.
 | `case.card.appeal.rejected` | **Appeal:** Rejected. The case still counts. | |
 | `case.card.appeal.closed` | **Appeal:** Closed. | |
 | `case.card.evidence.saving` | **Evidence:** Saving evidence… | any item `saving` |
-| `case.card.evidence.saved` | **Evidence:** one: 1 item saved. / other: {count} items saved. | all items settled, none failed |
-| `case.card.evidence.partial` | **Evidence:** {saved} saved, {failed} couldn't be saved. Open View evidence to see why. | none saving, some failed |
+| `case.card.evidence.saved` | **Evidence:** one: Quack saved 1 evidence item. / other: Quack saved {count} evidence items. | all items settled, none failed |
+| `case.card.evidence.partial` | **Evidence:** Quack saved {saved} evidence {item / items}. It couldn't save {failed}. Select View evidence to see why. (none saved: "Quack couldn't save {failed} evidence {item / items}. Select View evidence to see why.") | none saving, some failed |
 | `case.card.context_heading` | **Case context** | the case has context |
 | `case.card.context_line` | **{label}:** {value} (text cut to 300 characters with "…"; booleans Yes/No; numbers as written; a message link as a link to the message) | per answered field |
 | `case.card.imported_action` | -# The original Quack v4 action was {v4_action}. Quack took no action for this case. | imported |
@@ -2852,9 +2852,9 @@ Context and evidence:
 | `evidence.modal.title` | Add evidence · case #{number} |
 | `evidence.modal.label` | Message links |
 | `evidence.modal.description` | One Discord message link per line, up to 10. (placeholder: `case.form.link_placeholder`) |
-| `evidence.added` | one: Quack is saving 1 evidence item for case #{number}. / other: Quack is saving {count} evidence items for case #{number}. |
-| `evidence.added.retrying` | one: Quack is trying again to save 1 message that failed before. / other: Quack is trying again to save {count} messages that failed before. |
-| `evidence.added.already_saved` | one: 1 of these was already saved. / other: {count} of these were already saved. |
+| `evidence.added` | one: Quack is saving 1 message as evidence for case #{number}. / other: Quack is saving {count} messages as evidence for case #{number}. |
+| `evidence.added.retrying` | one: Quack will try again to save 1 message that it couldn't save before. / other: Quack will try again to save {count} messages that it couldn't save before. |
+| `evidence.added.already_saved` | one: 1 message was already saved as evidence. / other: {count} messages were already saved as evidence. |
 | `evidence.view.heading` | ### Evidence {item} of {total} · case #{number} |
 | `evidence.view.message` | Message from {author} in {channel}, sent {time} · [Open message]({url}) ("from {author} " and ", sent {time}" are left out until the message is saved) |
 | `evidence.view.edited` | Edited {time}. |
@@ -2862,23 +2862,23 @@ Context and evidence:
 | `evidence.view.embeds` | Link previews: {titles or types, comma-separated} |
 | `evidence.view.saving` | Quack is still saving this message. |
 | `evidence.view.none` | Case #{number} has no evidence yet. Use Add evidence to add message links. |
-| `evidence.failure.message_deleted` | Quack couldn't save this message because it was deleted before Quack fetched it. |
-| `evidence.failure.moderator_no_access` | Quack didn't save this message because the moderator who added it can't read that channel. |
-| `evidence.failure.quack_no_access` | Quack couldn't save this message because it can't read that channel. Give Quack View Channel and Read Message History there, then add the link again to retry. |
-| `evidence.failure.other_server` | Quack didn't save this message because it's in another server. |
-| `evidence.failure.discord_error` | Quack couldn't save this message because Discord kept failing. Add the link again to retry. |
-| `evidence.file.copied` | {name} · saved copy |
-| `evidence.file.pending` | {name} · saving… |
-| `evidence.file.link_only` | {name} · original link only, because no evidence channel is set |
-| `evidence.file.too_large` | {name} · original link only, because Quack copies files up to 10 MB |
-| `evidence.file.unsupported_type` | {name} · original link only, because Quack copies only images, video, audio, text, and PDF files |
-| `evidence.file.copy_failed` | {name} · Quack couldn't copy this file, so the original link may stop working |
+| `evidence.failure.message_deleted` | The message was deleted before Quack saved it. If another message shows what happened, add its link. |
+| `evidence.failure.moderator_no_access` | Quack didn't save this message because the moderator who added it can't read the channel. Ask a moderator who can read the channel to add it. |
+| `evidence.failure.quack_no_access` | Quack couldn't save this message because it can't read the channel. Ask an administrator to allow View Channel and Read Message History for Quack there, then add the link again. |
+| `evidence.failure.other_server` | Quack didn't save this message because it's from another server. Add a message link from this server. |
+| `evidence.failure.discord_error` | Quack couldn't save this message. Add the link again to retry. |
+| `evidence.file.copied` | {name} · Copy saved |
+| `evidence.file.pending` | {name} · Copying file… |
+| `evidence.file.link_only` | {name} · Original link only. No evidence channel is set. |
+| `evidence.file.too_large` | {name} · Original link only. Quack copies files up to 10 MB. |
+| `evidence.file.unsupported_type` | {name} · Original link only. Quack doesn't copy this file type. |
+| `evidence.file.copy_failed` | {name} · Quack couldn't copy this file. The original link may stop working. |
 | `evidence.files_not_saved` | one: 1 more file wasn't saved, because a case keeps at most 100 files and 10 per message. / other: {count} more files weren't saved, because a case keeps at most 100 files and 10 per message. |
-| `evidence.channel_not_staff_only` | The evidence channel is no longer staff-only, so Quack didn't copy files there. |
+| `evidence.channel_not_staff_only` | Quack didn't copy files because the evidence channel is visible outside staff. Fix its View Channel permissions or choose another evidence channel in /setup. |
 | `evidence.state_text` | The API's `state_text` of an item: saving: `evidence.view.saving`; saved: "Saved."; failed: its `evidence.failure.*` (`evidence.failure.discord_error` when the reason is unknown) |
 
 The reply to adding links is `evidence.added`, then
-`evidence.added.retrying`, then "Open View evidence to check each one."
+`evidence.added.retrying`, then "Select View evidence to see the outcome."
 when either was shown, then `evidence.added.already_saved`; parts with a
 zero count are left out. The viewer shows, after the heading and message
 line: the saving sentence, or the failure, or (saved) the edited line, the
@@ -3135,20 +3135,20 @@ Discord unbanned {member}").
 | `log.settings_changed` | `settings_changed` ok | {actor} changed Quack's settings: {fields}. |
 | `log.module_enabled` | `module_enabled` ok | {actor} turned on {module}. |
 | `log.module_disabled` | `module_disabled` ok, by staff | {actor} turned off {module}. |
-| `log.module_disabled.channel_deleted` | `module_disabled` ok, by Quack | Quack turned off {module} because its channel was deleted. |
+| `log.module_disabled.channel_deleted` | `module_disabled` ok, by Quack | Quack turned off {module} because its channel was deleted. Choose a new channel in /setup, then turn it on. |
 | `log.module_disabled.quack_left` | `module_disabled` ok, by Quack (not posted) | Quack turned off {module} because Quack left the server. |
 | `log.module_settings_changed` | `module_settings_changed` ok | {actor} changed the {module settings name} settings: {fields}. |
 | `log.quack_joined.first` | `quack_joined` ok | Quack joined the server and created the starter rule {rule}. Review it on the dashboard. |
 | `log.quack_joined.again` | `quack_joined` ok | Quack rejoined the server. |
 | `log.quack_left` | `quack_left` ok (not posted) | Quack left the server. |
-| `log.channel_setting_cleared` | `channel_setting_cleared` ok | Quack stopped using the {setting} because its channel was deleted. |
-| `log.log_channel_failed.not_staff_only` | `log_channel_failed` failed (not posted) | Quack stopped posting in the log channel because it isn't staff-only anymore. Entries are still in the moderation log. Fix the channel's permissions to resume. |
-| `log.log_channel_failed.discord_refused` | `log_channel_failed` failed (not posted) | Discord didn't let Quack post in the log channel. Entries are still in the moderation log. Check Quack's permissions there. |
-| `log.log_channel_failed.retries_exhausted` | `log_channel_failed` failed (not posted) | Quack couldn't confirm that an entry reached the log channel because Discord kept failing. Entries are still in the moderation log. |
+| `log.channel_setting_cleared` | `channel_setting_cleared` ok | The {setting} was deleted. Choose a new channel in /setup. |
+| `log.log_channel_failed.not_staff_only` | `log_channel_failed` failed (not posted) | Quack stopped posting to the log channel because members outside staff can see it. The entries are saved in the moderation log. Fix the channel's View Channel permissions or choose another log channel in /setup. |
+| `log.log_channel_failed.discord_refused` | `log_channel_failed` failed (not posted) | Discord didn't let Quack post in the log channel. The entries are saved in the moderation log. In Edit Channel → Permissions, check View Channel and Send Messages for Quack. |
+| `log.log_channel_failed.retries_exhausted` | `log_channel_failed` failed (not posted) | Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log. |
 | `log.ticket_opened` | `ticket_opened` ok | {member} opened a ticket: {thread}. ("{member} opened a ticket." when the thread is unknown) |
-| `log.ticket_closed` | `ticket_closed` ok, closed by staff | {actor} closed {member}'s ticket. The transcript is saved on the dashboard. |
-| `log.ticket_closed` | `ticket_closed` ok, closed by the member | {member} closed their ticket. The transcript is saved on the dashboard. |
-| `log.ticket_closed.partial` | (appended) | Some messages may be missing from the transcript. |
+| `log.ticket_closed` | `ticket_closed` ok, closed by staff | {actor} closed {member}'s ticket. Open the ticket on the dashboard to check for a transcript. |
+| `log.ticket_closed` | `ticket_closed` ok, closed by the member | {member} closed their ticket. Open the ticket on the dashboard to check for a transcript. |
+| `log.ticket_closed.partial` | (appended) | Some messages may be missing from it. |
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed, a member refusal | Quack didn't add a honeypot case for {member}. {refusal reason, §12.3, for Quack as the actor: a refusal about the actor (self, role hierarchy) reads "Review the post and use /case add if a case is needed."} |
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed, `rule_unavailable` | Quack didn't add a honeypot case for {member}. The honeypot rule is archived or no longer exists. Choose a rule in /setup or on the dashboard. |
 | `log.honeypot_case_failed` | `honeypot_case_failed` failed, `policy_changed` | Quack didn't add a honeypot case for {member}. The honeypot settings changed while Quack was adding it. Review the post and use /case add if a case is needed. |
@@ -3397,45 +3397,45 @@ Tickets:
 
 | Id | Text |
 | --- | --- |
-| `ticket.panel.heading` | ### Need help from the staff? |
+| `ticket.panel.heading` | ### Need help? |
 | `ticket.panel.text` | Open a ticket to talk privately with the moderators. |
 | `ticket.panel.off` | Tickets are turned off right now. (replaces the text; no button) |
 | `ticket.panel.button` | Open a ticket |
 | `ticket.panel.moved` | Tickets moved to {channel}. Open a ticket there. |
-| `ticket.open.opening` | Quack is opening your ticket. You'll be added to a private thread in {channel} in a moment, and Quack will mention you there. |
+| `ticket.open.opening` | Quack is opening your ticket. Look for a private thread in {entry channel}. Quack will mention you there. |
 | `ticket.open.exists` | You already have an open ticket: {thread}. |
-| `ticket.open.closing` | Your last ticket is still closing. Try again in a minute. |
+| `ticket.open.closing` | Your previous ticket is still closing. Select Open a ticket again after it closes. |
 | `ticket.open.disabled` | Tickets are turned off in this server. |
-| `ticket.open.failed` | Quack couldn't open your ticket because Discord didn't let it create the thread. Ask a server administrator to check Quack's permissions in {channel}. |
-| `ticket.welcome` | {member}, your ticket is open. Tell us what you need help with, and a moderator will reply here. (button `ticket.button.close`) |
+| `ticket.open.failed` | Quack couldn't open your ticket. Ask a server administrator to check Quack's permissions in {entry channel}. |
+| `ticket.welcome` | {member}, your ticket is open. Tell the moderators what you need help with here. (button `ticket.button.close`; the one message whose mention pings) |
 | `ticket.button.close` | Close ticket |
 | `ticket.button.open_thread` | Open thread |
-| `ticket.button.fix_access` | Fix access |
+| `ticket.button.fix_access` | Restore private access |
 | `ticket.post.heading` | ### Ticket from {member} |
-| `ticket.post.open` | Open · {thread} · opened {time} ("its thread" when the thread isn't known) |
+| `ticket.post.open` | Ticket open · {thread} · opened {time} ("Ticket open · opened {time}" when the thread isn't known) |
 | `ticket.post.opening` | Opening… |
-| `ticket.post.open_failed` | Quack couldn't open this ticket. {member} can try again. |
+| `ticket.post.open_failed` | Quack couldn't open this ticket. Check that Quack can create private threads in the ticket entry channel. |
 | `ticket.post.closing` | Closing. Quack is saving the transcript. |
 | `ticket.post.closed` | Closed by {actor} {time}. ("Closed." when unknown) |
 | `ticket.post.transcript_attached` | The transcript is attached. |
-| `ticket.post.transcript_dashboard` | The transcript is on the dashboard until {datetime}. |
-| `ticket.post.transcript_expired` | The transcript was kept until {datetime} and has been deleted. |
-| `ticket.post.partial` | The transcript may be missing some messages: {cause}. |
-| `ticket.post.partial.history` | Quack couldn't read the thread's full history |
-| `ticket.post.partial.trimmed` | it was cut to 8 MB |
-| `ticket.post.thread_not_deleted` | Quack couldn't delete the thread. A moderator can delete it in Discord. |
+| `ticket.post.transcript_dashboard` | The transcript is available on the dashboard until {date}. |
+| `ticket.post.transcript_expired` | The transcript expired on {date}. |
+| `ticket.post.partial` | `ticket.post.partial.history` or `ticket.post.partial.trimmed` |
+| `ticket.post.partial.history` | Some messages may be missing because Quack couldn't read the full thread. |
+| `ticket.post.partial.trimmed` | Some messages are missing because Quack reached the 8 MB limit. |
+| `ticket.post.thread_not_deleted` | Quack closed the ticket but couldn't delete the thread. Ask someone with Manage Threads to delete {thread}. ("… to delete it." when the thread isn't known) |
 | `ticket.close.closing` | Quack is closing this ticket and saving the transcript. |
 | `ticket.close.not_open` | This ticket is already closed or closing. |
-| `ticket.close.not_allowed` | Only the member who opened this ticket and moderators can close it. |
-| `ticket.fix.done` | Quack added {member} to the thread.{" It removed 1 person who isn't staff." / " It removed {count} people who aren't staff." when it removed anyone} |
-| `ticket.fix.failed` | Discord didn't let Quack fix the ticket's access. Check Quack's Manage Threads permission in {channel}. |
+| `ticket.close.not_allowed` | Only the person who opened this ticket or a Quack moderator can close it. Ask a moderator if you need help. |
+| `ticket.fix.done` | {member} can open the ticket thread.{" Quack removed 1 person who didn't have permission to read this ticket." / " Quack removed {count} people who didn't have permission to read this ticket." when it removed anyone} |
+| `ticket.fix.failed` | Discord didn't let Quack update ticket access. `access.quack_channel_needs` (staff, Manage Threads, the thread's channel) |
 | `dm.ticket_closed.heading` | ### Your ticket in {server} is closed |
-| `dm.ticket_closed.text` | Here's a copy of the conversation for your records. (the transcript file is attached) |
+| `dm.ticket_closed.text` | The attached file is a copy of the conversation. |
 | `ticket.thread_name` | ticket-{ticket u22} |
-| `ticket.transcript.header` | Ticket transcript · {server} · opened {transcript time} by {member name} ({member id}) · closed {transcript time} |
+| `ticket.transcript.header` | Ticket transcript · {server} · opened {transcript time} by {member name} (Discord member ID {member id}) · closed {transcript time} |
 | `ticket.transcript.line` | [{transcript time}] {author name} ({author id}): {text} |
-| `ticket.transcript.file_line` | `  file: {name} ({size} bytes)` (size with thousands separators) |
-| `ticket.transcript.partial` | Some messages may be missing: {cause}. |
+| `ticket.transcript.file_line` | `  File: {name} ({size})` (size as "512 bytes", "1.5 KB", "8 MB") |
+| `ticket.transcript.partial` | `ticket.post.partial.history` or `ticket.post.partial.trimmed` |
 
 `{transcript time}` is UTC as "2026-11-17 14:05:09 UTC". The staff post
 shows the transcript, partial, and thread lines only once closed (and not
@@ -3448,32 +3448,32 @@ Server activity log (posted in the routed channel):
 | --- | --- |
 | `activity.message_edited` | A message from {author} was edited in {channel}. |
 | `activity.before` | **Before:**\n> {text} |
-| `activity.before_unknown` | **Before:** Quack hadn't seen this message, so the earlier text isn't known. |
-| `activity.message` (before, no text) | **Before:** the message had no text. |
+| `activity.before_unknown` | **Before:** Quack hadn't seen the earlier text. |
+| `activity.message` (before, no text) | **Before:** The message had no text. |
 | `activity.after` | **After:**\n> {text} |
-| `activity.after_empty` | **After:** the message has no text now. |
-| `activity.message` (after, not sent) | **After:** Discord didn't send the new text. |
+| `activity.after_empty` | **After:** The message has no text. |
+| `activity.message` (after, not sent) | **After:** Discord didn't include the new text. |
 | `activity.message_deleted` | A message from {author} was deleted in {channel}.{"\n> {text}" when it had text} |
-| `activity.message_deleted_unknown` | A message was deleted in {channel}. Quack hadn't seen it, so its author and text aren't known. |
-| `activity.messages_deleted_unknown` | {count} messages were deleted in {channel}. Quack hadn't seen them, so their authors and text aren't known. |
-| `activity.messages_bulk_deleted` | {count} messages were deleted at once in {channel}. |
-| `activity.bulk_known` | one: Quack had seen 1 of them: / other: Quack had seen {known} of them: |
-| `activity.bulk_row` | {author}: {text, cut to 200 characters} ("(no text)" for a message without text, "(text not shown)" when the text is hidden or unknown; at most 20 rows) |
-| `activity.messages_bulk_deleted` (more rows) | And {count} more. |
+| `activity.message_deleted_unknown` | A message was deleted in {channel}. Quack hadn't seen it, so its author and text are unavailable. |
+| `activity.messages_deleted_unknown` | {count} messages were deleted in {channel}. Quack hadn't seen these messages, so their authors and text are unavailable. |
+| `activity.messages_bulk_deleted` | {count} messages were deleted in {channel}. Then `activity.bulk_known`, or, when Quack had seen none, "Quack hadn't seen these messages, so their authors and text are unavailable." |
+| `activity.bulk_known` | one: Quack had seen 1 of them: / other: Quack had seen {known} of them: (more than 20: "Quack had seen {known} of them. Showing excerpts from 20:") |
+| `activity.bulk_row` | {author}: {text on one line, cut to 70 characters so 20 rows always fit} ("(no text)" for a message without text, "(text not shown)" when the text is hidden or unknown; at most 20 rows) |
 | `activity.files` | Files: {names, each linked to its original URL, comma-separated} |
 | `activity.embeds` | Link previews: {types} |
-| `activity.text_hidden` | Message text isn't shown, because this server's activity log hides it. |
-| `activity.message_ids` | -# Message IDs: {ids, comma-separated, at most 50} |
-| `activity.subtext` | -# Message {message_id} · {datetime} |
+| `activity.text_hidden` | This server's activity log hides message text. |
+| `activity.message_ids` | -# Deleted message IDs: {ids, comma-separated, at most 50} |
+| `activity.subtext` | -# Message ID {message_id} · {datetime} |
 | `activity.member_joined` | {member} joined the server. Their account was created {time}. |
-| `activity.member_left` | **{username}** ({member_id}) left the server. |
+| `activity.member_left` | **{username}** left the server. Discord member ID: {member_id}. |
 | `activity.member_banned` | {member} was banned by {actor}. |
 | `activity.member_unbanned` | {member} was unbanned by {actor}. |
 | `activity.reason` | **Reason:**\n> {reason} |
 | `activity.server_changed` | The server settings changed. |
 | `activity.channel_created` | The channel {channel} was created. |
-| `activity.channel_changed` | The settings of {channel} changed. |
+| `activity.channel_changed` | Settings changed for {channel}. |
 | `activity.channel_deleted` | The channel #{name} was deleted. |
+| `activity.trimmed` | This post shows excerpts. Quack shortened some message text to fit in Discord. (a post shortened to fit; there is no dashboard history of activity posts) |
 
 An edit with both texts hidden shows `activity.text_hidden` once instead of
 Before and After. Posts about several messages end with
@@ -3485,10 +3485,10 @@ Honeypot:
 | Id | Text |
 | --- | --- |
 | `honeypot.warning.heading` | ### Don't post here |
-| `honeypot.warning.one_outcome` | Posting here adds a case under {rule}, and Quack will {outcome}. |
-| `honeypot.warning.many_outcomes` | Posting here adds a case under {rule}. Depending on earlier cases, Quack will {outcomes, in level order, each once, joined with ", " and " or "}. |
-| `honeypot.warning.warning_only` | Posting here adds a case under {rule}. |
-| `honeypot.warning.tail` | This channel catches spam accounts. Staff can post here safely. |
+| `honeypot.warning.one_outcome` | If you post here, Quack can add a case under {rule}. This rule can {outcome}. |
+| `honeypot.warning.many_outcomes` | If you post here, Quack can add a case under {rule}. This rule can {outcomes, in level order, each once, joined with ", " and " or "}. What happens depends on how many of your cases count under it. |
+| `honeypot.warning.warning_only` | If you post here, Quack can add a case under {rule}. This rule can give you a warning. |
+| `honeypot.warning.tail` | This channel catches spam accounts. Quack ignores posts from staff and bots. |
 | `honeypot.warning.count` | -# zero: No honeypot cases yet. / one: 1 honeypot case so far. / other: {count} honeypot cases so far. |
 | `honeypot.warning.off` | ### The honeypot is off\nPosts here don't add cases right now. |
 | `honeypot.outcome.ban` | ban you |
@@ -3496,7 +3496,8 @@ Honeypot:
 | `honeypot.outcome.timeout` | time you out for {duration} |
 | `honeypot.outcome.warning` | give you a warning |
 
-A custom warning replaces the heading and the generated sentences; the
+The warning describes what the rule can do, never that an action will
+succeed. A custom warning replaces the heading and the generated sentences; the
 count line is always appended. While the honeypot is off, the warning shows
 only `honeypot.warning.off` (a custom warning is not shown).
 

@@ -8,8 +8,11 @@ use time::OffsetDateTime;
 use crate::fmt;
 use crate::model::{Actor, Block, ChannelRef, Msg, Person, Text, TimeStyle, Tone};
 
-/// Rows a bulk-delete post lists before "and N more".
+/// Excerpts a bulk-delete post shows at most.
 pub const BULK_ROWS: usize = 20;
+/// Characters of each bulk-delete excerpt, so 20 rows always fit the text
+/// budget even when every character needs escaping.
+pub const BULK_EXCERPT: usize = 70;
 /// Message ids a post lists at most.
 pub const MAX_IDS: usize = 50;
 
@@ -147,19 +150,19 @@ fn content(label: &str, c: &Content, after: bool) -> Block {
         Content::Text(t) => Block::Quote(Text::new().user(t)),
         Content::Empty if after => Block::Field {
             label: label.to_owned(),
-            value: Text::fixed("the message has no text now."),
+            value: Text::fixed("The message has no text."),
         },
         Content::Empty => Block::Field {
             label: label.to_owned(),
-            value: Text::fixed("the message had no text."),
+            value: Text::fixed("The message had no text."),
         },
         Content::Unknown if after => Block::Field {
             label: label.to_owned(),
-            value: Text::fixed("Discord didn't send the new text."),
+            value: Text::fixed("Discord didn't include the new text."),
         },
         Content::Unknown => Block::Field {
             label: label.to_owned(),
-            value: Text::fixed("Quack hadn't seen this message, so the earlier text isn't known."),
+            value: Text::fixed("Quack hadn't seen the earlier text."),
         },
         Content::Hidden => Block::Text(text_hidden()),
     }
@@ -167,7 +170,7 @@ fn content(label: &str, c: &Content, after: bool) -> Block {
 
 /// `activity.text_hidden`.
 pub fn text_hidden() -> Text {
-    Text::fixed("Message text isn't shown, because this server's activity log hides it.")
+    Text::fixed("This server's activity log hides message text.")
 }
 
 fn with_label(msg: Msg, label: &str, c: &Content, after: bool) -> Msg {
@@ -201,12 +204,15 @@ fn attachments(mut msg: Msg, m: &MessageFacts) -> Msg {
 }
 
 fn subtext(id: MessageId, at: OffsetDateTime) -> Block {
-    Block::Subtext(Text::fixed(format!("Message {id} · ")).time(at, TimeStyle::Full))
+    Block::Subtext(Text::fixed(format!("Message ID {id} · ")).time(at, TimeStyle::Full))
 }
 
 fn ids(list: &[MessageId]) -> Block {
     let shown: Vec<String> = list.iter().take(MAX_IDS).map(ToString::to_string).collect();
-    Block::Subtext(Text::fixed(format!("Message IDs: {}", shown.join(", "))))
+    Block::Subtext(Text::fixed(format!(
+        "Deleted message IDs: {}",
+        shown.join(", ")
+    )))
 }
 
 fn reason(msg: Msg, reason: Option<&String>) -> Msg {
@@ -225,33 +231,34 @@ fn bulk_deleted(
     known: &[(Person, Content)],
     at: OffsetDateTime,
 ) -> Msg {
-    let mut msg = msg.para(
-        Text::fixed(format!(
-            "{} messages were deleted at once in ",
-            fmt::count(list.len() as u64)
-        ))
-        .channel(channel)
-        .s("."),
-    );
-    if !known.is_empty() {
-        msg = msg.para(Text::fixed(match known.len() {
-            1 => "Quack had seen 1 of them:".to_owned(),
-            n => format!("Quack had seen {} of them:", fmt::count(n as u64)),
-        }));
-        for (author, c) in known.iter().take(BULK_ROWS) {
-            let row = Text::new().person(author).s(": ");
-            msg = msg.para(match c {
-                Content::Text(t) => row.user(fmt::cut(t, 200)),
-                Content::Empty => row.s("(no text)"),
-                Content::Unknown | Content::Hidden => row.s("(text not shown)"),
-            });
+    // The counts come first and say how many excerpts follow; excerpts are
+    // short enough that the rows shown always fit (§11.11).
+    let shown = known.len().min(BULK_ROWS);
+    let lead = Text::fixed(format!(
+        "{} messages were deleted in ",
+        fmt::count(list.len() as u64)
+    ))
+    .channel(channel)
+    .s(".");
+    let lead = match known.len() {
+        0 => {
+            lead.s(" Quack hadn't seen these messages, so their authors and text are unavailable.")
         }
-        if known.len() > BULK_ROWS {
-            msg = msg.para(Text::fixed(format!(
-                "And {} more.",
-                fmt::count((known.len() - BULK_ROWS) as u64)
-            )));
-        }
+        n if n == shown => lead.s(format!(" Quack had seen {} of them:", fmt::count(n as u64))),
+        n => lead.s(format!(
+            " Quack had seen {} of them. Showing excerpts from {}:",
+            fmt::count(n as u64),
+            fmt::count(shown as u64)
+        )),
+    };
+    let mut msg = msg.para(lead);
+    for (author, c) in known.iter().take(BULK_ROWS) {
+        let row = Text::new().person(author).s(": ");
+        msg = msg.para(match c {
+            Content::Text(t) => row.user(fmt::cut(&fmt::one_line(t), BULK_EXCERPT)),
+            Content::Empty => row.s("(no text)"),
+            Content::Unknown | Content::Hidden => row.s("(text not shown)"),
+        });
     }
     msg.block(ids(list))
         .block(Block::Subtext(Text::new().time(at, TimeStyle::Full)))
@@ -294,7 +301,11 @@ fn deleted(msg: Msg, message: &MessageFacts, c: &Content) -> Msg {
 
 /// `activity.*`: the post for one event.
 pub fn post(p: &ActivityPost) -> Msg {
-    let msg = Msg::new(Tone::Neutral);
+    // There is no dashboard history of activity posts (§13.3), so a
+    // shortened post says so instead of pointing anywhere.
+    let msg = Msg::new(Tone::Neutral).when_trimmed(Text::fixed(
+        "This post shows excerpts. Quack shortened some message text to fit in Discord.",
+    ));
     match p {
         ActivityPost::MessageEdited {
             message,
@@ -309,7 +320,7 @@ pub fn post(p: &ActivityPost) -> Msg {
             .para(
                 Text::fixed("A message was deleted in ")
                     .channel(channel)
-                    .s(". Quack hadn't seen it, so its author and text aren't known."),
+                    .s(". Quack hadn't seen it, so its author and text are unavailable."),
             )
             .block(subtext(*id, *at)),
         ActivityPost::MessagesDeletedUnknown {
@@ -323,7 +334,7 @@ pub fn post(p: &ActivityPost) -> Msg {
                     fmt::count(list.len() as u64)
                 ))
                 .channel(channel)
-                .s(". Quack hadn't seen them, so their authors and text aren't known."),
+                .s(". Quack hadn't seen these messages, so their authors and text are unavailable."),
             )
             .block(ids(list))
             .block(Block::Subtext(Text::new().time(*at, TimeStyle::Full))),
@@ -346,7 +357,7 @@ pub fn post(p: &ActivityPost) -> Msg {
         ActivityPost::MemberLeft { username, id } => msg.para(
             Text::new()
                 .bold_user(fmt::one_line(username))
-                .s(format!(" ({id}) left the server.")),
+                .s(format!(" left the server. Discord member ID: {id}.")),
         ),
         ActivityPost::MemberBanned {
             member,
@@ -381,7 +392,7 @@ pub fn post(p: &ActivityPost) -> Msg {
             msg.para(Text::fixed("The channel ").channel(c).s(" was created."))
         }
         ActivityPost::ChannelChanged(c) => {
-            msg.para(Text::fixed("The settings of ").channel(c).s(" changed."))
+            msg.para(Text::fixed("Settings changed for ").channel(c).s("."))
         }
         ActivityPost::ChannelDeleted(name) => msg.para(
             Text::fixed("The channel #")

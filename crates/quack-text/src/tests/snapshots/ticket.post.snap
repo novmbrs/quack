@@ -17,14 +17,14 @@ Text [Fixed("Opening…")]
 tone: Success
 --- discord ---
 ### Ticket from <@222>
-Open · <#555> · opened <t:1794924309:R>
-buttons: [Open thread](https://discord.com/channels/111/555) | [Fix access · Secondary] FixTicketAccess(TicketId(01930000-0000-7000-8000-000000000005)) | [Close ticket · Danger] CloseTicket(TicketId(01930000-0000-7000-8000-000000000005))
+Ticket open · <#555> · opened <t:1794924309:R>
+buttons: [Open thread](https://discord.com/channels/111/555) | [Restore private access · Secondary] FixTicketAccess(TicketId(01930000-0000-7000-8000-000000000005)) | [Close ticket · Danger] CloseTicket(TicketId(01930000-0000-7000-8000-000000000005))
 --- plain ---
 Ticket from Sam
-Open · #ticket-abc · opened on 17 Nov 2026 at 14:05 UTC
+Ticket open · #ticket-abc · opened on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Ticket from "), Person(Person { id: AccountId(222), name: Some("Sam") })]
-Text [Fixed("Open · "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(" · opened "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Text [Fixed("Ticket open · "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(" · opened "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
 
 ## closing
 tone: Warning
@@ -42,13 +42,13 @@ Text [Fixed("Closing. Quack is saving the transcript.")]
 tone: Neutral
 --- discord ---
 ### Ticket from <@222>
-Quack couldn't open this ticket. <@222> can try again.
+Quack couldn't open this ticket. Check that Quack can create private threads in the ticket entry channel.
 --- plain ---
 Ticket from Sam
-Quack couldn't open this ticket. Sam can try again.
+Quack couldn't open this ticket. Check that Quack can create private threads in the ticket entry channel.
 --- model ---
 Heading [Fixed("Ticket from "), Person(Person { id: AccountId(222), name: Some("Sam") })]
-Text [Fixed("Quack couldn't open this ticket. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can try again.")]
+Text [Fixed("Quack couldn't open this ticket. Check that Quack can create private threads in the ticket entry channel.")]
 
 ## closed, attached
 tone: Neutral
@@ -70,36 +70,36 @@ tone: Neutral
 --- discord ---
 ### Ticket from <@222>
 Closed by Quack <t:1795014309:R>.
-The transcript is on the dashboard until <t:1795014309:f>.
-The transcript may be missing some messages: Quack couldn't read the thread's full history.
+The transcript is available on the dashboard until <t:1795014309:d>.
+Some messages may be missing because Quack couldn't read the full thread.
 --- plain ---
 Ticket from Sam
 Closed by Quack on 18 Nov 2026 at 15:05 UTC.
-The transcript is on the dashboard until 18 Nov 2026 at 15:05 UTC.
-The transcript may be missing some messages: Quack couldn't read the thread's full history.
+The transcript is available on the dashboard until 18 Nov 2026.
+Some messages may be missing because Quack couldn't read the full thread.
 --- model ---
 Heading [Fixed("Ticket from "), Person(Person { id: AccountId(222), name: Some("Sam") })]
 Text [Fixed("Closed by Quack "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
-Text [Fixed("The transcript is on the dashboard until "), Time(2026-11-18 15:05:09.0 +00:00:00, Full), Fixed(".")]
-Text [Fixed("The transcript may be missing some messages: Quack couldn't read the thread's full history.")]
+Text [Fixed("The transcript is available on the dashboard until "), Time(2026-11-18 15:05:09.0 +00:00:00, Date), Fixed(".")]
+Text [Fixed("Some messages may be missing because Quack couldn't read the full thread.")]
 
 ## closed, expired, trimmed, thread kept
 tone: Neutral
 --- discord ---
 ### Ticket from <@222>
 Closed by <@333> <t:1795014309:R>.
-The transcript was kept until <t:1795014309:f> and has been deleted.
-The transcript may be missing some messages: it was cut to 8 MB.
-Quack couldn't delete the thread. A moderator can delete it in Discord.
+The transcript expired on <t:1795014309:d>.
+Some messages are missing because Quack reached the 8 MB limit.
+Quack closed the ticket but couldn't delete the thread. Ask someone with Manage Threads to delete <#555>.
 --- plain ---
 Ticket from Sam
 Closed by Ana on 18 Nov 2026 at 15:05 UTC.
-The transcript was kept until 18 Nov 2026 at 15:05 UTC and has been deleted.
-The transcript may be missing some messages: it was cut to 8 MB.
-Quack couldn't delete the thread. A moderator can delete it in Discord.
+The transcript expired on 18 Nov 2026.
+Some messages are missing because Quack reached the 8 MB limit.
+Quack closed the ticket but couldn't delete the thread. Ask someone with Manage Threads to delete #ticket-abc.
 --- model ---
 Heading [Fixed("Ticket from "), Person(Person { id: AccountId(222), name: Some("Sam") })]
 Text [Fixed("Closed by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
-Text [Fixed("The transcript was kept until "), Time(2026-11-18 15:05:09.0 +00:00:00, Full), Fixed(" and has been deleted.")]
-Text [Fixed("The transcript may be missing some messages: it was cut to 8 MB.")]
-Text [Fixed("Quack couldn't delete the thread. A moderator can delete it in Discord.")]
+Text [Fixed("The transcript expired on "), Time(2026-11-18 15:05:09.0 +00:00:00, Date), Fixed(".")]
+Text [Fixed("Some messages are missing because Quack reached the 8 MB limit.")]
+Text [Fixed("Quack closed the ticket but couldn't delete the thread. Ask someone with Manage Threads to delete "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(".")]
