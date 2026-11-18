@@ -229,3 +229,49 @@ async fn replacement_links_and_operation_keys_are_unique(
     );
     Ok(())
 }
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn a_case_past_level_255_is_stored(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (spam, _) = rule(&db, g, "Spam").await?;
+    let decision = quack_core::case::CaseDecision {
+        case_count: 256,
+        level_index: 256,
+        level_from_case_count: 256,
+        ..common::decision(spam, None)
+    };
+    let id = quack_core::ids::CaseId::from_uuid(uuid::Uuid::now_v7());
+    let mut tx = db.begin().await?;
+    let number = quack_db::guilds::next_case_number(&mut tx, g).await?;
+    quack_db::cases::insert(
+        &mut tx,
+        &quack_db::cases::NewCase {
+            id,
+            guild: g,
+            number,
+            member: common::member_id(7),
+            member_joined_at: None,
+            source: quack_core::case::CaseSource::Discord,
+            moderator: Some(common::account_id(2)),
+            decision: &decision,
+            context: &quack_core::case::ContextValues::default(),
+            operation_key: None,
+            request_hash: None,
+            replaces: None,
+            created_at: time::OffsetDateTime::now_utc(),
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    let mut conn = db.conn().await?;
+    let stored = quack_db::cases::get(&mut conn, g, id).await?;
+    assert_eq!(
+        stored.and_then(|c| c.decision).map(|d| d.level_index),
+        Some(256)
+    );
+    Ok(())
+}

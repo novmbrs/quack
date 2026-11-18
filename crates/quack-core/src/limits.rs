@@ -61,6 +61,11 @@ pub const MIN_LEVELS: usize = 1;
 pub const MAX_LEVELS: usize = 10;
 /// Highest `from_case_count` a level may start at.
 pub const MAX_LEVEL_CASE_COUNT: u32 = 1_000_000;
+
+/// The most levels an imported rule version may have: a case stores its
+/// level's position in a `smallint`, so every validated version can
+/// always create cases.
+pub const MAX_IMPORTED_LEVELS: usize = 32_767;
 /// Shortest timeout, in seconds.
 pub const MIN_TIMEOUT_SECONDS: u32 = 1;
 /// Longest timeout, in seconds (28 days, Discord's limit).

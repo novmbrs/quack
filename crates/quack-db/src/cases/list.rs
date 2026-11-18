@@ -50,7 +50,7 @@ pub struct CaseSummary {
     /// The name in that version; `None` for imported cases without a rule.
     pub rule_name: Option<String>,
     /// The chosen level.
-    pub level_index: Option<u8>,
+    pub level_index: Option<u16>,
     /// Where it came from.
     pub source: CaseSource,
     /// The moderator.

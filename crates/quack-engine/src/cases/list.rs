@@ -24,7 +24,7 @@ pub struct CasePreview {
     /// The case count the new case would have.
     pub case_count: u32,
     /// The level it would choose (1-based).
-    pub level_index: u8,
+    pub level_index: u16,
     /// That level.
     pub level: Level,
     /// The version's counting window.

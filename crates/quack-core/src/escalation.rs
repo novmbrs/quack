@@ -7,8 +7,9 @@ use crate::rule::{LevelAction, RuleDefinition};
 /// The level a new case gets, as recorded in the case's decision.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LevelChoice {
-    /// 1-based position of the level in the rule version.
-    pub index: u8,
+    /// 1-based position of the level in the rule version (at most
+    /// [`crate::limits::MAX_IMPORTED_LEVELS`] for a validated version).
+    pub index: u16,
     /// The level's `from_case_count`.
     pub from_case_count: u32,
     /// The level's action; `None` makes the case a warning.
@@ -35,7 +36,7 @@ pub fn select_level(def: &RuleDefinition, case_count: u32) -> Option<LevelChoice
         .or_else(|| def.levels.iter().enumerate().next())?;
     let (position, level) = chosen;
     Some(LevelChoice {
-        index: u8::try_from(position + 1).ok()?,
+        index: u16::try_from(position + 1).ok()?,
         from_case_count: level.from_case_count,
         action: level.action,
         send_dm: level.send_dm,
@@ -123,6 +124,27 @@ mod tests {
         assert!(in_window(datetime!(2000-01-01 0:00 UTC), None));
     }
 
+    fn imported(levels: u32) -> RuleDefinition {
+        rule_with(&(1..=levels).collect::<Vec<_>>())
+    }
+
+    #[test]
+    fn a_validated_imported_rule_always_has_a_level_that_fits() {
+        use crate::rule::Strictness;
+        let strict = Strictness::Imported {
+            reconstructed: false,
+        };
+        let big = imported(256);
+        assert_eq!(big.validate(strict), Ok(()));
+        assert_eq!(select_level(&big, 255).unwrap().index, 255);
+        assert_eq!(select_level(&big, 256).unwrap().index, 256);
+        assert_eq!(select_level(&big, 10_000).unwrap().index, 256);
+        let largest = imported(32_767);
+        assert_eq!(largest.validate(strict), Ok(()));
+        assert_eq!(select_level(&largest, 32_767).unwrap().index, 32_767);
+        assert!(imported(32_768).validate(strict).is_err());
+    }
+
     fn levels() -> impl Strategy<Value = Vec<u32>> {
         prop::collection::btree_set(2_u32..=1_000_000, 0..10).prop_map(|rest| {
             let mut v = vec![1];
@@ -158,7 +180,7 @@ mod tests {
         fn first_level_for_one_and_last_for_large(froms in levels()) {
             let def = rule_with(&froms);
             prop_assert_eq!(select_level(&def, 1).unwrap().index, 1);
-            let last = u8::try_from(froms.len()).unwrap();
+            let last = u16::try_from(froms.len()).unwrap();
             prop_assert_eq!(select_level(&def, 1_000_000).unwrap().index, last);
             prop_assert_eq!(select_level(&def, u32::MAX).unwrap().index, last);
         }

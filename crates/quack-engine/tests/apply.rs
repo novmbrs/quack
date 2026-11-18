@@ -87,7 +87,7 @@ async fn concurrent_creations_get_consecutive_numbers_and_counts() -> Result<()>
         // Case numbers and case counts advance together: one counter row
         // serializes creation, so each case counts every earlier one.
         assert_eq!(u64::from(d.case_count), n);
-        let expected_level = u8::try_from(n.min(5))?;
+        let expected_level = u16::try_from(n.min(5))?;
         assert_eq!(d.level_index, expected_level);
     }
     Ok(())

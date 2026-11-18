@@ -250,7 +250,7 @@ impl RuleDefinition {
                 problems.push(RuleProblem::FieldKeyDuplicate { index });
             }
         }
-        if self.levels.is_empty() {
+        if self.levels.is_empty() || self.levels.len() > limits::MAX_IMPORTED_LEVELS {
             problems.push(RuleProblem::LevelCount);
         }
         let mut previous: Option<u32> = None;

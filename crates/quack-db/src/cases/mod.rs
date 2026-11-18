@@ -148,7 +148,7 @@ pub async fn insert(conn: &mut PgConnection, case: &NewCase<'_>) -> Result<(), D
             d.rule_id.get(),
             int::<u32, i32>(d.rule_version)?,
             int::<u32, i32>(d.case_count)?,
-            i16::from(d.level_index),
+            int::<u16, i16>(d.level_index)?,
             int::<u32, i32>(d.level_from_case_count)?,
             kind.map(Pg) as _,
             timeout,

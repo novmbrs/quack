@@ -38,7 +38,7 @@ pub struct CaseView {
     /// The version applied.
     pub rule_version: Option<u32>,
     /// The chosen level.
-    pub level_index: Option<u8>,
+    pub level_index: Option<u16>,
     /// The case count including this case.
     pub case_count: Option<u32>,
     /// The level's start.

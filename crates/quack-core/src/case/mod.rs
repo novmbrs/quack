@@ -79,7 +79,7 @@ pub struct CaseDecision {
     /// Counted cases including this one.
     pub case_count: u32,
     /// 1-based level position in that version.
-    pub level_index: u8,
+    pub level_index: u16,
     /// That level's `from_case_count`.
     pub level_from_case_count: u32,
     /// The level's action; `None` is a warning.
