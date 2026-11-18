@@ -2,14 +2,14 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## ticket_entry_missing
-discord: Choose the channel where members open tickets.
-plain:   Choose the channel where members open tickets.
-model:   [Fixed("Choose the channel where members open tickets.")]
+discord: Choose where members open tickets.
+plain:   Choose where members open tickets.
+model:   [Fixed("Choose where members open tickets.")]
 
 ## ticket_queue_missing
-discord: Choose the staff channel for new tickets.
-plain:   Choose the staff channel for new tickets.
-model:   [Fixed("Choose the staff channel for new tickets.")]
+discord: Choose a staff channel for new tickets.
+plain:   Choose a staff channel for new tickets.
+model:   [Fixed("Choose a staff channel for new tickets.")]
 
 ## ticket_same_channel
 discord: The entry channel and the staff channel must be different.
@@ -27,9 +27,9 @@ plain:   Choose the rule the honeypot applies.
 model:   [Fixed("Choose the rule the honeypot applies.")]
 
 ## honeypot_rule_required_fields
-discord: The rule **Honeypot** has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
-plain:   The rule Honeypot has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
-model:   [Fixed("The rule "), Bold([User("Honeypot")]), Fixed(" has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.")]
+discord: The rule **Honeypot** has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+plain:   The rule Honeypot has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+model:   [Fixed("The rule "), Bold([User("Honeypot")]), Fixed(" has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.")]
 
 ## activity_no_route
 discord: Choose a channel for server activity.
@@ -37,21 +37,21 @@ plain:   Choose a channel for server activity.
 model:   [Fixed("Choose a channel for server activity.")]
 
 ## activity_needs_audit_log
-discord: Quack needs the View Audit Log permission to show who banned or unbanned a member.
-plain:   Quack needs the View Audit Log permission to show who banned or unbanned a member.
-model:   [Fixed("Quack needs the View Audit Log permission to show who banned or unbanned a member.")]
+discord: In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.
+plain:   In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.
+model:   [Fixed("In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.")]
 
 ## channel_permissions
-discord: Quack needs Manage Messages and Read Message History in <#444>.
-plain:   Quack needs Manage Messages and Read Message History in #staff.
-model:   [Fixed("Quack needs Manage Messages and Read Message History in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]
+discord: In <#444> → Edit Channel → Permissions, allow Manage Messages and Read Message History for Quack.
+plain:   In #staff → Edit Channel → Permissions, allow Manage Messages and Read Message History for Quack.
+model:   [Fixed("In "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" → Edit Channel → Permissions, allow Manage Messages and Read Message History for Quack.")]
 
 ## channel_not_staff_only
-discord: <#444> isn't staff-only.
-plain:   #staff isn't staff-only.
-model:   [Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" isn't staff-only.")]
+discord: <#444> can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.
+plain:   #staff can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.
+model:   [Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.")]
 
 ## honeypot_rule_required_fields, rule name unknown
-discord: The rule the honeypot uses has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
-plain:   The rule the honeypot uses has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.
-model:   [Fixed("The rule the honeypot uses has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional.")]
+discord: The rule the honeypot uses has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+plain:   The rule the honeypot uses has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+model:   [Fixed("The rule the honeypot uses has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.")]

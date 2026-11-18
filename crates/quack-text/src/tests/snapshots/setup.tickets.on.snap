@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Tickets are on. The Open a ticket button is in <#444>.
-plain:   Tickets are on. The Open a ticket button is in #staff.
-model:   [Fixed("Tickets are on. The Open a ticket button is in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]
+discord: Tickets are on. Quack will post the Open a ticket button in <#444>.
+plain:   Tickets are on. Quack will post the Open a ticket button in #staff.
+model:   [Fixed("Tickets are on. Quack will post the Open a ticket button in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

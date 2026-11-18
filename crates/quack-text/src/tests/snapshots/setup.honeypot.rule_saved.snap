@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Posts in the honeypot channel will add a case under **Honeypot**.
-plain:   Posts in the honeypot channel will add a case under Honeypot.
-model:   [Fixed("Posts in the honeypot channel will add a case under "), Bold([User("Honeypot")]), Fixed(".")]
+discord: The honeypot rule is now **Honeypot**.
+plain:   The honeypot rule is now Honeypot.
+model:   [Fixed("The honeypot rule is now "), Bold([User("Honeypot")]), Fixed(".")]

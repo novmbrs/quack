@@ -185,7 +185,7 @@ fn explain(area: SetupArea) -> &'static str {
         SetupArea::Home => "",
         SetupArea::Log => "Quack posts moderation log entries in this staff-only channel.",
         SetupArea::Appeals => {
-            "New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite."
+            "New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans."
         }
         SetupArea::Evidence => {
             "Quack copies evidence files to this staff-only channel so they last after the original message is deleted."
@@ -194,7 +194,7 @@ fn explain(area: SetupArea) -> &'static str {
             "Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel."
         }
         SetupArea::Honeypot => {
-            "A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely."
+            "When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots."
         }
         SetupArea::ActivityLog => {
             "Quack posts message edits and deletions, members joining and leaving, bans, and server changes here."
@@ -241,7 +241,7 @@ pub fn area(area: SetupArea, s: &SetupState, result: Option<Text>, rules: &[Pick
             msg = msg.select(channel_select(area, SetupOp::Channel, "Choose a channel"));
             buttons.push(create(ChannelKind::Log, area));
             if s.log.is_some() {
-                buttons.push(button("Stop posting", area, SetupOp::Clear));
+                buttons.push(button("Stop posting log entries", area, SetupOp::Clear));
             }
         }
         SetupArea::Appeals => {

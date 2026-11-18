@@ -5,7 +5,7 @@ use quack_core::permissions::{ChannelProblem, Permission};
 use quack_core::settings::SettingsProblem;
 
 use super::module_name;
-use crate::action::permission;
+use crate::access::{self, Reader};
 use crate::fmt;
 use crate::model::{ChannelRef, Person, RoleRef, Text};
 
@@ -72,18 +72,21 @@ pub fn result(r: &SetupResult) -> Text {
             .s("Quack will post moderation log entries in ")
             .channel(c)
             .s("."),
-        SetupResult::LogCleared => t.s("Quack stopped posting moderation log entries."),
+        SetupResult::LogCleared => t.s(
+            "Quack stopped posting entries to Discord. You can still read them in the moderation log on the dashboard.",
+        ),
         SetupResult::AppealsSaved(c) => t
             .s("Appeals will be posted in ")
             .channel(c)
             .s(", including open appeals that weren't posted yet."),
         SetupResult::AppealsCleared => t
-            .s("Quack stopped posting new appeals. Review them with ")
+            .s("Quack stopped posting new appeals to Discord. You can still review them with ")
             .command(crate::model::Command::Appeals)
             .s(" or on the dashboard."),
         SetupResult::InviteSaved(invite) => t
-            .s("Members whose appeal is accepted will get this invite: ")
-            .link(invite, invite),
+            .s("Rejoin invite saved: ")
+            .link(invite, invite)
+            .s(". Quack includes it in DMs about accepted appeals for kicks and bans."),
         SetupResult::InviteCleared => t.s("The rejoin invite is removed."),
         SetupResult::EvidenceSaved(c) => {
             t.s("Quack will copy evidence files to ").channel(c).s(".")
@@ -96,24 +99,23 @@ pub fn result(r: &SetupResult) -> Text {
         }
         SetupResult::TicketQueueSaved(c) => t.s("New tickets will be posted in ").channel(c).s("."),
         SetupResult::TicketsOn(c) => t
-            .s("Tickets are on. The Open a ticket button is in ")
+            .s("Tickets are on. Quack will post the Open a ticket button in ")
             .channel(c)
             .s("."),
         SetupResult::TicketsOff => {
             t.s("Tickets are off. Open tickets stay open until someone closes them.")
         }
         SetupResult::HoneypotChannelSaved(c) => t.s("The honeypot channel is ").channel(c).s("."),
-        SetupResult::HoneypotRuleSaved(rule) => t
-            .s("Posts in the honeypot channel will add a case under ")
-            .bold_user(rule)
-            .s("."),
+        SetupResult::HoneypotRuleSaved(rule) => {
+            t.s("The honeypot rule is now ").bold_user(rule).s(".")
+        }
         SetupResult::HoneypotRuleCleared => {
             t.s("The honeypot no longer uses a rule. Choose one before turning it on.")
         }
         SetupResult::HoneypotRuleCreated(rule) => t
             .s("Quack created the rule ")
             .bold_user(rule)
-            .s(" for the honeypot. Change it on the dashboard if you want a different outcome."),
+            .s(" for the honeypot. Edit it on the dashboard to change what it does."),
         SetupResult::HoneypotWarningSaved => t.s("The honeypot warning is updated."),
         SetupResult::HoneypotOn(c) => t.s("The honeypot is on in ").channel(c).s("."),
         SetupResult::HoneypotOff => t.s("The honeypot is off. Posts there no longer add cases."),
@@ -130,33 +132,22 @@ pub fn result(r: &SetupResult) -> Text {
             .s("Quack created ")
             .channel(c)
             .s(" so members can see it, and saved it."),
-        SetupResult::Adopted(c) => t
-            .s("Quack found ")
-            .channel(c)
-            .s(", which it created a moment ago, and saved it."),
+        SetupResult::Adopted(c) => t.s("Quack found ").channel(c).s(" and saved it."),
     }
-}
-
-fn permissions_list(perms: &[Permission]) -> String {
-    let names: Vec<String> = perms.iter().map(|p| permission(*p).to_owned()).collect();
-    fmt::list(&names, "and")
 }
 
 /// `setup.create_failed.permission`. `name` is the channel name without `#`.
 pub fn create_failed_permission(name: &str, perms: &[Permission]) -> Text {
     let n = fmt::one_line(name);
-    Text::fixed(format!(
-        "Quack couldn't create #{n} because it needs the {} permission",
-        permissions_list(perms)
-    ))
-    .s(if perms.len() > 1 { "s" } else { "" })
-    .s(". Give it to Quack's role, or choose an existing channel instead.")
+    Text::fixed(format!("Quack couldn't create #{n}."))
+        .sentence(access::quack_role_needs(perms, Reader::Administrator))
+        .s(" Or choose an existing channel.")
 }
 
 /// `setup.create_failed.discord`.
 pub fn create_failed_discord(name: &str) -> Text {
     Text::fixed(format!(
-        "Discord didn't let Quack create #{}. Choose an existing channel instead.",
+        "Discord didn't let Quack create #{}. Choose an existing channel.",
         fmt::one_line(name)
     ))
 }
@@ -165,7 +156,7 @@ pub fn create_failed_discord(name: &str) -> Text {
 pub fn create_unconfirmed(name: &str) -> Text {
     let n = fmt::one_line(name);
     Text::fixed(format!(
-        "Quack couldn't confirm whether Discord created #{n}. Open the channel list: choose #{n} if it's there, or try again."
+        "Quack couldn't confirm whether Discord created #{n}. Check the channel list. If #{n} is there, choose it here. Otherwise, create it again."
     ))
 }
 
@@ -179,10 +170,10 @@ pub fn channel_problem(
     members: &[Person],
 ) -> Text {
     match p {
-        ChannelProblem::NotText => Text::fixed("It isn't a text channel in this server."),
-        ChannelProblem::EveryoneCanView => {
-            Text::fixed("@everyone can view it. Deny View Channel for @everyone.")
-        }
+        ChannelProblem::NotText => Text::fixed("Choose a text channel in this server."),
+        ChannelProblem::EveryoneCanView => Text::fixed(
+            "Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.",
+        ),
         ChannelProblem::RoleCanView(id) => {
             let role = roles
                 .iter()
@@ -192,9 +183,9 @@ pub fn channel_problem(
                     id: *id,
                     name: None,
                 });
-            Text::fixed("The role ")
-                .role(&role)
-                .s(" can view it but isn't a staff role.")
+            Text::new().role(&role).s(
+                " can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.",
+            )
         }
         ChannelProblem::MemberCanView(id) => {
             let person = members
@@ -202,37 +193,34 @@ pub fn channel_problem(
                 .find(|m| m.id == id.account())
                 .cloned()
                 .unwrap_or(Person::unnamed(id.account()));
-            Text::new()
-                .person(&person)
-                .s(" can view it but isn't staff.")
+            Text::new().person(&person).s(
+                " can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.",
+            )
         }
         ChannelProblem::QuackMissing(perms) => quack_missing_channel_permissions(perms, channel),
         ChannelProblem::Inaccessible => Text::fixed(
-            "Discord doesn't let Quack see this channel, so Quack can't check it. Give Quack the View Channel permission there.",
+            "Quack can't check this channel. In Edit Channel → Permissions, allow View Channel for Quack, then choose the channel again.",
         ),
         ChannelProblem::Missing => {
-            Text::fixed("This channel doesn't exist anymore. Choose another channel.")
+            Text::fixed("This channel no longer exists. Choose another channel.")
         }
     }
 }
 
 /// `setup.quack_missing_channel_permissions`.
 pub fn quack_missing_channel_permissions(perms: &[Permission], channel: &ChannelRef) -> Text {
-    Text::fixed(format!("Quack needs {} in ", permissions_list(perms)))
-        .channel(channel)
-        .s(". Update the channel's permissions, then choose it again.")
+    access::quack_channel_needs(channel, perms, Reader::Administrator)
+        .s(" Then choose the channel again.")
 }
 
 /// `setup.channel_not_staff_only`: the channel and its problems, one per
-/// line.
+/// line; each problem says how to fix it.
 pub fn channel_not_staff_only(channel: &ChannelRef, problems: &[Text]) -> Text {
-    let mut t = Text::new()
-        .channel(channel)
-        .s(" isn't staff-only, so Quack didn't save it:");
+    let mut t = Text::fixed("Quack didn't save ").channel(channel).s(":");
     for p in problems {
         t = t.s("\n").then(p.clone());
     }
-    t.s("\nFix its permissions, then choose it again.")
+    t
 }
 
 /// `module.problem.*`: one reason a module can't be turned on. `rule` is
@@ -244,10 +232,8 @@ pub fn module_problem(p: &ModuleProblem, rule: Option<&str>, channel: Option<&Ch
         None => t.channel(&ChannelRef { id, name: None }),
     };
     match p {
-        ModuleProblem::TicketEntryMissing => {
-            Text::fixed("Choose the channel where members open tickets.")
-        }
-        ModuleProblem::TicketQueueMissing => Text::fixed("Choose the staff channel for new tickets."),
+        ModuleProblem::TicketEntryMissing => Text::fixed("Choose where members open tickets."),
+        ModuleProblem::TicketQueueMissing => Text::fixed("Choose a staff channel for new tickets."),
         ModuleProblem::TicketSameChannel => {
             Text::fixed("The entry channel and the staff channel must be different.")
         }
@@ -257,24 +243,31 @@ pub fn module_problem(p: &ModuleProblem, rule: Option<&str>, channel: Option<&Ch
             Some(r) => Text::fixed("The rule ").bold_user(r),
             None => Text::fixed("The rule the honeypot uses"),
         }
-        .s(" has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional."),
+        .s(" has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard."),
         ModuleProblem::ActivityNoRoute => Text::fixed("Choose a channel for server activity."),
-        ModuleProblem::ActivityNeedsAuditLog => Text::fixed(
-            "Quack needs the View Audit Log permission to show who banned or unbanned a member.",
-        ),
-        ModuleProblem::ChannelPermissions { channel: id, missing } => {
-            ch(Text::fixed(format!("Quack needs {} in ", permissions_list(missing))), *id).s(".")
+        ModuleProblem::ActivityNeedsAuditLog => {
+            access::quack_role_needs(&[Permission::ViewAuditLog], Reader::Administrator)
+                .s(" Quack uses it to show who banned or unbanned a member.")
         }
-        ModuleProblem::ChannelNotStaffOnly(id) => ch(Text::new(), *id).s(" isn't staff-only."),
+        ModuleProblem::ChannelPermissions { channel: id, missing } => {
+            let c = channel.cloned().unwrap_or(ChannelRef { id: *id, name: None });
+            access::quack_channel_needs(&c, missing, Reader::Administrator)
+        }
+        ModuleProblem::ChannelNotStaffOnly(id) => ch(Text::new(), *id).s(
+            " can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.",
+        ),
     }
 }
 
 /// `setup.module.not_ready`: the module and its problems, one per line.
 pub fn module_not_ready(module: ModuleName, problems: &[Text]) -> Text {
-    let mut t = Text::fixed(format!(
-        "{} can't be turned on yet:",
-        fmt::upper_first(module_name(module))
-    ));
+    let name = fmt::upper_first(module_name(module));
+    if problems.is_empty() {
+        return Text::fixed(format!("{name} can't be turned on yet. Open "))
+            .command(crate::model::Command::Setup)
+            .s(" to see what needs fixing.");
+    }
+    let mut t = Text::fixed(format!("{name} can't be turned on yet:"));
     for p in problems {
         t = t.s("\n").then(p.clone());
     }
@@ -291,7 +284,7 @@ pub fn invite_invalid() -> Text {
 pub fn settings_problem(p: SettingsProblem, max: usize) -> Text {
     match p {
         SettingsProblem::TooManyRoles => Text::fixed("Choose at most 25 roles."),
-        SettingsProblem::DuplicateRole => Text::fixed("A role is listed more than once."),
+        SettingsProblem::DuplicateRole => Text::fixed("Choose each role once."),
         SettingsProblem::EveryoneRole => Text::fixed("@everyone can't be a staff role."),
         SettingsProblem::UnknownRole => {
             Text::fixed("One of these roles isn't in the server anymore. Choose a current role.")

@@ -3,27 +3,32 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Tickets
 discord: Tickets can't be turned on yet:
-Choose the channel where members open tickets.
-Choose the staff channel for new tickets.
+Choose where members open tickets.
+Choose a staff channel for new tickets.
 plain:   Tickets can't be turned on yet:
-Choose the channel where members open tickets.
-Choose the staff channel for new tickets.
-model:   [Fixed("Tickets can't be turned on yet:\nChoose the channel where members open tickets.\nChoose the staff channel for new tickets.")]
+Choose where members open tickets.
+Choose a staff channel for new tickets.
+model:   [Fixed("Tickets can't be turned on yet:\nChoose where members open tickets.\nChoose a staff channel for new tickets.")]
 
 ## ActivityLog
 discord: The server activity log can't be turned on yet:
-Choose the channel where members open tickets.
-Choose the staff channel for new tickets.
+Choose a channel for server activity.
+In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.
 plain:   The server activity log can't be turned on yet:
-Choose the channel where members open tickets.
-Choose the staff channel for new tickets.
-model:   [Fixed("The server activity log can't be turned on yet:\nChoose the channel where members open tickets.\nChoose the staff channel for new tickets.")]
+Choose a channel for server activity.
+In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.
+model:   [Fixed("The server activity log can't be turned on yet:\nChoose a channel for server activity.\nIn Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.")]
 
 ## Honeypot
 discord: The honeypot can't be turned on yet:
-Choose the channel where members open tickets.
-Choose the staff channel for new tickets.
+Choose the honeypot channel.
+Choose the rule the honeypot applies.
 plain:   The honeypot can't be turned on yet:
-Choose the channel where members open tickets.
-Choose the staff channel for new tickets.
-model:   [Fixed("The honeypot can't be turned on yet:\nChoose the channel where members open tickets.\nChoose the staff channel for new tickets.")]
+Choose the honeypot channel.
+Choose the rule the honeypot applies.
+model:   [Fixed("The honeypot can't be turned on yet:\nChoose the honeypot channel.\nChoose the rule the honeypot applies.")]
+
+## problems unknown
+discord: Tickets can't be turned on yet. Open </setup:1004> to see what needs fixing.
+plain:   Tickets can't be turned on yet. Open /setup to see what needs fixing.
+model:   [Fixed("Tickets can't be turned on yet. Open "), Command(Setup), Fixed(" to see what needs fixing.")]

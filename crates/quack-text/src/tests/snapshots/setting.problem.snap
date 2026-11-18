@@ -7,9 +7,9 @@ plain:   Choose at most 25 roles.
 model:   [Fixed("Choose at most 25 roles.")]
 
 ## DuplicateRole
-discord: A role is listed more than once.
-plain:   A role is listed more than once.
-model:   [Fixed("A role is listed more than once.")]
+discord: Choose each role once.
+plain:   Choose each role once.
+model:   [Fixed("Choose each role once.")]
 
 ## EveryoneRole
 discord: @everyone can't be a staff role.

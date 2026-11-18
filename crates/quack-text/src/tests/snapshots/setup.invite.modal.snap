@@ -3,5 +3,5 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 modal "Rejoin invite" SetupInvite
 - Invite "Invite link" (required)
-  description: A Discord invite like https://discord.gg/abc123. Members get it when their appeal is accepted.
+  description: Paste a Discord invite link. Quack includes it in DMs about accepted appeals for kicks and bans.
   Short text, 1–200 characters, placeholder Some("https://discord.gg/abc123"), value Some("https://discord.gg/abc123")

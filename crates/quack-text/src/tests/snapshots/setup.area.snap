@@ -8,7 +8,7 @@ tone: Neutral
 Quack posts moderation log entries in this staff-only channel.
 **Log channel:** <#444>
 select Setup(Log, Channel) "Choose a channel": text channels
-buttons: [Create #moderation-log · Secondary] Setup(Log, Create) | [Stop posting · Secondary] Setup(Log, Clear) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create #moderation-log · Secondary] Setup(Log, Create) | [Stop posting log entries · Secondary] Setup(Log, Clear) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Log channel
 Quack posts moderation log entries in this staff-only channel.
@@ -39,34 +39,34 @@ Field "Log channel" [Fixed("Not set")]
 tone: Neutral
 --- discord ---
 ### Appeals
-New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite.
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
 **Appeals:** <#444>, rejoin invite set
 select Setup(Appeals, Channel) "Choose a channel": text channels
 buttons: [Create #appeals · Secondary] Setup(Appeals, Create) | [Stop posting appeals · Secondary] Setup(Appeals, Clear) | [Set rejoin invite · Secondary] Setup(Appeals, SetInvite) | [Remove invite · Secondary] Setup(Appeals, ClearInvite) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Appeals
-New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite.
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
 Appeals: #appeals, rejoin invite set
 --- model ---
 Heading [Fixed("Appeals")]
-Text [Fixed("New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite.")]
+Text [Fixed("New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.")]
 Field "Appeals" [Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(", rejoin invite set")]
 
 ## Appeals not set
 tone: Neutral
 --- discord ---
 ### Appeals
-New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite.
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
 **Appeals:** Not set
 select Setup(Appeals, Channel) "Choose a channel": text channels
 buttons: [Create #appeals · Secondary] Setup(Appeals, Create) | [Set rejoin invite · Secondary] Setup(Appeals, SetInvite) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Appeals
-New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite.
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
 Appeals: Not set
 --- model ---
 Heading [Fixed("Appeals")]
-Text [Fixed("New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite.")]
+Text [Fixed("New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.")]
 Field "Appeals" [Fixed("Not set")]
 
 ## Evidence set
@@ -143,35 +143,35 @@ Field "Tickets" [Fixed("Off")]
 tone: Neutral
 --- discord ---
 ### Honeypot
-A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
 **Honeypot:** On · <#444> · rule **Honeypot**
 select Setup(Honeypot, Channel) "Choose a channel": text channels
 select Setup(Honeypot, Rule) "Rule the honeypot applies": Honeypot (Posting in the honeypot channel.)
 buttons: [Create #honeypot · Secondary] Setup(Honeypot, Create) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn off · Secondary] Setup(Honeypot, TurnOff) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Honeypot
-A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
 Honeypot: On · #honeypot · rule Honeypot
 --- model ---
 Heading [Fixed("Honeypot")]
-Text [Fixed("A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.")]
+Text [Fixed("When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.")]
 Field "Honeypot" [Fixed("On · "), Channel(ChannelRef { id: ChannelId(444), name: Some("honeypot") }), Fixed(" · rule "), Bold([User("Honeypot")])]
 
 ## Honeypot not set
 tone: Neutral
 --- discord ---
 ### Honeypot
-A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
 **Honeypot:** Off
 select Setup(Honeypot, Channel) "Choose a channel": text channels
 buttons: [Create #honeypot · Secondary] Setup(Honeypot, Create) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn on · Secondary] Setup(Honeypot, TurnOn) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Honeypot
-A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
 Honeypot: Off
 --- model ---
 Heading [Fixed("Honeypot")]
-Text [Fixed("A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.")]
+Text [Fixed("When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.")]
 Field "Honeypot" [Fixed("Off")]
 
 ## ActivityLog set
@@ -212,16 +212,16 @@ Field "Server activity log" [Fixed("Off")]
 tone: Neutral
 --- discord ---
 ### Honeypot
-A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
 **Honeypot:** Off · <#444> · rule **Honeypot**
 select Setup(Honeypot, Channel) "Choose a channel": text channels
 select Setup(Honeypot, Rule) "Rule the honeypot applies": Honeypot (Posting in the honeypot channel.)
 buttons: [Create #honeypot · Secondary] Setup(Honeypot, Create) | [Clear rule · Secondary] Setup(Honeypot, ClearRule) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn on · Secondary] Setup(Honeypot, TurnOn) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Honeypot
-A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
 Honeypot: Off · #honeypot · rule Honeypot
 --- model ---
 Heading [Fixed("Honeypot")]
-Text [Fixed("A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely.")]
+Text [Fixed("When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.")]
 Field "Honeypot" [Fixed("Off · "), Channel(ChannelRef { id: ChannelId(444), name: Some("honeypot") }), Fixed(" · rule "), Bold([User("Honeypot")])]

@@ -49,7 +49,7 @@ pub const fn channel_topic(kind: ChannelKind) -> &'static str {
         ChannelKind::TicketQueue => "New tickets and their transcripts.",
         ChannelKind::Honeypot => "Don't post here. Read the warning below.",
         ChannelKind::ActivityLog => {
-            "Server activity: edits, deletions, joins, leaves, bans, and server changes."
+            "Message edits and deletions, members joining and leaving, bans, and server changes."
         }
     }
 }
@@ -73,7 +73,7 @@ pub fn first_message(kind: ChannelKind) -> Option<Msg> {
         ),
         ChannelKind::TicketQueue => (
             "Tickets",
-            "New tickets appear here. Open a ticket's thread to help.",
+            "New tickets appear here. Open a ticket's thread to reply.",
         ),
         ChannelKind::ActivityLog => (
             "Server activity log",
@@ -97,7 +97,7 @@ pub fn invite_modal(current: Option<&str>) -> Modal {
             id: InputId::Invite,
             label: "Invite link".to_owned(),
             description: Some(
-                "A Discord invite like https://discord.gg/abc123. Members get it when their appeal is accepted."
+                "Paste a Discord invite link. Quack includes it in DMs about accepted appeals for kicks and bans."
                     .to_owned(),
             ),
             required: true,
@@ -122,7 +122,7 @@ pub fn warning_modal(current: Option<&str>) -> Modal {
             id: InputId::Warning,
             label: "Warning text".to_owned(),
             description: Some(
-                "Shown in the honeypot channel. Leave it empty to use Quack's default warning."
+                "Shown in the honeypot channel. Leave it empty for Quack's warning, which lists the rule's actions."
                     .to_owned(),
             ),
             required: false,

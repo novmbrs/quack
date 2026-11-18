@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Quack stopped posting moderation log entries.
-plain:   Quack stopped posting moderation log entries.
-model:   [Fixed("Quack stopped posting moderation log entries.")]
+discord: Quack stopped posting entries to Discord. You can still read them in the moderation log on the dashboard.
+plain:   Quack stopped posting entries to Discord. You can still read them in the moderation log on the dashboard.
+model:   [Fixed("Quack stopped posting entries to Discord. You can still read them in the moderation log on the dashboard.")]

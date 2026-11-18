@@ -320,12 +320,23 @@ pub fn samples() -> Vec<Sample> {
         ),
     ));
     for m in ModuleName::ALL {
+        // Each module with its own problems, in the order above.
+        let own = match m {
+            ModuleName::Tickets => &module_lines[0..2],
+            ModuleName::Honeypot => &module_lines[3..5],
+            ModuleName::ActivityLog => &module_lines[6..8],
+        };
         v.push(text(
             "setup.module.not_ready",
             format!("{m:?}"),
-            setup::module_not_ready(*m, &module_lines[..2]),
+            setup::module_not_ready(*m, own),
         ));
     }
+    v.push(text(
+        "setup.module.not_ready",
+        "problems unknown",
+        setup::module_not_ready(ModuleName::Tickets, &[]),
+    ));
     v.push(covering(
         "setup.invite.modal",
         &[

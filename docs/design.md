@@ -3238,7 +3238,7 @@ server activity channel.
 | `setup.button.create_ticket_channels` | Create #support and #ticket-log |
 | `setup.button.turn_on` | Turn on |
 | `setup.button.turn_off` | Turn off |
-| `setup.button.stop_log` | Stop posting |
+| `setup.button.stop_log` | Stop posting log entries |
 | `setup.button.stop_evidence` | Stop copying files |
 | `setup.button.set_invite` | Set rejoin invite |
 | `setup.button.remove_invite` | Remove invite |
@@ -3251,11 +3251,11 @@ server activity channel.
 | `setup.select.rule` | Rule the honeypot applies |
 | `setup.log.explain` | Quack posts moderation log entries in this staff-only channel. |
 | `setup.log.saved` | Quack will post moderation log entries in {channel}. |
-| `setup.log.cleared` | Quack stopped posting moderation log entries. |
-| `setup.appeals.explain` | New appeals are posted in this staff-only channel for moderators to review. Members whose appeal is accepted can get a rejoin invite. |
+| `setup.log.cleared` | Quack stopped posting entries to Discord. You can still read them in the moderation log on the dashboard. |
+| `setup.appeals.explain` | New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans. |
 | `setup.appeals.saved` | Appeals will be posted in {channel}, including open appeals that weren't posted yet. |
-| `setup.appeals.cleared` | Quack stopped posting new appeals. Review them with /appeals or on the dashboard. |
-| `setup.appeals.invite_saved` | Members whose appeal is accepted will get this invite: {invite, as a link} |
+| `setup.appeals.cleared` | Quack stopped posting new appeals to Discord. You can still review them with /appeals or on the dashboard. |
+| `setup.appeals.invite_saved` | Rejoin invite saved: {invite, as a link}. Quack includes it in DMs about accepted appeals for kicks and bans. |
 | `setup.appeals.invite_cleared` | The rejoin invite is removed. |
 | `setup.evidence.explain` | Quack copies evidence files to this staff-only channel so they last after the original message is deleted. |
 | `setup.evidence.saved` | Quack will copy evidence files to {channel}. |
@@ -3263,13 +3263,13 @@ server activity channel.
 | `setup.tickets.explain` | Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel. |
 | `setup.tickets.entry_saved` | Members will open tickets from {channel}. |
 | `setup.tickets.queue_saved` | New tickets will be posted in {channel}. |
-| `setup.tickets.on` | Tickets are on. The Open a ticket button is in {channel}. |
+| `setup.tickets.on` | Tickets are on. Quack will post the Open a ticket button in {channel}. |
 | `setup.tickets.off` | Tickets are off. Open tickets stay open until someone closes them. |
-| `setup.honeypot.explain` | A post in the honeypot channel adds a case under the chosen rule. Staff and Quack can post there safely. |
+| `setup.honeypot.explain` | When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots. |
 | `setup.honeypot.channel_saved` | The honeypot channel is {channel}. |
-| `setup.honeypot.rule_saved` | Posts in the honeypot channel will add a case under {rule}. |
+| `setup.honeypot.rule_saved` | The honeypot rule is now {rule}. |
 | `setup.honeypot.rule_cleared` | The honeypot no longer uses a rule. Choose one before turning it on. |
-| `setup.honeypot.rule_created` | Quack created the rule {rule} for the honeypot. Change it on the dashboard if you want a different outcome. |
+| `setup.honeypot.rule_created` | Quack created the rule {rule} for the honeypot. Edit it on the dashboard to change what it does. |
 | `setup.honeypot.warning_saved` | The honeypot warning is updated. |
 | `setup.honeypot.on` | The honeypot is on in {channel}. |
 | `setup.honeypot.off` | The honeypot is off. Posts there no longer add cases. |
@@ -3279,36 +3279,36 @@ server activity channel.
 | `setup.activity_log.off` | The server activity log is off. |
 | `setup.created` | Quack created {channel} with staff-only permissions and saved it. |
 | `setup.created_public` | Quack created {channel} so members can see it, and saved it. |
-| `setup.adopted` | Quack found {channel}, which it created a moment ago, and saved it. |
-| `setup.create_failed.permission` | one: Quack couldn't create #{name} because it needs the {permission} permission. Give it to Quack's role, or choose an existing channel instead. / other: Quack couldn't create #{name} because it needs the {permissions} permissions. Give it to Quack's role, or choose an existing channel instead. |
-| `setup.create_failed.discord` | Discord didn't let Quack create #{name}. Choose an existing channel instead. |
-| `setup.create_unconfirmed` | Quack couldn't confirm whether Discord created #{name}. Open the channel list: choose #{name} if it's there, or try again. |
-| `setup.channel_not_staff_only` | {channel} isn't staff-only, so Quack didn't save it:\n{problems, one per line}\nFix its permissions, then choose it again. |
-| `setup.problem.not_text` | It isn't a text channel in this server. |
-| `setup.problem.everyone_can_view` | @everyone can view it. Deny View Channel for @everyone. |
-| `setup.problem.role_can_view` | The role {role} can view it but isn't a staff role. |
-| `setup.problem.member_can_view` | {member} can view it but isn't staff. |
-| `setup.problem` (inaccessible) | Discord doesn't let Quack see this channel, so Quack can't check it. Give Quack the View Channel permission there. |
-| `setup.problem` (missing) | This channel doesn't exist anymore. Choose another channel. |
-| `setup.quack_missing_channel_permissions` | Quack needs {permissions} in {channel}. Update the channel's permissions, then choose it again. |
-| `setup.module.not_ready` | {Module} can't be turned on yet:\n{problems, one per line} |
-| `module.problem.ticket_entry_missing` | Choose the channel where members open tickets. |
-| `module.problem.ticket_queue_missing` | Choose the staff channel for new tickets. |
+| `setup.adopted` | Quack found {channel} and saved it. |
+| `setup.create_failed.permission` | Quack couldn't create #{name}. `access.quack_role_needs` (administrator) Or choose an existing channel. |
+| `setup.create_failed.discord` | Discord didn't let Quack create #{name}. Choose an existing channel. |
+| `setup.create_unconfirmed` | Quack couldn't confirm whether Discord created #{name}. Check the channel list. If #{name} is there, choose it here. Otherwise, create it again. |
+| `setup.channel_not_staff_only` | Quack didn't save {channel}:\n{problems, one per line; each says how to fix it} |
+| `setup.problem.not_text` | Choose a text channel in this server. |
+| `setup.problem.everyone_can_view` | Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role. |
+| `setup.problem.role_can_view` | {role} can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel. |
+| `setup.problem.member_can_view` | {member} can view this channel. Remove their access in Edit Channel → Permissions or choose another channel. |
+| `setup.problem` (inaccessible) | Quack can't check this channel. In Edit Channel → Permissions, allow View Channel for Quack, then choose the channel again. |
+| `setup.problem` (missing) | This channel no longer exists. Choose another channel. |
+| `setup.quack_missing_channel_permissions` | `access.quack_channel_needs` (administrator) Then choose the channel again. |
+| `setup.module.not_ready` | {Module} can't be turned on yet:\n{problems, one per line} (no problems known: "{Module} can't be turned on yet. Open /setup to see what needs fixing.") |
+| `module.problem.ticket_entry_missing` | Choose where members open tickets. |
+| `module.problem.ticket_queue_missing` | Choose a staff channel for new tickets. |
 | `module.problem.ticket_same_channel` | The entry channel and the staff channel must be different. |
 | `module.problem.honeypot_channel_missing` | Choose the honeypot channel. |
 | `module.problem.honeypot_rule_missing` | Choose the rule the honeypot applies. |
-| `module.problem.honeypot_rule_required_fields` | The rule {rule} has required context fields, which the honeypot can't fill in. Choose another rule or make those fields optional. ("The rule the honeypot uses has …", not bold, when the name isn't known) |
+| `module.problem.honeypot_rule_required_fields` | The rule {rule} has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard. ("The rule the honeypot uses has …", not bold, when the name isn't known) |
 | `module.problem.activity_no_route` | Choose a channel for server activity. |
-| `module.problem.activity_needs_audit_log` | Quack needs the View Audit Log permission to show who banned or unbanned a member. |
-| `module.problem.channel_permissions` | Quack needs {permissions} in {channel}. |
-| `module.problem.channel_not_staff_only` | {channel} isn't staff-only. |
+| `module.problem.activity_needs_audit_log` | `access.quack_role_needs` (administrator, View Audit Log) Quack uses it to show who banned or unbanned a member. |
+| `module.problem.channel_permissions` | `access.quack_channel_needs` (administrator) |
+| `module.problem.channel_not_staff_only` | {channel} can be viewed by members outside staff. Fix its View Channel permissions or choose another channel. |
 | `setup.invite.modal.title` | Rejoin invite |
 | `setup.invite.modal.label` | Invite link |
-| `setup.invite.modal.description` | A Discord invite like https://discord.gg/abc123. Members get it when their appeal is accepted. (placeholder: https://discord.gg/abc123; prefilled with the current invite) |
+| `setup.invite.modal.description` | Paste a Discord invite link. Quack includes it in DMs about accepted appeals for kicks and bans. (placeholder: https://discord.gg/abc123; prefilled with the current invite) |
 | `setup.invite.invalid` | That isn't a Discord invite link. Use a link like https://discord.gg/abc123. |
 | `setup.warning.modal.title` | Honeypot warning |
 | `setup.warning.modal.label` | Warning text |
-| `setup.warning.modal.description` | Shown in the honeypot channel. Leave it empty to use Quack's default warning. (prefilled with the current custom warning) |
+| `setup.warning.modal.description` | Shown in the honeypot channel. Leave it empty for Quack's warning, which lists the rule's actions. (prefilled with the current custom warning) |
 
 An area panel is: the area's name as the heading (its `setup.button.*`
 label), the result of the last change, its `explain` line, its
@@ -3321,7 +3321,7 @@ dashboard's settings):
 | Code | Text |
 | --- | --- |
 | `too_many_roles` | Choose at most 25 roles. |
-| `duplicate_role` | A role is listed more than once. |
+| `duplicate_role` | Choose each role once. |
 | `everyone_role` | @everyone can't be a staff role. |
 | `unknown_role` | One of these roles isn't in the server anymore. Choose a current role. |
 | `invite_url` | `setup.invite.invalid` |
@@ -3336,9 +3336,9 @@ Created channels (name, topic, first message):
 | `channel.appeals` | `appeals` | Appeals for moderators to review. | ### Appeals\nNew appeals appear here. Accept or reject them here or on the dashboard. |
 | `channel.evidence` | `evidence` | Copies of evidence files for Quack cases. | ### Evidence\nQuack copies evidence files here so they last after the original message is deleted. Please don't delete messages here. |
 | `channel.ticket_entry` | `support` | Need help from the staff? Open a ticket below. | (the ticket panel, §12.13) |
-| `channel.ticket_queue` | `ticket-log` | New tickets and their transcripts. | ### Tickets\nNew tickets appear here. Open a ticket's thread to help. |
+| `channel.ticket_queue` | `ticket-log` | New tickets and their transcripts. | ### Tickets\nNew tickets appear here. Open a ticket's thread to reply. |
 | `channel.honeypot` | `honeypot` | Don't post here. Read the warning below. | (the honeypot warning, §12.13) |
-| `channel.activity_log` | `server-log` | Server activity: edits, deletions, joins, leaves, bans, and server changes. | ### Server activity log\nQuack posts server activity here. Only staff can see this channel. |
+| `channel.activity_log` | `server-log` | Message edits and deletions, members joining and leaving, bans, and server changes. | ### Server activity log\nQuack posts server activity here. Only staff can see this channel. |
 
 ### 12.12 Help, rules, lists
 

@@ -10,10 +10,10 @@ New tickets and their transcripts.
 tone: Neutral
 --- discord ---
 ### Tickets
-New tickets appear here. Open a ticket's thread to help.
+New tickets appear here. Open a ticket's thread to reply.
 --- plain ---
 Tickets
-New tickets appear here. Open a ticket's thread to help.
+New tickets appear here. Open a ticket's thread to reply.
 --- model ---
 Heading [Fixed("Tickets")]
-Text [Fixed("New tickets appear here. Open a ticket's thread to help.")]
+Text [Fixed("New tickets appear here. Open a ticket's thread to reply.")]

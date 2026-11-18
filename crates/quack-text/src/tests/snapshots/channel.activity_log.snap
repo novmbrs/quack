@@ -4,7 +4,7 @@ source: crates/quack-text/src/tests/snapshots.rs
 server-log
 
 ## topic
-Server activity: edits, deletions, joins, leaves, bans, and server changes.
+Message edits and deletions, members joining and leaving, bans, and server changes.
 
 ## first message
 tone: Neutral
