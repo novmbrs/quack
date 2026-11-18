@@ -17,6 +17,7 @@ use quack_telemetry::spans::SpanEvent;
 use crate::obs::{event, kv};
 use crate::{Engine, obs};
 
+pub use stale::message_deleted;
 pub use sync::{finalize, sync};
 
 /// The `sync_message` payload.

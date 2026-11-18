@@ -102,6 +102,52 @@ pub(super) async fn on_missing(
     Ok(handled)
 }
 
+/// `MESSAGE_DELETE` (§10.3): when the deleted message is a tracked one's
+/// current location, the same plan as a sync finding it gone, in its own
+/// transaction (database only), so a deleted panel, post, or warning is
+/// posted again at once. Anything else is ignored.
+pub async fn message_deleted(
+    engine: &Engine,
+    channel: quack_core::ids::ChannelId,
+    message: quack_core::ids::MessageId,
+) -> Result<(), DbError> {
+    let row = {
+        let mut conn = engine.db().conn().await?;
+        messages::by_location(&mut conn, channel, message).await?
+    };
+    let Some(row) = row else { return Ok(()) };
+    let token_valid = row
+        .interaction_token
+        .as_ref()
+        .is_some_and(|(_, at)| *at > OffsetDateTime::now_utc());
+    let plan = plan_for(
+        kind(&row),
+        current_channel(engine, &row).await?,
+        false,
+        token_valid,
+    );
+    let mut tx = engine.db().begin().await?;
+    let Some(locked) = messages::lock(&mut tx, row.guild, row.id).await? else {
+        return Ok(());
+    };
+    if locked.generation != row.generation || locked.message != Some(message) {
+        return Ok(());
+    }
+    match plan {
+        MissingPlan::Repost(to) => {
+            messages::relocate(&mut tx, row.guild, row.id, row.generation, Some(to)).await?;
+        }
+        MissingPlan::WaitForChannel => {
+            messages::relocate(&mut tx, row.guild, row.id, row.generation, None).await?;
+        }
+        MissingPlan::MarkGone | MissingPlan::BecomePrivate => {
+            messages::mark_gone(&mut tx, row.guild, row.id, row.generation).await?;
+        }
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
 /// The receipt Quack couldn't post becomes the moderator's private reply:
 /// the card with `case.receipt.post_failed` (§10.3).
 async fn become_private(

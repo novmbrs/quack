@@ -37,6 +37,11 @@ pub(crate) async fn handle(shared: &Shared, event: &Event) {
             guild_id,
             unavailable: false,
         } => left(engine, *guild_id).await,
+        Event::MessageDelete {
+            guild_id: Some(_),
+            channel_id,
+            message_id,
+        } => quack_engine::messages::message_deleted(engine, *channel_id, *message_id).await,
         Event::ChannelDelete(channel) => match channel.guild_id {
             Some(guild) => channel_deleted(engine, guild, channel.id).await,
             None => Ok(()),

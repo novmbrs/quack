@@ -8094,3 +8094,9 @@ folds these into the sections (or changes the code) and removes them here.
     `last_error = destination_unavailable` instead of posting "again" in
     the same channel under a new generation every run; the next bump (a
     settings change, say) tries again.
+57. §10.3 (engine review MAJOR 8) → `MESSAGE_DELETE` in a server calls
+    `messages::message_deleted`: when the message is a tracked row's
+    current location (same generation), the §10.3 table's plan runs in
+    one transaction (post again where it belongs, wait for a channel, or
+    `gone`) and its sync is queued; the gateway handler does one indexed
+    lookup per delete.

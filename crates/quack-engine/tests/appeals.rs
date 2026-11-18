@@ -520,3 +520,55 @@ async fn a_post_whose_configured_channel_is_gone_stops_trying() -> Result<()> {
     assert_eq!(post.generation, 1, "no new generation per run");
     Ok(())
 }
+
+/// Engine review MAJOR 8: a staff post deleted on Discord is posted again
+/// at once, with no other change to the appeal.
+#[tokio::test]
+async fn a_deleted_appeal_post_is_posted_again_at_once() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    let case = h.apply(MEMBER, rule).await?.case.id;
+    let channel = h.fake.world(|w| w.add_text_channel(h.guild, true));
+    sqlx::query("UPDATE guild_settings SET appeal_channel_id = $1 WHERE guild_id = $2")
+        .bind(i64::from(channel))
+        .bind(i64::try_from(GUILD)?)
+        .execute(h.db.db.pool())
+        .await?;
+    let appeal = submit(
+        &h.engine,
+        sf(MEMBER),
+        Origin::Dashboard,
+        case,
+        "Not me.",
+        &h.key("apm"),
+    )
+    .await?
+    .appeal;
+    h.settle().await?;
+    let post = |h: &Harness| {
+        let h = h.db.db.clone();
+        async move {
+            let mut conn = h.conn().await?;
+            quack_db::messages::by_owner(
+                &mut conn,
+                quack_testkit::sf(GUILD),
+                quack_db::messages::Owner::Appeal(appeal),
+            )
+            .await?
+            .context("the appeal's post")
+        }
+    };
+    let before = post(&h).await?;
+    let first = before.message.context("posted")?;
+    h.fake.world(|w| w.messages.retain(|id, _| *id != first));
+    quack_engine::messages::message_deleted(&h.engine, channel, first).await?;
+    h.settle().await?;
+    let after = post(&h).await?;
+    assert_eq!(after.channel, Some(channel));
+    assert!(after.message.is_some_and(|m| m != first), "posted again");
+    assert_eq!(h.fake.world(|w| w.sent_to(channel).len()), 1);
+    // A delete of any other message changes nothing.
+    quack_engine::messages::message_deleted(&h.engine, channel, first).await?;
+    assert_eq!(post(&h).await?.generation, after.generation);
+    Ok(())
+}
