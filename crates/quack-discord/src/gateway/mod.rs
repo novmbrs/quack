@@ -26,6 +26,7 @@ use twilight_gateway::{
 use twilight_gateway::error::ReceiveMessageErrorType;
 
 use crate::cache::{GuildCache, MemberCache, feed_members};
+use crate::rest::{DiscordClient, Outcome};
 
 pub use dispatch::{
     EVENT_QUEUE_LEN, EVENT_QUEUES, INTERACTION_QUEUE_LEN, MAX_INTERACTION_HANDLERS,
@@ -114,6 +115,29 @@ pub enum GatewayError {
     /// 4004, authentication failed).
     #[error("Discord closed the gateway and Quack can't reconnect (close code {0:?})")]
     Closed(Option<u16>),
+    /// Discord recommends more than one shard (about 2,500 servers); Quack
+    /// runs one (§11.9, §20.4).
+    #[error(
+        "Discord recommends {0} gateway shards for this application, but Quack runs one shard \
+         (up to about 2,500 servers)"
+    )]
+    TooManyShards(u32),
+    /// `GET /gateway/bot` failed, so the shard count is unknown.
+    #[error("couldn't read the gateway settings from Discord ({0})")]
+    ShardCheck(String),
+}
+
+/// Checks `GET /gateway/bot` before connecting: more than one recommended
+/// shard stops `serve` (§11.9).
+pub async fn check_shards(client: &DiscordClient) -> Result<(), GatewayError> {
+    match client.gateway_bot().await {
+        Outcome::Done(info) if info.shards <= 1 => Ok(()),
+        Outcome::Done(info) => Err(GatewayError::TooManyShards(info.shards)),
+        Outcome::Refused(r) => Err(GatewayError::ShardCheck(r.machine_code())),
+        Outcome::RetryAfter(d) => Err(GatewayError::ShardCheck(format!("rate limited for {d:?}"))),
+        Outcome::NotSent(c) => Err(GatewayError::ShardCheck(format!("not sent: {c:?}"))),
+        Outcome::Unknown(c) => Err(GatewayError::ShardCheck(format!("no answer: {c:?}"))),
+    }
 }
 
 /// The gateway's connection state, shared with readiness checks.
@@ -191,6 +215,8 @@ impl Gateway {
         D: Fn(&Event) + Send + Sync + 'static,
     {
         let dispatcher = dispatch::Dispatcher::start(Arc::new(handler));
+        self.guilds.observe();
+        self.members.observe();
         let status = Arc::downgrade(&self.status);
         metrics()
             .gateway

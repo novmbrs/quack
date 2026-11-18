@@ -348,3 +348,39 @@ async fn interactions_run_concurrently_up_to_the_limit() {
     gate.close();
     dispatcher.stop().await;
 }
+
+#[tokio::test]
+async fn more_than_one_recommended_shard_stops_startup() {
+    let server = httpmock::MockServer::start_async().await;
+    let answer = server
+        .mock_async(|when, then| {
+            when.method("GET").path("/api/v10/gateway/bot");
+            then.status(200).json_body(json!({
+                "url": "wss://gateway.discord.gg",
+                "shards": 1,
+                "session_start_limit": {
+                    "total": 1000, "remaining": 999, "reset_after": 1000, "max_concurrency": 1
+                }
+            }));
+        })
+        .await;
+    let client = crate::rest::tests::client(&server.base_url());
+    assert!(check_shards(&client).await.is_ok());
+    answer.delete_async().await;
+    server
+        .mock_async(|when, then| {
+            when.method("GET").path("/api/v10/gateway/bot");
+            then.status(200).json_body(json!({
+                "url": "wss://gateway.discord.gg",
+                "shards": 3,
+                "session_start_limit": {
+                    "total": 1000, "remaining": 999, "reset_after": 1000, "max_concurrency": 1
+                }
+            }));
+        })
+        .await;
+    assert!(matches!(
+        check_shards(&client).await,
+        Err(GatewayError::TooManyShards(3))
+    ));
+}

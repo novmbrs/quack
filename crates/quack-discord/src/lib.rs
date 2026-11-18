@@ -17,6 +17,14 @@
 //!
 //! The engine's `Discord` port is implemented in the binary on top of this
 //! crate, because this crate must not depend on `quack-engine` (§17.2).
+//! Each port method is one call here: the fact reads (`guild_facts`,
+//! `member`, `channel_facts`, `guild_channels`) go to [`facts::Facts`];
+//! everything else to the [`DiscordClient`] method of the same name, with
+//! `send`/`edit` taking [`rest::MessageBody::from_msg`]. Outcomes map
+//! variant for variant; the two causes the port lacks map to its nearest
+//! one: [`UnknownCause::Malformed`] (Discord confirmed but Quack couldn't
+//! read the answer) to `Unknown(Connection)`, and [`NotSentCause::Invalid`]
+//! (Quack refused to build the request) to `NotSent(Connection)`.
 
 pub mod cache;
 pub mod commands;

@@ -232,21 +232,47 @@ impl GuildCache {
         channel: ChannelId,
         now: OffsetDateTime,
     ) -> Option<Option<ChannelFacts>> {
+        let found = self.channel_facts_inner(guild, channel, now);
+        // A channel the cache lacks is read over REST, so it counts as a miss.
+        metrics()
+            .caches
+            .lookup(NAME, matches!(found, Some(Some(_))));
+        found
+    }
+
+    #[allow(
+        clippy::option_option,
+        reason = "the same shape as channel_facts: untrusted, or absent"
+    )]
+    fn channel_facts_inner(
+        &self,
+        guild: GuildId,
+        channel: ChannelId,
+        now: OffsetDateTime,
+    ) -> Option<Option<ChannelFacts>> {
         let facts = self.guild_facts_inner(guild, now)?;
-        let found = self.channel(guild, channel).map(|c| {
+        Some(self.channel(guild, channel).map(|c| {
             let parent = c
                 .is_thread()
                 .then(|| c.parent_id.and_then(|p| self.channel(guild, p)))
                 .flatten();
             channel_facts(&facts, &c, parent.as_ref(), now)
-        });
-        metrics().caches.lookup(NAME, true);
-        Some(found)
+        }))
     }
 
     /// Every channel of the server (not threads), or `None` when the cache
     /// isn't trusted.
     pub fn guild_channels(&self, guild: GuildId, now: OffsetDateTime) -> Option<Vec<ChannelFacts>> {
+        let found = self.guild_channels_inner(guild, now);
+        metrics().caches.lookup(NAME, found.is_some());
+        found
+    }
+
+    fn guild_channels_inner(
+        &self,
+        guild: GuildId,
+        now: OffsetDateTime,
+    ) -> Option<Vec<ChannelFacts>> {
         let facts = self.guild_facts_inner(guild, now)?;
         let ids: Vec<ChannelId> = self
             .cache
@@ -254,7 +280,6 @@ impl GuildCache {
             .iter()
             .filter_map(|c| convert::id(*c))
             .collect();
-        metrics().caches.lookup(NAME, true);
         Some(
             ids.into_iter()
                 .filter_map(|id| self.channel(guild, id))
