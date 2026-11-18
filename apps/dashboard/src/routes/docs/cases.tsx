@@ -10,49 +10,63 @@ function Cases() {
   return (
     <Doc
       title="Cases"
-      lead="A case is the record of a member breaking a rule. Adding one is how you moderate with Quack."
+      lead="A case is the record of a rule applied to a member. Adding one is how you moderate with Quack."
     >
       <Section id="add" title="Add a case">
         <p>There are three ways, and they all do the same thing:</p>
         <ul>
           <li>
-            Run <Cmd>/case add</Cmd>, then pick the rule and the member.
+            Run <Cmd>/case add</Cmd>, then choose the member and the rule.
           </li>
           <li>
-            Right-click a message and choose <Cmd>Apps → Add case</Cmd>. The message is saved as
+            Right-click a message and choose <Cmd>Apps → Add case</Cmd>. Quack saves the message as
             evidence.
           </li>
           <li>
-            Right-click a member and choose <Cmd>Apps → Add case for member</Cmd>.
+            Right-click a member and choose <Cmd>Apps → Add case</Cmd>.
           </li>
         </ul>
         <p>
-          You can also add cases from the dashboard, on the <b>Cases</b> page.
+          You can also add cases on the dashboard, on the <b>Cases</b> page, where Quack shows which
+          level the rule will use before you save.
         </p>
       </Section>
 
       <Section id="what-happens" title="What happens next">
         <p>Quack takes it from there:</p>
         <ul>
-          <li>Counts the member's earlier cases for that rule and picks the right level.</li>
-          <li>Times out, kicks, or bans the member if that level says to.</li>
-          <li>Sends the member one DM with the reason and what happened.</li>
-          <li>Posts a short summary where you ran the command.</li>
+          <li>
+            Counts the member's valid cases under that rule, including the new one, and picks the
+            level.
+          </li>
+          <li>Times out, kicks, or bans the member if that level has an action.</li>
+          <li>Sends the member one DM about the case, if the level sends one.</li>
+          <li>
+            Posts the case receipt in the channel. Set <b>private</b> to True to show it only to
+            you.
+          </li>
+          <li>Records it all in the moderation log.</li>
         </ul>
+        <p>
+          Open the case with <Cmd>/case view</Cmd> or on the dashboard to see each outcome. An
+          action or DM is in progress, done, failed, or Quack couldn't confirm it. For the DM, that
+          reads sent, couldn't send, couldn't confirm, or not needed. When Quack couldn't send a DM,
+          the member can still see the case by signing in to the dashboard.
+        </p>
         <Note>
-          Quack punishes with its own permissions, so you don't need Ban Members for a case that
-          bans. You do need a higher role than the member, and Quack won't add a case it can't carry
-          out. See <Link to="/docs/permissions">Who can do what</Link>.
+          Quack takes the action with its own permissions, so you don't need Ban Members for a case
+          that bans. You do need a higher role than the member. See{" "}
+          <Link to="/docs/permissions">Who can do what</Link>.
         </Note>
       </Section>
 
       <Section id="evidence" title="Evidence">
         <p>
-          Attach a screenshot or paste a message link when you add the case, or add it later with{" "}
-          <Cmd>/case evidence</Cmd>. You can link anyone's message, including Quack's own logs; the
-          member sees the message but not who wrote it. Quack saves a copy of the message. With{" "}
-          <Cmd>/setup evidence</Cmd>, it also keeps copies of the files, so they're still there if
-          the original gets deleted.
+          Evidence is saved message snapshots and their files. Add case from a message, message
+          links in the case context, and <b>Add evidence</b> on the case all add evidence. Quack
+          saves a copy of each message. With evidence copies turned on in <Cmd>/setup</Cmd>, it also
+          keeps copies of the files in a staff channel, so they're still there if the original gets
+          deleted. Members can see the evidence on their case, but not who wrote it.
         </p>
         <Note tone="warn">
           Quack can't save a message that's already gone. Add the case before deleting the message.
@@ -61,34 +75,40 @@ function Cases() {
 
       <Section id="mistakes" title="Fixing a mistake">
         <p>
-          Cases can't be edited or deleted. If a case was wrong, <b>void</b> it with{" "}
-          <Cmd>/case void</Cmd> or the button on the case. A voided case:
+          A case's decision never changes. If a case was wrong, <b>void</b> it with{" "}
+          <Cmd>/case void</Cmd> or <b>Void case</b>. A voided case:
         </p>
         <ul>
           <li>stays in the history, marked as voided,</li>
-          <li>no longer counts toward the member's punishments, and</li>
-          <li>has its timeout or ban removed when possible.</li>
+          <li>no longer counts toward the member's case count, and</li>
+          <li>
+            has its timeout or ban removed when Quack can. A kick can't be undone. Open the case
+            afterwards to check the outcome.
+          </li>
         </ul>
-        <p>Then add a new case with the right rule if you need to.</p>
+        <p>
+          Then add a new case with the right rule if you need to. On the dashboard you can link it
+          as the replacement. You can still edit a case's context and add evidence after it's saved.
+        </p>
       </Section>
 
       <Section id="look-up" title="Looking things up">
         <ul>
           <li>
-            <Cmd>/case list</Cmd> shows recent cases.
+            <Cmd>/case list</Cmd> lists recent cases.
           </li>
           <li>
-            <Cmd>/case user</Cmd> shows one member's history.
+            <Cmd>/case history</Cmd> shows one member's case history.
           </li>
           <li>
-            <Cmd>/case view</Cmd> shows one case in full.
-          </li>
-          <li>
-            <Cmd>/case failures</Cmd> shows punishments that didn't go through, usually because
-            Quack's role was too low. You can retry or dismiss them.
+            <Cmd>/case view</Cmd> opens one case by number, with buttons to retry or dismiss a
+            failed action.
           </li>
         </ul>
-        <p>The dashboard has all of this too, with search.</p>
+        <p>
+          The dashboard has all of this too, with filters, and a <b>Failed actions</b> page for
+          actions that didn't go through, usually because Quack's role was too low.
+        </p>
       </Section>
     </Doc>
   );

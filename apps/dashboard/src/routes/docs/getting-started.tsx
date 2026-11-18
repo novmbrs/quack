@@ -30,55 +30,56 @@ function GettingStarted() {
           </Step>
           <Step title="Check the starter rule">
             <p>
-              Quack comes with one rule, <b>General rule violation</b>: a warning for the first two
-              cases, a 24-hour timeout for the third and fourth, and a ban from the fifth on.
+              Quack comes with one rule, <b>General rule violation</b>: a warning at 1 case, a
+              timeout for 1 day at 3 cases, and a ban at 5 cases.
             </p>
             <p>
               Open the <Link to="/guilds">dashboard</Link>, pick your server, and go to <b>Rules</b>{" "}
               to change it or add your own. See <Link to="/docs/rules">Rules</Link> for how.
             </p>
           </Step>
-          <Step title="Pick an appeals channel">
+          <Step title="Run /setup">
             <p>
-              Run <Cmd>/setup appeals</Cmd> in your server. Quack creates a staff-only channel where
-              appeals show up, or you can choose one you already have.
+              Run <Cmd>/setup</Cmd> in your server. Pick a log channel for the moderation log and a
+              channel where appeals show up, or let Quack create staff-only ones. You can change the
+              same settings on the dashboard.
             </p>
           </Step>
           <Step title="Try it out">
             <p>
-              Run <Cmd>/case add</Cmd>, pick a rule, and pick a member. Quack posts the result and
-              DMs the member. Use a friend or an alt account: Quack won't add cases for you, bots,
-              or the server owner.
+              Run <Cmd>/case add</Cmd>, pick a member and a rule. Quack posts the case receipt and
+              sends the member a DM. Use a friend or an alt account: Quack won't add cases about
+              you, bots, or the server owner.
             </p>
           </Step>
         </Steps>
       </Section>
 
       <Section id="next" title="Optional extras">
-        <p>When you're ready, these each take one command:</p>
+        <p>
+          When you're ready, <Cmd>/setup</Cmd> also turns these on:
+        </p>
         <ul>
           <li>
-            <Cmd>/setup audit</Cmd> posts Quack's moderation activity in a staff channel.
+            <b>Evidence copies</b> keep copies of evidence files in a staff channel.
           </li>
           <li>
-            <Cmd>/setup evidence</Cmd> keeps copies of evidence files in a staff channel.
+            <b>Tickets</b> let members open private support threads with your staff.
           </li>
           <li>
-            <Cmd>/setup tickets</Cmd> lets members open private support threads.
+            <b>Server activity log</b> posts edited and deleted messages, joins, leaves, and other
+            server changes to a staff channel.
           </li>
           <li>
-            <Cmd>/setup logging</Cmd> logs deleted and edited messages and other server changes.
-          </li>
-          <li>
-            <Cmd>/setup honeypot</Cmd> sets a trap for spam bots.
+            <b>Honeypot</b> sets a trap channel for spam bots.
           </li>
         </ul>
         <p>
           More on each in <Link to="/docs/extras">Tickets, logs & more</Link>.
         </p>
         <Note>
-          Stuck? Run <Cmd>/help</Cmd> in your server for a quick overview, with a link to the right
-          dashboard page.
+          Stuck? Run <Cmd>/help</Cmd> in your server for a quick overview, with a link to the
+          dashboard.
         </Note>
       </Section>
     </Doc>

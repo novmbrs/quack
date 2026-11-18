@@ -10,62 +10,65 @@ function Extras() {
   return (
     <Doc
       title="Tickets, logs & more"
-      lead="Optional features you can turn on with one command each. None of them are needed to use Quack."
+      lead="Channels and optional modules you set up with /setup or on the dashboard. None of the modules are needed to use Quack."
     >
       <Note>
-        Run any setup command without picking channels and Quack creates what it needs. Or choose
-        channels you already have.
+        In <Cmd>/setup</Cmd>, choose a channel you already have or let Quack create one. Keep the
+        log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members
+        need access to the ticket entry and honeypot channels.
       </Note>
 
-      <Section id="tickets" title="Tickets">
+      <Section id="log-channel" title="Log channel">
         <p>
-          <Cmd>/setup tickets</Cmd> posts a panel where members can open a private thread with your
-          staff. When the ticket is closed, Quack saves a transcript and DMs the member a copy when
-          it can.
-        </p>
-      </Section>
-
-      <Section id="audit" title="Moderation log">
-        <p>
-          <Cmd>/setup audit</Cmd> posts Quack's activity in a staff channel: new cases, voids,
-          appeal decisions, rule changes, and so on. The full history is always in the dashboard
-          too.
+          Quack posts each moderation log entry in the log channel: new cases, voids, failed
+          actions, appeal decisions, rule changes, and so on. The full moderation log is always on
+          the dashboard too.
         </p>
       </Section>
 
       <Section id="evidence" title="Evidence copies">
         <p>
-          <Cmd>/setup evidence</Cmd> picks a staff-only channel where Quack keeps copies of evidence
-          files, so they stay viewable after the original message is deleted. Without it, Quack
-          keeps each file's details and a link to the original.
+          Pick a staff-only channel where Quack keeps copies of evidence files, so they stay
+          viewable after the original message is deleted. Without it, Quack keeps each file's
+          details and a link to the original.
         </p>
       </Section>
 
-      <Section id="logging" title="Server logs">
+      <Section id="tickets" title="Tickets">
         <p>
-          <Cmd>/setup logging</Cmd> keeps an eye on your server and posts things like edited and
-          deleted messages, and changes to channels and the server, in a staff channel.
+          Members open a private thread with your staff from a panel in the entry channel, and staff
+          get a post about each new ticket in a staff channel. When a ticket closes, Quack saves a
+          transcript and tries to send the member a DM with it. Transcripts stay on the dashboard
+          for 90 days by default.
         </p>
+      </Section>
+
+      <Section id="activity-log" title="Server activity log">
+        <p>
+          Posts Discord events to staff-only channels: edited and deleted messages, members joining,
+          leaving, banned, and unbanned, and changes to channels and the server. Route every event
+          to one channel, or each to its own on the dashboard. It isn't a searchable archive.
+        </p>
+        <Note>To show who banned or unbanned a member, Quack's role needs View Audit Log.</Note>
       </Section>
 
       <Section id="honeypot" title="Honeypot">
         <p>
-          <Cmd>/setup honeypot</Cmd> creates a trap channel with a warning not to post in it. Real
-          members read the warning. Spam bots don't. Anyone who posts there gets a case under the
-          rule you pick, and moderators are left alone.
+          A trap channel with a warning not to post in it. Real members read the warning. Spam bots
+          don't. When someone who isn't staff posts there, Quack adds a case under the rule you
+          choose and deletes the post.
         </p>
         <Note tone="warn">
-          Check which rule the honeypot uses before turning it on. Whatever that rule does, it does
-          automatically.
+          Check which rule the honeypot uses before turning it on. Whatever that rule's levels do,
+          Quack does automatically. The rule can't have required case context.
         </Note>
       </Section>
 
-      <Section id="pause" title="Pausing a feature">
+      <Section id="pause" title="Turning a module off">
         <p>
-          Use <Cmd>enabled:false</Cmd> on its own with <Cmd>/setup tickets</Cmd>,{" "}
-          <Cmd>/setup logging</Cmd>, or <Cmd>/setup honeypot</Cmd> to pause it. Use{" "}
-          <Cmd>enabled:true</Cmd> to turn it back on. Your channels are kept. You can also manage
-          all of these in the dashboard under <b>Settings</b>.
+          Turn tickets, the server activity log, or the honeypot on and off in <Cmd>/setup</Cmd> or
+          on the module's dashboard page. Your settings are kept. If a module's channel is deleted,
+          Quack turns the module off and the dashboard says what to fix.
         </p>
       </Section>
     </Doc>

@@ -16,7 +16,7 @@ export function CasePreview() {
       <div className={s.window}>
         <div className={s.bar}>
           <Hash size={16} />
-          <span>mod-chat</span>
+          <span>staff-chat</span>
         </div>
         <div className={s.body}>
           <div className={s.used}>
