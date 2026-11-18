@@ -1367,10 +1367,22 @@ dependencies = [
 name = "quack-engine"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "aws-lc-rs",
+ "opentelemetry",
+ "proptest",
  "quack-core",
  "quack-db",
  "quack-telemetry",
+ "quack-testkit",
  "quack-text",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "time",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -1412,9 +1424,16 @@ dependencies = [
 name = "quack-testkit"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "quack-core",
  "quack-db",
  "quack-engine",
+ "quack-text",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

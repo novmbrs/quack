@@ -64,6 +64,10 @@ oauth2 = { version = "=5.0.0", default-features = false }
 tower-sessions = { version = "=0.15.0", default-features = false, features = ["axum-core"] }
 tower-sessions-sqlx-store = { version = "=0.16.0", features = ["postgres"] }
 
+# Hashing (SHA-256 of operation-key requests); already in the graph
+# through rustls, so this adds no new code (design §20.5 #31).
+aws-lc-rs = { version = "=1.19.0", default-features = false, features = ["aws-lc-sys"] }
+
 # Config, errors, ids, time.
 config = { version = "=0.15.27", default-features = false, features = ["toml"] }
 serde = { version = "=1.0.229", features = ["derive"] }
