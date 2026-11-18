@@ -53,13 +53,15 @@ pub(crate) fn decide(n: &Notice<'_>, voided: bool) -> Decided {
             in_flight: Some("dm_sending_unknown"),
             derived: None,
         },
-        "sent" => match (n.channel, n.message) {
-            (Some(channel), Some(message)) => plain(DmState::Sent {
-                channel,
+        // Go didn't always keep the DM channel; the message ID is enough
+        // to know the DM was sent.
+        "sent" => match n.message {
+            Some(message) => plain(DmState::Sent {
+                channel: n.channel,
                 message,
                 at: n.sent_at.unwrap_or(at),
             }),
-            _ => Decided {
+            None => Decided {
                 state: DmState::Unknown {
                     at: n.sent_at.unwrap_or(at),
                 },
@@ -201,7 +203,15 @@ mod tests {
         assert_eq!(
             decide(&n("sent", "", Some(1), Some(2)), false).state,
             DmState::Sent {
-                channel: 1,
+                channel: Some(1),
+                message: 2,
+                at
+            }
+        );
+        assert_eq!(
+            decide(&n("sent", "", None, Some(2)), false).state,
+            DmState::Sent {
+                channel: None,
                 message: 2,
                 at
             }

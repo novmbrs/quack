@@ -69,8 +69,10 @@ pub async fn fix_access(
         let (TicketState::Open, Some(thread)) = (t.state, t.thread) else {
             return Err(DomainError::TicketNotOpen.into());
         };
+        // An imported ticket may not know its entry channel; the thread
+        // then names where the permission is needed.
         let failed = FixAnswer::Failed {
-            channel: t.entry_channel,
+            channel: t.entry_channel.unwrap_or(thread),
         };
         let discord = engine.discord();
         let Outcome::Done(facts) = discord.guild_facts(guild).await else {

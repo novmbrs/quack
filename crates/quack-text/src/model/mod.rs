@@ -54,6 +54,8 @@ pub enum Actor {
     Quack,
     /// A person acted.
     Person(Person),
+    /// A moderator imported history didn't name ("a moderator").
+    UnknownModerator,
 }
 
 /// A channel or thread, shown as a mention or `#name`.
@@ -286,6 +288,7 @@ impl Text {
         match a {
             Actor::Quack => self.s("Quack"),
             Actor::Person(p) => self.person(p),
+            Actor::UnknownModerator => self.s("a moderator"),
         }
     }
 

@@ -61,8 +61,9 @@ pub struct Action {
     pub no_change: bool,
     /// When it became `done`.
     pub done_at: Option<OffsetDateTime>,
-    /// When and by whom a failure was dismissed.
-    pub dismissed: Option<(OffsetDateTime, AccountId)>,
+    /// When a failure was dismissed, and by whom (`None` for some
+    /// imported history, which didn't record who).
+    pub dismissed: Option<(OffsetDateTime, Option<AccountId>)>,
     /// When it was created (the case's creation, or the undo request).
     pub created_at: OffsetDateTime,
 }
@@ -161,9 +162,9 @@ impl TryFrom<ActionRow> for Action {
                 })
             })
             .transpose()?;
-        let dismissed = match (r.dismissed_at, r.dismissed_by) {
-            (Some(at), Some(by)) => Some((at, id(by)?)),
-            _ => None,
+        let dismissed = match r.dismissed_at {
+            Some(at) => Some((at, opt_id(r.dismissed_by)?)),
+            None => None,
         };
         Ok(Self {
             id: ActionId::from_uuid(r.id),

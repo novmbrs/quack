@@ -66,9 +66,10 @@ pub(crate) fn refusal_in(
             access::quack_not_in_server()
         }
         (MemberRefusal::ActorNotInServer, Voice::You) => t.s("You're not in this server anymore."),
-        (MemberRefusal::ActorNotInServer, Voice::Log(a @ Actor::Person(_))) => {
-            t.actor(a).s(" isn't in this server anymore.")
-        }
+        (
+            MemberRefusal::ActorNotInServer,
+            Voice::Log(a @ (Actor::Person(_) | Actor::UnknownModerator)),
+        ) => t.actor(a).s(" isn't in this server anymore."),
         (MemberRefusal::MemberNotInServer, Voice::You) => {
             who(t, true).s(" isn't in this server. Choose a current member.")
         }
@@ -78,9 +79,10 @@ pub(crate) fn refusal_in(
         (MemberRefusal::MemberIsSelf, Voice::You) => {
             t.s("You can't add a case about yourself. Ask another moderator.")
         }
-        (MemberRefusal::MemberIsSelf, Voice::Log(a @ Actor::Person(_))) => {
-            t.actor(a).s(" can't add a case about themselves.")
-        }
+        (
+            MemberRefusal::MemberIsSelf,
+            Voice::Log(a @ (Actor::Person(_) | Actor::UnknownModerator)),
+        ) => t.actor(a).s(" can't add a case about themselves."),
         (
             MemberRefusal::MemberIsSelf | MemberRefusal::MemberRoleTooHigh,
             Voice::Log(Actor::Quack),
@@ -92,7 +94,10 @@ pub(crate) fn refusal_in(
             who(t, true).s(" owns this server. Quack doesn't add cases about the server owner.")
         }
         (MemberRefusal::MemberRoleTooHigh, Voice::You) => access::your_role_too_low(member),
-        (MemberRefusal::MemberRoleTooHigh, Voice::Log(a @ Actor::Person(_))) => {
+        (
+            MemberRefusal::MemberRoleTooHigh,
+            Voice::Log(a @ (Actor::Person(_) | Actor::UnknownModerator)),
+        ) => {
             let t = t.actor(a).s("'s highest role must be above ");
             who(t, false).s("'s highest role.")
         }

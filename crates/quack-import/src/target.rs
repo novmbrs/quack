@@ -159,9 +159,9 @@ pub(crate) struct NewDm {
 pub(crate) enum DmState {
     /// Not sent yet; a `send_dm` job sends it after cutover.
     Pending,
-    /// Sent: the DM channel and message.
+    /// Sent: the DM channel (when Go kept it) and message.
     Sent {
-        channel: i64,
+        channel: Option<i64>,
         message: i64,
         at: OffsetDateTime,
     },
@@ -203,7 +203,7 @@ pub(crate) async fn dm(
             channel,
             message,
             at,
-        } => (None, Some(*channel), Some(*message), Some(*at), Some(*at)),
+        } => (None, *channel, Some(*message), Some(*at), Some(*at)),
         DmState::Unknown { at } => (None, None, None, Some(*at), Some(*at)),
         DmState::Failed { failure, at } => (Some(*failure), None, None, None, Some(*at)),
         DmState::NotNeeded { at } => (None, None, None, None, Some(*at)),

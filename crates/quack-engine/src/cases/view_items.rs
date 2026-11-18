@@ -173,7 +173,7 @@ pub(super) fn action_item(
         skipped_because_case_number: view.still_applies_case,
         requested_by: a.requested_by,
         dismissed_at: a.dismissed.map(|(at, _)| at),
-        dismissed_by: a.dismissed.map(|(_, by)| by),
+        dismissed_by: a.dismissed.and_then(|(_, by)| by),
         done_at: a.done_at,
         created_at: a.created_at,
         attempt_log: r

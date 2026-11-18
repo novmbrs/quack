@@ -41,10 +41,12 @@ fn action_view(item: &ActionItem, original: Option<&ActionItem>, case_number: u6
         },
         ban_delete_message_seconds: item.delete_message_seconds,
         case_number,
-        dismissed: item
-            .dismissed_at
-            .zip(item.dismissed_by)
-            .map(|(at, by)| (Actor::Person(Person::unnamed(by)), at)),
+        dismissed: item.dismissed_at.map(|at| {
+            let by = item.dismissed_by.map_or(Actor::UnknownModerator, |by| {
+                Actor::Person(Person::unnamed(by))
+            });
+            (by, at)
+        }),
         may_have_applied: may_have_applied(&attempts),
     }
 }

@@ -130,11 +130,11 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
                         .s("'s timeout for "),
                     d.case_number,
                 ),
-                (Actor::Person(_), true) => case(
+                (Actor::Person(_) | Actor::UnknownModerator, true) => case(
                     member(actor().s(" asked Quack to unban ")).s(" for "),
                     d.case_number,
                 ),
-                (Actor::Person(_), false) => case(
+                (Actor::Person(_) | Actor::UnknownModerator, false) => case(
                     member(actor().s(" asked Quack to remove ")).s("'s timeout for "),
                     d.case_number,
                 ),

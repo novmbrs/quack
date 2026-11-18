@@ -160,12 +160,11 @@ async fn ticket(cx: &mut Ctx<'_>, c: &Cols<'_>, extra_live: bool) -> Result<(), 
         life = Life::Closed(updated_at);
     }
     let log_channel = c.snowflake("log_channel_discord_id")?.id();
-    let Some(entry) = cx.ticket_entry_channel.or(log_channel).or(thread) else {
-        cx.f.skip("tickets", "no_entry_channel", &key);
-        return Ok(());
-    };
-    if cx.ticket_entry_channel.is_none() {
-        cx.f.derived("ticket_entry_channel_guessed", &key);
+    // Without ticket settings the entry channel is unknown; the schema
+    // allows that for a ticket that is not opening (imported ones never are).
+    let entry = cx.ticket_entry_channel;
+    if entry.is_none() {
+        cx.f.derived("ticket_entry_channel_unknown", &key);
     }
     let closed = match life {
         Life::Open => None,

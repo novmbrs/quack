@@ -76,6 +76,11 @@ discord: Quack couldn't time out <@222>.
 plain:   Quack couldn't time out Sam.
 model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
 
+## Timeout Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't time out <@222>.
+plain:   Quack couldn't time out Sam.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
 ## Timeout Failed RetriesExhausted
 discord: Quack couldn't time out <@222>.
 plain:   Quack couldn't time out Sam.
@@ -162,6 +167,11 @@ plain:   Quack couldn't remove Sam from the server.
 model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
 
 ## Kick Failed DiscordRefused dismissed
+discord: Quack couldn't remove <@222> from the server.
+plain:   Quack couldn't remove Sam from the server.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
+
+## Kick Failed DiscordRefused dismissed by an unrecorded moderator
 discord: Quack couldn't remove <@222> from the server.
 plain:   Quack couldn't remove Sam from the server.
 model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
@@ -261,6 +271,11 @@ discord: Quack couldn't ban <@222>.
 plain:   Quack couldn't ban Sam.
 model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
 
+## Ban Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't ban <@222>.
+plain:   Quack couldn't ban Sam.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
 ## Ban Failed RetriesExhausted
 discord: Quack couldn't ban <@222>.
 plain:   Quack couldn't ban Sam.
@@ -356,6 +371,11 @@ discord: Quack couldn't remove <@222>'s timeout.
 plain:   Quack couldn't remove Sam's timeout.
 model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
 
+## RemoveTimeout Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't remove <@222>'s timeout.
+plain:   Quack couldn't remove Sam's timeout.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
+
 ## RemoveTimeout Failed RetriesExhausted
 discord: Quack couldn't remove <@222>'s timeout.
 plain:   Quack couldn't remove Sam's timeout.
@@ -442,6 +462,11 @@ plain:   Quack couldn't unban Sam.
 model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
 
 ## Unban Failed DiscordRefused dismissed
+discord: Quack couldn't unban <@222>.
+plain:   Quack couldn't unban Sam.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Unban Failed DiscordRefused dismissed by an unrecorded moderator
 discord: Quack couldn't unban <@222>.
 plain:   Quack couldn't unban Sam.
 model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]

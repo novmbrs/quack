@@ -101,9 +101,13 @@ async fn live_answer(
     Ok(match (live.state, live.thread) {
         (TicketState::Open, Some(thread)) => OpenAnswer::Exists { thread },
         (TicketState::Closing | TicketState::Closed, _) => OpenAnswer::Closing,
-        _ => OpenAnswer::Opening {
-            entry: live.entry_channel,
-            ticket: live.id,
+        // A ticket still opening always has its entry channel.
+        _ => match live.entry_channel {
+            Some(entry) => OpenAnswer::Opening {
+                entry,
+                ticket: live.id,
+            },
+            None => OpenAnswer::Closing,
         },
     })
 }

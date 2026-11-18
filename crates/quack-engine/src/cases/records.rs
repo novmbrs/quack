@@ -162,7 +162,9 @@ impl CaseRecords {
             case_number: self.case.number,
             dismissed: action.dismissed.map(|(at, by)| {
                 (
-                    quack_text::Actor::Person(quack_text::Person::unnamed(by)),
+                    by.map_or(quack_text::Actor::UnknownModerator, |by| {
+                        quack_text::Actor::Person(quack_text::Person::unnamed(by))
+                    }),
                     at,
                 )
             }),

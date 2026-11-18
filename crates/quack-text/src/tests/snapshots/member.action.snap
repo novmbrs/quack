@@ -76,6 +76,11 @@ discord: Quack didn't time you out.
 plain:   Quack didn't time you out.
 model:   [Fixed("Quack didn't time you out.")]
 
+## Timeout Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack didn't time you out.
+plain:   Quack didn't time you out.
+model:   [Fixed("Quack didn't time you out.")]
+
 ## Timeout Failed RetriesExhausted
 discord: Quack didn't time you out.
 plain:   Quack didn't time you out.
@@ -162,6 +167,11 @@ plain:   Quack didn't remove you from the server.
 model:   [Fixed("Quack didn't remove you from the server.")]
 
 ## Kick Failed DiscordRefused dismissed
+discord: Quack didn't remove you from the server.
+plain:   Quack didn't remove you from the server.
+model:   [Fixed("Quack didn't remove you from the server.")]
+
+## Kick Failed DiscordRefused dismissed by an unrecorded moderator
 discord: Quack didn't remove you from the server.
 plain:   Quack didn't remove you from the server.
 model:   [Fixed("Quack didn't remove you from the server.")]
@@ -261,6 +271,11 @@ discord: Quack didn't ban you.
 plain:   Quack didn't ban you.
 model:   [Fixed("Quack didn't ban you.")]
 
+## Ban Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack didn't ban you.
+plain:   Quack didn't ban you.
+model:   [Fixed("Quack didn't ban you.")]
+
 ## Ban Failed RetriesExhausted
 discord: Quack didn't ban you.
 plain:   Quack didn't ban you.
@@ -356,6 +371,11 @@ discord: Your timeout is still in place. The moderators can see why.
 plain:   Your timeout is still in place. The moderators can see why.
 model:   [Fixed("Your timeout is still in place. The moderators can see why.")]
 
+## RemoveTimeout Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Your timeout is still in place. The moderators can see why.
+plain:   Your timeout is still in place. The moderators can see why.
+model:   [Fixed("Your timeout is still in place. The moderators can see why.")]
+
 ## RemoveTimeout Failed RetriesExhausted
 discord: Your timeout is still in place. The moderators can see why.
 plain:   Your timeout is still in place. The moderators can see why.
@@ -442,6 +462,11 @@ plain:   Your ban is still in place. The moderators can see why.
 model:   [Fixed("Your ban is still in place. The moderators can see why.")]
 
 ## Unban Failed DiscordRefused dismissed
+discord: Your ban is still in place. The moderators can see why.
+plain:   Your ban is still in place. The moderators can see why.
+model:   [Fixed("Your ban is still in place. The moderators can see why.")]
+
+## Unban Failed DiscordRefused dismissed by an unrecorded moderator
 discord: Your ban is still in place. The moderators can see why.
 plain:   Your ban is still in place. The moderators can see why.
 model:   [Fixed("Your ban is still in place. The moderators can see why.")]

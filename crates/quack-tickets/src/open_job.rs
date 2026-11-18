@@ -116,7 +116,12 @@ async fn steps(engine: &Engine, job: &ClaimedJob, t: &Ticket) -> Result<Step<()>
 async fn thread(engine: &Engine, job: &ClaimedJob, t: &Ticket) -> Result<Step<ChannelId>, DbError> {
     let discord = engine.discord();
     let name = ticket_thread_name(t.id);
-    let found = match step(discord.find_threads(t.guild, t.entry_channel, &name).await) {
+    // The schema keeps an opening ticket's entry channel; only imported
+    // tickets may lack one, and none of those is opening.
+    let Some(entry) = t.entry_channel else {
+        return Ok(Step::Fail("entry_unknown"));
+    };
+    let found = match step(discord.find_threads(t.guild, entry, &name).await) {
         Step::Ok(found) => found,
         Step::Fail(_) => return Ok(Step::Fail("threads_unreadable")),
         Step::Retry(c) => return Ok(Step::Retry(c)),
@@ -128,7 +133,7 @@ async fn thread(engine: &Engine, job: &ClaimedJob, t: &Ticket) -> Result<Step<Ch
         }
         *oldest
     } else {
-        match step(discord.create_private_thread(t.entry_channel, &name).await) {
+        match step(discord.create_private_thread(entry, &name).await) {
             Step::Ok(thread) => thread,
             Step::Fail(_) => return Ok(Step::Fail("thread_refused")),
             // The next run finds the thread if the create took effect.

@@ -546,3 +546,87 @@ async fn an_unreadable_log_detail_keeps_the_page_readable(
     );
     Ok(())
 }
+
+/// Runs `sql` in its own transaction; `Ok` or the SQLSTATE it failed with.
+async fn try_sql(db: &quack_db::Db, sql: &str) -> Result<Option<String>> {
+    let mut tx = db.begin().await?;
+    match sqlx::raw_sql(sqlx::AssertSqlSafe(sql.to_owned()))
+        .execute(&mut *tx)
+        .await
+    {
+        Ok(_) => {
+            tx.commit().await?;
+            Ok(None)
+        }
+        Err(e) => Ok(sqlstate(&e)),
+    }
+}
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn historical_rows_may_lack_what_go_did_not_keep(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (r, _) = rule(&db, g, "Spam").await?;
+    let check = Some("23514".to_owned());
+    let gid = i64::try_from(g.get())?;
+    let case = |n: u32, key: &str| {
+        format!(
+            "INSERT INTO cases (guild_id, number, member_id, source, moderator_id, rule_id, rule_version,
+                                case_count, level_index, level_from_case_count, sends_dm, operation_key)
+             VALUES ({gid}, {n}, 7, 'discord', NULL, '{}', 1, 1, 1, 1, false, {key})",
+            r.get()
+        )
+    };
+    // An imported Discord case may lack its moderator; Quack's own never.
+    assert_eq!(try_sql(&db, &case(1001, "NULL")).await?, None);
+    assert_eq!(try_sql(&db, &case(1002, "'legacy:abc'")).await?, None);
+    assert_eq!(try_sql(&db, &case(1003, "'7:case_add:9'")).await?, check);
+
+    let c = common::case(&db, g, member_id(7), r, TIMEOUT).await?;
+    let action = format!(
+        "INSERT INTO actions (guild_id, case_id, member_id, kind, state, timeout_ends_at, failure_reason,
+                              dismissed_at, dismissed_by)
+         VALUES ({gid}, '{}', 7, 'timeout', 'failed', now(), 'discord_refused', {{at}}, {{by}})",
+        c.id.get()
+    );
+    // A dismissal Go didn't attribute; a dismisser needs a dismissal.
+    let unattributed = action.replace("{at}", "now()").replace("{by}", "NULL");
+    assert_eq!(try_sql(&db, &unattributed).await?, None);
+    let read = {
+        let mut conn = db.conn().await?;
+        actions::for_case(&mut conn, g, c.id).await?
+    };
+    assert!(
+        read.iter().any(|a| matches!(a.dismissed, Some((_, None)))),
+        "an unattributed dismissal still reads as dismissed"
+    );
+
+    let dm = |state: &str, channel: &str, message: &str| {
+        format!(
+            "INSERT INTO dms (guild_id, member_id, kind, case_id, state, channel_id, message_id,
+                              first_attempt_at, settled_at)
+             VALUES ({gid}, 7, 'case', '{}', '{state}', {channel}, {message}, now(), {})",
+            c.id.get(),
+            if state == "sending" { "NULL" } else { "now()" }
+        )
+    };
+    // A sent DM needs its message, not its channel; sending needs both.
+    assert_eq!(try_sql(&db, &dm("sending", "NULL", "NULL")).await?, check);
+    assert_eq!(try_sql(&db, &dm("sent", "NULL", "12")).await?, None);
+
+    let ticket = |state: &str, extra: &str| {
+        format!(
+            "INSERT INTO tickets (guild_id, member_id, state, entry_channel_id{}) VALUES ({gid}, {}, '{state}', NULL{})",
+            if extra.is_empty() { "" } else { ", closed_at" },
+            if state == "opening" { 8 } else { 9 },
+            extra
+        )
+    };
+    // Only a ticket still opening needs its entry channel.
+    assert_eq!(try_sql(&db, &ticket("opening", "")).await?, check);
+    assert_eq!(try_sql(&db, &ticket("closed", ", now()")).await?, None);
+    Ok(())
+}

@@ -142,8 +142,10 @@ fn case_row(
         "v4_import" => "imported",
         other => return Ok(Err(format!("unknown source {other:?}"))),
     };
+    // The schema lets an imported Discord or dashboard case lack its
+    // moderator (its operation key is absent or `legacy:`).
     if !matches!(source, "honeypot" | "imported") && moderator.is_none() {
-        return Ok(Err(format!("a {source} case has no moderator ID")));
+        cx.f.derived("case_moderator_unknown", &key);
     }
     let created_at = c.time("created_at")?;
     let (context, notes) = transform::context(&c.json("context_values_json")?);

@@ -24,8 +24,8 @@ pub struct TicketView {
     pub state: TicketState,
     /// Its private thread, once created.
     pub thread_id: Option<ChannelId>,
-    /// The channel the thread is in.
-    pub entry_channel_id: ChannelId,
+    /// The channel the thread is in (`None` for some imported tickets).
+    pub entry_channel_id: Option<ChannelId>,
     /// When it was requested.
     #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,

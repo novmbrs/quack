@@ -167,8 +167,10 @@ pub struct Ticket {
     pub member: MemberId,
     /// Its state.
     pub state: TicketState,
-    /// The thread's parent.
-    pub entry_channel: ChannelId,
+    /// The thread's parent channel; `None` for some imported tickets
+    /// whose server's ticket settings Go didn't keep (never for a ticket
+    /// still opening).
+    pub entry_channel: Option<ChannelId>,
     /// The private thread.
     pub thread: Option<ChannelId>,
     /// When it became `open`.
@@ -204,7 +206,7 @@ struct TicketRow {
     guild_id: i64,
     member_id: i64,
     state: Pg<TicketState>,
-    entry_channel_id: i64,
+    entry_channel_id: Option<i64>,
     thread_id: Option<i64>,
     opened_at: Option<OffsetDateTime>,
     close_requested_at: Option<OffsetDateTime>,
@@ -230,7 +232,7 @@ impl TryFrom<TicketRow> for Ticket {
             guild: id(r.guild_id)?,
             member: id(r.member_id)?,
             state: r.state.0,
-            entry_channel: id(r.entry_channel_id)?,
+            entry_channel: opt_id(r.entry_channel_id)?,
             thread: opt_id(r.thread_id)?,
             opened_at: r.opened_at,
             close_requested_at: r.close_requested_at,

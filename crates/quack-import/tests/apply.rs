@@ -323,7 +323,8 @@ async fn dms_and_messages(s: &Scratch) -> Result<()> {
         (7, "not_needed|-"),
         (8, "pending|-"),
         (12, "failed|discord_unavailable"),
-        (13, "unknown|-"),
+        // Go kept the message but not the DM channel: still sent.
+        (13, "sent|-"),
     ] {
         assert_eq!(s.text(&dm(n)).await?.as_deref(), Some(want), "case {n}");
     }
@@ -668,7 +669,7 @@ fn report_sections(r: &quack_import::Report) {
     assert_eq!(r.in_flight["dm_sending_unknown"].count, 1);
     assert_eq!(r.in_flight["honeypot_pending_failed"].count, 1);
     assert_eq!(r.in_flight["mirror_delivery_dropped"].count, 1);
-    assert_eq!(r.derived["unconfirmed_dm"].count, 2);
+    assert_eq!(r.derived["unconfirmed_dm"].count, 1);
     assert_eq!(r.derived["uploaded_file_as_copy_message"].count, 1);
     assert_eq!(r.in_flight["appeal_staff_post_never_delivered"].count, 1);
     assert_eq!(r.over_limit["evidence.content"].count, 1);

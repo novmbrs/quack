@@ -273,13 +273,18 @@ async fn execution(
             None,
         ),
     };
-    // Only a failed action can be dismissed, and the schema needs who did it.
+    // Only a failed action can be dismissed; Go didn't always record who.
     let dismissed = match (
         c.opt_time("dismissed_at")?,
         c.snowflake("dismissed_by_discord_user_id")?.id(),
     ) {
         (None, _) => (None, None),
-        (Some(at), Some(by)) if label == "failed" => (Some(at), Some(by)),
+        (Some(at), by) if label == "failed" => {
+            if by.is_none() {
+                cx.f.derived("dismissed_by_unknown", &key);
+            }
+            (Some(at), by)
+        }
         _ => {
             cx.f.derived("dismissal_dropped", &key);
             (None, None)

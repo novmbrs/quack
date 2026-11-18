@@ -202,9 +202,11 @@ pub(crate) fn couldnt_phrase(kind: ActionKind, member: Option<&Person>) -> Text 
 
 /// `action.dismissed_suffix`.
 pub fn dismissed_suffix(by: &Actor, at: OffsetDateTime) -> Text {
-    Text::new()
-        .actor(by)
-        .s(" dismissed this failure ")
+    let who = match by {
+        Actor::UnknownModerator => Text::fixed("A moderator"),
+        by => Text::new().actor(by),
+    };
+    who.s(" dismissed this failure ")
         .time(at, TimeStyle::Relative)
         .s(". The case keeps its history.")
 }

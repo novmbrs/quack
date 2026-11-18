@@ -69,8 +69,16 @@ pub fn action_views() -> Vec<(String, ActionView)> {
                             v.push((format!("{name} {reason:?} after one attempt"), a));
                         }
                         if *reason == ActionFailure::DiscordRefused {
+                            let mut imported = a.clone();
                             a.dismissed = Some((ana(), later()));
                             v.push((format!("{name} {reason:?} dismissed"), a));
+                            // Imported history that didn't record who.
+                            imported.dismissed =
+                                Some((crate::model::Actor::UnknownModerator, later()));
+                            v.push((
+                                format!("{name} {reason:?} dismissed by an unrecorded moderator"),
+                                imported,
+                            ));
                         }
                     }
                 }
