@@ -8036,3 +8036,7 @@ folds these into the sections (or changes the code) and removes them here.
     their acknowledgement, until 256 are in flight. Quack doesn't drop an
     interaction by its snowflake's age (a skewed clock would drop every
     one); a late acknowledgement is still logged.
+49. §14.10 (application review MAJOR 6) → a dashboard file (or the SPA's
+    `index.html`) is served only when its real path, with symlinks
+    resolved, is inside the real `QUACK_DASHBOARD_DIR`; a symlink that
+    leads out is a 404.

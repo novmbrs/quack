@@ -91,7 +91,15 @@ fn not_found() -> Response {
         .into_response()
 }
 
-async fn file(path: &Path, cache: &'static str, head: bool) -> Option<Response> {
+/// Serves `path` when it is a file that is really inside `root`: a symlink
+/// (to the file or a directory on its way) that leads out of the root is
+/// not found.
+async fn file(root: &Path, path: &Path, cache: &'static str, head: bool) -> Option<Response> {
+    let real = tokio::fs::canonicalize(path).await.ok()?;
+    if !real.starts_with(tokio::fs::canonicalize(root).await.ok()?) {
+        return None;
+    }
+    let path = real.as_path();
     let meta = tokio::fs::metadata(path).await.ok()?;
     if !meta.is_file() {
         return None;
@@ -133,12 +141,12 @@ pub(crate) async fn serve(state: &ApiState, request: Request) -> Response {
         } else {
             REVALIDATE
         };
-        return match file(&path, cache, head).await {
+        return match file(root, &path, cache, head).await {
             Some(response) => response,
             None => not_found(),
         };
     }
-    match file(&root.join("index.html"), REVALIDATE, head).await {
+    match file(root, &root.join("index.html"), REVALIDATE, head).await {
         Some(mut response) => {
             response.headers_mut().insert(
                 header::CONTENT_SECURITY_POLICY,
@@ -153,6 +161,28 @@ pub(crate) async fn serve(state: &ApiState, request: Request) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn symlinks_out_of_the_root_are_not_served() {
+        let base = std::env::temp_dir().join(format!("quack-static-{}", std::process::id()));
+        let (root, outside) = (base.join("dashboard"), base.join("outside"));
+        std::fs::create_dir_all(root.join("assets")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(outside.join("secret.txt"), "secret").unwrap();
+        std::fs::write(root.join("assets/app.js"), "app").unwrap();
+        std::os::unix::fs::symlink(outside.join("secret.txt"), root.join("leak.txt")).unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("dir")).unwrap();
+        let get = |p: &str| {
+            let path = resolve(&root, p).unwrap();
+            let root = root.clone();
+            async move { file(&root, &path, REVALIDATE, false).await.is_some() }
+        };
+        assert!(get("/assets/app.js").await);
+        assert!(!get("/leak.txt").await, "a file symlink out");
+        assert!(!get("/dir/secret.txt").await, "a directory symlink out");
+        std::fs::remove_dir_all(&base).unwrap();
+    }
 
     #[test]
     fn paths_stay_inside_the_root() {
