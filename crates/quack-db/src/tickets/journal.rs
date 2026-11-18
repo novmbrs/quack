@@ -95,20 +95,32 @@ pub async fn mark_journal_gaps(
     Ok(done.rows_affected() == 1)
 }
 
-/// A ticket's journal, oldest first.
+/// The most journal rows one [`journal`] call returns.
+pub const JOURNAL_PAGE: u32 = 1000;
+
+/// One page of a ticket's journal, oldest first: the messages after
+/// `after` (by message ID), at most `limit` (capped at [`JOURNAL_PAGE`]).
+/// A transcript reads it page by page and stops at its size cap, so a
+/// long journal is never loaded whole.
 pub async fn journal(
     conn: &mut PgConnection,
     guild: GuildId,
     ticket: TicketId,
+    after: Option<MessageId>,
+    limit: u32,
 ) -> Result<Vec<JournalMessage>, DbError> {
     let rows = obs::run(
         Select,
         "ticket_messages",
         sqlx::query!(
             r#"SELECT message_id, author_id, author_name, text, files AS "files: Json<Vec<JournalFile>>", sent_at
-               FROM ticket_messages WHERE guild_id = $1 AND ticket_id = $2 ORDER BY message_id"#,
+               FROM ticket_messages
+               WHERE guild_id = $1 AND ticket_id = $2 AND message_id > $3
+               ORDER BY message_id LIMIT $4"#,
             i64::from(guild),
             ticket.get(),
+            after.map_or(0, i64::from),
+            i64::from(limit.min(JOURNAL_PAGE)),
         )
         .fetch_all(conn),
     )

@@ -17,7 +17,8 @@ pub enum Conflict {
     /// The case already has its original action, or the original already
     /// has its undo.
     ActionExists,
-    /// The action already has an open attempt.
+    /// The action already has an open attempt (an attempt number that
+    /// already exists is [`Conflict::AlreadyExists`]).
     AttemptOpen,
     /// The case already has evidence for this message.
     EvidenceExists,
@@ -46,7 +47,7 @@ impl Conflict {
             "cases_guild_id_number_key" => Self::CaseNumberTaken,
             "cases_replaces" => Self::CaseAlreadyReplaced,
             "actions_one_original" | "actions_undo_of_action_id_key" => Self::ActionExists,
-            "action_attempts_one_open" | "action_attempts_pkey" => Self::AttemptOpen,
+            "action_attempts_one_open" => Self::AttemptOpen,
             "evidence_case_id_message_id_key" => Self::EvidenceExists,
             "appeals_case_id_key" => Self::AppealExists,
             "dms_one_per_case" | "dms_appeal_event_id_key" | "dms_ticket_id_key" => Self::DmExists,
@@ -190,7 +191,12 @@ fn classify(error: sqlx::Error) -> DbError {
                 "23503" => rejected(Violation::ForeignKey, constraint),
                 "23514" => rejected(Violation::Check, constraint),
                 "23502" => rejected(Violation::NotNull, constraint.or(table)),
-                "42501" => rejected(Violation::AppendOnly, table),
+                // The append-only trigger raises 42501 with "<table> is
+                // append-only"; any other 42501 is a real permission error.
+                "42501" => match db.message().strip_suffix(" is append-only") {
+                    Some(table) => rejected(Violation::AppendOnly, Some(table.to_owned())),
+                    None => DbError::Other(error),
+                },
                 "40001" => DbError::Contention(DbErrorClass::SerializationFailure, error),
                 "40P01" => DbError::Contention(DbErrorClass::Deadlock, error),
                 // query_canceled (statement_timeout) and lock_not_available.

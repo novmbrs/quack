@@ -346,7 +346,12 @@ async fn tickets_freeze_their_journal_and_close(
         !tickets::add_journal_message(&mut conn, g, ticket, &message(2)).await?,
         "frozen"
     );
-    assert_eq!(tickets::journal(&mut conn, g, ticket).await?.len(), 1);
+    assert_eq!(
+        tickets::journal(&mut conn, g, ticket, None, 10)
+            .await?
+            .len(),
+        1
+    );
     assert!(
         tickets::save_transcript(
             &mut conn,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT message_id, author_id, author_name, text, files AS \"files: Json<Vec<JournalFile>>\", sent_at\n               FROM ticket_messages WHERE guild_id = $1 AND ticket_id = $2 ORDER BY message_id",
+  "query": "SELECT message_id, author_id, author_name, text, files AS \"files: Json<Vec<JournalFile>>\", sent_at\n               FROM ticket_messages\n               WHERE guild_id = $1 AND ticket_id = $2 AND message_id > $3\n               ORDER BY message_id LIMIT $4",
   "describe": {
     "columns": [
       {
@@ -73,7 +73,9 @@
     "parameters": {
       "Left": [
         "Int8",
-        "Uuid"
+        "Uuid",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -85,5 +87,5 @@
       false
     ]
   },
-  "hash": "4c9ebaeecf6b43dffe5b90778aefd80ee8d5a5edb649b2e98f144bf499a4801f"
+  "hash": "b8324072c3e07de22c303f143913c104051d934037ca1b375cd8851ffaeadb9b"
 }

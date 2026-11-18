@@ -28,8 +28,8 @@ use crate::DbError;
 
 pub use kind::{DEADLINE_MARGIN, JobKind, JobPolicy};
 pub use queue::{
-    JobBacklog, backlog, claim, enqueue, ensure_housekeeping, fence, next_due_in, settle,
-    sweep_and_next_due, sweep_leases, wake,
+    JobBacklog, backlog, claim, enqueue, enqueue_many, ensure_housekeeping, fence, next_due_in,
+    settle, sweep_and_next_due, sweep_leases, wake,
 };
 pub use runner::{FINALIZE_TRIES, Handled, Handler, HandlerFuture, Phase, Runner, RunnerConfig};
 

@@ -140,7 +140,12 @@ async fn journal_does_not_admit_after_freeze(
     })
     .await??;
     freeze.commit().await?;
-    assert_eq!(tickets::journal(&mut reader, g, ticket).await?.len(), 0);
+    assert_eq!(
+        tickets::journal(&mut reader, g, ticket, None, 10)
+            .await?
+            .len(),
+        0
+    );
     let _ = send_commit.send(());
     let added = insertion.await??;
     assert!(

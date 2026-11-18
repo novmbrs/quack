@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 
 use quack_core::ids::JobId;
 use sqlx::PgConnection;
+use time::OffsetDateTime;
 
 use super::{ClaimedJob, DEADLINE_MARGIN, JobKind, JobResult, NewJob, RunAt, short_error};
 use crate::obs::{self, AfterCommit, Delete, Insert, Select, Update};
@@ -52,6 +53,71 @@ pub async fn enqueue(tx: &mut Tx, job: &NewJob) -> Result<JobId, DbError> {
     notify_kind(tx, job.kind).await?;
     tx.after_commit(AfterCommit::JobEnqueued(job.kind));
     Ok(JobId::from_uuid(id))
+}
+
+/// The most jobs one [`enqueue_many`] statement inserts.
+const ENQUEUE_BATCH: usize = 500;
+
+/// [`enqueue`] for many jobs at once (bulk moves of tracked messages):
+/// one statement per [`ENQUEUE_BATCH`] jobs and one notification per kind,
+/// with the same coalescing.
+pub async fn enqueue_many(tx: &mut Tx, jobs: &[NewJob]) -> Result<(), DbError> {
+    let trace = quack_telemetry::current_trace_context().filter(|t| t.len() <= 256);
+    for batch in jobs.chunks(ENQUEUE_BATCH) {
+        let ids: Vec<uuid::Uuid> = batch.iter().map(|_| uuid::Uuid::now_v7()).collect();
+        let kinds: Vec<Pg<JobKind>> = batch.iter().map(|j| Pg(j.kind)).collect();
+        let keys: Vec<String> = batch.iter().map(|j| j.key.as_str().to_owned()).collect();
+        let guilds: Vec<Option<i64>> = batch.iter().map(|j| j.guild.map(i64::from)).collect();
+        let payloads: Vec<serde_json::Value> = batch.iter().map(|j| j.payload.clone()).collect();
+        let (delays, ats): (Vec<f64>, Vec<Option<OffsetDateTime>>) =
+            batch.iter().map(|j| j.run_at.sql()).unzip();
+        let budgets: Vec<i32> = batch
+            .iter()
+            .map(|j| i32::try_from(j.kind.policy().max_attempts).unwrap_or(i32::MAX))
+            .collect();
+        obs::run(
+            Insert,
+            "jobs",
+            sqlx::query!(
+                r#"INSERT INTO jobs (id, kind, key, guild_id, payload, run_at, max_attempts, trace_context)
+                   SELECT id, kind, key, guild_id, payload, COALESCE(at, now() + make_interval(secs => delay)),
+                          max_attempts, $9
+                   FROM unnest($1::uuid[], $2::job_kind[], $3::text[], $4::bigint[], $5::jsonb[],
+                               $6::timestamptz[], $7::float8[], $8::int[])
+                        AS j(id, kind, key, guild_id, payload, at, delay, max_attempts)
+                   ON CONFLICT (key) DO UPDATE SET
+                     run_at     = CASE WHEN jobs.locked_until IS NULL
+                                       THEN LEAST(jobs.run_at, EXCLUDED.run_at) ELSE jobs.run_at END,
+                     rerun_at   = CASE WHEN jobs.locked_until IS NOT NULL
+                                       THEN LEAST(COALESCE(jobs.rerun_at, EXCLUDED.run_at), EXCLUDED.run_at)
+                                       ELSE jobs.rerun_at END,
+                     attempts   = CASE WHEN jobs.dead_at IS NOT NULL THEN 0 ELSE jobs.attempts END,
+                     dead_at    = NULL,
+                     updated_at = now()"#,
+                &ids,
+                &kinds as &[Pg<JobKind>],
+                &keys,
+                &guilds as &[Option<i64>],
+                &payloads,
+                &ats as &[Option<OffsetDateTime>],
+                &delays,
+                &budgets,
+                trace,
+            )
+            .execute(&mut **tx),
+        )
+        .await?;
+    }
+    let mut kinds: Vec<JobKind> = jobs.iter().map(NewJob::kind).collect();
+    kinds.sort_unstable();
+    kinds.dedup();
+    for kind in kinds {
+        notify_kind(tx, kind).await?;
+    }
+    for job in jobs {
+        tx.after_commit(AfterCommit::JobEnqueued(job.kind));
+    }
+    Ok(())
 }
 
 async fn notify_kind(conn: &mut PgConnection, kind: JobKind) -> Result<(), DbError> {

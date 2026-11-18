@@ -329,7 +329,8 @@ pub async fn reactivate(
 }
 
 /// Setting an appeal channel (§8.3): the posts of open appeals that have no
-/// channel or are `gone` move to `channel` and are bumped.
+/// channel or are `gone` move to `channel` and are bumped (one statement,
+/// one batch of jobs).
 pub async fn bind_waiting_appeal_posts(
     tx: &mut Tx,
     guild: GuildId,
@@ -353,14 +354,13 @@ pub async fn bind_waiting_appeal_posts(
     )
     .await?;
     let rows: Vec<MessageRowId> = rows.into_iter().map(MessageRowId::from_uuid).collect();
-    for row in &rows {
-        jobs::enqueue(tx, &NewJob::sync_message(guild, *row)).await?;
-    }
+    sync_all(tx, guild, &rows).await?;
     Ok(rows)
 }
 
 /// Changing the appeal channel (§8.3): the active posts of open appeals in
-/// another channel move to `channel`; their old messages become stale.
+/// another channel move to `channel`; their old messages become stale (one
+/// statement, one batch of jobs).
 pub async fn move_open_appeal_posts(
     tx: &mut Tx,
     guild: GuildId,
@@ -369,29 +369,36 @@ pub async fn move_open_appeal_posts(
     let rows = obs::run(
         Update,
         "messages",
-        sqlx::query!(
-            "SELECT m.id, m.generation FROM messages m JOIN appeals a ON a.id = m.appeal_id
+        sqlx::query_scalar!(
+            "UPDATE messages m SET
+               stale = CASE WHEN m.message_id IS NULL OR m.channel_id IS NULL THEN m.stale ELSE (
+                 SELECT COALESCE(jsonb_agg(e ORDER BY n), '[]'::jsonb)
+                 FROM jsonb_array_elements(m.stale || jsonb_build_array(jsonb_build_object(
+                        'channel_id', m.channel_id::text, 'message_id', m.message_id::text)))
+                      WITH ORDINALITY AS t(e, n)
+                 WHERE n > jsonb_array_length(m.stale) + 1 - 5) END,
+               channel_id = $2, message_id = NULL, generation = m.generation + 1, create_started_at = NULL,
+               state = 'active', wanted_revision = m.wanted_revision + 1, wanted_at = now(), updated_at = now()
+             FROM appeals a
              WHERE m.guild_id = $1 AND m.kind = 'appeal_post' AND m.state = 'active'
-               AND m.channel_id IS DISTINCT FROM $2 AND a.state IN ('pending', 'needs_information')
-             ORDER BY m.id FOR UPDATE OF m",
+               AND m.channel_id IS DISTINCT FROM $2
+               AND a.id = m.appeal_id AND a.state IN ('pending', 'needs_information')
+             RETURNING m.id",
             i64::from(guild),
             i64::from(channel),
         )
         .fetch_all(&mut **tx),
     )
     .await?;
-    let mut moved = Vec::with_capacity(rows.len());
-    for r in rows {
-        let row = MessageRowId::from_uuid(r.id);
-        relocate(
-            tx,
-            guild,
-            row,
-            crate::pg::count(r.generation)?,
-            Some(channel),
-        )
-        .await?;
-        moved.push(row);
-    }
-    Ok(moved)
+    let rows: Vec<MessageRowId> = rows.into_iter().map(MessageRowId::from_uuid).collect();
+    sync_all(tx, guild, &rows).await?;
+    Ok(rows)
+}
+
+async fn sync_all(tx: &mut Tx, guild: GuildId, rows: &[MessageRowId]) -> Result<(), DbError> {
+    let jobs: Vec<NewJob> = rows
+        .iter()
+        .map(|row| NewJob::sync_message(guild, *row))
+        .collect();
+    jobs::enqueue_many(tx, &jobs).await
 }

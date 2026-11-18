@@ -659,3 +659,59 @@ async fn evidence_is_admitted_once_and_saved_once(
     );
     Ok(())
 }
+
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn moving_appeal_posts_is_one_batch(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (spam, _) = rule(&db, g, "Spam").await?;
+    let mut rows = Vec::new();
+    for member in [7, 8, 9] {
+        let c = case(&db, g, member_id(member), spam, None).await?;
+        let appeal = AppealId::from_uuid(Uuid::now_v7());
+        let mut tx = db.begin().await?;
+        appeals::insert(&mut tx, appeal, g, c.id, c.member, "Please").await?;
+        let row = MessageRowId::from_uuid(Uuid::now_v7());
+        messages::insert(
+            &mut tx,
+            &NewTrackedMessage {
+                id: row,
+                guild: g,
+                owner: Owner::Appeal(appeal),
+                channel: Some(channel(5)),
+                private: false,
+                interaction_token: None,
+            },
+        )
+        .await?;
+        tx.commit().await?;
+        let mut conn = db.conn().await?;
+        assert!(
+            messages::record_posted(&mut conn, g, row, 1, 1, Some(message(100 + member))).await?
+        );
+        rows.push(row);
+    }
+    let mut tx = db.begin().await?;
+    let mut moved = messages::move_open_appeal_posts(&mut tx, g, channel(6)).await?;
+    tx.commit().await?;
+    moved.sort();
+    rows.sort();
+    assert_eq!(moved, rows);
+    let mut conn = db.conn().await?;
+    for row in &rows {
+        let m = messages::get(&mut conn, g, *row).await?.context("row")?;
+        assert_eq!(
+            (m.generation, m.channel, m.message),
+            (2, Some(channel(6)), None)
+        );
+        assert_eq!(m.stale.len(), 1, "the old post is cleaned up later");
+    }
+    let jobs: i64 = sqlx::query_scalar("SELECT count(*) FROM jobs WHERE kind = 'sync_message'")
+        .fetch_one(&mut *conn)
+        .await?;
+    assert_eq!(jobs, 3, "one coalesced sync job per row");
+    Ok(())
+}

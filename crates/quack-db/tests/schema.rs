@@ -125,14 +125,35 @@ async fn the_moderation_log_and_rule_versions_are_append_only(
         let error = sqlx::query(statement).execute(&mut *conn).await.err();
         let state = error.as_ref().and_then(sqlstate);
         assert_eq!(state.as_deref(), Some("42501"), "{statement}");
-        assert!(matches!(
-            error.map(DbError::from),
-            Some(DbError::Rejected {
-                violation: Violation::AppendOnly,
-                ..
-            })
-        ));
+        let table = statement.split_whitespace().find(|w| w.contains('_'));
+        assert!(
+            matches!(
+                error.map(DbError::from),
+                Some(DbError::Rejected {
+                    violation: Violation::AppendOnly,
+                    ref constraint,
+                }) if Some(constraint.as_str()) == table
+            ),
+            "{statement}"
+        );
     }
+    // A real permission error is not mistaken for the append-only rule.
+    let role = format!("quack_no_access_{}", Uuid::now_v7().simple());
+    sqlx::raw_sql(sqlx::AssertSqlSafe(format!("CREATE ROLE {role}")))
+        .execute(&mut *conn)
+        .await?;
+    sqlx::raw_sql(sqlx::AssertSqlSafe(format!("SET ROLE {role}")))
+        .execute(&mut *conn)
+        .await?;
+    let denied = sqlx::query("SELECT 1 FROM mod_log")
+        .execute(&mut *conn)
+        .await
+        .err();
+    sqlx::raw_sql(sqlx::AssertSqlSafe(format!("RESET ROLE; DROP ROLE {role}")))
+        .execute(&mut *conn)
+        .await?;
+    assert_eq!(denied.as_ref().and_then(sqlstate).as_deref(), Some("42501"));
+    assert!(matches!(denied.map(DbError::from), Some(DbError::Other(_))));
     Ok(())
 }
 
