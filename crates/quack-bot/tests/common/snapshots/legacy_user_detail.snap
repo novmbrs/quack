@@ -1,0 +1,9 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Case history for a member (ID 40)
+1 case · 1 valid · 0 voided
+#1 · a member (ID 40) · Spam · [date]
+{select: Open a case}
