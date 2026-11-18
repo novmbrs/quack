@@ -314,7 +314,8 @@ fn couldnt_confirm_only_for_unknown_outcomes() {
         let s = log::text(&e, &facts).plain();
         let unknown = id.ends_with("unknown")
             || id.ends_with("unconfirmed")
-            || id.ends_with("retries_exhausted");
+            || id.ends_with("retries_exhausted")
+            || matches!(&e, quack_core::modlog::ModLogEntry::ActionFailed(d) if d.may_have_applied);
         assert_eq!(s.contains(CONFIRM), unknown, "{id} {name}: {s}");
         if s.contains(CONFIRM) {
             assert!(!says_couldnt(&s), "{id} {name}: says both: {s}");

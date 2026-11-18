@@ -258,6 +258,11 @@ pub struct ActionFailedDetail {
     pub discord_code: Option<u32>,
     /// Attempts made, across budgets.
     pub attempts: u32,
+    /// Some attempt may have applied (§5.2), so the entry can't say the
+    /// action didn't happen ("couldn't confirm"). Absent in entries written
+    /// before it existed.
+    #[serde(default)]
+    pub may_have_applied: bool,
 }
 
 /// Detail naming a case and an action kind.

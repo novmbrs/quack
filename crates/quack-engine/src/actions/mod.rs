@@ -74,6 +74,11 @@ async fn log_failed(
     failure: &Failure,
     attempts: u32,
 ) -> Result<(), DbError> {
+    let outcomes: Vec<Option<AttemptOutcome>> = quack_db::actions::attempts(tx, action.id)
+        .await?
+        .into_iter()
+        .map(|a| a.outcome)
+        .collect();
     let entry = ModLogEntry::ActionFailed(ActionFailedDetail {
         case_number: case.number,
         kind: action.kind,
@@ -82,6 +87,7 @@ async fn log_failed(
         http_status: failure.http_status,
         discord_code: failure.discord_code,
         attempts,
+        may_have_applied: quack_core::action::may_have_applied(&outcomes),
     });
     modlog::write(tx, case.guild, entry, By::QUACK, links(action)).await?;
     Ok(())

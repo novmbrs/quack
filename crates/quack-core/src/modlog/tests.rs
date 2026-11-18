@@ -67,6 +67,7 @@ fn one_of_each() -> Vec<ModLogEntry> {
             http_status: Some(403),
             discord_code: Some(50_013),
             attempts: 2,
+            may_have_applied: false,
         }),
         ModLogEntry::ActionRetryRequested(action),
         ModLogEntry::ActionDismissed(action),
@@ -229,11 +230,19 @@ fn detail_shapes_match_the_design() {
         http_status: None,
         discord_code: None,
         attempts: 8,
+        may_have_applied: true,
     };
     assert_eq!(
         serde_json::to_value(unconfirmed).unwrap()["reason"],
         json!("unconfirmed")
     );
+    // Entries written before `may_have_applied` existed still read.
+    let old: ActionFailedDetail = serde_json::from_value(json!({
+        "case_number": 4, "kind": "ban", "reason": "discord_refused", "permission": null,
+        "http_status": 403, "discord_code": 50013, "attempts": 2
+    }))
+    .unwrap();
+    assert!(!old.may_have_applied);
     let left = ModuleDisabledDetail {
         module: ModuleName::Honeypot,
         reason: Some(ModuleDisabledReason::QuackLeft),

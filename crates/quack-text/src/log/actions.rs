@@ -139,14 +139,21 @@ pub(super) fn action_failed(d: &ActionFailedDetail, f: &LogFacts) -> Text {
         .s(".");
         return t.sentence(action::check(d.kind, f.member.as_ref()));
     }
-    let reason = action::failure_reason(d.kind, &failure, f.member.as_ref(), d.attempts, false)
-        .unwrap_or_default();
-    case(
-        action::couldnt_phrase(d.kind, f.member.as_ref()).s(" for "),
-        n,
+    let reason = action::failure_reason(
+        d.kind,
+        &failure,
+        f.member.as_ref(),
+        d.attempts,
+        d.may_have_applied,
     )
-    .s(".")
-    .sentence(reason)
+    .unwrap_or_default();
+    // An attempt may have applied: the entry can't say it didn't happen.
+    let start = if d.may_have_applied {
+        action::whether_applied(d.kind, f.member.as_ref())
+    } else {
+        action::couldnt_phrase(d.kind, f.member.as_ref())
+    };
+    case(start.s(" for "), n).s(".").sentence(reason)
 }
 
 pub(super) fn undo_skipped(d: &UndoSkippedDetail, f: &LogFacts) -> Text {

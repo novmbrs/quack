@@ -159,18 +159,20 @@ pub fn entries() -> Vec<(&'static str, String, ModLogEntry)> {
             } else {
                 "log.action_failed"
             };
+            let detail = ActionFailedDetail {
+                case_number: 12,
+                kind: *kind,
+                reason: *reason,
+                permission: Some(kind.permission()),
+                http_status: Some(403),
+                discord_code: Some(50_013),
+                attempts: 8,
+                may_have_applied: false,
+            };
             push(
                 id,
                 &format!("{kind:?} {reason:?}"),
-                ModLogEntry::ActionFailed(ActionFailedDetail {
-                    case_number: 12,
-                    kind: *kind,
-                    reason: *reason,
-                    permission: Some(kind.permission()),
-                    http_status: Some(403),
-                    discord_code: Some(50_013),
-                    attempts: 8,
-                }),
+                ModLogEntry::ActionFailed(detail),
             );
         }
         let d = ActionDetail {
@@ -529,5 +531,20 @@ pub fn entries() -> Vec<(&'static str, String, ModLogEntry)> {
             }),
         );
     }
+    // Last, so the "no names known" rotation of the samples above holds.
+    push(
+        "log.action_failed",
+        "Timeout RetriesExhausted after an attempt that may have applied",
+        ModLogEntry::ActionFailed(ActionFailedDetail {
+            case_number: 12,
+            kind: ActionKind::Timeout,
+            reason: ActionFailure::RetriesExhausted,
+            permission: Some(ActionKind::Timeout.permission()),
+            http_status: None,
+            discord_code: None,
+            attempts: 8,
+            may_have_applied: true,
+        }),
+    );
     v
 }
