@@ -195,6 +195,26 @@ async fn a_rate_limit_beyond_the_window_goes_back_to_pending() -> Result<()> {
     Ok(())
 }
 
+/// Engine review MAJOR 12: on the budget's last run, a rate limit past
+/// the window settles the DM at once instead of after Discord's delay.
+#[tokio::test]
+async fn a_rate_limit_on_the_last_run_fails_the_dm_without_waiting() -> Result<()> {
+    let h = Harness::new().await?;
+    let id = warned(&h).await?;
+    h.db.execute("UPDATE jobs SET attempts = max_attempts - 1 WHERE kind = 'send_dm'")
+        .await?;
+    h.fake
+        .script(Call::Send, Script::RetryAfter(Duration::from_secs(600)));
+    h.run_jobs().await?;
+    let d = dm(&h, id).await?;
+    assert_eq!(
+        (d.state, d.failure),
+        (DmState::Failed, Some(DmFailure::DiscordUnavailable))
+    );
+    assert_eq!(dms_to_member(&h), 0);
+    Ok(())
+}
+
 #[tokio::test]
 async fn void_before_the_start_means_not_needed() -> Result<()> {
     let h = Harness::new().await?;
