@@ -8167,3 +8167,9 @@ folds these into the sections (or changes the code) and removes them here.
     `UnknownReason::Malformed`: the expired-button answer, or for an
     autocomplete an empty choice list (type 8), instead of never being
     acknowledged.
+68. §17.3 Edit Message (Discord review MAJOR 14) → every Components V2
+    edit of a channel message also sends `"content": null` and
+    `"embeds": []`, so an edit that converts a message posted before V2
+    (the Go bot's appeal posts, re-rendered at cutover) is accepted.
+    Interaction webhook edits are unchanged: they only ever edit Quack's
+    own V2 responses.

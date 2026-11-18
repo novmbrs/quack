@@ -96,6 +96,13 @@ enum AttachmentRef {
 
 #[derive(Serialize)]
 struct Payload<'a> {
+    /// `null` on a V2 edit: a message posted before Components V2 (by the
+    /// Go bot, say) must lose its text in the edit that converts it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<serde_json::Value>,
+    /// `[]` on a V2 edit, for the same reason.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    embeds: Option<[(); 0]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     components: Option<&'a [Component]>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -112,6 +119,8 @@ struct Payload<'a> {
 impl<'a> Payload<'a> {
     fn new(body: &'a MessageBody) -> Self {
         Self {
+            content: None,
+            embeds: None,
             components: body.components.as_deref(),
             flags: body
                 .components
@@ -211,6 +220,10 @@ impl DiscordClient {
         files: &FileEdit,
     ) -> Outcome<SentMessage> {
         let mut payload = Payload::new(body);
+        if payload.components.is_some() {
+            payload.content = Some(serde_json::Value::Null);
+            payload.embeds = Some([]);
+        }
         let uploads_now: Vec<&OutgoingFile> = match files {
             FileEdit::None => Vec::new(),
             FileEdit::Keep(id) => {

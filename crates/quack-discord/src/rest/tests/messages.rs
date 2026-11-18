@@ -96,7 +96,9 @@ async fn files_go_as_multipart_and_edits_keep_or_replace_them() {
         .mock_async(|when, then| {
             when.method("PATCH")
                 .path("/api/v10/channels/5/messages/10")
-                .json_body_includes(r#"{"attachments": [{"id": "77"}], "flags": 32768}"#);
+                .json_body_includes(r#"{"attachments": [{"id": "77"}], "flags": 32768}"#)
+                // Converting a pre-V2 message clears its text and embeds.
+                .json_body_includes(r#"{"content": null, "embeds": []}"#);
             then.status(200).json_body(fixtures::message(10, 5));
         })
         .await;
