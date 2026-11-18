@@ -386,7 +386,7 @@ fn an_interaction_with_unreadable_data_is_still_answerable() {
             autocomplete: false
         })
     );
-    assert_eq!(ix.guild_id.map(|g| g.get()), Some(1));
+    assert_eq!(ix.guild_id.map(quack_core::ids::GuildId::get), Some(1));
     let auto = fixtures::interaction(
         4,
         &json!({"id": "101", "name": "case", "type": 1, "options": [{"name": "add", "type": "x"}]}),
