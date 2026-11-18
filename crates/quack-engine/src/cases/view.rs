@@ -190,6 +190,27 @@ pub async fn get(
     .await
 }
 
+/// The staff case card (§11.7) for `moderate` + 2FA: the one card builder
+/// the receipts' sync, `/case view`, and every "Open case" share. Reads
+/// only the case's records (no moderation log).
+pub async fn card(
+    engine: &Engine,
+    principal: &Principal,
+    case: CaseRef,
+) -> Result<quack_text::case::CaseCard, CaseError> {
+    obs::use_case("get_case_card", Some(principal.guild), async {
+        let mut conn = engine.db().conn().await?;
+        principal.require(&mut conn, Capability::Moderate).await??;
+        let found = case
+            .find(&mut conn, principal.guild)
+            .await?
+            .ok_or(DomainError::CaseNotFound)?;
+        let records = CaseRecords::of(&mut conn, found).await?;
+        Ok(super::card::card(engine, &records))
+    })
+    .await
+}
+
 fn view(
     r: &CaseRecords,
     timeline: Vec<TimelineItem>,

@@ -18,7 +18,6 @@
 mod ack;
 mod auth;
 mod bot;
-mod card;
 mod dedupe;
 mod errors;
 mod forms;

@@ -13,6 +13,10 @@ use time::OffsetDateTime;
 use super::records::CaseRecords;
 
 /// One action with its outcome sentence, attempts, and controls.
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "the three controls and no_change are independent facts"
+)]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ActionItem {
     /// The action.
@@ -50,8 +54,12 @@ pub struct ActionItem {
     /// When a failure was dismissed.
     #[serde(with = "time::serde::rfc3339::option")]
     pub dismissed_at: Option<OffsetDateTime>,
-    /// Who dismissed it.
+    /// Who dismissed it (`None` when no one did, or imported history
+    /// didn't record who).
     pub dismissed_by: Option<AccountId>,
+    /// It is done because the desired state already held (an "already
+    /// timed out" timeout, an "already gone" kick).
+    pub no_change: bool,
     /// When it was done.
     #[serde(with = "time::serde::rfc3339::option")]
     pub done_at: Option<OffsetDateTime>,
@@ -172,6 +180,7 @@ pub(super) fn action_item(
         skip_reason: a.skip.map(|(s, _)| s),
         skipped_because_case_number: view.still_applies_case,
         requested_by: a.requested_by,
+        no_change: a.no_change,
         dismissed_at: a.dismissed.map(|(at, _)| at),
         dismissed_by: a.dismissed.and_then(|(_, by)| by),
         done_at: a.done_at,

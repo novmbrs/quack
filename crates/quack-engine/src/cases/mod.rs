@@ -36,7 +36,8 @@ pub use evidence_add::{EvidenceAdded, add_evidence};
 pub use list::{CasePreview, list, member_cases, member_summary, preview};
 pub(crate) use records::CaseRecords;
 pub use view::{
-    AppealItem, CaseView, DmItem, TimelineItem, TimelineText, VoidItem, get, get_by_number,
+    AppealItem, CaseView, DmItem, TimelineItem, TimelineText, VoidItem, card as staff_card, get,
+    get_by_number,
 };
 pub use view_items::{ActionItem, AttemptItem, EvidenceFileItem, EvidenceItem};
 pub use view_member::{

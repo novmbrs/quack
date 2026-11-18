@@ -5,12 +5,12 @@ use quack_core::DomainError;
 use quack_core::ids::{ActionId, CaseId};
 use quack_discord::interaction::{SelectChoice, Source};
 use quack_engine::CaseRef;
-use quack_engine::cases::get;
+use quack_engine::cases::staff_card;
 use quack_text::Msg;
 use quack_text::error::ErrorFacts;
 
 use crate::ack::{Acked, Failure, Finish, Pending};
-use crate::{auth, card, errors};
+use crate::{auth, errors};
 
 /// The staff card for `case`, after authorizing the clicker (§11.7).
 pub(crate) async fn card_for(a: &Acked<'_>, case: CaseRef) -> Result<Msg, Failure> {
@@ -20,7 +20,7 @@ pub(crate) async fn card_for(a: &Acked<'_>, case: CaseRef) -> Result<Msg, Failur
         CaseRef::Number(n) => Some(n),
         CaseRef::Id(_) => None,
     };
-    let view = get(engine, &principal, case).await.map_err(|e| {
+    let card = staff_card(engine, &principal, case).await.map_err(|e| {
         errors::case(
             &e,
             &ErrorFacts {
@@ -29,7 +29,7 @@ pub(crate) async fn card_for(a: &Acked<'_>, case: CaseRef) -> Result<Msg, Failur
             },
         )
     })?;
-    Ok(card::msg(&view, principal.guild, engine.links()))
+    Ok(quack_text::case::card(&card))
 }
 
 /// `/case view number`.
