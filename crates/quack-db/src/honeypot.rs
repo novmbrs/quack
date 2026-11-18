@@ -251,6 +251,62 @@ pub async fn pending_batch(
         .collect()
 }
 
+/// One hit of this server, by its post (the cleanup job's lookup).
+pub async fn hit(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    message: MessageId,
+) -> Result<Option<Hit>, DbError> {
+    let row = obs::run(
+        Select,
+        "honeypot_hits",
+        sqlx::query!(
+            "SELECT message_id, channel_id, member_id, settings_version, rule_id, state, case_id, failure, created_at
+             FROM honeypot_hits WHERE guild_id = $1 AND message_id = $2",
+            i64::from(guild),
+            i64::from(message),
+        )
+        .fetch_optional(conn),
+    )
+    .await?;
+    row.map(|r| {
+        Ok(Hit {
+            message: id(r.message_id)?,
+            channel: id(r.channel_id)?,
+            member: id(r.member_id)?,
+            settings_version: count(r.settings_version)?,
+            rule: r.rule_id.map(RuleId::from_uuid),
+            state: r.state.0,
+            case: r.case_id.map(CaseId::from_uuid),
+            failure: r.failure,
+            created_at: r.created_at,
+        })
+    })
+    .transpose()
+}
+
+/// Members with pending hits, across servers, at most `limit`: the
+/// `honeypot_case` jobs to make sure of after a restart.
+pub async fn members_with_pending_hits(
+    conn: &mut PgConnection,
+    limit: u32,
+) -> Result<Vec<(GuildId, MemberId)>, DbError> {
+    let rows = obs::run(
+        Select,
+        "honeypot_hits",
+        sqlx::query!(
+            "SELECT DISTINCT guild_id, member_id FROM honeypot_hits WHERE state = 'pending'
+             ORDER BY guild_id, member_id LIMIT $1",
+            i64::from(limit),
+        )
+        .fetch_all(conn),
+    )
+    .await?;
+    rows.into_iter()
+        .map(|r| Ok((id(r.guild_id)?, id(r.member_id)?)))
+        .collect()
+}
+
 /// A burst (§13.4.2 step 3.3): a valid case created from this member's hits
 /// under the same settings version whose first hit is less than 30 seconds
 /// older than `first_hit_at`.

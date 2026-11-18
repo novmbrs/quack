@@ -13,7 +13,7 @@ use crate::pg::{Pg, TimeCursor, count, cursor_parts, id, int, limit, opt_id};
 
 pub use journal::{
     JOURNAL_PAGE, JournalFile, JournalMessage, Transcript, add_journal_message, journal,
-    mark_journal_gaps, save_transcript, transcript,
+    mark_journal_gaps, mark_live_journal_gaps, save_transcript, transcript,
 };
 
 /// `ticket_settings`.

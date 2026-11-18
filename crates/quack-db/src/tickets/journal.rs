@@ -226,3 +226,20 @@ pub async fn transcript(
         expires_at: r.expires_at,
     }))
 }
+
+/// Marks every live ticket whose journal is still open as possibly missing
+/// messages: the gateway session was invalidated, so events may have been
+/// missed (§11.9). Returns how many changed.
+pub async fn mark_live_journal_gaps(conn: &mut PgConnection) -> Result<u64, DbError> {
+    let done = obs::run(
+        Update,
+        "tickets",
+        sqlx::query!(
+            "UPDATE tickets SET journal_gaps = true, updated_at = now()
+             WHERE state IN ('opening', 'open', 'closing') AND frozen_at IS NULL AND NOT journal_gaps"
+        )
+        .execute(conn),
+    )
+    .await?;
+    Ok(done.rows_affected())
+}

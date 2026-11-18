@@ -340,6 +340,8 @@ async fn tickets_freeze_their_journal_and_close(
     };
     assert!(tickets::add_journal_message(&mut conn, g, ticket, &message(1)).await?);
     assert!(!tickets::add_journal_message(&mut conn, g, ticket, &message(1)).await?);
+    assert_eq!(tickets::mark_live_journal_gaps(&mut conn).await?, 1);
+    assert_eq!(tickets::mark_live_journal_gaps(&mut conn).await?, 0);
     assert!(tickets::request_close(&mut conn, g, ticket, Some(account_id(7))).await?);
     assert!(tickets::mark_frozen(&mut conn, g, ticket).await?);
     assert!(
@@ -393,6 +395,17 @@ async fn honeypot_hits_batch_and_burst(_: PgPoolOptions, options: PgConnectOptio
     assert!(honeypot::insert_hit(&mut conn, g, channel(5), msg(10), m, 1, Some(trap)).await?);
     assert!(!honeypot::insert_hit(&mut conn, g, channel(5), msg(10), m, 1, Some(trap)).await?);
     honeypot::insert_hit(&mut conn, g, channel(5), msg(11), m, 1, Some(trap)).await?;
+    assert_eq!(
+        honeypot::members_with_pending_hits(&mut conn, 10).await?,
+        vec![(g, m)]
+    );
+    let one = honeypot::hit(&mut conn, g, msg(11)).await?.context("hit")?;
+    assert_eq!((one.member, one.settings_version), (m, 1));
+    assert!(
+        honeypot::hit(&mut conn, guild_id(2), msg(11))
+            .await?
+            .is_none()
+    );
     let batch = honeypot::pending_batch(&mut conn, g, m).await?;
     assert_eq!(
         batch.iter().map(|h| h.message).collect::<Vec<_>>(),
