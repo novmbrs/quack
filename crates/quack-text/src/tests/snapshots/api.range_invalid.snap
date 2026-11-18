@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Choose an end after the start, at most 366 days later.
+plain:   Choose an end after the start, at most 366 days later.
+model:   [Fixed("Choose an end after the start, at most 366 days later.")]

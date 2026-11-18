@@ -85,7 +85,7 @@ pub struct CaseCard {
     /// Where it came from.
     pub source: CaseSource,
     /// The 1-based level.
-    pub level_index: u8,
+    pub level_index: u16,
     /// The level's starting case count.
     pub level_from: u32,
     /// The case count including this case.

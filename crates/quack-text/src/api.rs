@@ -150,6 +150,32 @@ pub fn file_unavailable() -> Text {
     )
 }
 
+/// `api.range_invalid`: a statistics range that ends before it starts or
+/// is longer than `max_days`.
+pub fn range_invalid(max_days: u64) -> Text {
+    Text::fixed(format!(
+        "Choose an end after the start, at most {} days later.",
+        fmt::count(max_days)
+    ))
+}
+
+/// `api.rule_file_wrong_format`.
+pub fn rule_file_wrong_format() -> Text {
+    Text::fixed("This file isn't a Quack rule file. Choose a file you exported from a rule's page.")
+}
+
+/// `api.rule_file_unsupported_version`.
+pub fn rule_file_unsupported_version() -> Text {
+    Text::fixed(
+        "This rule file comes from a different version of Quack. Export the rule again and import the new file.",
+    )
+}
+
+/// `api.value_invalid`: an ID or a filter value Quack can't read.
+pub fn value_invalid() -> Text {
+    Text::fixed("Quack couldn't read this value. Go back, choose it again, and retry.")
+}
+
 /// `api.validation_failed`.
 pub fn validation_failed() -> Text {
     Text::fixed("Check the marked fields and save again.")

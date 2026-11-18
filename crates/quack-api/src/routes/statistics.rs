@@ -86,7 +86,7 @@ fn time_param(value: Option<&str>, field: &str) -> ApiResult<Option<OffsetDateTi
                 ApiError::field(
                     field,
                     "invalid_time",
-                    quack_text::render::plain(&quack_text::api::validation_failed()),
+                    quack_text::render::plain(&quack_text::api::value_invalid()),
                 )
             })
         })
@@ -106,7 +106,7 @@ async fn statistics(
 ) -> ApiResult<Json<Statistics>> {
     let from = time_param(query.from.as_deref(), "from")?;
     let to = time_param(query.to.as_deref(), "to")?;
-    let facts = Facts::scene(Scene::Staff);
+    let facts = Facts::scene(Scene::Dashboard);
     let (from, to) = range(from, to).map_err(|e| map::stats(e, &facts))?;
     let s = compute(state.engine(), &staff.principal, Some(from), Some(to))
         .await

@@ -101,14 +101,36 @@ pub(crate) fn apply(err: &ApplyError, facts: &ErrorFacts<'_>) -> Failure {
     }
 }
 
-/// A void, context edit, or evidence addition failed.
+/// A reason (void, appeal decision) that is empty or longer than `max`.
+pub(crate) fn reason(text: &str, max: usize) -> Failure {
+    let words = if text.trim().is_empty() {
+        error::reason_empty()
+    } else {
+        error::reason_too_long(max)
+    };
+    Failure::refused(words, Reason::Invalid)
+}
+
+/// A member's appeal text that is empty or longer than `max`.
+pub(crate) fn appeal_text(text: &str, max: usize) -> Failure {
+    let words = if text.trim().is_empty() {
+        error::appeal_text_empty()
+    } else {
+        error::appeal_text_too_long(max)
+    };
+    Failure::refused(words, Reason::Invalid)
+}
+
+/// A void, context edit, or evidence addition failed. A void's reason
+/// problem is reported with its text by the caller ([`reason`]).
 pub(crate) fn case(err: &CaseError, facts: &ErrorFacts<'_>) -> Failure {
     match err {
         CaseError::Refused(d) => domain(*d, facts),
         CaseError::ContextChanged => Failure::refused(error::context_changed(), Reason::Conflict),
+        CaseError::NoLinks => Failure::refused(error::no_links(), Reason::Invalid),
+        CaseError::ReasonLength => reason("x", quack_core::limits::VOID_REASON.max),
         CaseError::ContextInvalid(_)
         | CaseError::LinksInvalid(_)
-        | CaseError::ReasonLength
         | CaseError::OperationKeyReused => invalid(),
         CaseError::Db(e) => db(e),
     }
@@ -125,13 +147,14 @@ pub(crate) fn action(err: &ActionError, facts: &ErrorFacts<'_>) -> Failure {
     }
 }
 
-/// An appeal operation failed.
+/// An appeal operation failed. Text and reason problems are reported with
+/// their text by the callers that have it ([`appeal_text`], [`reason`]).
 pub(crate) fn appeal(err: &AppealError, facts: &ErrorFacts<'_>) -> Failure {
     match err {
         AppealError::Refused(d) => domain(*d, facts),
-        AppealError::TextLength | AppealError::ReasonLength | AppealError::OperationKeyReused => {
-            invalid()
-        }
+        AppealError::TextLength => appeal_text("x", quack_core::limits::APPEAL_TEXT.max),
+        AppealError::ReasonLength => reason("x", quack_core::limits::APPEAL_DECISION_REASON.max),
+        AppealError::OperationKeyReused => invalid(),
         AppealError::Db(e) => db(e),
     }
 }

@@ -13,9 +13,11 @@ use crate::{api, appeal, ticket};
 /// Where the error happened, when that changes the wording.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Scene {
-    /// A staff command, button, or dashboard page.
+    /// A staff command or button in Discord.
     #[default]
     Staff,
+    /// A staff page of the dashboard (no slash commands to point at).
+    Dashboard,
     /// Adding a case (the form or the command).
     AddingCase,
     /// Editing a rule on the dashboard.
@@ -57,6 +59,11 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
         DomainError::CaseNotFound | DomainError::AppealNotFound if f.scene == Scene::Member => {
             api::not_found()
         }
+        DomainError::CaseNotFound if f.scene == Scene::Dashboard => case_or(
+            f,
+            super::case_not_found_dashboard,
+            "Quack couldn't find that case in this server.",
+        ),
         DomainError::CaseNotFound => case_or(
             f,
             super::case_not_found,
@@ -93,7 +100,9 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
                     .command(crate::model::Command::CaseAdd)
                     .s(" again to use the new version.")
             }
-            (Scene::Staff | Scene::EditingRule | Scene::Member, _) => api::rule_changed(),
+            (Scene::Staff | Scene::Dashboard | Scene::EditingRule | Scene::Member, _) => {
+                api::rule_changed()
+            }
         },
         DomainError::RuleNameTaken => f.rule.map_or_else(
             || Text::fixed("Another active rule already has this name. Choose a different name."),
@@ -121,6 +130,9 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
             || Text::fixed("The timeout's end time has passed, so Quack won't retry it."),
             super::timeout_window_passed,
         ),
+        DomainError::AppealNotFound if f.scene == Scene::Dashboard => {
+            super::appeal_not_found_dashboard()
+        }
         DomainError::AppealNotFound => super::appeal_not_found(),
         DomainError::AppealChanged if f.scene == Scene::Member => appeal::information_outdated(),
         DomainError::AppealChanged => super::appeal_changed(),

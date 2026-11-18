@@ -148,7 +148,7 @@ impl SettingsChange {
 }
 
 fn facts() -> Facts {
-    Facts::scene(Scene::Staff)
+    Facts::scene(Scene::Dashboard)
 }
 
 /// The server's settings.

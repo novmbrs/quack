@@ -107,7 +107,10 @@ pub async fn add_evidence(
                 .await?
                 .ok_or(DomainError::CaseNotFound)?
         };
-        if links.is_empty() || links.len() > MAX_LINKS_PER_CALL {
+        if links.is_empty() {
+            return Err(CaseError::NoLinks);
+        }
+        if links.len() > MAX_LINKS_PER_CALL {
             return Err(DomainError::TooManyLinks.into());
         }
         let mut parsed = parse_links(guild, links).map_err(CaseError::LinksInvalid)?;

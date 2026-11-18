@@ -43,12 +43,12 @@ pub(super) fn invalid(field: &str) -> ApiError {
     ApiError::field(
         field,
         "invalid",
-        quack_text::render::plain(&quack_text::api::validation_failed()),
+        quack_text::render::plain(&quack_text::api::value_invalid()),
     )
 }
 
 fn staff_facts() -> Facts {
-    Facts::scene(Scene::Staff)
+    Facts::scene(Scene::Dashboard)
 }
 
 /// Route 21's body.

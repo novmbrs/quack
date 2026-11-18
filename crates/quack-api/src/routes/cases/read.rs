@@ -19,7 +19,7 @@ use crate::state::ApiState;
 use crate::wire::parse_ts;
 
 fn staff_facts() -> Facts {
-    Facts::scene(Scene::Staff)
+    Facts::scene(Scene::Dashboard)
 }
 
 fn parse_enum<T: std::str::FromStr>(value: Option<&str>, field: &str) -> ApiResult<Option<T>> {

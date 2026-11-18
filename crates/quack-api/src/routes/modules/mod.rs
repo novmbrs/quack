@@ -105,7 +105,7 @@ async fn switch(
     set_enabled(state.engine(), &staff.principal, hooks, enabled, &key.0)
         .await
         .map(|s| Json(s.into()))
-        .map_err(|e| map::settings(e, &Facts::scene(Scene::Staff), Some(module), &[]))
+        .map_err(|e| map::settings(e, &Facts::scene(Scene::Dashboard), Some(module), &[]))
 }
 
 /// Turns a module on (`409 module_not_ready` lists what to fix).

@@ -55,7 +55,7 @@ async fn member_summary(
     let member: MemberId = snowflake(&path.1, "member_id")?;
     let tallies = cases::member_summary(state.engine(), &staff.principal, member)
         .await
-        .map_err(|e| map::case(e, &Facts::scene(Scene::Staff), ""))?;
+        .map_err(|e| map::case(e, &Facts::scene(Scene::Dashboard), ""))?;
     let valid = tallies.iter().map(|t| t.valid).sum();
     let voided = tallies.iter().map(|t| t.voided).sum();
     Ok(Json(MemberSummary {

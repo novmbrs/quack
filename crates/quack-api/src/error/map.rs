@@ -7,7 +7,6 @@ use quack_core::case::{ContextProblem, ContextProblemCode, LinkProblem};
 use quack_core::modules::{ModuleName, ModuleProblem};
 use quack_core::permissions::ChannelProblem;
 use quack_core::rule::{Field, RuleFileError, RuleProblem};
-use quack_core::settings::SettingsProblem;
 use quack_db::DbError;
 use quack_engine::PrincipalError;
 use quack_engine::actions::ActionError;
@@ -84,24 +83,24 @@ pub(crate) fn from_db(error: &DbError) -> ApiError {
     }
 }
 
-/// `field` is empty, or longer than `max` characters.
-pub(crate) fn length_problem(field: &str, code: &str, text: &str, max: usize) -> ApiError {
+/// A reason (void, appeal decision) that is empty or longer than `max`.
+pub(crate) fn reason_problem(field: &str, code: &str, text: &str, max: usize) -> ApiError {
     let message = if text.trim().is_empty() {
-        plain(&quack_text::case::context_problem(
-            &ContextProblem {
-                key: field.to_owned(),
-                code: ContextProblemCode::Required,
-            },
-            None,
-            None,
-        ))
+        quack_text::error::reason_empty()
     } else {
-        plain(&quack_text::setup::settings_problem(
-            SettingsProblem::TooLong,
-            max,
-        ))
+        quack_text::error::reason_too_long(max)
     };
-    ApiError::field(field, code, message)
+    ApiError::field(field, code, plain(&message))
+}
+
+/// A member's appeal text that is empty or longer than `max`.
+fn appeal_text_problem(field: &str, text: &str, max: usize) -> ApiError {
+    let message = if text.trim().is_empty() {
+        quack_text::error::appeal_text_empty()
+    } else {
+        quack_text::error::appeal_text_too_long(max)
+    };
+    ApiError::field(field, "text_length", plain(&message))
 }
 
 fn context_fields(problems: &[ContextProblem], fields: &[Field]) -> Vec<FieldError> {
@@ -184,7 +183,10 @@ pub(crate) fn case(error: CaseError, facts: &Facts, reason: &str) -> ApiError {
         }
         CaseError::LinksInvalid(problems) => ApiError::validation(link_fields("links", &problems)),
         CaseError::ContextChanged => ApiError::api(ApiCode::ContextChanged),
-        CaseError::ReasonLength => length_problem(
+        CaseError::NoLinks => {
+            ApiError::field("links", "no_links", plain(&quack_text::error::no_links()))
+        }
+        CaseError::ReasonLength => reason_problem(
             "reason",
             "reason_length",
             reason,
@@ -211,13 +213,10 @@ pub(crate) fn action(error: ActionError, facts: &Facts) -> ApiError {
 pub(crate) fn appeal(error: AppealError, facts: &Facts, text_field: &str, text: &str) -> ApiError {
     match error {
         AppealError::Refused(err) => facts.domain(err),
-        AppealError::TextLength => length_problem(
-            text_field,
-            "text_length",
-            text,
-            quack_core::limits::APPEAL_TEXT.max,
-        ),
-        AppealError::ReasonLength => length_problem(
+        AppealError::TextLength => {
+            appeal_text_problem(text_field, text, quack_core::limits::APPEAL_TEXT.max)
+        }
+        AppealError::ReasonLength => reason_problem(
             "reason",
             "reason_length",
             text,
@@ -235,10 +234,16 @@ pub(crate) fn rule(error: RuleError, facts: &Facts, prefix: &str) -> ApiError {
         RuleError::Refused(err) => facts.domain(err),
         RuleError::Invalid(problems) => ApiError::validation(rule_fields(prefix, &problems)),
         RuleError::File(file) => match file {
-            RuleFileError::WrongFormat => file_problem("file.format", "wrong_format"),
-            RuleFileError::UnsupportedVersion(_) => {
-                file_problem("file.format_version", "unsupported_version")
-            }
+            RuleFileError::WrongFormat => ApiError::field(
+                "file.format",
+                "wrong_format",
+                plain(&quack_text::api::rule_file_wrong_format()),
+            ),
+            RuleFileError::UnsupportedVersion(_) => ApiError::field(
+                "file.format_version",
+                "unsupported_version",
+                plain(&quack_text::api::rule_file_unsupported_version()),
+            ),
             RuleFileError::Invalid(problems) => {
                 ApiError::validation(rule_fields("file.rule.", &problems))
             }
@@ -246,10 +251,6 @@ pub(crate) fn rule(error: RuleError, facts: &Facts, prefix: &str) -> ApiError {
         RuleError::OperationKeyReused => ApiError::api(ApiCode::IdempotencyKeyReused),
         RuleError::Db(e) => from_db(&e),
     }
-}
-
-fn file_problem(field: &str, code: &str) -> ApiError {
-    ApiError::field(field, code, plain(&quack_text::api::validation_failed()))
 }
 
 /// The character limit of a settings field, for `too_long`.
@@ -337,7 +338,13 @@ pub(crate) fn settings(
 pub(crate) fn stats(error: StatsError, facts: &Facts) -> ApiError {
     match error {
         StatsError::Refused(err) => facts.domain(err),
-        StatsError::RangeInvalid => file_problem("from", "range"),
+        StatsError::RangeInvalid => ApiError::field(
+            "from",
+            "range",
+            plain(&quack_text::api::range_invalid(
+                u64::try_from(quack_core::limits::MAX_STATS_RANGE.whole_days()).unwrap_or(366),
+            )),
+        ),
         StatsError::Db(e) => from_db(&e),
     }
 }

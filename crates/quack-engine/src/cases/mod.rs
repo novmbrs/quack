@@ -233,6 +233,9 @@ pub enum CaseError {
     /// The void reason is empty or longer than 1,000 characters.
     #[error("reason length")]
     ReasonLength,
+    /// Adding evidence named no message link (`error.no_links`).
+    #[error("no evidence links")]
+    NoLinks,
     /// The operation key was used for a different request.
     #[error("operation key reused")]
     OperationKeyReused,

@@ -2477,6 +2477,7 @@ matching error code (§14.6).
 | `error.unconfirmed` | Quack couldn't confirm whether that was saved. Open it again to check before you try again. |
 | `error.render_failed` | Case #{number} is saved. Quack couldn't show it here. Run /case view and enter {number} as the number. |
 | `error.case_not_found` | Case #{number} wasn't found in this server. Check the number or use /case list. |
+| `error.case_not_found_dashboard` | Case #{number} wasn't found in this server. Check the number or find the case in the case list. (dashboard pages) |
 | `error.action_not_found` | Quack couldn't find that action in this server. Open the case again to see its actions. |
 | `error.context_changed` | Someone else changed this case's context. Open it again to see their changes before you save. |
 | `error.rule_changed` | The rule {rule} changed while you were adding the case. Run /case add again to use the new version. |
@@ -2489,9 +2490,15 @@ matching error code (§14.6).
 | `error.action_not_undoable` | kick: A kick can't be undone. Open the case to see what happened. / timeout, ban: This {timeout / ban} can't be undone from the case now. Open the case to see its current outcome. / an undo: This action can't be undone from the case. Open the case to see its current outcome. |
 | `error.timeout_window_passed` | The timeout's end time has passed, so Quack won't retry it. Check {member}'s case history before adding another case. |
 | `error.appeal_not_found` | Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision. |
+| `error.appeal_not_found_dashboard` | Quack couldn't find this appeal. Open the case, or go back to the appeals list. (dashboard pages) |
 | `error.appeal_changed` | This appeal changed since you opened it. Open it again to see the latest update. |
 | `error.evidence_limit_reached` | Case #{number} would have more than 50 evidence items. Add fewer message links. |
 | `error.too_many_links` | Add at most 10 message links at a time. |
+| `error.no_links` | No evidence was added. Paste at least one message link and try again. |
+| `error.reason_empty` | Add a reason before you save. The member can see it. (void, appeal decisions) |
+| `error.reason_too_long` | This reason is too long. Shorten it to {max} characters or fewer. |
+| `error.appeal_text_empty` | Write what you want the moderators to know before you send it. (appeal, added information) |
+| `error.appeal_text_too_long` | Your message is too long. Shorten it to {max} characters or fewer. |
 | `error.replacement_invalid` | Case #{number} can't be replaced. Choose a voided case in this server that doesn't already have a replacement. |
 | `error.honeypot_policy_changed` | The honeypot settings changed, so Quack didn't add a case for this post. |
 | `error.case_numbers_exhausted` | No case was added. This server has reached the highest case number Quack can store. |
@@ -3525,6 +3532,10 @@ id fits, the API uses it (domain errors through
 | `api.server_not_found` | Quack couldn't open that server. Choose a server from your dashboard. (It doesn't say whether Quack left or the reader isn't a member.) |
 | `api.file_unavailable` | This file is no longer available. Go back to the page where you opened it to check for another copy. |
 | `api.validation_failed` | Check the marked fields and save again. (the field messages are in `details`) |
+| `api.range_invalid` | Choose an end after the start, at most 366 days later. (statistics `from`/`to`) |
+| `api.rule_file_wrong_format` | This file isn't a Quack rule file. Choose a file you exported from a rule's page. |
+| `api.rule_file_unsupported_version` | This rule file comes from a different version of Quack. Export the rule again and import the new file. |
+| `api.value_invalid` | Quack couldn't read this value. Go back, choose it again, and retry. (an ID or filter value in the path or query) |
 | `api.invalid_json` | Quack couldn't read your changes. Reload this page and try again. |
 | `api.body_too_large` | Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once. |
 | `api.unsupported_media_type` | Quack couldn't read your changes. Reload this page and try again. |

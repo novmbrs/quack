@@ -158,7 +158,7 @@ pub fn case_ref(number: u64) -> String {
 }
 
 /// "level 2 (from a case count of 3)": "case 3" would read as case #3.
-pub fn level(index: u8, from_case_count: u32) -> String {
+pub fn level(index: u16, from_case_count: u32) -> String {
     format!("level {index} (from a case count of {from_case_count})")
 }
 

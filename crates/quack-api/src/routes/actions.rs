@@ -206,7 +206,7 @@ async fn list_actions(
             ApiError::field(
                 "state",
                 "invalid",
-                quack_text::render::plain(&quack_text::api::validation_failed()),
+                quack_text::render::plain(&quack_text::api::value_invalid()),
             )
         })?,
     };
@@ -222,7 +222,7 @@ async fn list_actions(
         limit,
     )
     .await
-    .map_err(|e| map::case(e, &Facts::scene(Scene::Staff), ""))?;
+    .map_err(|e| map::case(e, &Facts::scene(Scene::Dashboard), ""))?;
     let (rows, next_cursor) = pagination::split(rows, |r| {
         pagination::time_cursor(r.item.created_at, r.item.id.get(), &filters)
     });
@@ -246,14 +246,14 @@ async fn answer(
     staff: &Staff<Moderate>,
     result: Result<ControlDone, ActionError>,
 ) -> ApiResult<Json<Action>> {
-    let done = result.map_err(|e| map::action(e, &Facts::scene(Scene::Staff)))?;
+    let done = result.map_err(|e| map::action(e, &Facts::scene(Scene::Dashboard)))?;
     let found = cases::action(state.engine(), &staff.principal, done.case, done.action)
         .await
         .map_err(|e| match e {
             cases::CaseError::Refused(quack_core::DomainError::CaseNotFound) => {
                 ApiError::api(quack_text::api::ApiCode::ActionNotFound)
             }
-            other => map::case(other, &Facts::scene(Scene::Staff), ""),
+            other => map::case(other, &Facts::scene(Scene::Dashboard), ""),
         })?;
     Ok(Json(Action::from_item(
         found.case,
@@ -264,7 +264,7 @@ async fn answer(
 
 /// Facts that name the action in a refusal.
 async fn action_facts(state: &ApiState, staff: &Staff<Moderate>, action: ActionId) -> Facts {
-    let mut facts = Facts::scene(Scene::Staff);
+    let mut facts = Facts::scene(Scene::Dashboard);
     if let Ok(mut conn) = state.engine().db().conn().await
         && let Ok(Some(found)) = quack_db::actions::get(&mut conn, staff.guild(), action).await
     {

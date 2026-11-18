@@ -58,7 +58,12 @@ async fn file(a: &Acked<'_>, case: CaseId, statement: &str) -> Result<Msg, Failu
         &op_key(a.ix, "appeal_submit"),
     )
     .await
-    .map_err(|e| errors::appeal(&e, &facts))?;
+    .map_err(|e| match e {
+        quack_engine::appeals::AppealError::TextLength => {
+            errors::appeal_text(statement, quack_core::limits::APPEAL_TEXT.max)
+        }
+        e => errors::appeal(&e, &facts),
+    })?;
     let number = {
         let engine = a.engine();
         let mut conn = engine.db().conn().await.map_err(|e| errors::db(&e))?;

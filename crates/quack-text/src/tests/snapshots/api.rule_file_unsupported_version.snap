@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This rule file comes from a different version of Quack. Export the rule again and import the new file.
+plain:   This rule file comes from a different version of Quack. Export the rule again and import the new file.
+model:   [Fixed("This rule file comes from a different version of Quack. Export the rule again and import the new file.")]

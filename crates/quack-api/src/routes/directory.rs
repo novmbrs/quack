@@ -100,7 +100,7 @@ fn bad_query(field: &str) -> ApiError {
     ApiError::field(
         field,
         "invalid",
-        quack_text::render::plain(&quack_text::api::validation_failed()),
+        quack_text::render::plain(&quack_text::api::value_invalid()),
     )
 }
 

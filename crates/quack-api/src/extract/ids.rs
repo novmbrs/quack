@@ -26,7 +26,7 @@ fn invalid(field: &str) -> ApiError {
     ApiError::field(
         field,
         "invalid_id",
-        plain(&quack_text::api::validation_failed()),
+        plain(&quack_text::api::value_invalid()),
     )
 }
 

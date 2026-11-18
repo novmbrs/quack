@@ -179,6 +179,53 @@ pub fn timeout_window_passed(member: &Person) -> Text {
         .s("'s case history before adding another case.")
 }
 
+/// `error.case_not_found_dashboard`: [`case_not_found`] on the dashboard,
+/// which has no slash commands.
+pub fn case_not_found_dashboard(number: u64) -> Text {
+    Text::fixed(format!(
+        "Case #{number} wasn't found in this server. Check the number or find the case in the case list."
+    ))
+}
+
+/// `error.appeal_not_found_dashboard`: [`appeal_not_found`] on the
+/// dashboard.
+pub fn appeal_not_found_dashboard() -> Text {
+    Text::fixed("Quack couldn't find this appeal. Open the case, or go back to the appeals list.")
+}
+
+/// `error.reason_empty`: a void or appeal decision without a reason.
+pub fn reason_empty() -> Text {
+    Text::fixed("Add a reason before you save. The member can see it.")
+}
+
+/// `error.reason_too_long`: a void or appeal decision reason over `max`
+/// characters.
+pub fn reason_too_long(max: usize) -> Text {
+    Text::fixed(format!(
+        "This reason is too long. Shorten it to {} characters or fewer.",
+        fmt::count(u64::try_from(max).unwrap_or(u64::MAX))
+    ))
+}
+
+/// `error.appeal_text_empty`: an appeal or added information with no text.
+pub fn appeal_text_empty() -> Text {
+    Text::fixed("Write what you want the moderators to know before you send it.")
+}
+
+/// `error.appeal_text_too_long`: an appeal or added information over `max`
+/// characters.
+pub fn appeal_text_too_long(max: usize) -> Text {
+    Text::fixed(format!(
+        "Your message is too long. Shorten it to {} characters or fewer.",
+        fmt::count(u64::try_from(max).unwrap_or(u64::MAX))
+    ))
+}
+
+/// `error.no_links`: adding evidence without a message link.
+pub fn no_links() -> Text {
+    Text::fixed("No evidence was added. Paste at least one message link and try again.")
+}
+
 /// `error.appeal_not_found`.
 pub fn appeal_not_found() -> Text {
     Text::fixed("Quack couldn't find this appeal. Open the case, or use ")

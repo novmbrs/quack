@@ -64,6 +64,9 @@ async fn void(a: &Acked<'_>, case: CaseRef, reason: &str) -> Result<Msg, Failure
     let voided = void_case(engine, &principal, case, reason, &op_key(a.ix, "case_void"))
         .await
         .map_err(|e| {
+            if matches!(e, quack_engine::cases::CaseError::ReasonLength) {
+                return errors::reason(reason, quack_core::limits::VOID_REASON.max);
+            }
             errors::case(
                 &e,
                 &ErrorFacts {

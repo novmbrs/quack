@@ -7,7 +7,7 @@ use quack_core::appeal::{AppealDecision, AppealEventKind, AppealState};
 use quack_core::ids::AppealId;
 use quack_core::permissions::Capability;
 use quack_discord::interaction::{FieldValue, Source};
-use quack_engine::appeals::{AppealView, decide as decide_appeal, get, list};
+use quack_engine::appeals::{AppealError, AppealView, decide as decide_appeal, get, list};
 use quack_text::actions::InputId;
 use quack_text::appeal::{AppealPost, AppealRow, ModalDecision, decided, decision_modal};
 use quack_text::error::ErrorFacts;
@@ -183,7 +183,12 @@ async fn decide_now(
         &op_key(a.ix, operation),
     )
     .await
-    .map_err(|e| errors::appeal(&e, &ErrorFacts::default()))?;
+    .map_err(|e| match e {
+        AppealError::ReasonLength => {
+            errors::reason(reason, quack_core::limits::APPEAL_DECISION_REASON.max)
+        }
+        e => errors::appeal(&e, &ErrorFacts::default()),
+    })?;
     let v = get(engine, &principal, appeal)
         .await
         .map_err(|e| errors::appeal(&e, &ErrorFacts::default()))?;

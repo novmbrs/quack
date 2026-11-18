@@ -30,7 +30,7 @@ fn mapped(error: TicketError) -> ApiError {
         TicketError::Refused(d) => ApiError::domain(
             &d,
             &ErrorFacts {
-                scene: Scene::Staff,
+                scene: Scene::Dashboard,
                 ..ErrorFacts::default()
             },
         ),
@@ -99,7 +99,7 @@ pub(super) async fn list_tickets(
                 ApiError::field(
                     "state",
                     "invalid",
-                    quack_text::render::plain(&quack_text::api::validation_failed()),
+                    quack_text::render::plain(&quack_text::api::value_invalid()),
                 )
             })
         })

@@ -123,7 +123,7 @@ pub(crate) struct AppealQuery {
 }
 
 fn staff_facts() -> Facts {
-    Facts::scene(Scene::Staff)
+    Facts::scene(Scene::Dashboard)
 }
 
 /// The server's appeals, newest first.
@@ -144,7 +144,7 @@ async fn list_appeals(
                 ApiError::field(
                     "state",
                     "invalid",
-                    quack_text::render::plain(&quack_text::api::validation_failed()),
+                    quack_text::render::plain(&quack_text::api::value_invalid()),
                 )
             })
         })

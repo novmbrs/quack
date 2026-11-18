@@ -121,6 +121,33 @@ pub fn samples() -> Vec<Sample> {
     v.push(text("error.render_failed", "", error::render_failed(12)));
     v.push(text("error.case_not_found", "", error::case_not_found(12)));
     v.push(text(
+        "error.case_not_found_dashboard",
+        "",
+        error::case_not_found_dashboard(12),
+    ));
+    v.push(text(
+        "error.appeal_not_found_dashboard",
+        "",
+        error::appeal_not_found_dashboard(),
+    ));
+    v.push(text("error.reason_empty", "", error::reason_empty()));
+    v.push(text(
+        "error.reason_too_long",
+        "",
+        error::reason_too_long(quack_core::limits::VOID_REASON.max),
+    ));
+    v.push(text(
+        "error.appeal_text_empty",
+        "",
+        error::appeal_text_empty(),
+    ));
+    v.push(text(
+        "error.appeal_text_too_long",
+        "",
+        error::appeal_text_too_long(quack_core::limits::APPEAL_TEXT.max),
+    ));
+    v.push(text("error.no_links", "", error::no_links()));
+    v.push(text(
         "error.action_not_found",
         "",
         error::action_not_found(),
@@ -267,6 +294,18 @@ pub fn samples() -> Vec<Sample> {
     v.push(text("api.server_not_found", "", api::server_not_found()));
     v.push(text("api.file_unavailable", "", api::file_unavailable()));
     v.push(text("api.validation_failed", "", api::validation_failed()));
+    v.push(text("api.range_invalid", "", api::range_invalid(366)));
+    v.push(text(
+        "api.rule_file_wrong_format",
+        "",
+        api::rule_file_wrong_format(),
+    ));
+    v.push(text(
+        "api.rule_file_unsupported_version",
+        "",
+        api::rule_file_unsupported_version(),
+    ));
+    v.push(text("api.value_invalid", "", api::value_invalid()));
     v.push(text("api.invalid_json", "", api::invalid_json()));
     v.push(text("api.body_too_large", "", api::body_too_large()));
     v.push(text(

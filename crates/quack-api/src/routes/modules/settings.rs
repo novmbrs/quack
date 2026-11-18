@@ -25,7 +25,7 @@ fn mapped(
     module: ModuleName,
     channels: &[(&str, ChannelId)],
 ) -> impl FnOnce(SettingsError) -> ApiError {
-    move |e| map::settings(e, &Facts::scene(Scene::Staff), Some(module), channels)
+    move |e| map::settings(e, &Facts::scene(Scene::Dashboard), Some(module), channels)
 }
 
 fn state_of(

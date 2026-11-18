@@ -144,7 +144,7 @@ fn invalid(field: &str) -> ApiError {
     ApiError::field(
         field,
         "invalid",
-        quack_text::render::plain(&quack_text::api::validation_failed()),
+        quack_text::render::plain(&quack_text::api::value_invalid()),
     )
 }
 
@@ -217,7 +217,7 @@ async fn mod_log(
     }
     let page = modlog::list(state.engine(), &staff.principal, &p.filter, cursor, limit)
         .await?
-        .map_err(|e| Facts::scene(Scene::Staff).domain(e))?;
+        .map_err(|e| Facts::scene(Scene::Dashboard).domain(e))?;
     let next_cursor = page
         .next_cursor
         .map(|c| pagination::time_cursor(c.created_at, c.id, &filters));

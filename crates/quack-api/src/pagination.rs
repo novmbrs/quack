@@ -35,7 +35,7 @@ pub(crate) fn limit_within(
 }
 
 fn invalid(field: &str, code: &str) -> ApiError {
-    ApiError::field(field, code, plain(&quack_text::api::validation_failed()))
+    ApiError::field(field, code, plain(&quack_text::api::value_invalid()))
 }
 
 #[derive(Serialize, Deserialize)]

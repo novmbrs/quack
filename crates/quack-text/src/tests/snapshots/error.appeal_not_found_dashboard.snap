@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't find this appeal. Open the case, or go back to the appeals list.
+plain:   Quack couldn't find this appeal. Open the case, or go back to the appeals list.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or go back to the appeals list.")]

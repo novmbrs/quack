@@ -163,7 +163,7 @@ async fn guild_health(
 ) -> ApiResult<Json<Health>> {
     let h = health(state.engine(), &staff.principal)
         .await
-        .map_err(|e| map::settings(e, &Facts::scene(Scene::Staff), None, &[]))?;
+        .map_err(|e| map::settings(e, &Facts::scene(Scene::Dashboard), None, &[]))?;
     Ok(Json(Health {
         quack_in_server: h.quack_in_server,
         missing_permissions: h.missing_permissions,

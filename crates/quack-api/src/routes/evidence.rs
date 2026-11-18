@@ -34,7 +34,7 @@ async fn redirect(state: &ApiState, viewer: FileViewer<'_>, file: FileId) -> Api
             FileError::Refused(d) => ApiError::domain(
                 &d,
                 &ErrorFacts {
-                    scene: Scene::Staff,
+                    scene: Scene::Dashboard,
                     ..ErrorFacts::default()
                 },
             ),

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Add a reason before you save. The member can see it.
+plain:   Add a reason before you save. The member can see it.
+model:   [Fixed("Add a reason before you save. The member can see it.")]

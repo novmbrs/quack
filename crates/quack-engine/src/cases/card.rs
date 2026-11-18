@@ -45,9 +45,7 @@ pub(crate) fn card(engine: &Engine, r: &CaseRecords) -> CaseCard {
         member: person(case.member.account()),
         member_id: case.member,
         source: case.source,
-        // quack-text's card holds a u8; a level past 255 (imported rules
-        // only) shows as 255 until it widens.
-        level_index: decision.map_or(0, |d| u8::try_from(d.level_index).unwrap_or(u8::MAX)),
+        level_index: decision.map_or(0, |d| d.level_index),
         level_from: decision.map_or(0, |d| d.level_from_case_count),
         case_count: decision.map_or(0, |d| d.case_count),
         reason: r.reason(),

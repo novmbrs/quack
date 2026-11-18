@@ -154,7 +154,7 @@ impl<R: Requirement> FromRequestParts<ApiState> for Staff<R> {
             ApiError::domain(
                 &err,
                 &ErrorFacts {
-                    scene: Scene::Staff,
+                    scene: Scene::Dashboard,
                     ..ErrorFacts::default()
                 },
             )
