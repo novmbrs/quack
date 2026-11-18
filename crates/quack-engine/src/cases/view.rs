@@ -237,7 +237,11 @@ fn view(
         dm: r.dm.as_ref().map(|d| DmItem {
             state: d.state,
             failure: d.failure,
-            outcome_text: plain(&quack_text::dm::sentence(r.dm_view().as_ref(), &member)),
+            outcome_text: plain(&quack_text::dm::sentence(
+                r.dm_view().as_ref(),
+                &member,
+                case.number,
+            )),
             settled_at: d.settled_at,
         }),
         evidence: r.evidence.iter().map(|e| evidence_item(r, e)).collect(),
