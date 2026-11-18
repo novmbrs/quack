@@ -424,3 +424,33 @@ async fn a_timeout_that_lands_after_the_void_is_still_removed() -> Result<()> {
     );
     Ok(())
 }
+
+/// Engine review MINOR 31: the member's timeline dates a skipped undo
+/// when it was skipped, not when it was requested.
+#[tokio::test]
+async fn a_skipped_undo_is_dated_when_it_was_skipped() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h
+        .rule(levels("Spam", &[Some(BAN), Some(BAN)], false))
+        .await?;
+    let first = h.apply(MEMBER, rule).await?;
+    h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    void(&h, first.case.id).await?;
+    // Requested a day ago; it runs now.
+    h.db.execute("UPDATE actions SET created_at = created_at - interval '1 day' WHERE undo_of_action_id IS NOT NULL")
+        .await?;
+    h.settle().await?;
+    let view = quack_engine::cases::member_case(&h.engine, sf(MEMBER), first.case.id).await?;
+    let skipped = view
+        .timeline
+        .iter()
+        .find(|t| t.text.contains("still applies"))
+        .context("the skipped undo")?;
+    assert!(
+        OffsetDateTime::now_utc() - skipped.at < time::Duration::hours(1),
+        "{:?}",
+        skipped.at
+    );
+    Ok(())
+}

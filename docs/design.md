@@ -8131,3 +8131,11 @@ folds these into the sections (or changes the code) and removes them here.
     its deadline; without it, it ends `Continue` (nothing opened, nothing
     counted) and a new claim starts over, so the hard deadline never cuts
     off a mutation in flight.
+63. §4.11, §10.2 (engine review MINOR 31) → an action's start
+    (`running`) and a retry's settlement back to `pending` don't bump the
+    case's receipt: every surface renders `pending` and `running` with the
+    same in-progress outcome, the receipt's sentence ("Quack will …" /
+    "Quack is …") is true in both, and the retry time and reason are
+    staff detail that `/case view` and the dashboard read live; terminal
+    transitions bump as before. The member's timeline dates a skipped
+    undo by its `action_undo_skipped` entry, not by when it was requested.

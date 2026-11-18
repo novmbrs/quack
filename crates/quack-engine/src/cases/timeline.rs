@@ -69,8 +69,16 @@ pub(crate) fn member_timeline(r: &CaseRecords, log: &[StoredEntry]) -> (Vec<Time
         });
     }
     for action in r.actions.iter().filter(|a| a.state == ActionState::Skipped) {
+        // When it was skipped (its log entry), not when it was requested.
+        let at = log
+            .iter()
+            .find(|e| {
+                matches!(e.entry, ModLogEntry::ActionUndoSkipped(_))
+                    && e.links.action_id == Some(action.id)
+            })
+            .map_or(action.created_at, |e| e.created_at);
         items.push(TimelineText {
-            at: action.created_at,
+            at,
             text: plain(&quack_text::action::member_sentence(&r.action_view(action))),
         });
     }
