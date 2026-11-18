@@ -1,13 +1,13 @@
 # Quack dashboard
 
-The web dashboard for Quack v5: a React single-page app built with
-[Vite+](https://viteplus.dev), styled with CSS Modules, and
-served by a small Go program in this directory.
+The web dashboard for Quack: a React single-page app built with
+[Vite+](https://viteplus.dev) and styled with CSS Modules.
 
-- Staff moderate their servers: cases, appeals, failed actions, the audit
-  log, rules, settings, and the optional modules.
-- Members sign in to see their own cases and appeal them. Quack's DMs link to
-  `/guilds/{guildId}/cases/{caseId}/appeal`.
+- Staff moderate their servers: cases, appeals, failed actions, the
+  moderation log, rules, settings, and the optional modules (tickets, the
+  server activity log, the honeypot).
+- Members sign in to see their own cases (Your cases, `/cases`) and appeal
+  them. Quack's DMs link to `/guilds/{guildId}/cases/{caseId}/appeal`.
 
 It's built to sit comfortably next to Discord without copying it: a calm
 dark palette with Quack's duck yellow as the accent, rounded surfaces, quick
@@ -17,47 +17,40 @@ icons the bot uses in its messages.
 ## How it runs
 
 ```
-browser ──> quack-dashboard (Go, :3000) ──/api/*──> quack serve (:8080)
+browser ──> quack serve (:8080) ── /api/*, /livez, /readyz: the HTTP API
                  │
-                 └── everything else: the built app, falling back to index.html
+                 └── everything else: the built app from QUACK_DASHBOARD_DIR,
+                     falling back to index.html (design §14.10)
 ```
 
-The Go server (`main.go`, `server.go`) embeds the built app, serves it with
-long-lived caching for hashed assets, and reverse-proxies `/api/*` to the
-backend with the prefix stripped. The browser only ever talks to one origin,
-so the backend's host-only session and CSRF cookies just work and no CORS is
-involved. In development `vp dev` does the same proxying.
+There is no separate dashboard server. `quack serve` serves the built app and
+the API from one origin, so the host-only session cookie and the CSRF and
+Origin checks just work and no CORS is involved. In development `vp dev`
+serves the app and proxies `/api`, `/livez`, and `/readyz` to the backend.
 
 ## Development
 
-You need [Bun](https://bun.sh) (or npm) and Go. Start the backend first (see
-[`docs/design.md`](../../docs/design.md#development)), then:
+You need [Bun](https://bun.sh) (or npm). Start the backend first (see
+[`docs/design.md`](../../docs/design.md), §20.2), then:
 
 ```sh
 bun install
 bun run dev        # http://localhost:3000, proxies /api to localhost:8080
 ```
 
-Set `QUACK_DASHBOARD_API_URL` to proxy somewhere else. The backend's
-`.env` needs the dashboard as its OAuth redirect and allowed origin, which
-`.env.example` already sets up:
-
-```sh
-QUACK_DISCORD_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/discord/callback
-QUACK_API_CORS_ORIGINS=http://localhost:3000
-```
+Set `QUACK_DASHBOARD_API_URL` to proxy somewhere else. Sign-in goes through
+`/api/auth/login`, and Discord redirects to `<QUACK_PUBLIC_URL>/api/auth/callback`,
+so point the backend's public URL at the origin you open in the browser.
 
 ## Commands
 
-| Command         | What it does                                                                                                           |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `bun run dev`   | Dev server with hot reload.                                                                                            |
-| `bun run build` | Production build into `dist/app`.                                                                                      |
-| `bun run check` | Format check, lint (Oxlint, type-aware), and type check. `vp check --fix` formats.                                     |
-| `bun run test`  | Unit tests (Vitest).                                                                                                   |
-| `bun run api`   | Regenerate `src/api/schema.gen.ts` from `contracts/http/openapi.yaml`. Run it after the backend's `go generate ./...`. |
-| `go run .`      | Serve `dist/app` and proxy `/api`, as in production. Build first.                                                      |
-| `go test ./...` | Test the Go server.                                                                                                    |
+| Command         | What it does                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `bun run dev`   | Dev server with hot reload.                                                                                                    |
+| `bun run build` | Production build into `dist/app`; point `QUACK_DASHBOARD_DIR` at it.                                                           |
+| `bun run check` | Format check, lint (Oxlint, type-aware), and type check. `vp check --fix` formats.                                             |
+| `bun run test`  | Unit tests (Vitest), including the vocabulary lint over user-facing text.                                                      |
+| `bun run api`   | Regenerate `src/api/schema.gen.ts` from `contracts/http/openapi.json`. Run it whenever the backend's OpenAPI document changes. |
 
 ## Layout
 
@@ -75,19 +68,31 @@ src/
 ### Conventions
 
 - **Data.** Every request goes through `api` in `src/api/client.ts`, typed
-  from the generated contract; wrap calls in `unwrap()` so failures become
-  `ApiError` with a user-safe `message`. Reads are `queryOptions` factories in
-  `src/api/queries.ts` keyed under `keys`, so a write can invalidate a whole
-  area (`keys.cases(guildId)`). Route loaders call `ensureQueryData` so
-  navigation (and hover preloading) has data before render; components read
-  with `useSuspenseQuery` or `useQuery`. The client adds `X-CSRF-Token` and a
-  fresh `Idempotency-Key` to every write.
+  from the generated contract (paths start with `/api`). Wrap reads in
+  `unwrap()` so failures become `ApiError`. Send writes with `write()`: it
+  makes one `Idempotency-Key` per write the reader asked for and reuses it on
+  automatic retries (network errors, 502, 503), so a retry never applies a
+  change twice; the client adds `X-CSRF-Token` from `GET /api/auth/me`. Reads
+  are `queryOptions` factories in `src/api/queries.ts` keyed under `keys`, so
+  a write can invalidate a whole area (`keys.cases(guildId)`). Route loaders
+  call `ensureQueryData` so navigation (and hover preloading) has data
+  before render; components read with `useSuspenseQuery` or `useQuery`.
+- **Errors.** The API answers every failure with one envelope (`code`,
+  `message`, `fields`, `problems`, `trace_id`). Show `message` as is; it is
+  already a sentence for the reader. Map `fields` onto form fields with
+  `ApiError.field(path)`. `ErrorState`, `InlineError`, and toasts add the
+  trace ID in small print for unexpected (network or 5xx) failures. A 401
+  sends the reader to sign in again.
+- **Lists.** Lists page by cursor (`next_cursor`, no totals or offsets).
+  Tables use `useCursorPager` with `Pager` for previous and next; feeds use
+  infinite queries with `nextPageParam` and a "Load more" button.
 - **Users and channels.** The API returns Discord IDs. Show people with
   `UserChip`/`Mention` (`features/people/User.tsx`), which batch lookups into
   one request per tick. Pick people with `MemberPicker`.
-- **Permissions.** `useCan(guildId)` reads the live permissions from
-  `GET /guilds/{id}/me`. It only hides what the user can't do; the API checks
-  again on every request.
+- **Capabilities.** `useCan(guildId)` reads the four capabilities
+  (`moderate`, `manage_rules`, `manage_settings`, `manage_staff_roles`) from
+  `GET /api/guilds/{id}/me`. It only hides what the reader can't do; the API
+  checks again on every request.
 - **Styling.** CSS Modules: each component has a `Name.module.css` next to
   it, imported as `s` and applied with `className={cx(s.a, cond && s.b)}`
   (`~/lib/cx`). Use the custom properties in `src/styles/tokens.css` for
@@ -101,8 +106,15 @@ src/
   should animate out (`usePresence` in `~/lib/usePresence` keeps an element
   mounted for its exit animation). Keep it quick: 120–260ms.
 - **Copy.** Short, plain, and specific, like Quack's Discord messages. Say
-  what happened and what to do next. Moderation "templates" are called
-  **rules** in the UI, as they are in Discord.
+  what happened and what the reader can do; a failure never hides a success.
+  Use the glossary in `docs/design.md` §1.3 and nothing else: rule (never
+  template or policy), level, case count, case, action, outcome, void,
+  archive, DM (never notification), case context, evidence, appeal (accept,
+  reject, request more information, close, reopen), moderation log (never
+  audit log), log channel, server activity log, member (never user),
+  moderator, rules manager, administrator, server. Where the API sends a
+  sentence (`outcome_text`, `state_text`, `text`, `dm_text`), show it as
+  given. A vocabulary test in `src` fails on the banned words.
 - **Mutations.** Show errors inline in dialogs (`onError`); anything else
   falls back to a toast from the global `MutationCache` handler. Confirm
   consequential actions with `ConfirmDialog`.
