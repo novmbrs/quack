@@ -7927,3 +7927,14 @@ folds these into the sections (or changes the code) and removes them here.
     `first_attempt_at` on the database's clock (`dms::send_window_open`),
     not the process clock. Past it: `unknown` when a create may have reached
     Discord, else back to `pending`.
+36. §7.3 (engine review MAJORs 5, 16, 17) → the evidence channel is read
+    from settings and checked staff-only again right before **every**
+    upload, not once per run; a channel that stops being staff-only gets no
+    further upload and the item's pending files fail with
+    `copy_skipped_not_staff_only`. Each upload try is reserved durably
+    (`evidence_files.copy_attempts`, migration `0005`) under the case and
+    item locks with the job's fence, so the three-try budget holds across
+    runs; a rate-limited or unsent upload gives its try back and a rate
+    limit ends the run with Discord's delay. A run starts a download only
+    with room for the download, the destination check, the upload, and a
+    5-second margin before its deadline, else it continues in a new run.

@@ -18,15 +18,22 @@ use crate::channels::{ChannelCheck, staff_channel};
 use crate::jobs::retry;
 use crate::port::{Nonce, Outcome, OutgoingFile};
 
-/// Upload tries per file (§7.3).
-const TRIES: u32 = 3;
+/// Upload tries per file (§7.3), reserved durably before each upload.
+const TRIES: u16 = 3;
+/// Download tries per file within one run (a download creates nothing).
+const DOWNLOAD_TRIES: u32 = 3;
 /// The CDN hosts Quack downloads from.
 const HOSTS: [&str; 2] = [
     "https://cdn.discordapp.com/",
     "https://media.discordapp.net/",
 ];
-/// The time a download and an upload may take, plus margin (§16.1).
-const CALL_ROOM: Duration = Duration::from_secs(35);
+/// The longest a download, a destination check, or an upload may take
+/// (the port's deadlines), and the margin left before the claim's own
+/// deadline (§16.1).
+const DOWNLOAD_ROOM: Duration = Duration::from_secs(30);
+const CHECK_ROOM: Duration = Duration::from_secs(10);
+const UPLOAD_ROOM: Duration = Duration::from_secs(30);
+const MARGIN: Duration = Duration::from_secs(5);
 
 /// How the copy step ended.
 pub(super) enum Copied {
@@ -36,6 +43,7 @@ pub(super) enum Copied {
     Stop(Handled),
 }
 
+/// How one file's copy ended.
 enum One {
     Copied(
         ChannelId,
@@ -45,6 +53,44 @@ enum One {
     ),
     /// A definite refusal, a non-CDN URL, or three tries spent (§7.3).
     Failed,
+    /// The destination is gone or no longer staff-only: stop every file.
+    Destination(Destination),
+    /// Stop the run here; the file stays `pending` (time, rate limit,
+    /// unavailable facts).
+    Stop(Handled),
+}
+
+/// Where uploads go, checked from current settings and facts right before
+/// every upload (§7.3): a channel that stopped being staff-only receives
+/// nothing more.
+#[derive(Clone, Copy)]
+enum Destination {
+    Ok(ChannelId),
+    /// No evidence channel any more, or it is gone.
+    Missing,
+    NotStaffOnly,
+    Unavailable,
+}
+
+async fn destination(engine: &Engine, item: &Evidence) -> Result<Destination, DbError> {
+    let channel = {
+        let mut conn = engine.db().conn().await?;
+        settings::get(&mut conn, item.guild)
+            .await?
+            .and_then(|s| s.evidence_channel)
+    };
+    let Some(channel) = channel else {
+        return Ok(Destination::Missing);
+    };
+    let needs = Permission::ViewChannel | Permission::SendMessages | Permission::AttachFiles;
+    Ok(
+        match staff_channel(engine, item.guild, channel, needs).await {
+            ChannelCheck::Ok => Destination::Ok(channel),
+            ChannelCheck::Problems(_) => Destination::NotStaffOnly,
+            ChannelCheck::Missing => Destination::Missing,
+            ChannelCheck::Unavailable => Destination::Unavailable,
+        },
+    )
 }
 
 /// Step 5: copies each pending file.
@@ -53,61 +99,34 @@ pub(super) async fn copy_pending(
     job: &ClaimedJob,
     item: &Evidence,
 ) -> Result<Copied, DbError> {
-    let (pending, channel) = {
+    let pending = {
         let mut conn = engine.db().conn().await?;
-        let pending = evidence::pending_files(&mut conn, item.guild, item.id).await?;
-        let channel = settings::get(&mut conn, item.guild)
-            .await?
-            .and_then(|s| s.evidence_channel);
-        (pending, channel)
+        evidence::pending_files(&mut conn, item.guild, item.id).await?
     };
     if pending.is_empty() {
         return Ok(Copied::All((0, 0)));
     }
-    let Some(channel) = channel else {
-        fail_all(engine, job, item, false).await?;
-        return Ok(Copied::All((0, 0)));
-    };
-    let needs = Permission::ViewChannel | Permission::SendMessages | Permission::AttachFiles;
-    match staff_channel(engine, item.guild, channel, needs).await {
-        ChannelCheck::Ok => {}
-        ChannelCheck::Problems(_) => {
-            fail_all(engine, job, item, true).await?;
-            return Ok(Copied::All((0, 0)));
-        }
-        ChannelCheck::Missing => {
-            fail_all(engine, job, item, false).await?;
-            return Ok(Copied::All((0, 0)));
-        }
-        ChannelCheck::Unavailable => {
-            return Ok(Copied::Stop(Handled::Settle(retry(
-                job,
-                "facts_unavailable",
-            ))));
-        }
-    }
     let (mut files, mut bytes) = (0, 0);
     for file in &pending {
-        // The claim's own deadline (§16.1): less room than one copy needs
-        // saves progress and continues in a new run.
-        if job.time_left() < CALL_ROOM {
-            return Ok(Copied::Stop(Handled::Settle(JobResult::Continue)));
-        }
-        start(engine, job, item, file).await?;
-        let one = copy_one(engine, channel, file).await;
+        let one = copy_one(engine, job, item, file).await?;
+        let state = match one {
+            One::Stop(handled) => return Ok(Copied::Stop(handled)),
+            One::Destination(d) => return stopped(engine, job, item, d).await,
+            One::Copied(c, m, a, size) => Ok((c, m, a, size)),
+            One::Failed => Err(FileCopyState::CopyFailed),
+        };
         let mut tx = engine.db().begin().await?;
         cases::lock(&mut tx, item.guild, item.case).await?;
         evidence::lock(&mut tx, item.guild, item.id).await?;
-        match one {
-            One::Copied(c, m, a, size) => {
+        match state {
+            Ok((c, m, a, size)) => {
                 if evidence::mark_copied(&mut tx, item.guild, file.id, c, m, a).await? {
                     files += 1;
                     bytes += size;
                 }
             }
-            One::Failed => {
-                evidence::set_file_state(&mut tx, item.guild, file.id, FileCopyState::CopyFailed)
-                    .await?;
+            Err(failed) => {
+                evidence::set_file_state(&mut tx, item.guild, file.id, failed).await?;
             }
         }
         fence(&mut tx, job).await?;
@@ -116,39 +135,96 @@ pub(super) async fn copy_pending(
     Ok(Copied::All((files, bytes)))
 }
 
-/// Records the upload's start (its nonce window) before any call.
-async fn start(
+/// The destination stopped the copy: every pending file fails (marking
+/// the item when the channel isn't staff-only), or the run retries when
+/// the facts were unavailable.
+async fn stopped(
+    engine: &Engine,
+    job: &ClaimedJob,
+    item: &Evidence,
+    d: Destination,
+) -> Result<Copied, DbError> {
+    match d {
+        Destination::Unavailable | Destination::Ok(_) => Ok(Copied::Stop(Handled::Settle(retry(
+            job,
+            "facts_unavailable",
+        )))),
+        Destination::Missing | Destination::NotStaffOnly => {
+            fail_all(engine, job, item, matches!(d, Destination::NotStaffOnly)).await?;
+            Ok(Copied::All((0, 0)))
+        }
+    }
+}
+
+/// Reserves an upload try (and its nonce window) under the case and item
+/// locks, with the job's fence. `None`: the file's budget is spent.
+async fn reserve(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
     file: &EvidenceFile,
-) -> Result<(), DbError> {
+) -> Result<Option<u16>, DbError> {
     let mut tx = engine.db().begin().await?;
     cases::lock(&mut tx, item.guild, item.case).await?;
     evidence::lock(&mut tx, item.guild, item.id).await?;
-    evidence::start_copy(&mut tx, item.guild, file.id).await?;
+    let reserved = evidence::reserve_upload(&mut tx, item.guild, file.id, TRIES).await?;
     fence(&mut tx, job).await?;
-    tx.commit().await
+    tx.commit().await?;
+    Ok(reserved)
+}
+
+/// Gives back a reserved try that never reached Discord.
+async fn release(engine: &Engine, item: &Evidence, file: &EvidenceFile) -> Result<(), DbError> {
+    let mut conn = engine.db().conn().await?;
+    evidence::release_upload(&mut conn, item.guild, file.id).await
 }
 
 /// Downloads one file from Discord's CDN and uploads it as a plain message
-/// with one spoilered attachment, up to three tries.
-async fn copy_one(engine: &Engine, channel: ChannelId, file: &EvidenceFile) -> One {
+/// with one spoilered attachment. Every upload is preceded by a fresh
+/// destination check and a durably reserved try (three per file); a
+/// rate limit stops the run with its delay; a run never starts a call it
+/// has no time to finish.
+async fn copy_one(
+    engine: &Engine,
+    job: &ClaimedJob,
+    item: &Evidence,
+    file: &EvidenceFile,
+) -> Result<One, DbError> {
     if !HOSTS.iter().any(|h| file.original_url.starts_with(h)) {
-        return One::Failed;
+        return Ok(One::Failed);
     }
     let discord = engine.discord();
     let nonce = Nonce::new(file.id.to_u22());
     let empty = Msg::default();
-    for _ in 0..TRIES {
+    let continue_later = || One::Stop(Handled::Settle(JobResult::Continue));
+    let mut downloads = 0;
+    loop {
+        if job.time_left() < DOWNLOAD_ROOM + CHECK_ROOM + UPLOAD_ROOM + MARGIN {
+            return Ok(continue_later());
+        }
+        if downloads == DOWNLOAD_TRIES {
+            return Ok(One::Failed);
+        }
+        downloads += 1;
         let bytes = match discord
             .download_attachment(&file.original_url, MAX_COPY_BYTES)
             .await
         {
             Outcome::Done(bytes) => bytes,
-            Outcome::Refused(_) => return One::Failed,
+            Outcome::Refused(_) => return Ok(One::Failed),
+            Outcome::RetryAfter(d) => return Ok(One::Stop(Handled::Settle(retry_in(job, d)))),
             _ => continue,
         };
+        if job.time_left() < CHECK_ROOM + UPLOAD_ROOM + MARGIN {
+            return Ok(continue_later());
+        }
+        let channel = match destination(engine, item).await? {
+            Destination::Ok(channel) => channel,
+            other => return Ok(One::Destination(other)),
+        };
+        if reserve(engine, job, item, file).await?.is_none() {
+            return Ok(One::Failed);
+        }
         let size = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
         let upload = [OutgoingFile {
             name: format!("SPOILER_{}", file.filename),
@@ -158,15 +234,35 @@ async fn copy_one(engine: &Engine, channel: ChannelId, file: &EvidenceFile) -> O
         match discord.send(channel, &empty, &upload, &nonce).await {
             Outcome::Done(sent) => {
                 let Some((_, attachment)) = sent.attachments.first() else {
-                    return One::Failed;
+                    return Ok(One::Failed);
                 };
-                return One::Copied(sent.channel_id, sent.message_id, *attachment, size);
+                return Ok(One::Copied(
+                    sent.channel_id,
+                    sent.message_id,
+                    *attachment,
+                    size,
+                ));
             }
-            Outcome::Refused(_) => return One::Failed,
-            _ => {}
+            Outcome::Refused(_) => return Ok(One::Failed),
+            Outcome::RetryAfter(d) => {
+                release(engine, item, file).await?;
+                return Ok(One::Stop(Handled::Settle(retry_in(job, d))));
+            }
+            Outcome::NotSent(_) => release(engine, item, file).await?,
+            // May have created the copy: the try stays counted, and the
+            // next one reuses the nonce while the window lasts.
+            Outcome::Unknown(_) => {}
         }
     }
-    One::Failed
+}
+
+/// Retry after Discord's requested wait, or the kind's backoff when that
+/// is longer.
+fn retry_in(job: &ClaimedJob, d: Duration) -> JobResult {
+    JobResult::Retry {
+        at: quack_db::jobs::RunAt::In(d.max(job.kind.policy().backoff(job.attempt))),
+        error: "rate_limited".to_owned(),
+    }
 }
 
 /// Every pending file of the item → `copy_failed` (`not_staff_only` also

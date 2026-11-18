@@ -279,6 +279,63 @@ pub async fn start_copy(
     .await
 }
 
+/// Reserves one upload try of a pending file (§7.3) together with its
+/// window ([`start_copy`]): `copy_attempts + 1`, only while fewer than
+/// `budget` were reserved. Returns the tries reserved so far, or `None`
+/// when the file is no longer pending or its budget is spent.
+pub async fn reserve_upload(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    file: FileId,
+    budget: u16,
+) -> Result<Option<u16>, DbError> {
+    let reserved = obs::run(
+        Update,
+        "evidence_files",
+        sqlx::query_scalar!(
+            r#"UPDATE evidence_files f
+               SET copy_attempts = f.copy_attempts + 1,
+                   copy_started_at = CASE WHEN f.copy_started_at IS NULL
+                                            OR f.copy_started_at <= now() - make_interval(secs => $3)
+                                          THEN now() ELSE f.copy_started_at END
+               FROM evidence e
+               WHERE f.guild_id = $1 AND f.id = $2 AND f.copy_state = 'pending'
+                 AND f.copy_attempts < $4
+                 AND e.id = f.evidence_id AND e.state = 'saving'
+               RETURNING f.copy_attempts"#,
+            i64::from(guild),
+            file.get(),
+            NONCE_WINDOW.as_seconds_f64(),
+            i16::try_from(budget).unwrap_or(i16::MAX),
+        )
+        .fetch_optional(conn),
+    )
+    .await?;
+    Ok(reserved.map(|n| u16::try_from(n).unwrap_or(0)))
+}
+
+/// Gives back an upload try that never reached Discord (rate limited or
+/// not sent), so only tries that may have created a message count.
+pub async fn release_upload(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    file: FileId,
+) -> Result<(), DbError> {
+    obs::run(
+        Update,
+        "evidence_files",
+        sqlx::query!(
+            "UPDATE evidence_files SET copy_attempts = copy_attempts - 1
+             WHERE guild_id = $1 AND id = $2 AND copy_state = 'pending' AND copy_attempts > 0",
+            i64::from(guild),
+            file.get(),
+        )
+        .execute(conn),
+    )
+    .await?;
+    Ok(())
+}
+
 /// `pending` → `copied` with the copy's location.
 pub async fn mark_copied(
     conn: &mut PgConnection,

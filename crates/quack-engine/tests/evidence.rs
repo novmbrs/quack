@@ -371,3 +371,116 @@ async fn two_editors_at_one_revision_and_links_become_evidence() -> Result<()> {
     assert_eq!(items(&h, case.id).await?.len(), 1);
     Ok(())
 }
+
+/// A message with `n` image attachments in a public channel.
+fn post_images(h: &Harness, channel: ChannelId, n: usize) -> MessageId {
+    h.fake.world(|w| {
+        let files = (0..n)
+            .map(|i| w.attachment(&format!("{i}.png"), Some("image/png"), vec![1, 2, 3]))
+            .collect();
+        w.post(h.guild, channel, sf(MEMBER), "x", files)
+    })
+}
+
+/// Engine review MAJOR 5: the destination is checked again right before
+/// every upload. A channel that stops being staff-only after the first
+/// upload receives nothing more.
+#[tokio::test]
+async fn uploads_stop_when_the_evidence_channel_opens_mid_copy() -> Result<()> {
+    let h = Harness::new().await?;
+    let (case, channel) = setup(&h).await?;
+    let copies = evidence_channel(&h);
+    set_evidence_channel(&h, copies).await?;
+    let message = post_images(&h, channel, 3);
+    add(&h, case, &[link(channel, message)]).await?;
+    let gate = h.fake.hold_after(Call::Send);
+    let task = h.spawn_one(JobKind::CaptureEvidence).await?;
+    gate.reached().await;
+    // The first copy is posted; now everyone can see the channel.
+    h.fake.world(|w| {
+        if let Some(c) = w
+            .guilds
+            .get_mut(&h.guild)
+            .and_then(|g| g.channels.get_mut(&copies))
+        {
+            c.overwrites.clear();
+        }
+    });
+    gate.release();
+    task.await?;
+    h.settle().await?;
+    assert_eq!(h.fake.count(Call::Send), 1, "no upload after the change");
+    let states: Vec<FileCopyState> = files(&h, case)
+        .await?
+        .iter()
+        .map(|f| f.copy_state)
+        .collect();
+    assert_eq!(
+        states,
+        vec![
+            FileCopyState::Copied,
+            FileCopyState::CopyFailed,
+            FileCopyState::CopyFailed
+        ]
+    );
+    assert!(items(&h, case).await?[0].copy_skipped_not_staff_only);
+    Ok(())
+}
+
+/// Engine review MAJOR 17: a file's three upload tries hold across runs.
+/// A run that stops after an unknown upload doesn't give the next run
+/// three more.
+#[tokio::test]
+async fn a_files_upload_budget_holds_across_runs() -> Result<()> {
+    let h = Harness::new().await?;
+    let (case, channel) = setup(&h).await?;
+    let copies = evidence_channel(&h);
+    set_evidence_channel(&h, copies).await?;
+    let message = post_images(&h, channel, 1);
+    add(&h, case, &[link(channel, message)]).await?;
+    // Two unknown uploads, then the run dies at the third.
+    h.fake.script_n(Call::Send, 2, &Script::Unknown);
+    let gate = h.fake.hold(Call::Send);
+    h.crash_at(JobKind::CaptureEvidence, &gate).await?;
+    h.fake.clear_scripts();
+    h.fake.script_n(Call::Send, 5, &Script::Unknown);
+    h.settle().await?;
+    assert_eq!(h.fake.count(Call::Send), 3, "three tries in all");
+    assert_eq!(
+        files(&h, case).await?[0].copy_state,
+        FileCopyState::CopyFailed
+    );
+    Ok(())
+}
+
+/// Engine review MAJOR 17: a rate-limited upload ends the run with
+/// Discord's delay instead of trying again at once, and doesn't use a try.
+#[tokio::test]
+async fn a_rate_limited_upload_waits_and_keeps_its_tries() -> Result<()> {
+    let h = Harness::new().await?;
+    let (case, channel) = setup(&h).await?;
+    let copies = evidence_channel(&h);
+    set_evidence_channel(&h, copies).await?;
+    let message = post_images(&h, channel, 1);
+    add(&h, case, &[link(channel, message)]).await?;
+    h.fake.script_n(
+        Call::Send,
+        2,
+        &Script::RetryAfter(std::time::Duration::from_secs(600)),
+    );
+    let ran = h.run_one(JobKind::CaptureEvidence).await?.context("ran")?;
+    assert_eq!(h.fake.count(Call::Send), 1, "one call, then the run ends");
+    assert!(
+        matches!(
+            ran.end,
+            quack_testkit::RunEnd::Settled(quack_db::jobs::JobResult::Retry { .. })
+        ),
+        "{:?}",
+        ran.end
+    );
+    h.settle().await?;
+    // Two rate limits used no tries: the third call copies it.
+    assert_eq!(h.fake.count(Call::Send), 3);
+    assert_eq!(files(&h, case).await?[0].copy_state, FileCopyState::Copied);
+    Ok(())
+}

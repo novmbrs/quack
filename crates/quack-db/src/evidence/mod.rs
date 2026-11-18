@@ -17,7 +17,8 @@ use crate::pg::{Pg, count, id, opt_id};
 
 pub use files::{
     NewFile, Snapshot, fail_pending_files, file, files_for_case, mark_copied, mark_failed,
-    mark_saved, pending_files, save_snapshot, set_file_state, start_copy,
+    mark_saved, pending_files, release_upload, reserve_upload, save_snapshot, set_file_state,
+    start_copy,
 };
 
 /// The summary kept of one embed.
