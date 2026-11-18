@@ -1638,8 +1638,20 @@ dependencies = [
 name = "quack-import"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "aws-lc-rs",
+ "proptest",
  "quack-core",
  "quack-db",
+ "quack-telemetry",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "time",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
