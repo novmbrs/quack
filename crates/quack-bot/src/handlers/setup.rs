@@ -21,7 +21,7 @@ use quack_text::setup::{
 use quack_text::{ChannelRef, Msg, Text};
 
 use super::op_key;
-use super::setup_channels::{self, Made};
+use super::setup_channels;
 use super::setup_modules::{self, Chosen};
 use crate::ack::{Acked, Failure, Finish, Pending};
 use crate::router::{expired, text_of};
@@ -293,22 +293,12 @@ async fn apply(
 
 /// "Create #…": make or adopt the channel, save it, then post its intro.
 async fn create(a: &Acked<'_>, principal: &Principal, ch: &AreaChannel) -> Result<Text, Failure> {
-    let engine = a.engine();
-    let view = read(a, principal).await?;
-    let made = {
-        let _one_at_a_time = a.shared().creating.lock().await;
-        setup_channels::create(engine, principal.guild, ch.kind, &view.moderator_role_ids).await?
-    };
-    let id = made.channel().id;
+    let (id, done, new) = setup_modules::make(a, principal, ch.kind).await?;
     let mut changes = SettingsPatch::default();
     (ch.set)(&mut changes, Some(id));
-    let done = match &made {
-        Made::Created(c) => SetupResult::Created(c.clone()),
-        Made::Adopted(c) => SetupResult::Adopted(c.clone()),
-    };
     let line = save(a, principal, &changes, Some(id), done).await?;
-    if matches!(made, Made::Created(_)) {
-        setup_channels::introduce(engine, ch.kind, id).await;
+    if new {
+        setup_channels::introduce(a.engine(), ch.kind, id).await;
     }
     Ok(line)
 }
@@ -321,8 +311,19 @@ async fn save(
     chosen: Option<ChannelId>,
     done: SetupResult,
 ) -> Result<Text, Failure> {
-    match patch(a.engine(), principal, changes, &op_key(a.ix, "setup")).await {
-        Ok(_) => Ok(result(&done)),
+    let saved = patch(a.engine(), principal, changes, &op_key(a.ix, "setup")).await;
+    line(saved, chosen, &done)
+}
+
+/// A settings result as the line shown: the result, the field problems,
+/// or the refusal.
+pub(crate) fn line<T>(
+    saved: Result<T, SettingsError>,
+    chosen: Option<ChannelId>,
+    done: &SetupResult,
+) -> Result<Text, Failure> {
+    match saved {
+        Ok(_) => Ok(result(done)),
         Err(SettingsError::Invalid(problems)) => Ok(problems_line(&problems, chosen)),
         Err(e) => Err(errors::settings(&e)),
     }
@@ -335,10 +336,10 @@ pub(crate) fn problems_line(
     chosen: Option<ChannelId>,
 ) -> Text {
     let mut out = Text::new();
-    for (i, (field, problem)) in problems.iter().enumerate() {
+    for (i, (_, problem)) in problems.iter().enumerate() {
         let line = match problem {
             FieldProblem::Channel(list) => {
-                let c = chosen.map_or_else(|| channel_from_field(field), channel);
+                let c = chosen.map_or_else(unknown_channel, channel);
                 let lines: Vec<Text> = list
                     .iter()
                     .map(|p| channel_problem(p, &c, &[], &[]))
@@ -352,7 +353,8 @@ pub(crate) fn problems_line(
     out
 }
 
-fn channel_from_field(_field: &str) -> ChannelRef {
+/// A channel problem's channel when the caller didn't name one.
+fn unknown_channel() -> ChannelRef {
     ChannelRef {
         id: ChannelId::new(1).unwrap_or_else(|| unreachable!("1 is a snowflake")),
         name: None,

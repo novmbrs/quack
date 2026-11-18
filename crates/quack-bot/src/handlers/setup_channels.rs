@@ -33,15 +33,6 @@ pub(crate) enum Made {
     Adopted(ChannelRef),
 }
 
-impl Made {
-    /// The channel.
-    pub(crate) const fn channel(&self) -> &ChannelRef {
-        match self {
-            Self::Created(c) | Self::Adopted(c) => c,
-        }
-    }
-}
-
 /// The overwrites a created channel gets (§13.1.4): Quack's member
 /// overwrite, the @everyone overwrite, and what staff roles are allowed
 /// (`None` for the channels members use).

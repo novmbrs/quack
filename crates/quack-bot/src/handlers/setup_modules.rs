@@ -15,7 +15,7 @@ use quack_text::{ChannelRef, Text};
 use quack_tickets::TicketSettingsInput;
 
 use super::op_key;
-use super::setup::problems_line;
+use super::setup::line;
 use super::setup_channels::{self, Made};
 use crate::ack::{Acked, Failure};
 use crate::errors;
@@ -79,20 +79,6 @@ async fn reload(a: &Acked<'_>, principal: &Principal) -> Result<(), Failure> {
         .map_err(|e| errors::db(&e))
 }
 
-/// A settings result as the line shown: the result, the field problems,
-/// or the refusal.
-fn line<T>(
-    saved: Result<T, SettingsError>,
-    chosen: Option<ChannelId>,
-    done: &SetupResult,
-) -> Result<Text, Failure> {
-    match saved {
-        Ok(_) => Ok(result(done)),
-        Err(SettingsError::Invalid(problems)) => Ok(problems_line(&problems, chosen)),
-        Err(e) => Err(errors::settings(&e)),
-    }
-}
-
 /// Turns a module on or off; problems become the line.
 async fn toggle(
     a: &Acked<'_>,
@@ -123,7 +109,7 @@ fn not_ready(
 }
 
 /// "Create …": makes or adopts the channel and says which.
-async fn make(
+pub(crate) async fn make(
     a: &Acked<'_>,
     principal: &Principal,
     kind: ChannelKind,
@@ -374,29 +360,15 @@ async fn activity(
             }
             Ok(saved)
         }
-        SetupOp::TurnOn => {
+        SetupOp::TurnOn | SetupOp::TurnOff => {
+            let on = op == SetupOp::TurnOn;
+            let done = if on {
+                SetupResult::ActivityOn
+            } else {
+                SetupResult::ActivityOff
+            };
             let hooks = quack_activity_log::hooks();
-            toggle(
-                a,
-                principal,
-                &hooks,
-                true,
-                SetupResult::ActivityOn,
-                (None, None),
-            )
-            .await
-        }
-        SetupOp::TurnOff => {
-            let hooks = quack_activity_log::hooks();
-            toggle(
-                a,
-                principal,
-                &hooks,
-                false,
-                SetupResult::ActivityOff,
-                (None, None),
-            )
-            .await
+            toggle(a, principal, &hooks, on, done, (None, None)).await
         }
         _ => Err(expired()),
     }
