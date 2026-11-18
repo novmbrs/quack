@@ -7938,3 +7938,13 @@ folds these into the sections (or changes the code) and removes them here.
     limit ends the run with Discord's delay. A run starts a download only
     with room for the download, the destination check, the upload, and a
     5-second margin before its deadline, else it continues in a new run.
+37. §13.2.3, §10.4 (Discord review BLOCKER 2, MAJOR 13) → the ticket
+    thread lookup returns only **private** threads (type 12) of the server
+    under the entry channel, with the exact name, **created by Quack's
+    account** (`owner_id`); the open job adopts the oldest and deletes the
+    other matches, so it never adopts a public thread or deletes one Quack
+    didn't make. Archived pages (newest archived first) are read until
+    Discord has no more or a page reaches threads archived before the
+    ticket was created; hitting the 10-page cap first, or a page with more
+    to come but no cursor, is `Unknown` and the job retries instead of
+    creating a thread.

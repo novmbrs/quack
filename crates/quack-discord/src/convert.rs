@@ -123,6 +123,7 @@ pub(crate) fn channel(c: &twilight_model::channel::Channel) -> Option<Channel> {
             locked: t.locked,
             archived_at: time(t.archive_timestamp),
         }),
+        owner_id: c.owner_id.and_then(id::<AccountId, _>),
     })
 }
 

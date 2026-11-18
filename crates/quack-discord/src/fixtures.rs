@@ -121,10 +121,23 @@ pub(crate) fn message(id: u64, channel: u64) -> Value {
 }
 
 pub(crate) fn thread(id: u64, parent: u64, name: &str, archived_at: &str) -> Value {
+    thread_by(id, parent, name, archived_at, 42, 12)
+}
+
+/// A thread created by `owner`, of channel type `kind`.
+pub(crate) fn thread_by(
+    id: u64,
+    parent: u64,
+    name: &str,
+    archived_at: &str,
+    owner: u64,
+    kind: u8,
+) -> Value {
     json!({
         "id": id.to_string(),
         "guild_id": "1",
-        "type": 12,
+        "type": kind,
+        "owner_id": owner.to_string(),
         "name": name,
         "parent_id": parent.to_string(),
         "thread_metadata": {

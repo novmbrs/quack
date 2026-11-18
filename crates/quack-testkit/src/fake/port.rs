@@ -354,6 +354,7 @@ impl Discord for FakeDiscord {
         guild: GuildId,
         parent: ChannelId,
         name: &'a str,
+        _since: OffsetDateTime,
     ) -> BoxFuture<'a, Outcome<Vec<ChannelId>>> {
         let r = with(Call::FindThreads, |r| {
             r.guild = Some(guild);

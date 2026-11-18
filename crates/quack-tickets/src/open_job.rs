@@ -121,14 +121,20 @@ async fn thread(engine: &Engine, job: &ClaimedJob, t: &Ticket) -> Result<Step<Ch
     let Some(entry) = t.entry_channel else {
         return Ok(Step::Fail("entry_unknown"));
     };
-    let found = match step(discord.find_threads(t.guild, entry, &name).await) {
+    let found = match step(
+        discord
+            .find_threads(t.guild, entry, &name, t.created_at)
+            .await,
+    ) {
         Step::Ok(found) => found,
         Step::Fail(_) => return Ok(Step::Fail("threads_unreadable")),
         Step::Retry(c) => return Ok(Step::Retry(c)),
     };
     let thread = if let Some((oldest, duplicates)) = found.split_first() {
         for duplicate in duplicates {
-            // Quack's own duplicates; a failure leaves one for staff.
+            // Quack's own duplicates (the lookup returns only private
+            // threads Quack created with this exact name and parent); a
+            // failure leaves one for staff.
             let _ = discord.delete_channel(*duplicate).await;
         }
         *oldest

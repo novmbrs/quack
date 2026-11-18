@@ -190,6 +190,7 @@ fn facts_from_members_and_channels() {
         parent_id: None,
         overwrites: vec![ow(OverwriteTarget::Role(r(GUILD)), 0, SEND)],
         thread: None,
+        owner_id: None,
     };
     let thread = Channel {
         id: quack_core::ids::ChannelId::new(8).unwrap(),

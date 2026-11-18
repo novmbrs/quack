@@ -296,6 +296,7 @@ async fn gateway_bootstraps_repairs_and_leaves_servers() -> Result {
         parent_id: None,
         overwrites: Vec::new(),
         thread: None,
+        owner_id: None,
     };
     w.bot.on_event(Event::ChannelDelete(channel)).await;
     let set =

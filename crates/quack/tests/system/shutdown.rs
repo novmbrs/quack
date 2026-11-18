@@ -79,7 +79,12 @@ async fn shutdown_drains_what_it_can_and_a_restart_resolves_the_rest() -> Result
 
     // 2. Discord accepts the DM but its answer is still on the way at the
     //    deadline: the job is dropped unsettled.
-    let stuck = sys.fake.hold_after(Call::Send);
+    // Only the DM is held: other posts (the log channel) go on.
+    let dm_channel = sys
+        .fake
+        .world(|w| w.dm_channels.get(&quack_testkit::sf(MEMBER)).copied())
+        .context("the member's DM channel")?;
+    let stuck = sys.fake.hold_after_in(Call::Send, dm_channel);
     sys.send(&ix(
         2,
         moderator(),

@@ -325,10 +325,18 @@ impl Discord for DiscordPort {
         guild: GuildId,
         parent: ChannelId,
         name: &'a str,
+        since: time::OffsetDateTime,
     ) -> BoxFuture<'a, Outcome<Vec<ChannelId>>> {
         Box::pin(async move {
+            // Only threads Quack itself created are ever returned.
+            let quack = match self.facts.quack_id().await.into_result() {
+                Ok(quack) => quack,
+                Err(failure) => return outcome(failure, identity),
+            };
             outcome(
-                self.client().find_threads(guild, parent, name).await,
+                self.client()
+                    .find_threads(guild, parent, name, quack, since)
+                    .await,
                 identity,
             )
         })

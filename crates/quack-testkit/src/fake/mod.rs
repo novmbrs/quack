@@ -121,6 +121,9 @@ pub enum Script {
     /// Moderation calls only: the caller sees `Unknown` and the change
     /// lands later, when the test calls [`FakeDiscord::land_late`].
     Late,
+    /// [`Script::HoldAfter`] for the first call of its kind in this
+    /// channel; calls in other channels pass it by.
+    HoldAfterIn(Gate, ChannelId),
 }
 
 impl Script {
@@ -313,6 +316,14 @@ impl FakeDiscord {
         });
     }
 
+    /// Holds the next call of `call` in `channel` after it takes effect;
+    /// calls in other channels go on normally.
+    pub fn hold_after_in(&self, call: Call, channel: ChannelId) -> Gate {
+        let gate = Gate::new();
+        self.script(call, Script::HoldAfterIn(gate.clone(), channel));
+        gate
+    }
+
     /// Drops every queued script.
     pub fn clear_scripts(&self) {
         lock(&self.scripts).clear();
@@ -342,10 +353,15 @@ impl FakeDiscord {
         lock(&self.calls).clear();
     }
 
-    fn next_script(&self, call: Call) -> Option<Script> {
-        lock(&self.scripts)
-            .get_mut(&call)
-            .and_then(VecDeque::pop_front)
+    fn next_script(&self, recorded: &Recorded) -> Option<Script> {
+        let mut scripts = lock(&self.scripts);
+        let queue = scripts.get_mut(&recorded.call)?;
+        if let Some(Script::HoldAfterIn(_, channel)) = queue.front()
+            && recorded.channel != Some(*channel)
+        {
+            return None;
+        }
+        queue.pop_front()
     }
 
     fn record(&self, recorded: Recorded) {

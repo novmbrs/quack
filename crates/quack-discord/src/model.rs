@@ -94,6 +94,8 @@ pub struct Channel {
     pub overwrites: Vec<Overwrite>,
     /// Thread state, for threads.
     pub thread: Option<ThreadState>,
+    /// Who created it, for threads (`owner_id`).
+    pub owner_id: Option<AccountId>,
 }
 
 impl Channel {

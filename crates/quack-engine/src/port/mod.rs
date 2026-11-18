@@ -181,13 +181,17 @@ pub trait Discord: Send + Sync + 'static {
         parent: ChannelId,
         name: &'a str,
     ) -> BoxFuture<'a, Outcome<ChannelId>>;
-    /// Threads under `parent` with exactly this name, oldest first (active
-    /// and archived private ones).
+    /// Private threads Quack created under `parent` with exactly this
+    /// name, oldest first (active and archived ones). Only a complete
+    /// lookup is `Done`: every archived thread made since `since` was seen.
+    /// Nothing another account made is ever returned, so the caller may
+    /// adopt or delete what it gets.
     fn find_threads<'a>(
         &'a self,
         guild: GuildId,
         parent: ChannelId,
         name: &'a str,
+        since: time::OffsetDateTime,
     ) -> BoxFuture<'a, Outcome<Vec<ChannelId>>>;
     /// Adds a member to a thread; idempotent.
     fn add_thread_member(&self, thread: ChannelId, member: MemberId) -> BoxFuture<'_, Outcome<()>>;

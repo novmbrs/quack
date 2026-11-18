@@ -15,7 +15,7 @@ impl FakeDiscord {
         mut recorded: Recorded,
         effect: impl FnOnce(&mut World) -> Outcome<T> + Send,
     ) -> Outcome<T> {
-        let script = self.next_script(recorded.call);
+        let script = self.next_script(&recorded);
         recorded.scripted = script.as_ref().map(|s| format!("{s:?}"));
         self.record(recorded);
         match script {
@@ -34,7 +34,7 @@ impl FakeDiscord {
                 gate.hold().await;
                 self.world(effect)
             }
-            Some(Script::HoldAfter(gate)) => {
+            Some(Script::HoldAfter(gate) | Script::HoldAfterIn(gate, _)) => {
                 let outcome = self.world(effect);
                 gate.hold().await;
                 outcome

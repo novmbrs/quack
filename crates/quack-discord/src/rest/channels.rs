@@ -4,11 +4,12 @@
 use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId};
 use quack_core::permissions::{Overwrite, OverwriteTarget};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use super::route::{Method, Route};
 use super::transport::Request;
-use super::{DiscordClient, Outcome, RefusalKind, converted, with_json};
+use super::{DiscordClient, Outcome, RefusalKind, UnknownCause, converted, with_json};
 use crate::convert;
 use crate::model::{Channel, ChannelSpec};
 
@@ -89,6 +90,9 @@ pub struct ThreadPage {
 /// threads each), so one lookup stays bounded.
 pub const FIND_THREADS_MAX_PAGES: usize = 10;
 
+/// Discord's channel type of a private thread.
+const PRIVATE_THREAD: u8 = 12;
+
 fn channels(list: &[twilight_model::channel::Channel]) -> Vec<Channel> {
     list.iter().filter_map(convert::channel).collect()
 }
@@ -140,23 +144,41 @@ impl DiscordClient {
         })
     }
 
-    /// Threads under `parent` named exactly `name`, oldest first: active
-    /// threads of the server, then archived private threads under `parent`
-    /// (at most [`FIND_THREADS_MAX_PAGES`] pages). Ticket threads are found
+    /// Quack's own ticket threads under `parent` named exactly `name`,
+    /// oldest first: private threads (type 12) of `guild` that `creator`
+    /// (Quack's account) created, among the server's active threads and the
+    /// archived private threads under `parent`. Ticket threads are found
     /// this way before one is created, because threads have no nonce
-    /// (§10.4, §13.2.3).
+    /// (§10.4, §13.2.3); nothing anyone else made is ever returned, so a
+    /// caller may adopt or delete what it gets.
+    ///
+    /// Archived pages come newest-archived first; the lookup is complete
+    /// once Discord has no more pages or a page reaches threads archived
+    /// before `since` (a thread made after `since` can't be older). Reaching
+    /// [`FIND_THREADS_MAX_PAGES`] first is `Unknown(Timeout)` and a page
+    /// without its cursor `Unknown(Malformed)`: an incomplete lookup never
+    /// authorizes a create or a delete.
     pub async fn find_threads(
         &self,
         guild: GuildId,
         parent: ChannelId,
         name: &str,
+        creator: AccountId,
+        since: OffsetDateTime,
     ) -> Outcome<Vec<ChannelId>> {
-        let named = |c: &Channel| c.parent_id == Some(parent) && c.name == name;
+        let ours = |c: &Channel| {
+            c.guild_id == Some(guild)
+                && c.parent_id == Some(parent)
+                && c.kind == PRIVATE_THREAD
+                && c.name == name
+                && c.owner_id == Some(creator)
+        };
         let mut found: Vec<ChannelId> = match self.active_threads(guild).await.into_result() {
-            Ok(active) => active.iter().filter(|c| named(c)).map(|c| c.id).collect(),
+            Ok(active) => active.iter().filter(|c| ours(c)).map(|c| c.id).collect(),
             Err(failure) => return failure,
         };
         let mut before: Option<String> = None;
+        let mut complete = false;
         for _ in 0..FIND_THREADS_MAX_PAGES {
             let page = match self
                 .archived_private_threads(parent, before.as_deref())
@@ -166,15 +188,19 @@ impl DiscordClient {
                 Ok(page) => page,
                 Err(failure) => return failure,
             };
-            found.extend(page.threads.iter().filter(|c| named(c)).map(|c| c.id));
-            before = page
-                .threads
-                .last()
-                .and_then(|c| c.thread?.archived_at)
-                .and_then(|at| at.format(&Rfc3339).ok());
-            if !page.has_more || before.is_none() {
+            found.extend(page.threads.iter().filter(|c| ours(c)).map(|c| c.id));
+            let oldest = page.threads.last().and_then(|c| c.thread?.archived_at);
+            if !page.has_more || oldest.is_some_and(|at| at < since) {
+                complete = true;
                 break;
             }
+            let Some(cursor) = oldest.and_then(|at| at.format(&Rfc3339).ok()) else {
+                return Outcome::Unknown(UnknownCause::Malformed);
+            };
+            before = Some(cursor);
+        }
+        if !complete {
+            return Outcome::Unknown(UnknownCause::Timeout);
         }
         // Snowflakes grow with creation time.
         found.sort_unstable();
