@@ -7808,10 +7808,12 @@ folds these into the sections (or changes the code) and removes them here.
 
 **Discord surface**
 
-10. §11.6 → `/case add`'s first form page still opens as the
-    acknowledgement with no database work before it; right after, the bot
-    writes the draft row (member, rule version, receipt choice, channel)
-    with `drafts::start`, and the page's submit reads it. There is no
+10. §11.6, §11.3 → `/case add`'s first form page writes its draft row
+    (member, rule version, receipt choice, channel) with `drafts::start`
+    *before* it opens, under the prefilled-modal exception (bounded to
+    300 ms, else `interaction.busy` and no form), so a submit never finds
+    the row missing, however fast or after a crash (application review
+    MAJOR 2); the page's submit reads it. There is no
     in-memory form map, so a restart doesn't expire an open form. Saving a
     page of a draft that already became a case answers with that case.
 11. §11.9 → a dropped `MESSAGE_CREATE` only remembers its channel in a

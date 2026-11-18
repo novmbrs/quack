@@ -8,7 +8,7 @@
 mod common;
 
 use common::payload::{self, interaction, moderator};
-use common::{Sent, World, snapshot};
+use common::{Sent, Step, World, snapshot};
 use quack_core::ids::{CaseId, RuleId};
 use quack_core::rule::{Field, FieldKey, FieldKind, RuleDefinition};
 use quack_testkit::MEMBER;
@@ -96,8 +96,9 @@ async fn a_two_page_form_saves_each_page_once_and_applies_at_the_end() -> Result
     let w = World::new().await?;
     let rule = w.h.rule(form_rule("Scam", 6)).await?;
 
-    // 1. /case add opens page 1 at once; the draft row is written after
-    //    that acknowledgement, so the form survives a restart.
+    // 1. /case add writes the draft row, then opens page 1 (the bounded
+    //    prefilled-modal exception), so the page's submit always finds it,
+    //    even right away or after a restart.
     w.send(&interaction(
         2,
         moderator(),
@@ -105,7 +106,14 @@ async fn a_two_page_form_saves_each_page_once_and_applies_at_the_end() -> Result
         &payload::case_add(MEMBER, rule, Some(true)),
     ))
     .await;
-    w.assert_acked_first();
+    w.assert_single_ack();
+    let steps = w.log.steps();
+    let ack = steps.iter().position(|s| matches!(s, Step::Ack("modal")));
+    let work = steps.iter().position(|s| matches!(s, Step::Work(_)));
+    assert!(
+        work < ack,
+        "the draft is saved before the form shows: {steps:?}"
+    );
     assert_eq!(
         w.h.db.count("SELECT count(*) FROM case_drafts").await?,
         1,

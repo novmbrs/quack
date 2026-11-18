@@ -101,9 +101,11 @@ pub(crate) async fn run(
     a.finish_opt(result).await
 }
 
-/// Opens the first page of a fresh form (no stored values, §11.3), then,
-/// after that acknowledgement, writes its draft row so the page's submit
-/// finds the member and the receipt choice even after a restart.
+/// Opens the first page of a fresh form after writing its draft row (the
+/// member, the rule version, and the receipt choice), so the page's
+/// submit always finds it, even after a restart. The write takes the
+/// prefilled-modal exception (§11.3): bounded to 300 ms, else the
+/// moderator is told Quack is busy and no form opens.
 async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: bool) -> Finish {
     let draft = uuid::Uuid::now_v7();
     let at = page_at(CaseId::from_uuid(draft), rule, 1);
@@ -113,30 +115,24 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
         pages(&rule.definition),
         &form_fields(rule, 1),
     );
-    let (ix, shared) = (p.ix, p.shared());
-    let finish = p.modal(&modal).await;
-    if finish == Finish::Done {
-        let started = async {
-            let principal = auth::principal(&shared.engine, ix).await?;
-            let channel = ix.channel_id.ok_or_else(crate::router::expired)?;
-            let form = CommandDraft {
-                draft,
-                member: member.account.id.member(),
-                rule: Some((rule.id, rule.version)),
-                source: None,
-                private,
-                channel,
-            };
-            start(&shared.engine, &principal, &form)
-                .await
-                .map_err(|e| outcome::apply_failed(&e, None, None))
+    let ix = p.ix;
+    p.prefilled_modal(|engine| async move {
+        let principal = auth::principal(engine, ix).await?;
+        let channel = ix.channel_id.ok_or_else(crate::router::expired)?;
+        let form = CommandDraft {
+            draft,
+            member: member.account.id.member(),
+            rule: Some((rule.id, rule.version)),
+            source: None,
+            private,
+            channel,
         };
-        if let Err(failure) = started.await {
-            // The page's submit then answers that the form expired.
-            tracing::warn!(?failure, "couldn't save a /case add form's draft");
-        }
-    }
-    finish
+        start(engine, &principal, &form)
+            .await
+            .map_err(|e| outcome::apply_failed(&e, None, None))?;
+        Ok(modal)
+    })
+    .await
 }
 
 /// The rule's id: picked, or found by its exact name.
