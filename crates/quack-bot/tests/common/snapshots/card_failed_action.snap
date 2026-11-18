@@ -1,0 +1,14 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+Case #1 · Timeouts
+A member (ID 40) · level 1 (from a case count of 1) · case count 1
+> Please follow the server rules.
+Action: Quack couldn't time out a member (ID 40). Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+To try again, select Retry timeout. To take it off the failed actions list, select Dismiss failed timeout.
+DM: This level doesn't send a DM.
+Added by a member (ID 30) on [date]
+[Retry timeout] [Dismiss failed timeout] [Edit context] [Add evidence] [Member's case history]
+[Void case] <View failed actions> <Open case on dashboard>

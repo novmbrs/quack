@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+The timeout failure can no longer be dismissed. Open the case to see its current outcome.

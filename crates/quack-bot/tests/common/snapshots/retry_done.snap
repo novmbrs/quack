@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Quack will try again to time out the member for case #1. Open the case to see the outcome.

@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Case #2 is voided. It stays in the history and no longer counts toward Bans. Quack won't ban a member (ID 41).
