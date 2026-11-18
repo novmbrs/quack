@@ -8,11 +8,14 @@ import { QuackIcon } from "~/ui/QuackIcon";
 
 import s from "./login.module.css";
 
-type Search = { redirect?: string };
+type Search = { redirect?: string; error?: "denied" | "failed" };
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): Search => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    // The API's sign-in callback comes back here with ?error= when Discord
+    // sign-in didn't finish (design §14.4).
+    error: search.error === "denied" || search.error === "failed" ? search.error : undefined,
   }),
   beforeLoad: async ({ context, search }) => {
     const me = await context.queryClient.ensureQueryData(authQuery);
@@ -21,7 +24,13 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-/** safeTarget keeps post-login redirects on this site. */
+/** signInProblem is the sentence for a sign-in that didn't finish (design §12.14). */
+const signInProblem = {
+  denied: "Discord sign-in was cancelled. Choose Sign in with Discord when you're ready.",
+  failed: "Discord sign-in didn't finish. Choose Sign in with Discord to try again.",
+} as const;
+
+/** safeTarget keeps post-sign-in redirects on this site. */
 function safeTarget(target: string | undefined): string {
   if (!target || !target.startsWith("/") || target.startsWith("//")) return "/guilds";
   return target;
@@ -29,7 +38,7 @@ function safeTarget(target: string | undefined): string {
 
 function Login() {
   useTitle("Sign in · Quack");
-  const { redirect: target } = Route.useSearch();
+  const { redirect: target, error } = Route.useSearch();
   return (
     <div className={s.page}>
       <SiteHeader />
@@ -40,9 +49,15 @@ function Login() {
             <p className={s.subtitle}>Use your Discord account. There's nothing else to set up.</p>
           </div>
 
+          {error ? (
+            <p role="alert" className={s.problem}>
+              {signInProblem[error]}
+            </p>
+          ) : null}
+
           <a href={loginUrl(safeTarget(target))} className={s.discord}>
             <DiscordMark />
-            Continue with Discord
+            Sign in with Discord
           </a>
 
           <ul className={s.reasons}>
@@ -55,14 +70,14 @@ function Login() {
             <li>
               <QuackIcon name="appeal" size={22} />
               <span>
-                <b>Members</b> see their own cases and appeal them.
+                <b>Members</b> see cases about them and appeal them.
               </span>
             </li>
           </ul>
 
           <p className={s.fine}>
-            Quack only sees your Discord name and server list. It never posts as you.{" "}
-            <Link to="/docs">New to Quack?</Link>
+            Quack uses your Discord account to sign you in and check your server access. It never
+            posts as you. <Link to="/docs">New to Quack?</Link>
           </p>
         </div>
       </main>

@@ -2,18 +2,19 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { selectLevel } from "~/lib/escalation";
 
-import { ordinal, starterSteps } from "./ladder";
+import { ordinal, starterSteps, stepLabel } from "./ladder";
 
 describe("starterSteps", () => {
   it("escalates like the starter rule: timeout at 3, ban at 5", () => {
-    const labels = [1, 2, 3, 4, 5, 9].map((n) => selectLevel(starterSteps, n)?.label);
+    const labels = [1, 2, 3, 4, 5, 9].map((n) => stepLabel(selectLevel(starterSteps, n)!));
+    const ban = "Ban and delete the last day of messages";
     expect(labels).toEqual([
       "Warning",
       "Warning",
-      "24-hour timeout",
-      "24-hour timeout",
-      "Ban",
-      "Ban",
+      "Timeout for 1 day",
+      "Timeout for 1 day",
+      ban,
+      ban,
     ]);
   });
 });

@@ -105,3 +105,13 @@
 .fine a:hover {
   color: var(--text-strong);
 }
+
+.problem {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--text-strong);
+  font-size: 14px;
+  line-height: 1.45;
+}

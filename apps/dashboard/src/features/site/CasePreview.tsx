@@ -7,8 +7,8 @@ import s from "./CasePreview.module.css";
 
 /**
  * CasePreview is the homepage's picture of Quack at work: a moderator's
- * /case add and the result Quack posts, with the member's DM beside it. The
- * copy follows the bot's real messages (see the Discord views golden file).
+ * /case add and the receipt Quack posts, with the member's DM beside it. The
+ * copy follows the bot's messages (design §12.4 and §12.8).
  */
 export function CasePreview() {
   return (
@@ -37,14 +37,17 @@ export function CasePreview() {
               <p className={s.line}>
                 <QuackIcon name="case_add" size={18} />
                 <span>
-                  <span className={s.mention}>@Mira</span> added a case.
+                  <b>Case #42 · Spam</b>
                 </span>
               </p>
               <p className={s.sub}>
-                Case #42 · <span className={s.mention}>@loud_larry</span> · Spam
+                <span className={s.mention}>@loud_larry</span>
               </p>
-              <p className={s.sub}>Level: Third case</p>
-              <p className={s.sub}>Outcome: Timeout (24h)</p>
+              <p className={s.sub}>Posting spam or unsolicited advertising.</p>
+              <p className={s.sub}>
+                <b>Action:</b> Quack set <span className={s.mention}>@loud_larry</span>'s timeout to
+                end tomorrow at 4:20 PM.
+              </p>
             </div>
           </div>
         </div>
@@ -59,12 +62,13 @@ export function CasePreview() {
         <p className={s.line}>
           <QuackIcon name="timeout" size={18} />
           <span>
-            You've been timed out in <b>The Pond</b> for <b>Spam</b>.
+            <b>Case #42 in The Pond</b> · Rule: Spam. The rule calls for a timeout until tomorrow at
+            4:20 PM.
           </span>
         </p>
         <span className={s.appeal}>
           <QuackIcon name="appeal" size={16} />
-          Appeal decision
+          Appeal case
         </span>
       </div>
     </figure>
