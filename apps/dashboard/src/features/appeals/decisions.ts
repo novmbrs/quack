@@ -1,67 +1,66 @@
-import type { AppealStatus } from "~/api/types";
+import type { AppealState, Decision } from "~/api/types";
 
-/** Decision is one staff move on an appeal, named after its API route. */
-export type Decision = "accept" | "reject" | "request_information" | "close" | "reopen";
+export type { Decision };
 
 /**
- * decisionsFrom mirrors the backend's appeal transitions: what staff can do
- * from each status. Accepting is final; rejected and closed appeals can be
- * reopened, which asks the member for more information.
+ * decisionsFrom mirrors the backend's appeal transitions (design §8.2):
+ * what staff can do from each state. Decided appeals can only be reopened,
+ * which asks the member for more information.
  */
-export const decisionsFrom: Record<AppealStatus, Decision[]> = {
+export const decisionsFrom: Record<AppealState, Decision[]> = {
   pending: ["accept", "reject", "request_information", "close"],
-  needs_information: ["close"],
-  accepted: [],
+  needs_information: ["accept", "reject", "close"],
+  accepted: ["reopen"],
   rejected: ["reopen"],
   closed: ["reopen"],
 };
 
 /**
- * Discord sends these when a server doesn't require a decision reason, so
- * the member reads the same notice whichever surface staff used.
+ * The reasons Discord's Accept and Reject buttons send when the moderator
+ * leaves the box as it is (design §12.9 appeal.reason.default.*), so the
+ * member reads the same thing whichever surface staff used. Every other
+ * decision is a message only staff can write.
  */
 const defaultReasons: Partial<Record<Decision, string>> = {
-  accept: "This case has been voided.",
-  reject: "Appeal rejected.",
-  close: "Appeal closed.",
+  accept: "We reviewed your appeal. The case no longer counts.",
+  reject: "We reviewed your appeal. The case still counts.",
 };
 
-/**
- * reasonRequired says whether staff must write the text for a decision.
- * Requests for information and reopens are a message to the member, so they
- * always need one. Decisions follow the server's setting, which staff appeal
- * responses carry as review_reason_required (omitted when off).
- */
-export function reasonRequired(decision: Decision, guildRequires: boolean | undefined): boolean {
-  if (!(decision in defaultReasons)) return true;
-  return guildRequires === true;
+/** defaultReason is the reason sent when staff leave the box empty, if the decision has one. */
+export function defaultReason(decision: Decision): string | undefined {
+  return defaultReasons[decision];
 }
 
-/** decisionReason is what to send: the staff text, or the standard notice. */
+/** reasonRequired says whether staff must write the reason themselves. */
+export function reasonRequired(decision: Decision): boolean {
+  return !(decision in defaultReasons);
+}
+
+/** decisionReason is what to send: the staff text, or the standard reason. */
 export function decisionReason(decision: Decision, text: string): string {
   return text.trim() || defaultReasons[decision] || "";
 }
 
-/** The status filter in the appeal queue's URL. "all" lists every status. */
-export type StatusFilter = AppealStatus | "all";
+/** The state filter in the appeal queue's URL. "all" lists every state. */
+export type StateFilter = AppealState | "all";
 
 /** FilterTab is a top-level tab; decided appeals share one, split below it. */
 export type FilterTab = "pending" | "needs_information" | "decided" | "all";
 
-const decided: AppealStatus[] = ["accepted", "rejected", "closed"];
+const decided: AppealState[] = ["accepted", "rejected", "closed"];
 
-/** tabOf finds the tab a status filter belongs to. */
-export function tabOf(filter: StatusFilter): FilterTab {
-  return decided.includes(filter as AppealStatus) ? "decided" : (filter as FilterTab);
+/** tabOf finds the tab a state filter belongs to. */
+export function tabOf(filter: StateFilter): FilterTab {
+  return decided.includes(filter as AppealState) ? "decided" : (filter as FilterTab);
 }
 
-/** filterOf picks the status filter a tab opens with. */
-export function filterOf(tab: FilterTab): StatusFilter {
+/** filterOf picks the state filter a tab opens with. */
+export function filterOf(tab: FilterTab): StateFilter {
   return tab === "decided" ? "accepted" : tab;
 }
 
-/** parseStatusFilter reads the filter from search params, defaulting to pending. */
-export function parseStatusFilter(value: unknown): StatusFilter {
-  const all: StatusFilter[] = ["pending", "needs_information", ...decided, "all"];
-  return all.includes(value as StatusFilter) ? (value as StatusFilter) : "pending";
+/** parseStateFilter reads the filter from search params, defaulting to pending. */
+export function parseStateFilter(value: unknown): StateFilter {
+  const all: StateFilter[] = ["pending", "needs_information", ...decided, "all"];
+  return all.includes(value as StateFilter) ? (value as StateFilter) : "pending";
 }

@@ -3,57 +3,52 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   decisionReason,
   decisionsFrom,
+  defaultReason,
   filterOf,
-  parseStatusFilter,
+  parseStateFilter,
   reasonRequired,
   tabOf,
 } from "./decisions";
 
 describe("decisionsFrom", () => {
-  it("only lets staff decide pending appeals", () => {
+  it("lets staff decide open appeals", () => {
     expect(decisionsFrom.pending).toEqual(["accept", "reject", "request_information", "close"]);
-    expect(decisionsFrom.needs_information).toEqual(["close"]);
+    expect(decisionsFrom.needs_information).toEqual(["accept", "reject", "close"]);
   });
-  it("reopens rejected and closed appeals but not accepted ones", () => {
+  it("only reopens decided appeals", () => {
+    expect(decisionsFrom.accepted).toEqual(["reopen"]);
     expect(decisionsFrom.rejected).toEqual(["reopen"]);
     expect(decisionsFrom.closed).toEqual(["reopen"]);
-    expect(decisionsFrom.accepted).toEqual([]);
   });
 });
 
-describe("reasonRequired", () => {
-  it("always needs a message to ask for information or reopen", () => {
-    expect(reasonRequired("request_information", false)).toBe(true);
-    expect(reasonRequired("reopen", false)).toBe(true);
+describe("reasons", () => {
+  it("needs written text for anything without a standard reason", () => {
+    expect(reasonRequired("request_information")).toBe(true);
+    expect(reasonRequired("reopen")).toBe(true);
+    expect(reasonRequired("close")).toBe(true);
+    expect(reasonRequired("accept")).toBe(false);
+    expect(reasonRequired("reject")).toBe(false);
   });
-  it("follows the server setting for decisions", () => {
-    expect(reasonRequired("accept", true)).toBe(true);
-    expect(reasonRequired("reject", false)).toBe(false);
-    expect(reasonRequired("close", false)).toBe(false);
-  });
-  it("treats an omitted setting as off", () => {
-    expect(reasonRequired("accept", undefined)).toBe(false);
-  });
-});
-
-describe("decisionReason", () => {
   it("prefers what staff wrote", () => {
     expect(decisionReason("accept", "  Mistaken identity. ")).toBe("Mistaken identity.");
   });
-  it("falls back to the notice Discord sends", () => {
-    expect(decisionReason("accept", "")).toBe("This case has been voided.");
-    expect(decisionReason("reject", " ")).toBe("Appeal rejected.");
-    expect(decisionReason("close", "")).toBe("Appeal closed.");
+  it("falls back to the reason Discord's buttons send", () => {
+    expect(decisionReason("accept", "")).toBe(
+      "We reviewed your appeal. The case no longer counts.",
+    );
+    expect(decisionReason("reject", " ")).toBe("We reviewed your appeal. The case still counts.");
+    expect(defaultReason("close")).toBeUndefined();
   });
 });
 
-describe("status filters", () => {
+describe("state filters", () => {
   it("defaults to pending", () => {
-    expect(parseStatusFilter(undefined)).toBe("pending");
-    expect(parseStatusFilter("nonsense")).toBe("pending");
-    expect(parseStatusFilter("rejected")).toBe("rejected");
+    expect(parseStateFilter(undefined)).toBe("pending");
+    expect(parseStateFilter("nonsense")).toBe("pending");
+    expect(parseStateFilter("rejected")).toBe("rejected");
   });
-  it("groups decided statuses under one tab", () => {
+  it("groups decided states under one tab", () => {
     expect(tabOf("accepted")).toBe("decided");
     expect(tabOf("closed")).toBe("decided");
     expect(tabOf("needs_information")).toBe("needs_information");

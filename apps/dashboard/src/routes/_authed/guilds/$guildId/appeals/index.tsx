@@ -12,8 +12,8 @@ function NothingSelected() {
   return (
     <div className={s.center}>
       <Empty icon="appeal" title="Pick an appeal to review">
-        Read the member's side, check the case, and decide. Use <kbd className={s.kbd}>J</kbd> and{" "}
-        <kbd className={s.kbd}>K</kbd> to move through the queue.
+        Read the appeal statement, check the case, and decide. Use <kbd className={s.kbd}>J</kbd>{" "}
+        and <kbd className={s.kbd}>K</kbd> to move through the queue.
       </Empty>
     </div>
   );

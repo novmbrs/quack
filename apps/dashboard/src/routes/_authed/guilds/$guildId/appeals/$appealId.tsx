@@ -5,7 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { appealQuery } from "~/api/queries";
 import { CaseSummary } from "~/features/appeals/CaseSummary";
 import { Conversation } from "~/features/appeals/Conversation";
-import { DecisionBar, ReversalOffers } from "~/features/appeals/Review";
+import { DecisionBar } from "~/features/appeals/Review";
 import { UserChip } from "~/features/people/User";
 import { appealMeta } from "~/lib/format";
 import { Badge } from "~/ui/Badge";
@@ -29,7 +29,7 @@ function AppealPage() {
   const { guildId, appealId } = Route.useParams();
   const search = Route.useSearch();
   const { data: appeal } = useSuspenseQuery(appealQuery(guildId, appealId));
-  const meta = appealMeta[appeal.status];
+  const meta = appealMeta[appeal.state];
 
   return (
     <>
@@ -43,7 +43,7 @@ function AppealPage() {
         >
           <ChevronLeft size={20} />
         </Link>
-        <UserChip guildId={guildId} userId={appeal.target_discord_user_id} size={24} />
+        <UserChip guildId={guildId} userId={appeal.member_id} size={24} />
         <Badge tone={meta.tone} icon={<QuackIcon name={meta.icon} size={14} />}>
           {meta.label}
         </Badge>
@@ -52,7 +52,6 @@ function AppealPage() {
         <div className={s.inner} key={appeal.id}>
           <CaseSummary guildId={guildId} appeal={appeal} />
           <Conversation guildId={guildId} appeal={appeal} />
-          <ReversalOffers guildId={guildId} appeal={appeal} />
         </div>
       </div>
       <DecisionBar guildId={guildId} appeal={appeal} />

@@ -4,9 +4,8 @@ import { ChevronRight } from "lucide-react";
 
 import { caseQuery } from "~/api/queries";
 import type { Appeal } from "~/api/types";
-import { Outcome } from "~/features/cases/Outcome";
 import { UserChip } from "~/features/people/User";
-import { ago, fullDate, levelName } from "~/lib/format";
+import { actionMeta, actionOutcome, ago, fullDate } from "~/lib/format";
 import { Badge } from "~/ui/Badge";
 import { QuackIcon } from "~/ui/QuackIcon";
 import { Skeleton } from "~/ui/States";
@@ -14,12 +13,15 @@ import s from "./CaseSummary.module.css";
 
 /**
  * CaseSummary is the case under appeal in one card: what it did and why,
- * linking to the full case. It shares the case page's cache entry.
+ * linking to the full case. The reason comes from the case page's cache
+ * entry; everything else is on the appeal.
  */
 export function CaseSummary({ guildId, appeal }: { guildId: string; appeal: Appeal }) {
-  const caseRef = appeal.case_number ? String(appeal.case_number) : appeal.case_id;
-  const { data: c, isPending } = useQuery(caseQuery(guildId, caseRef));
-  const voided = c?.validity === "voided";
+  const c = appeal.case;
+  const caseRef = String(c.number);
+  const full = useQuery(caseQuery(guildId, caseRef));
+  const voided = Boolean(c.voided_at);
+  const action = c.action;
 
   return (
     <Link to="/guilds/$guildId/cases/$caseRef" params={{ guildId, caseRef }} className={s.card}>
@@ -27,43 +29,40 @@ export function CaseSummary({ guildId, appeal }: { guildId: string; appeal: Appe
       <div className={s.body}>
         <div className={s.top}>
           <span className={s.title}>
-            Case #{appeal.case_number}
-            {appeal.template_name ? (
-              <span className={s.rule}> · {appeal.template_name}</span>
-            ) : null}
+            Case #{c.number}
+            <span className={s.rule}> · {c.rule_name}</span>
           </span>
-          {c ? (
-            voided ? (
-              <Badge tone="neutral" dot>
-                Voided
-              </Badge>
-            ) : (
-              <Outcome actions={c.actions} />
-            )
-          ) : null}
+          {voided ? (
+            <Badge tone="neutral" dot>
+              Voided
+            </Badge>
+          ) : action ? (
+            <Badge tone={actionOutcome(action).tone}>
+              {actionMeta[action.kind].label} · {action.outcome_text}
+            </Badge>
+          ) : (
+            <Badge tone="neutral">Warning</Badge>
+          )}
         </div>
-        {isPending ? (
+        {full.isPending ? (
           <Skeleton width="70%" height={12} />
-        ) : c ? (
-          <>
-            <p className={s.reason}>{c.reason}</p>
-            <p className={s.meta}>
-              <span>{levelName(c.selected_level)}</span>
-              <span>·</span>
-              <span>by</span>
-              <UserChip
-                guildId={guildId}
-                userId={c.moderator_discord_user_id}
-                size={16}
-                link={false}
-              />
-              <span>·</span>
-              <time dateTime={c.created_at} title={fullDate(c.created_at)}>
-                {ago(c.created_at)}
-              </time>
-            </p>
-          </>
+        ) : full.data ? (
+          <p className={s.reason}>{full.data.reason}</p>
         ) : null}
+        <p className={s.meta}>
+          {c.level_index ? <span>Level {c.level_index}</span> : null}
+          {c.level_index ? <span>·</span> : null}
+          {c.moderator_id ? (
+            <>
+              <span>by</span>
+              <UserChip guildId={guildId} userId={c.moderator_id} size={16} link={false} />
+              <span>·</span>
+            </>
+          ) : null}
+          <time dateTime={c.created_at} title={fullDate(c.created_at)}>
+            {ago(c.created_at)}
+          </time>
+        </p>
       </div>
       <ChevronRight size={20} className={s.chevron} />
     </Link>
