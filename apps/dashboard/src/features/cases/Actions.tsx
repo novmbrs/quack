@@ -1,164 +1,145 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
-import { keys } from "~/api/queries";
-import type { ActionType, CaseActionDetail } from "~/api/types";
-import { actionMeta, ago, fullDate } from "~/lib/format";
-import type { Permission } from "~/lib/permissions";
+import { useUser } from "~/api/directory";
+import { guildMeQuery, keys } from "~/api/queries";
+import type { Action } from "~/api/types";
+import { actionMeta, actionOutcome, plural } from "~/lib/format";
 import { Button } from "~/ui/Button";
 import { ConfirmDialog } from "~/ui/ConfirmDialog";
 import { QuackIcon } from "~/ui/QuackIcon";
+import { errorMessage } from "~/ui/States";
 import { toast } from "~/ui/Toast";
 
-import { StatusBadge } from "./Outcome";
+import {
+  dismissDone,
+  dismissLabel,
+  mayHaveApplied,
+  retryDone,
+  retryLabel,
+  undoConfirm,
+  undoKind,
+  undoLabel,
+  undoQueued,
+} from "./controls";
+import { OutcomeBadge } from "./Outcome";
+import { dismissAction, retryAction, undoAction } from "./writes";
 
 import s from "./Actions.module.css";
 
-const reversalOf: Partial<Record<ActionType, ActionType>> = {
-  timeout_user: "remove_timeout",
-  ban_user: "unban_user",
-};
-
 /**
- * reversibleActions are succeeded timeouts and bans with no reversal queued
- * yet. A timeout that has already run out has nothing left to undo.
+ * useActionControls runs retry, dismiss, and undo for one server and
+ * refreshes everything they change: cases, the failed actions list, and the
+ * failed-action count in the sidebar.
  */
-export function reversibleActions(actions: CaseActionDetail[], now = Date.now()) {
-  return actions.filter((a) => {
-    const reverse = reversalOf[a.action_type];
-    if (!reverse || a.status !== "succeeded") return false;
-    if (a.action_type === "timeout_user" && a.timeout_until && Date.parse(a.timeout_until) < now)
-      return false;
-    return !actions.some(
-      (b) => b.action_type === reverse && b.status !== "failed" && b.status !== "cancelled",
-    );
-  });
-}
-
-/** CaseActions lists each Discord action on a case with staff controls. */
-export function CaseActions({
-  guildId,
-  caseRef,
-  actions,
-  can,
-  voided,
-}: {
-  guildId: string;
-  caseRef: string;
-  actions: CaseActionDetail[];
-  can: (p: Permission) => boolean;
-  voided: boolean;
-}) {
+export function useActionControls(guildId: string) {
   const queryClient = useQueryClient();
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
-    void queryClient.invalidateQueries({ queryKey: keys.failures(guildId) });
+    void queryClient.invalidateQueries({ queryKey: keys.actions(guildId) });
+    void queryClient.invalidateQueries({ queryKey: guildMeQuery(guildId).queryKey });
   };
-  const [reversing, setReversing] = useState<CaseActionDetail | null>(null);
-  // Fixed at mount: timeouts are minutes or longer, and the page refetches.
-  const [now] = useState(Date.now);
-  const [error, setError] = useState<string | null>(null);
-
+  // Retry and undo report errors where they were asked for (a dialog or a
+  // toast), so they opt out of the global error toast.
   const retry = useMutation({
-    mutationFn: (id: string) =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/action-failures/{executionID}/retry", {
-          params: { path: { discordGuildID: guildId, executionID: id } },
-        }),
-      ),
-    onSuccess: () => {
-      toast.success("Retrying the action.");
-      refresh();
-    },
+    mutationFn: (a: Action) => retryAction(guildId, a.id),
+    onSuccess: refresh,
+    onError: () => undefined,
   });
   const dismiss = useMutation({
-    mutationFn: (id: string) =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/action-failures/{executionID}/dismiss", {
-          params: { path: { discordGuildID: guildId, executionID: id } },
-        }),
-      ),
-    onSuccess: () => {
-      toast.success("Dismissed. The failure stays in the case history.");
+    mutationFn: (a: Action) => dismissAction(guildId, a.id),
+    onSuccess: (_, a) => {
+      toast.success(dismissDone(a.kind, a.case_number));
       refresh();
     },
   });
-  const reverse = useMutation({
-    mutationFn: (a: CaseActionDetail) =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/cases/{caseRef}/reversals", {
-          params: { path: { discordGuildID: guildId, caseRef } },
-          body: {
-            action_type: reversalOf[a.action_type],
-            original_execution_id: a.id,
-            confirm: true,
-          },
-        }),
-      ),
-    onSuccess: () => {
-      toast.success("Reversal queued.");
-      setReversing(null);
-      refresh();
-    },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "Couldn't queue the reversal."),
+  const undo = useMutation({
+    mutationFn: (a: Action) => undoAction(guildId, a.id),
+    onSuccess: refresh,
+    onError: () => undefined,
   });
+  return { retry, dismiss, undo };
+}
 
-  const visible = actions.filter((a) => a.action_type !== "send_dm");
-  if (visible.length === 0) {
-    return <p className={s.none}>No Discord action. This case is a warning.</p>;
+/**
+ * CaseActions lists each action on a case (the original and any undo) with
+ * the server's outcome sentence and the controls the server allows.
+ */
+export function CaseActions({
+  guildId,
+  memberId,
+  actions,
+}: {
+  guildId: string;
+  memberId: string;
+  actions: Action[];
+}) {
+  const { data: member } = useUser(guildId, memberId);
+  const memberName = member?.display_name ?? "the member";
+  const { retry, dismiss, undo } = useActionControls(guildId);
+  const [confirmRetry, setConfirmRetry] = useState<Action | null>(null);
+  const [undoing, setUndoing] = useState<Action | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (actions.length === 0) {
+    return <p className={s.none}>This case is a warning.</p>;
   }
-  const reversible = new Set(reversibleActions(actions, now).map((a) => a.id));
+
+  const runRetry = (a: Action) =>
+    retry.mutate(a, {
+      onSuccess: () => {
+        toast.success(retryDone(a.kind, a.case_number, true));
+        setConfirmRetry(null);
+      },
+      onError: (e) => (confirmRetry ? setError(errorMessage(e)) : toast.error(errorMessage(e))),
+    });
+  const undoingKind = undoing ? undoKind(undoing) : null;
 
   return (
     <>
       <ul className={s.list}>
-        {visible.map((a) => {
-          const meta = actionMeta[a.action_type];
+        {actions.map((a) => {
+          const meta = actionMeta[a.kind];
+          const outcome = actionOutcome(a);
+          const offered = undoKind(a);
           return (
             <li key={a.id} className={s.item}>
               <div className={s.row}>
                 <QuackIcon name={meta.icon} size={22} />
                 <span className={s.name}>{meta.label}</span>
-                <StatusBadge status={a.status} />
+                <OutcomeBadge
+                  outcome={outcome}
+                  moving={a.state === "pending" || a.state === "running"}
+                />
               </div>
-              {a.action_type === "timeout_user" && a.timeout_until && a.status === "succeeded" ? (
-                <p className={s.detail} title={fullDate(a.timeout_until)}>
-                  {Date.parse(a.timeout_until) > now ? "Ends" : "Ended"} {ago(a.timeout_until)}
-                </p>
-              ) : null}
-              {a.status === "failed" && a.last_error ? (
-                <p className={s.error}>{a.last_error}</p>
-              ) : null}
-              {a.attempt_count > 1 ? <p className={s.detail}>{a.attempt_count} attempts</p> : null}
-              {a.status === "failed" && !voided ? (
+              <p className={a.state === "failed" ? s.error : s.detail}>{a.outcome_text}</p>
+              {a.attempts > 1 ? <p className={s.detail}>{plural(a.attempts, "attempt")}</p> : null}
+              {a.can_retry || a.can_dismiss || (a.can_undo && offered) ? (
                 <div className={s.buttons}>
-                  {can("case.create") ? (
+                  {a.can_retry ? (
                     <Button
                       size="sm"
-                      pending={retry.isPending && retry.variables === a.id}
-                      onClick={() => retry.mutate(a.id)}
+                      pending={retry.isPending && retry.variables?.id === a.id}
+                      onClick={() => (mayHaveApplied(a) ? setConfirmRetry(a) : runRetry(a))}
                     >
-                      Retry
+                      {retryLabel(a.kind)}
                     </Button>
                   ) : null}
-                  {can("action_failure.dismiss") ? (
+                  {a.can_dismiss ? (
                     <Button
                       size="sm"
                       variant="secondary"
-                      pending={dismiss.isPending && dismiss.variables === a.id}
-                      onClick={() => dismiss.mutate(a.id)}
+                      pending={dismiss.isPending && dismiss.variables?.id === a.id}
+                      onClick={() => dismiss.mutate(a)}
                     >
-                      Dismiss
+                      {dismissLabel(a.kind)}
                     </Button>
                   ) : null}
-                </div>
-              ) : null}
-              {reversible.has(a.id) && can("case.create") ? (
-                <div className={s.buttons}>
-                  <Button size="sm" variant="secondary" onClick={() => setReversing(a)}>
-                    {a.action_type === "ban_user" ? "Unban" : "Remove timeout"}
-                  </Button>
+                  {a.can_undo && offered ? (
+                    <Button size="sm" variant="secondary" onClick={() => setUndoing(a)}>
+                      {undoLabel(offered)}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
             </li>
@@ -166,19 +147,42 @@ export function CaseActions({
         })}
       </ul>
       <ConfirmDialog
-        open={reversing !== null}
+        open={confirmRetry !== null}
         onClose={() => {
-          setReversing(null);
+          setConfirmRetry(null);
+          setError(null);
+        }}
+        title={confirmRetry ? `${retryLabel(confirmRetry.kind)}?` : "Retry?"}
+        description="Quack couldn't confirm whether Discord applied this action. Check the member in Discord first, so it isn't applied twice."
+        confirmLabel={confirmRetry ? retryLabel(confirmRetry.kind) : "Retry"}
+        pending={retry.isPending}
+        error={error}
+        onConfirm={() => confirmRetry && runRetry(confirmRetry)}
+      />
+      <ConfirmDialog
+        open={undoing !== null}
+        onClose={() => {
+          setUndoing(null);
           setError(null);
         }}
         title={
-          reversing?.action_type === "ban_user" ? "Unban this member?" : "Remove this timeout?"
+          undoing && undoingKind ? undoConfirm(undoingKind, memberName, undoing.case_number) : ""
         }
-        description="Quack checks your Discord permissions again before it runs. The case itself stays valid; void it if it shouldn't count."
-        confirmLabel={reversing?.action_type === "ban_user" ? "Unban" : "Remove timeout"}
-        pending={reverse.isPending}
+        description="Quack checks Discord first and leaves the timeout or ban in place if another case still applies. The case keeps counting; void it if it shouldn't."
+        confirmLabel={undoingKind === "unban" ? "Yes, unban" : "Yes, remove timeout"}
+        pending={undo.isPending}
         error={error}
-        onConfirm={() => reversing && reverse.mutate(reversing)}
+        onConfirm={() =>
+          undoing &&
+          undoingKind &&
+          undo.mutate(undoing, {
+            onSuccess: () => {
+              toast.success(undoQueued(undoingKind, memberName, undoing.case_number));
+              setUndoing(null);
+            },
+            onError: (e) => setError(errorMessage(e)),
+          })
+        }
       />
     </>
   );

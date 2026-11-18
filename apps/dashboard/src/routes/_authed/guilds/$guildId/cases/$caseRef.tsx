@@ -3,16 +3,18 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { FolderOpen } from "lucide-react";
 import { useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
-import { caseQuery, keys } from "~/api/queries";
-import type { ContextValue } from "~/api/types";
+import { guildMeQuery, caseQuery, keys } from "~/api/queries";
+import type { Case, Field } from "~/api/types";
 import { CaseActions } from "~/features/cases/Actions";
+import { AddEvidenceDialog, EditContextDialog } from "~/features/cases/CaseEdits";
+import { contextFields } from "~/features/cases/context";
 import { CreateCaseDialog } from "~/features/cases/CreateCaseDialog";
 import { EvidenceMessage } from "~/features/cases/Evidence";
-import { enforcement, Outcome } from "~/features/cases/Outcome";
+import { Outcome, OutcomeBadge } from "~/features/cases/Outcome";
 import { Timeline } from "~/features/cases/Timeline";
+import { voidCase } from "~/features/cases/writes";
 import { UserChip } from "~/features/people/User";
-import { fullDate, levelName, sourceLabel, stamp } from "~/lib/format";
+import { appealMeta, dmOutcome, fullDate, levelName, plural, sourceLabel, stamp } from "~/lib/format";
 import { useCan } from "~/lib/permissions";
 import { Badge } from "~/ui/Badge";
 import { Button } from "~/ui/Button";
@@ -20,7 +22,7 @@ import { ConfirmDialog } from "~/ui/ConfirmDialog";
 import { Details } from "~/ui/Details";
 import { Heading, Page, Panel } from "~/ui/Page";
 import { QuackIcon } from "~/ui/QuackIcon";
-import { ErrorState } from "~/ui/States";
+import { ErrorState, errorMessage } from "~/ui/States";
 import { toast } from "~/ui/Toast";
 
 import s from "./case.module.css";
@@ -36,6 +38,9 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/cases/$caseRef")(
   ),
 });
 
+/** Imported is what Quack v4 recorded for a case brought over from it. */
+type Imported = { v4_action?: string; v4_moderator?: string | null; v4_reason?: string };
+
 function CasePage() {
   const { guildId, caseRef } = Route.useParams();
   const { data: c } = useSuspenseQuery(caseQuery(guildId, caseRef));
@@ -43,65 +48,68 @@ function CasePage() {
   const queryClient = useQueryClient();
   const [voiding, setVoiding] = useState(false);
   const [replacing, setReplacing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
 
-  const voided = c.validity === "voided";
-  const voidCase = useMutation({
-    mutationFn: (reason: string) =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/cases/{caseRef}/void", {
-          params: { path: { discordGuildID: guildId, caseRef } },
-          body: { reason },
-        }),
-      ),
+  const moderate = can("moderate");
+  const voided = Boolean(c.voided_at);
+  const imported = c.imported as Imported | null | undefined;
+  const voidIt = useMutation({
+    mutationFn: (reason: string) => voidCase(guildId, String(c.number), reason),
     onSuccess: () => {
       setVoiding(false);
-      toast.success(`Case #${c.case_number} voided.`);
+      toast.success(
+        `Case #${c.number} is voided. It stays in the history and no longer counts toward ${c.rule_name}.`,
+      );
       void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
+      void queryClient.invalidateQueries({ queryKey: keys.appeals(guildId) });
+      void queryClient.invalidateQueries({ queryKey: guildMeQuery(guildId).queryKey });
     },
-    onError: (e) => setVoidError(e instanceof ApiError ? e.message : "Couldn't void the case."),
+    onError: (e) => setVoidError(errorMessage(e)),
   });
 
-  const action = enforcement(c.actions);
-  const context = (c.context_values ?? []).filter((v) => v.value !== null && v.value !== "");
+  const fields = contextFields(c.fields);
+  const answered = fields.filter((f) => {
+    const v = c.context[f.key];
+    return v !== undefined && v !== "";
+  });
 
   return (
     <Page
       icon={<FolderOpen size={22} />}
-      title={`Case #${c.case_number}`}
+      title={`Case #${c.number}`}
       topic={c.rule_name}
       actions={
-        can("case.void") && !voided ? (
+        moderate && !voided ? (
           <Button size="sm" variant="danger" onClick={() => setVoiding(true)}>
             Void case
           </Button>
         ) : null
       }
     >
-      {voided ? (
+      {c.void ? (
         <div className={s.voidBanner}>
           <QuackIcon name="case_void" size={24} />
           <div className={s.bannerText}>
-            <p className={s.bannerTitle}>This case was voided</p>
+            <p className={s.bannerTitle}>Case #{c.number} was voided. It no longer counts.</p>
             <p className={s.bannerBody}>
-              {c.voided_reason || "No reason given."} It no longer counts toward escalation.
-              {c.replacement_case_id ? (
-                <>
-                  {" "}
-                  <Link
-                    to="/guilds/$guildId/cases/$caseRef"
-                    params={{ guildId, caseRef: c.replacement_case_id }}
-                    className={s.link}
-                  >
-                    See the replacement case.
-                  </Link>
-                </>
+              {c.void.cause === "appeal_accepted" ? "The appeal was accepted. " : ""}
+              {c.void.reason}{" "}
+              {c.replaced_by_case_number ? (
+                <Link
+                  to="/guilds/$guildId/cases/$caseRef"
+                  params={{ guildId, caseRef: String(c.replaced_by_case_number) }}
+                  className={s.link}
+                >
+                  Replaced by case #{c.replaced_by_case_number}.
+                </Link>
               ) : null}
             </p>
           </div>
-          {can("case.create") && !c.replacement_case_id ? (
+          {moderate && !c.replaced_by_case_number && c.source !== "imported" ? (
             <Button size="sm" variant="secondary" onClick={() => setReplacing(true)}>
-              Open replacement
+              Add replacement case
             </Button>
           ) : null}
         </div>
@@ -111,14 +119,14 @@ function CasePage() {
         <div className={s.main}>
           <Panel className={s.hero}>
             <div className={s.heroTop}>
-              <UserChip guildId={guildId} userId={c.target_discord_user_id} size={48} subtitle />
+              <UserChip guildId={guildId} userId={c.member_id} size={48} subtitle />
               <div className={s.heroOutcome}>
                 {voided ? (
                   <Badge tone="neutral" dot>
                     Voided
                   </Badge>
                 ) : (
-                  <Outcome actions={c.actions} />
+                  <Outcome action={c.action} />
                 )}
               </div>
             </div>
@@ -126,137 +134,117 @@ function CasePage() {
               <span className={s.quoteBar} />
               <div>
                 <p className={s.reasonLabel}>
-                  {c.rule_name} · {levelName(c.selected_level)}
+                  {c.rule_name}
+                  {c.level_index && c.level_from_case_count
+                    ? ` · ${levelName(c.level_index, c.level_from_case_count)}`
+                    : ""}
                 </p>
                 <p className={s.reasonText}>{c.reason}</p>
               </div>
             </div>
           </Panel>
 
-          {context.length > 0 ? (
-            <section className={s.block}>
-              <Heading>Context</Heading>
+          {imported ? (
+            <p className={s.warn}>
+              <QuackIcon name="info" size={16} /> Imported from Quack v4. The original action was{" "}
+              {imported.v4_action || "unknown"}. Quack took no action for this case.
+            </p>
+          ) : null}
+
+          <section className={s.block}>
+            <div className={s.blockHead}>
+              <Heading>Case context</Heading>
+              {moderate ? (
+                <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                  Edit context
+                </Button>
+              ) : null}
+            </div>
+            {answered.length > 0 ? (
               <Panel>
                 <Details
-                  items={context.map((v) => ({
-                    label: v.label,
-                    value: <ContextValueView value={v} />,
+                  items={answered.map((f) => ({
+                    label: f.label,
+                    value: <ContextValueView field={f} value={c.context[f.key]!} />,
                   }))}
                 />
               </Panel>
-            </section>
-          ) : null}
+            ) : (
+              <p className={s.muted}>No case context.</p>
+            )}
+          </section>
 
-          {c.evidence?.length || c.evidence_incomplete ? (
-            <section className={s.block}>
+          <section className={s.block}>
+            <div className={s.blockHead}>
               <Heading>Evidence</Heading>
-              {c.evidence_incomplete ? (
-                <p className={s.warn}>
-                  <QuackIcon name="warn" size={16} /> Some evidence couldn't be captured.
-                </p>
+              {moderate ? (
+                <Button size="sm" variant="ghost" onClick={() => setAdding(true)}>
+                  Add evidence
+                </Button>
               ) : null}
-              {(c.evidence ?? []).map((e) => (
+            </div>
+            {c.evidence.length === 0 ? (
+              <p className={s.muted}>
+                Case #{c.number} has no evidence yet. Use Add evidence to add message links.
+              </p>
+            ) : (
+              c.evidence.map((e) => (
                 <EvidenceMessage
                   key={e.id}
                   evidence={e}
                   guildId={guildId}
-                  files={`/api/guilds/${guildId}/cases/${c.id}/evidence/files`}
+                  files={`/api/guilds/${guildId}/cases/${c.number}/evidence`}
                 />
-              ))}
-            </section>
-          ) : null}
+              ))
+            )}
+          </section>
 
-          {c.events?.length ? (
+          {c.timeline.length ? (
             <section className={s.block}>
               <Heading>History</Heading>
               <Panel>
-                <Timeline events={c.events} guildId={guildId} />
+                <Timeline
+                  guildId={guildId}
+                  items={c.timeline.map((e) => ({
+                    at: e.created_at,
+                    text: e.text,
+                    actorId: e.actor_id ?? null,
+                    result: e.result,
+                    kind: e.kind,
+                  }))}
+                />
+                {c.timeline_truncated ? (
+                  <p className={s.muted}>
+                    Only the latest entries are shown.{" "}
+                    <Link
+                      to="/guilds/$guildId/mod-log"
+                      params={{ guildId }}
+                      search={{ member: c.member_id }}
+                      className={s.link}
+                    >
+                      Open the moderation log
+                    </Link>{" "}
+                    for the rest.
+                  </p>
+                ) : null}
               </Panel>
             </section>
           ) : null}
         </div>
 
         <aside className={s.side}>
-          <section className={s.block}>
-            <Heading>Actions</Heading>
-            <CaseActions
-              guildId={guildId}
-              caseRef={caseRef}
-              actions={c.actions ?? []}
-              can={can}
-              voided={voided}
-            />
-          </section>
+          {c.source !== "imported" ? (
+            <section className={s.block}>
+              <Heading>Actions</Heading>
+              <CaseActions guildId={guildId} memberId={c.member_id} actions={c.actions} />
+            </section>
+          ) : null}
           <Panel>
-            <Details
-              items={[
-                {
-                  label: "Moderator",
-                  value: (
-                    <UserChip guildId={guildId} userId={c.moderator_discord_user_id} size={20} />
-                  ),
-                },
-                {
-                  label: "Opened",
-                  value: <time title={fullDate(c.created_at)}>{stamp(c.created_at)}</time>,
-                },
-                { label: "From", value: c.source ? sourceLabel[c.source] : "Unknown" },
-                {
-                  label: "Level",
-                  value: c.selected_level?.matched_case_count
-                    ? `${levelName(c.selected_level)} (case ${c.selected_level.matched_case_count} under this rule)`
-                    : levelName(c.selected_level),
-                },
-                {
-                  label: "Member DM",
-                  value: !c.notification?.status
-                    ? "Not sent for this level"
-                    : c.notification.status === "sent"
-                      ? `Sent ${stamp(c.notification.sent_at)}`
-                      : c.notification.status === "failed"
-                        ? `Couldn't deliver${c.notification.last_error ? `: ${c.notification.last_error}` : ""}`
-                        : "Sending soon",
-                },
-                c.template_id
-                  ? {
-                      label: "Rule",
-                      value: (
-                        <Link
-                          to="/guilds/$guildId/rules/$ruleId"
-                          params={{ guildId, ruleId: c.template_id }}
-                          className={s.link}
-                        >
-                          {c.rule_name} (version {c.template_version})
-                        </Link>
-                      ),
-                    }
-                  : null,
-                c.replaces_case_id
-                  ? {
-                      label: "Replaces",
-                      value: (
-                        <Link
-                          to="/guilds/$guildId/cases/$caseRef"
-                          params={{ guildId, caseRef: c.replaces_case_id }}
-                          className={s.link}
-                        >
-                          Earlier voided case
-                        </Link>
-                      ),
-                    }
-                  : null,
-                action?.status === "failed"
-                  ? {
-                      label: "Needs attention",
-                      value: "The Discord action failed. Retry or dismiss it above.",
-                    }
-                  : null,
-              ]}
-            />
+            <Details items={sideDetails(guildId, c)} />
           </Panel>
           <Link
             to="/guilds/$guildId/members/$userId"
-            params={{ guildId, userId: c.target_discord_user_id ?? "" }}
+            params={{ guildId, userId: c.member_id }}
             className={s.historyLink}
           >
             <QuackIcon name="history" size={18} /> Member's case history
@@ -270,34 +258,151 @@ function CasePage() {
           setVoiding(false);
           setVoidError(null);
         }}
-        title={`Void case #${c.case_number}?`}
-        description="A voided case stays visible but stops counting toward escalation. If it applied a timeout or ban, Quack lifts it too."
+        title={`Void case #${c.number}?`}
+        description="The case stays in the history but stops counting. If its timeout or ban is in place, Quack checks whether it can remove it. A kick can't be undone."
         confirmLabel="Void case"
         tone="danger"
-        reason={{ label: "Reason", required: true, placeholder: "Why is this case wrong?" }}
-        pending={voidCase.isPending}
+        reason={{
+          label: "Why are you voiding this case?",
+          required: true,
+          hint: "The member can see this reason.",
+        }}
+        pending={voidIt.isPending}
         error={voidError}
-        onConfirm={(reason) => voidCase.mutate(reason)}
+        onConfirm={(reason) => voidIt.mutate(reason)}
       />
       <CreateCaseDialog
         guildId={guildId}
         open={replacing}
         onClose={() => setReplacing(false)}
-        initialMember={c.target_discord_user_id}
-        replacesCaseId={c.id}
+        initialMember={c.member_id}
+        replacesCaseNumber={c.number}
+      />
+      {editing ? (
+        <EditContextDialog guildId={guildId} value={c} open={editing} onClose={() => setEditing(false)} />
+      ) : null}
+      <AddEvidenceDialog
+        guildId={guildId}
+        caseNumber={c.number}
+        open={adding}
+        onClose={() => setAdding(false)}
       />
     </Page>
   );
 }
 
-function ContextValueView({ value: v }: { value: ContextValue }) {
-  if (v.type === "boolean") return <>{v.value ? "Yes" : "No"}</>;
-  if (v.type === "discord_message_link" && typeof v.value === "string") {
+function sideDetails(guildId: string, c: Case) {
+  const dm = c.dm;
+  return [
+    {
+      label: "Moderator",
+      value: <UserChip guildId={guildId} userId={c.moderator_id} size={20} />,
+    },
+    {
+      label: "Added",
+      value: <time title={fullDate(c.created_at)}>{stamp(c.created_at)}</time>,
+    },
+    { label: "From", value: sourceLabel[c.source] },
+    c.case_count
+      ? {
+          label: "Case count",
+          value: `${c.case_count.toLocaleString()}${
+            c.level_index && c.level_from_case_count
+              ? ` · ${levelName(c.level_index, c.level_from_case_count)}`
+              : ""
+          }`,
+        }
+      : null,
+    c.source !== "imported"
+      ? {
+          label: "DM",
+          value: dm ? (
+            <span className={s.dm}>
+              <OutcomeBadge
+                outcome={dmOutcome[dm.state]}
+                moving={dm.state === "pending" || dm.state === "sending"}
+              />
+              <span>{dm.outcome_text}</span>
+            </span>
+          ) : (
+            "This level doesn't send a DM."
+          ),
+        }
+      : null,
+    c.rule_id
+      ? {
+          label: "Rule",
+          value: (
+            <Link
+              to="/guilds/$guildId/rules/$ruleId"
+              params={{ guildId, ruleId: c.rule_id }}
+              className={s.link}
+            >
+              {c.rule_name}
+              {c.rule_version ? ` (version ${c.rule_version})` : ""}
+            </Link>
+          ),
+        }
+      : null,
+    c.replaces_case_number
+      ? {
+          label: "Replaces",
+          value: (
+            <Link
+              to="/guilds/$guildId/cases/$caseRef"
+              params={{ guildId, caseRef: String(c.replaces_case_number) }}
+              className={s.link}
+            >
+              Case #{c.replaces_case_number}
+            </Link>
+          ),
+        }
+      : null,
+    c.appeal
+      ? {
+          label: "Appeal",
+          value: (
+            <Link
+              to="/guilds/$guildId/appeals/$appealId"
+              params={{ guildId, appealId: c.appeal.id }}
+              className={s.link}
+            >
+              {appealMeta[c.appeal.state].label}
+            </Link>
+          ),
+        }
+      : { label: "Appeal", value: c.appealable ? "Not appealed" : "Can't be appealed" },
+    c.void
+      ? {
+          label: "Voided",
+          value: (
+            <span>
+              {c.void.by ? <UserChip guildId={guildId} userId={c.void.by} size={20} /> : null}{" "}
+              <time title={fullDate(c.void.at)}>{stamp(c.void.at)}</time>
+            </span>
+          ),
+        }
+      : null,
+    c.evidence.some((e) => e.state === "failed")
+      ? {
+          label: "Evidence",
+          value: `Quack couldn't save ${plural(
+            c.evidence.filter((e) => e.state === "failed").length,
+            "evidence item",
+          )}. See why under Evidence.`,
+        }
+      : null,
+  ];
+}
+
+function ContextValueView({ field, value }: { field: Field; value: string | boolean }) {
+  if (typeof value === "boolean") return <>{value ? "Yes" : "No"}</>;
+  if (field.kind === "message_link") {
     return (
-      <a href={v.value} target="_blank" rel="noreferrer" className={s.link}>
-        {v.value}
+      <a href={value} target="_blank" rel="noreferrer" className={s.link}>
+        {value}
       </a>
     );
   }
-  return <span className={s.pre}>{String(v.value)}</span>;
+  return <span className={s.pre}>{value}</span>;
 }

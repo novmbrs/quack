@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
-import type { Case } from "~/api/types";
-import { ago, fullDate, levelName } from "~/lib/format";
+import type { CaseSummary } from "~/api/types";
+import { ago, fullDate } from "~/lib/format";
 import { Badge } from "~/ui/Badge";
 import { columnsFor } from "~/ui/DataTable";
 
@@ -11,7 +11,7 @@ import { cx } from "~/lib/cx";
 
 import s from "./columns.module.css";
 
-const col = columnsFor<Case>();
+const col = columnsFor<CaseSummary>();
 
 /**
  * caseColumns is the staff case table: number, member, rule, outcome,
@@ -20,7 +20,7 @@ const col = columnsFor<Case>();
  */
 export function caseColumns(guildId: string, { member = true }: { member?: boolean } = {}) {
   return col.columns([
-    col.accessor("case_number", {
+    col.accessor("number", {
       header: "Case",
       meta: { width: 84 },
       cell: (c) => (
@@ -35,7 +35,7 @@ export function caseColumns(guildId: string, { member = true }: { member?: boole
     }),
     ...(member
       ? [
-          col.accessor("target_discord_user_id", {
+          col.accessor("member_id", {
             header: "Member",
             meta: { width: "24%" },
             cell: (c) => <UserChip guildId={guildId} userId={c.getValue()} />,
@@ -49,10 +49,14 @@ export function caseColumns(guildId: string, { member = true }: { member?: boole
         const row = c.row.original;
         return (
           <div className={s.stack}>
-            <span className={cx(s.rule, row.validity === "voided" && s.voided)}>
-              {row.rule_name ?? "Rule"}
+            <span className={cx(s.rule, row.voided_at && s.voided)}>{row.rule_name}</span>
+            <span className={s.sub}>
+              {row.source === "imported"
+                ? "Imported"
+                : row.level_index
+                  ? `Level ${row.level_index}`
+                  : ""}
             </span>
-            <span className={s.sub}>{levelName(row.selected_level)}</span>
           </div>
         );
       },
@@ -62,15 +66,15 @@ export function caseColumns(guildId: string, { member = true }: { member?: boole
       header: "Outcome",
       meta: { width: 190 },
       cell: (c) =>
-        c.row.original.validity === "voided" ? (
+        c.row.original.voided_at ? (
           <Badge tone="neutral" dot>
             Voided
           </Badge>
         ) : (
-          <Outcome actions={c.row.original.actions} compact />
+          <Outcome action={c.row.original.action} compact />
         ),
     }),
-    col.accessor("moderator_discord_user_id", {
+    col.accessor("moderator_id", {
       header: "Moderator",
       meta: { width: "18%", hideOnMobile: true },
       cell: (c) => <UserChip guildId={guildId} userId={c.getValue()} size={20} />,

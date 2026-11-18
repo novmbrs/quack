@@ -50,3 +50,8 @@
   justify-content: flex-end;
   gap: 6px;
 }
+
+.filters {
+  display: flex;
+  margin-bottom: 16px;
+}
