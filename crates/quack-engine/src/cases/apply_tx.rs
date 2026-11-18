@@ -27,8 +27,9 @@ use crate::{Engine, opkey};
 
 /// Statement and lock timeout inside case creation (§4.2 step 22).
 const STATEMENT_TIMEOUT: Duration = Duration::from_secs(2);
-/// The whole transaction's deadline (§4.2 step 22).
-const DEADLINE: Duration = Duration::from_secs(3);
+/// The whole transaction's deadline (§4.2 step 22), from the key's
+/// reservation to COMMIT.
+pub(super) const DEADLINE: Duration = Duration::from_secs(3);
 /// How long a kick or ban waits for its DM at most (§6.3).
 const DM_WAIT: time::Duration = quack_core::dm::ACTION_WAIT;
 
@@ -39,9 +40,10 @@ pub(super) async fn run(
     request: &ApplyRule,
     prepared: &Prepared,
     mut tx: Tx,
+    started: std::time::Instant,
 ) -> Result<Applied, ApplyError> {
-    let started = std::time::Instant::now();
-    let body = tokio::time::timeout(DEADLINE, body(request, prepared, &mut tx)).await;
+    let left = DEADLINE.saturating_sub(started.elapsed());
+    let body = tokio::time::timeout(left, body(request, prepared, &mut tx)).await;
     let created = match body {
         Ok(Ok(created)) => created,
         Ok(Err(error)) => {
@@ -57,9 +59,12 @@ pub(super) async fn run(
             return Err(ApplyError::Deadline);
         }
     };
-    let left = DEADLINE
-        .saturating_sub(started.elapsed())
-        .max(Duration::from_millis(500));
+    // COMMIT gets exactly what is left; none left means it is never sent
+    // (dropping the transaction rolls it back).
+    let left = DEADLINE.saturating_sub(started.elapsed());
+    if left.is_zero() {
+        return Err(ApplyError::Deadline);
+    }
     match tokio::time::timeout(left, tx.commit()).await {
         Ok(Ok(())) => {}
         Ok(Err(DbError::Unavailable(..))) | Err(_) => return Err(ApplyError::Unconfirmed),

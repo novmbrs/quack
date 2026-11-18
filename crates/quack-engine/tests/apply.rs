@@ -291,3 +291,25 @@ async fn a_principal_of_one_server_cant_create_a_case_in_another() -> Result<()>
     assert_eq!(cases, 0);
     Ok(())
 }
+
+/// Engine review MAJOR 21: a request waiting on another request holding
+/// its operation key is bounded by the creation deadline (3 s), which
+/// starts before the key's reservation.
+#[tokio::test]
+async fn waiting_on_a_held_key_is_within_the_deadline() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(warning("Spam")).await?;
+    let request = h.request(MEMBER, rule);
+    let account = sf::<quack_core::ids::AccountId>(MODERATOR);
+    let key = request.op_key.scoped(Some(h.guild), Some(account));
+    // Another request holds the key's reservation and never finishes.
+    let mut holder = h.db.db.begin().await?;
+    assert!(quack_db::operation_keys::reserve(&mut holder, &key, &[7; 32]).await?);
+    let started = std::time::Instant::now();
+    let waited = apply_rule(&h.engine, request).await;
+    let took = started.elapsed();
+    assert!(matches!(waited, Err(ApplyError::Deadline)), "{waited:?}");
+    assert!(took < std::time::Duration::from_millis(3_500), "{took:?}");
+    holder.rollback().await?;
+    Ok(())
+}

@@ -8110,3 +8110,8 @@ folds these into the sections (or changes the code) and removes them here.
     render, and posts nothing when it changed; `log_channel_posted_at` is
     stamped only while the pinned channel is still the log channel. A
     switch committing after that read can still race the request itself.
+60. §4.2 steps 7 and 22 (engine review MAJOR 21) → the 3-second deadline
+    starts before the operation key's reservation (which can wait on a
+    concurrent request holding the same key), the reservation goes
+    through the same contention retry, and COMMIT gets exactly what is
+    left (none left: it is never sent, `Deadline`).

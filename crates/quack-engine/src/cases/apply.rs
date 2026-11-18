@@ -169,9 +169,24 @@ async fn apply(
     // deadlock (§4.12).
     let mut retries = 0;
     loop {
-        let result = match begin_keyed(engine.db(), &prepared.key, &prepared.hash).await? {
-            Keyed::Replay(response) => Ok(Applied::Replayed(stored_id(&response, "case_id")?)),
-            Keyed::Fresh(tx) => apply_tx::run(engine, request, &prepared, tx).await,
+        // The deadline starts before the key's reservation, which can wait
+        // on a concurrent request holding the same key; its errors go
+        // through the same contention retry.
+        let started = std::time::Instant::now();
+        let reserved = tokio::time::timeout(
+            apply_tx::DEADLINE,
+            begin_keyed(engine.db(), &prepared.key, &prepared.hash),
+        )
+        .await;
+        let result = match reserved {
+            Err(_) => Err(ApplyError::Deadline),
+            Ok(Err(error)) => Err(error.into()),
+            Ok(Ok(Keyed::Replay(response))) => stored_id(&response, "case_id")
+                .map(Applied::Replayed)
+                .map_err(Into::into),
+            Ok(Ok(Keyed::Fresh(tx))) => {
+                apply_tx::run(engine, request, &prepared, tx, started).await
+            }
         };
         match result {
             Err(ApplyError::Db(e)) if e.is_contention() && retries < CONTENTION_RETRIES => {
