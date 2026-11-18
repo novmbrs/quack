@@ -1,0 +1,62 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+assertion_line: 71
+expression: "json(&render(&msg, &ids()))"
+---
+[
+  {
+    "accent_color": 15548997,
+    "components": [
+      {
+        "content": "### Case #12 · Spam\nQuack couldn't ban <@9>\n**Reason:** \\*bold\\* attempt \\<\\@1\\>\n> line one\n> line two\n-# Run </case view:1000000000000000001>",
+        "type": 10
+      },
+      {
+        "divider": true,
+        "type": 14
+      },
+      {
+        "file": {
+          "url": "attachment://transcript.txt"
+        },
+        "type": 13
+      },
+      {
+        "content": "after the file",
+        "type": 10
+      },
+      {
+        "components": [
+          {
+            "custom_id": "1:vd:AAAAAAAAAAAAAAAAAAAAAQ",
+            "label": "Void case",
+            "style": 4,
+            "type": 2
+          },
+          {
+            "label": "Open in dashboard",
+            "style": 5,
+            "type": 2,
+            "url": "https://quack.example/guilds/1/cases/12"
+          }
+        ],
+        "type": 1
+      },
+      {
+        "components": [
+          {
+            "channel_types": [
+              0
+            ],
+            "custom_id": "1:su:log:ch",
+            "disabled": false,
+            "placeholder": "Choose a channel",
+            "type": 8
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 17
+  }
+]

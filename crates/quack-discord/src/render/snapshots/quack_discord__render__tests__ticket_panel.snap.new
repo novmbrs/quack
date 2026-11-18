@@ -1,0 +1,27 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+assertion_line: 99
+expression: "json(&render(&quack_text::ticket::panel(true), &CommandIds::EMPTY))"
+---
+[
+  {
+    "components": [
+      {
+        "content": "### Need help from the staff?\nOpen a ticket to talk privately with the moderators.",
+        "type": 10
+      },
+      {
+        "components": [
+          {
+            "custom_id": "1:to",
+            "label": "Open a ticket",
+            "style": 1,
+            "type": 2
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 17
+  }
+]

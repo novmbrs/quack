@@ -1,0 +1,184 @@
+//! Encoding and decoding current (`1:`) ids.
+
+use quack_core::ids::{ActionId, AppealId, CaseId, MemberId, RuleId, TicketId};
+use quack_text::actions::DraftPage;
+
+use super::CustomId;
+use super::setup::{area, area_code, op, op_code};
+
+/// Strict decimal: no sign, no leading zeros (so every number has one
+/// spelling and decoding round-trips exactly).
+fn number<T: std::str::FromStr>(s: &str) -> Option<T> {
+    let canonical = !s.is_empty()
+        && s.len() <= 20
+        && s.bytes().all(|b| b.is_ascii_digit())
+        && (s == "0" || !s.starts_with('0'));
+    canonical.then(|| s.parse().ok()).flatten()
+}
+
+fn member(s: &str) -> Option<MemberId> {
+    number::<u64>(s).and_then(MemberId::new)
+}
+
+fn draft_page(args: &[&str]) -> Option<DraftPage> {
+    match args {
+        [draft, rule, version, page] => Some(DraftPage {
+            draft: CaseId::from_u22(draft).ok()?,
+            rule: RuleId::from_u22(rule).ok()?,
+            version: number(version)?,
+            page: number(page)?,
+        }),
+        _ => None,
+    }
+}
+
+fn draft_args(p: &DraftPage) -> String {
+    format!(
+        "{}:{}:{}:{}",
+        p.draft.to_u22(),
+        p.rule.to_u22(),
+        p.version,
+        p.page
+    )
+}
+
+/// Writes `1:<code>[:<arg>]…`.
+pub(super) fn encode(id: &CustomId) -> String {
+    use CustomId as C;
+    let (code, args): (&str, String) = match id {
+        C::OpenCase(c) => ("cv", c.to_u22()),
+        C::CasePicker => ("cvs", String::new()),
+        C::EditContext(c) => ("ce", c.to_u22()),
+        C::EditContextModal { case, revision } => ("cem", format!("{}:{revision}", case.to_u22())),
+        C::AddEvidence(c) => ("ea", c.to_u22()),
+        C::AddEvidenceModal(c) => ("eam", c.to_u22()),
+        C::ViewEvidence { case, item } => ("ev", format!("{}:{item}", case.to_u22())),
+        C::VoidCase(c) => ("vd", c.to_u22()),
+        C::VoidCaseModal(c) => ("vdm", c.to_u22()),
+        C::History { member, page } => ("hi", format!("{member}:{page}")),
+        C::CaseList { page, member, rule } => (
+            "cl",
+            format!(
+                "{page}:{}:{}",
+                member.map_or_else(|| "0".to_owned(), |m| m.to_string()),
+                rule.map_or_else(|| "0".to_owned(), RuleId::to_u22)
+            ),
+        ),
+        C::RetryAction(a) => ("ar", a.to_u22()),
+        C::DismissAction(a) => ("ad", a.to_u22()),
+        C::UndoAction(a) => ("au", a.to_u22()),
+        C::ConfirmUndo(a) => ("auc", a.to_u22()),
+        C::RulePicker(d) => ("rp", d.to_u22()),
+        C::RulePickerPage { draft, page } => ("rpp", format!("{}:{page}", draft.to_u22())),
+        C::DraftPageModal(p) => ("cd", draft_args(p)),
+        C::DraftContinue(p) => ("cn", draft_args(p)),
+        C::DraftRetryPage(p) => ("cr", draft_args(p)),
+        C::DraftSaveAgain(d) => ("cs", d.to_u22()),
+        C::Appeal(c) => ("ap", c.to_u22()),
+        C::AppealModal(c) => ("apm", c.to_u22()),
+        C::AcceptAppeal { appeal, version } => ("aa", format!("{}:{version}", appeal.to_u22())),
+        C::AcceptAppealModal { appeal, version } => {
+            ("aam", format!("{}:{version}", appeal.to_u22()))
+        }
+        C::RejectAppeal { appeal, version } => ("aj", format!("{}:{version}", appeal.to_u22())),
+        C::RejectAppealModal { appeal, version } => {
+            ("ajm", format!("{}:{version}", appeal.to_u22()))
+        }
+        C::OpenAppeal(a) => ("ao", a.to_u22()),
+        C::AppealsPage(p) => ("al", p.to_string()),
+        C::RulesPage(p) => ("rl", p.to_string()),
+        C::Setup(a, o) => ("su", format!("{}:{}", area_code(*a), op_code(*o))),
+        C::SetupInviteModal => ("su", "ap:invm".to_owned()),
+        C::SetupWarningModal => ("su", "hp:warnm".to_owned()),
+        C::OpenTicket => ("to", String::new()),
+        C::CloseTicket(t) => ("tc", t.to_u22()),
+        C::FixTicketAccess(t) => ("tf", t.to_u22()),
+    };
+    if args.is_empty() {
+        format!("1:{code}")
+    } else {
+        format!("1:{code}:{args}")
+    }
+}
+
+/// Reads everything after `1:`.
+pub(super) fn decode(rest: &str) -> Option<CustomId> {
+    use CustomId as C;
+    let parts: Vec<&str> = rest.split(':').collect();
+    let (code, args) = parts.split_first()?;
+    let case = |s: &str| CaseId::from_u22(s).ok();
+    let action = |s: &str| ActionId::from_u22(s).ok();
+    let appeal = |s: &str| AppealId::from_u22(s).ok();
+    let ticket = |s: &str| TicketId::from_u22(s).ok();
+    Some(match (*code, args) {
+        ("cv", [c]) => C::OpenCase(case(c)?),
+        ("cvs", []) => C::CasePicker,
+        ("ce", [c]) => C::EditContext(case(c)?),
+        ("cem", [c, r]) => C::EditContextModal {
+            case: case(c)?,
+            revision: number(r)?,
+        },
+        ("ea", [c]) => C::AddEvidence(case(c)?),
+        ("eam", [c]) => C::AddEvidenceModal(case(c)?),
+        ("ev", [c, i]) => C::ViewEvidence {
+            case: case(c)?,
+            item: number(i)?,
+        },
+        ("vd", [c]) => C::VoidCase(case(c)?),
+        ("vdm", [c]) => C::VoidCaseModal(case(c)?),
+        ("hi", [m, p]) => C::History {
+            member: member(m)?,
+            page: number(p)?,
+        },
+        ("cl", [p, m, r]) => C::CaseList {
+            page: number(p)?,
+            member: if *m == "0" { None } else { Some(member(m)?) },
+            rule: if *r == "0" {
+                None
+            } else {
+                Some(RuleId::from_u22(r).ok()?)
+            },
+        },
+        ("ar", [a]) => C::RetryAction(action(a)?),
+        ("ad", [a]) => C::DismissAction(action(a)?),
+        ("au", [a]) => C::UndoAction(action(a)?),
+        ("auc", [a]) => C::ConfirmUndo(action(a)?),
+        ("rp", [d]) => C::RulePicker(case(d)?),
+        ("rpp", [d, p]) => C::RulePickerPage {
+            draft: case(d)?,
+            page: number(p)?,
+        },
+        ("cd", args) => C::DraftPageModal(draft_page(args)?),
+        ("cn", args) => C::DraftContinue(draft_page(args)?),
+        ("cr", args) => C::DraftRetryPage(draft_page(args)?),
+        ("cs", [d]) => C::DraftSaveAgain(case(d)?),
+        ("ap", [c]) => C::Appeal(case(c)?),
+        ("apm", [c]) => C::AppealModal(case(c)?),
+        ("aa", [a, v]) => C::AcceptAppeal {
+            appeal: appeal(a)?,
+            version: number(v)?,
+        },
+        ("aam", [a, v]) => C::AcceptAppealModal {
+            appeal: appeal(a)?,
+            version: number(v)?,
+        },
+        ("aj", [a, v]) => C::RejectAppeal {
+            appeal: appeal(a)?,
+            version: number(v)?,
+        },
+        ("ajm", [a, v]) => C::RejectAppealModal {
+            appeal: appeal(a)?,
+            version: number(v)?,
+        },
+        ("ao", [a]) => C::OpenAppeal(appeal(a)?),
+        ("al", [p]) => C::AppealsPage(number(p)?),
+        ("rl", [p]) => C::RulesPage(number(p)?),
+        ("su", ["ap", "invm"]) => C::SetupInviteModal,
+        ("su", ["hp", "warnm"]) => C::SetupWarningModal,
+        ("su", [a, o]) => C::Setup(area(a)?, op(o)?),
+        ("to", []) => C::OpenTicket,
+        ("tc", [t]) => C::CloseTicket(ticket(t)?),
+        ("tf", [t]) => C::FixTicketAccess(ticket(t)?),
+        _ => return None,
+    })
+}
