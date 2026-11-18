@@ -153,7 +153,7 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
         )
         .s("."),
         ModLogEntry::AppealInformationProvided(d) => case(
-            member(Text::new()).s(" added information to their appeal for "),
+            member(Text::new()).s(" replied to the appeal for "),
             d.case_number,
         )
         .s("."),

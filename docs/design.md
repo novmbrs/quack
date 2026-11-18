@@ -2995,16 +2995,16 @@ Member side:
 | Id | Text |
 | --- | --- |
 | `appeal.form.title` | Appeal this case |
-| `appeal.form.label` | What should the moderators reconsider? |
-| `appeal.form.description` | Explain what happened. You can appeal each case once. |
-| `appeal.submitted` | Your appeal for case #{number} is submitted. Follow it on the dashboard; Quack will also try to DM you when the moderators decide. |
-| `appeal.submit.exists` | You already appealed case #{number}. Open your appeal to check where it stands. |
-| `appeal.submit.not_allowed` | Case #{number} can't be appealed. |
-| `appeal.submit.voided` | Case #{number} was voided, so there's nothing to appeal. |
+| `appeal.form.label` | Why should moderators reconsider this case? |
+| `appeal.form.description` | Explain what you want the moderators to review. You can appeal this case once. |
+| `appeal.submitted` | Your appeal for case #{number} is saved. It's waiting for a decision. Open your appeal on the dashboard to see updates. |
+| `appeal.submit.exists` | You already appealed case #{number}. Open your appeal on the dashboard to see the latest update. |
+| `appeal.submit.not_allowed` | Case #{number} can't be appealed. You can still review it on the dashboard. |
+| `appeal.submit.voided` | Case #{number} was voided and no longer counts. You can still review it on the dashboard. |
 | `appeal.submit.not_yours` | This button isn't for your account. Sign in to the dashboard to see your own cases. |
-| `appeal.information.saved` | Your answer is added to the appeal for case #{number}. The moderators will review it. |
-| `appeal.information.not_requested` | The moderators haven't asked for more information on this appeal. |
-| `appeal.information.outdated` | This appeal changed since you opened it. Reload the page to see the latest question before you answer. |
+| `appeal.information.saved` | Your reply was added to the appeal for case #{number}. It's waiting for a decision. |
+| `appeal.information.not_requested` | There's no question waiting for you to answer. Open your appeal to see the latest update. |
+| `appeal.information.outdated` | The appeal changed while you were writing. Reload it and read the latest question before replying. |
 
 Staff side (appeal post, appeal card, `/appeals`):
 
@@ -3013,32 +3013,34 @@ Staff side (appeal post, appeal card, `/appeals`):
 | `appeal.post.heading` | ### Appeal for case #{number} · {rule} |
 | `appeal.post.from` | From {member} · submitted {time} |
 | `appeal.post.state.pending` | Waiting for a decision. |
-| `appeal.post.state.needs_information` | Waiting for {member} to add information. |
+| `appeal.post.state.needs_information` | Waiting for {member} to reply. |
 | `appeal.post.state.accepted` | Accepted by {actor} {time}. ("Accepted." when unknown) |
 | `appeal.post.state.rejected` | Rejected by {actor} {time}. ("Rejected." when unknown) |
 | `appeal.post.state.closed` | Closed by {actor} {time}. ("Closed." when unknown) |
 | `appeal.post.state.closed_case_voided` | Closed {time} because the case was voided. ("Closed because the case was voided." when the time is unknown) |
-| `appeal.post.statement_heading` | **Statement** |
+| `appeal.post.statement_heading` | **Appeal statement** |
 | `appeal.post.statement` | > {statement, first 1,500 characters, cut with "…"} |
-| `appeal.post.statement_cut` | -# The full statement is on the dashboard. |
-| `appeal.post.information_heading` | **Added information**, then > {latest added information, first 1,500 characters} |
-| `appeal.post.reason_heading` | **Reason given to the member**, then > {decision reason} (not shown when a void closed the appeal) |
+| `appeal.post.statement_cut` | -# Open the appeal on the dashboard for the full statement. |
+| `appeal.post.information_heading` | **Reply from the member**, then > {latest reply, first 1,500 characters} |
+| `appeal.post.reason_heading` | **Reason shared with the member**, then > {decision reason} (not shown when a void closed the appeal) |
 | `appeal.button.accept` | Accept (while pending) |
 | `appeal.button.reject` | Reject (while pending) |
 | `appeal.button.open` | Open appeal (link to the dashboard) |
+| `appeal.post.trimmed` | Open the appeal on the dashboard for the full statement and decision. (a post shortened to fit) |
 | `appeal.modal.accept.title` | Accept appeal |
 | `appeal.modal.reject.title` | Reject appeal |
 | `appeal.modal.reason.label` | Reason the member will see |
-| `appeal.reason.default.accept` | We reviewed your appeal and voided the case. |
-| `appeal.reason.default.reject` | We reviewed your appeal, and the case stands. |
-| `appeal.decided.accepted` | You accepted the appeal for case #{number}. The case is voided, and Quack will try to send {member} a DM. Open the case to see what happens to any timeout or ban. |
-| `appeal.decided.rejected` | You rejected the appeal for case #{number}. Quack will try to send {member} a DM. |
-| `appeal.closed_by_void` | Closed because the case was voided. |
-| `appeal.post.moved` | -# This appeal moved to {channel}. |
+| `appeal.modal.reason.description` | Leave out staff names and private details. |
+| `appeal.reason.default.accept` | We reviewed your appeal. The case no longer counts. |
+| `appeal.reason.default.reject` | We reviewed your appeal. The case still counts. |
+| `appeal.decided.accepted` | Appeal accepted. Case #{number} is voided and no longer counts. Quack will try to send {member} a DM. Open the case to check the outcome of any timeout or ban. |
+| `appeal.decided.rejected` | Appeal rejected. Case #{number} still counts. Quack will try to send {member} a DM. |
+| `appeal.closed_by_void` | The appeal was closed because the case was voided. |
+| `appeal.post.moved` | -# Appeals now go to {channel}. Review this appeal there or on the dashboard. |
 | `appeals.heading` | ### Appeals waiting for a decision |
 | `appeals.row` | Case #{number} · {member} · {rule name, not bold} · submitted {time} |
-| `appeals.empty` | No appeals are waiting for a decision. |
-| `appeals.button.open` | Open #{number} (one per row, then `button.previous` / `button.next`; the page counter `word.page` is subtext when there is more than one page) |
+| `appeals.empty` | No appeals are waiting for a decision. Open Appeals on the dashboard to see replies and past decisions. |
+| `appeals.button.open` | Open appeal for #{number} (one per row, then `button.previous` / `button.next`; the page counter `word.page` is subtext when there is more than one page) |
 
 Timeline (the case's history on the dashboard). Staff see who acted;
 members see "you" and never a staff name. Action and DM items reuse
@@ -3047,11 +3049,11 @@ members see "you" and never a staff name. Action and DM items reuse
 | Id | Event | Staff view | Member view |
 | --- | --- | --- | --- |
 | `timeline.case_added` | case added | Case #{number} was added. | same |
-| `timeline.case_voided` | case voided | The case was voided, so it no longer counts:\n> {void_reason} | same |
+| `timeline.case_voided` | The case was voided. It no longer counts.\n> {void_reason} | The case was voided, so it no longer counts:\n> {void_reason} | same |
 | `appeal.event` | submitted | {member} appealed the case. | You appealed the case. |
 | `appeal.event` | information requested | {actor} asked for more information. | The moderators asked for more information. |
-| `appeal.event` | information provided | {member} added information. | You added information. |
-| `appeal.event` | accepted | {actor} accepted the appeal. The case is voided. | The moderators accepted the appeal. The case is voided. |
+| `appeal.event` | information provided | {member} replied to the appeal. | You replied to the appeal. |
+| `appeal.event` | accepted | {actor} accepted the appeal. The case was voided and no longer counts. | The moderators accepted the appeal. The case was voided and no longer counts. |
 | `appeal.event` | rejected | {actor} rejected the appeal. The case still counts. | The moderators rejected the appeal. The case still counts. |
 | `appeal.event` | closed by staff | {actor} closed the appeal. | The moderators closed the appeal. |
 | `appeal.event` | closed by Quack (case voided) | `appeal.closed_by_void` | `appeal.closed_by_void` |
@@ -3119,7 +3121,7 @@ Discord unbanned {member}").
 | `log.dm_failed.ticket_unknown` | `dm_failed` failed, state unknown | `dm.state.unknown` with the ticket transcript |
 | `log.appeal_submitted` | `appeal_submitted` ok | {member} appealed {case}. |
 | `log.appeal_information_requested` | `appeal_information_requested` ok | {actor} asked {member} for more information about their appeal for {case}. |
-| `log.appeal_information_provided` | `appeal_information_provided` ok | {member} added information to their appeal for {case}. |
+| `log.appeal_information_provided` | `appeal_information_provided` ok | {member} replied to the appeal for {case}. |
 | `log.appeal_accepted` | `appeal_accepted` ok | {actor} accepted {member}'s appeal for {case}. |
 | `log.appeal_rejected` | `appeal_rejected` ok | {actor} rejected {member}'s appeal for {case}. |
 | `log.appeal_closed` | `appeal_closed` ok | {actor} closed {member}'s appeal for {case}. |

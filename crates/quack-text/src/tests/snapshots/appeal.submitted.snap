@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Your appeal for case #12 is submitted. Follow it on the dashboard; Quack will also try to DM you when the moderators decide.
-plain:   Your appeal for case #12 is submitted. Follow it on the dashboard; Quack will also try to DM you when the moderators decide.
-model:   [Fixed("Your appeal for case #12 is submitted. Follow it on the dashboard; Quack will also try to DM you when the moderators decide.")]
+discord: Your appeal for case #12 is saved. It's waiting for a decision. Open your appeal on the dashboard to see updates.
+plain:   Your appeal for case #12 is saved. It's waiting for a decision. Open your appeal on the dashboard to see updates.
+model:   [Fixed("Your appeal for case #12 is saved. It's waiting for a decision. Open your appeal on the dashboard to see updates.")]

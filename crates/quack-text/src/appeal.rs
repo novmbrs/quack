@@ -26,8 +26,11 @@ pub fn form(case: CaseId) -> Modal {
         title: "Appeal this case".to_owned(),
         inputs: vec![Input {
             id: InputId::Statement,
-            label: "What should the moderators reconsider?".to_owned(),
-            description: Some("Explain what happened. You can appeal each case once.".to_owned()),
+            label: "Why should moderators reconsider this case?".to_owned(),
+            description: Some(
+                "Explain what you want the moderators to review. You can appeal this case once."
+                    .to_owned(),
+            ),
             required: true,
             kind: InputKind::Text {
                 style: InputStyle::Paragraph,
@@ -43,26 +46,28 @@ pub fn form(case: CaseId) -> Modal {
 /// `appeal.submitted`.
 pub fn submitted(number: u64) -> Text {
     Text::fixed(format!(
-        "Your appeal for case #{number} is submitted. Follow it on the dashboard; Quack will also try to DM you when the moderators decide."
+        "Your appeal for case #{number} is saved. It's waiting for a decision. Open your appeal on the dashboard to see updates."
     ))
 }
 
 /// `appeal.submit.exists`.
 pub fn submit_exists(number: u64) -> Text {
     Text::fixed(format!(
-        "You already appealed case #{number}. Open your appeal to check where it stands."
+        "You already appealed case #{number}. Open your appeal on the dashboard to see the latest update."
     ))
 }
 
 /// `appeal.submit.not_allowed`.
 pub fn submit_not_allowed(number: u64) -> Text {
-    Text::fixed(format!("Case #{number} can't be appealed."))
+    Text::fixed(format!(
+        "Case #{number} can't be appealed. You can still review it on the dashboard."
+    ))
 }
 
 /// `appeal.submit.voided`.
 pub fn submit_voided(number: u64) -> Text {
     Text::fixed(format!(
-        "Case #{number} was voided, so there's nothing to appeal."
+        "Case #{number} was voided and no longer counts. You can still review it on the dashboard."
     ))
 }
 
@@ -76,19 +81,21 @@ pub fn submit_not_yours() -> Text {
 /// `appeal.information.saved`.
 pub fn information_saved(number: u64) -> Text {
     Text::fixed(format!(
-        "Your answer is added to the appeal for case #{number}. The moderators will review it."
+        "Your reply was added to the appeal for case #{number}. It's waiting for a decision."
     ))
 }
 
 /// `appeal.information.not_requested`.
 pub fn information_not_requested() -> Text {
-    Text::fixed("The moderators haven't asked for more information on this appeal.")
+    Text::fixed(
+        "There's no question waiting for you to answer. Open your appeal to see the latest update.",
+    )
 }
 
 /// `appeal.information.outdated`.
 pub fn information_outdated() -> Text {
     Text::fixed(
-        "This appeal changed since you opened it. Reload the page to see the latest question before you answer.",
+        "The appeal changed while you were writing. Reload it and read the latest question before replying.",
     )
 }
 
@@ -136,7 +143,7 @@ fn state_line(p: &AppealPost) -> Text {
         AppealState::Pending => Text::fixed("Waiting for a decision."),
         AppealState::NeedsInformation => Text::fixed("Waiting for ")
             .person(&p.member)
-            .s(" to add information."),
+            .s(" to reply."),
         AppealState::Accepted => by("Accepted"),
         AppealState::Rejected => by("Rejected"),
         AppealState::Closed if p.closed_by_void => {
@@ -176,26 +183,26 @@ pub fn post(p: &AppealPost) -> Msg {
                 .time(p.submitted_at, TimeStyle::Relative),
         )
         .para(state_line(p))
-        .para(Text::new().bold("Statement"))
+        .para(Text::new().bold("Appeal statement"))
         .block(Block::Quote(Text::new().user(fmt::cut(
             &p.statement,
             limits::APPEAL_POST_STATEMENT_CHARS,
         ))));
     if statement_cut {
         msg = msg.block(Block::Subtext(Text::fixed(
-            "The full statement is on the dashboard.",
+            "Open the appeal on the dashboard for the full statement.",
         )));
     }
     if let Some(info) = &p.information {
         msg = msg
-            .para(Text::new().bold("Added information"))
+            .para(Text::new().bold("Reply from the member"))
             .block(Block::Quote(
                 Text::new().user(fmt::cut(info, limits::APPEAL_POST_STATEMENT_CHARS)),
             ));
     }
     if let Some(reason) = p.decision_reason.as_ref().filter(|_| !p.closed_by_void) {
         msg = msg
-            .para(Text::new().bold("Reason given to the member"))
+            .para(Text::new().bold("Reason shared with the member"))
             .block(Block::Quote(Text::new().user(reason)));
     }
     let mut buttons = Vec::new();
@@ -213,14 +220,19 @@ pub fn post(p: &AppealPost) -> Msg {
         ));
     }
     buttons.push(Button::link("Open appeal", &p.dashboard_url));
-    msg.buttons(buttons)
+    msg.when_trimmed(Text::fixed(
+        "Open the appeal on the dashboard for the full statement and decision.",
+    ))
+    .buttons(buttons)
 }
 
 /// `appeal.post.moved`: what the old post says after the appeal channel
 /// changed.
 pub fn post_moved(channel: &ChannelRef) -> Msg {
     Msg::new(Tone::Neutral).block(Block::Subtext(
-        Text::fixed("This appeal moved to ").channel(channel).s("."),
+        Text::fixed("Appeals now go to ")
+            .channel(channel)
+            .s(". Review this appeal there or on the dashboard."),
     ))
 }
 
@@ -240,12 +252,12 @@ pub fn decision_modal(decision: ModalDecision, appeal: AppealId, version: u32) -
         ModalDecision::Accept => (
             ModalAction::AcceptAppeal { appeal, version },
             "Accept appeal",
-            "We reviewed your appeal and voided the case.",
+            "We reviewed your appeal. The case no longer counts.",
         ),
         ModalDecision::Reject => (
             ModalAction::RejectAppeal { appeal, version },
             "Reject appeal",
-            "We reviewed your appeal, and the case stands.",
+            "We reviewed your appeal. The case still counts.",
         ),
     };
     Modal {
@@ -254,7 +266,7 @@ pub fn decision_modal(decision: ModalDecision, appeal: AppealId, version: u32) -
         inputs: vec![Input {
             id: InputId::Reason,
             label: "Reason the member will see".to_owned(),
-            description: None,
+            description: Some("Leave out staff names and private details.".to_owned()),
             required: true,
             kind: InputKind::Text {
                 style: InputStyle::Paragraph,
@@ -271,12 +283,12 @@ pub fn decision_modal(decision: ModalDecision, appeal: AppealId, version: u32) -
 pub fn decided(decision: ModalDecision, number: u64, member: &Person) -> Text {
     match decision {
         ModalDecision::Accept => Text::fixed(format!(
-            "You accepted the appeal for case #{number}. The case is voided, and Quack will try to send "
+            "Appeal accepted. Case #{number} is voided and no longer counts. Quack will try to send "
         ))
         .person(member)
-        .s(" a DM. Open the case to see what happens to any timeout or ban."),
+        .s(" a DM. Open the case to check the outcome of any timeout or ban."),
         ModalDecision::Reject => Text::fixed(format!(
-            "You rejected the appeal for case #{number}. Quack will try to send "
+            "Appeal rejected. Case #{number} still counts. Quack will try to send "
         ))
         .person(member)
         .s(" a DM."),
@@ -286,7 +298,7 @@ pub fn decided(decision: ModalDecision, number: u64, member: &Person) -> Text {
 /// `appeal.closed_by_void`: the text of the event Quack records when a void
 /// closes an appeal.
 pub fn closed_by_void() -> Text {
-    Text::fixed("Closed because the case was voided.")
+    Text::fixed("The appeal was closed because the case was voided.")
 }
 
 /// One appeal event on a timeline. Staff see who acted; members see "you"
@@ -311,8 +323,10 @@ pub fn event(
     match kind {
         AppealEventKind::Submitted => them(Text::new()).s(" appealed the case."),
         AppealEventKind::InformationRequested => staff("asked for more information."),
-        AppealEventKind::InformationProvided => them(Text::new()).s(" added information."),
-        AppealEventKind::Accepted => staff("accepted the appeal. The case is voided."),
+        AppealEventKind::InformationProvided => them(Text::new()).s(" replied to the appeal."),
+        AppealEventKind::Accepted => {
+            staff("accepted the appeal. The case was voided and no longer counts.")
+        }
         AppealEventKind::Rejected => staff("rejected the appeal. The case still counts."),
         AppealEventKind::Closed if actor == Some(&Actor::Quack) => closed_by_void(),
         AppealEventKind::Closed => staff("closed the appeal."),
@@ -341,7 +355,9 @@ pub fn list(rows: &[AppealRow], page: u32, pages: u32) -> Msg {
         "Appeals waiting for a decision",
     )));
     if rows.is_empty() {
-        msg = msg.para(Text::fixed("No appeals are waiting for a decision."));
+        msg = msg.para(Text::fixed(
+            "No appeals are waiting for a decision. Open Appeals on the dashboard to see replies and past decisions.",
+        ));
     }
     for r in rows {
         msg = msg.para(
@@ -360,7 +376,7 @@ pub fn list(rows: &[AppealRow], page: u32, pages: u32) -> Msg {
         .iter()
         .map(|r| {
             Button::new(
-                format!("Open #{}", r.number),
+                format!("Open appeal for #{}", r.number),
                 ButtonStyle::Secondary,
                 ButtonAction::OpenAppeal(r.appeal),
             )

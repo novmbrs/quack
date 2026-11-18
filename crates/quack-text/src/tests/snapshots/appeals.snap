@@ -6,7 +6,7 @@ tone: Neutral
 --- discord ---
 ### Appeals waiting for a decision
 Case #12 · <@222> · Spam · submitted <t:1794924309:R>
-buttons: [Open #12 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004))
+buttons: [Open appeal for #12 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004))
 --- plain ---
 Appeals waiting for a decision
 Case #12 · Sam · Spam · submitted on 17 Nov 2026 at 14:05 UTC
@@ -29,8 +29,8 @@ Case #9007199254740984 · <@222> · Long text with \*stars\* and \<\@1\> mention
 Case #9007199254740983 · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · submitted <t:1794924309:R>
 Case #9007199254740982 · <@222> · Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \* · submitted <t:1794924309:R>
 -# Page 2 of 3
-buttons: [Open #9007199254740991 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740990 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740989 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740988 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740987 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004))
-buttons: [Open #9007199254740986 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740985 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740984 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740983 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open #9007199254740982 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004))
+buttons: [Open appeal for #9007199254740991 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740990 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740989 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740988 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740987 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004))
+buttons: [Open appeal for #9007199254740986 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740985 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740984 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740983 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004)) | [Open appeal for #9007199254740982 · Secondary] OpenAppeal(AppealId(01930000-0000-7000-8000-000000000004))
 buttons: [Previous · Secondary] AppealsPage(1) | [Next · Secondary] AppealsPage(3)
 --- plain ---
 Appeals waiting for a decision

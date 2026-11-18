@@ -3,4 +3,5 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 modal "Accept appeal" AcceptAppeal { appeal: AppealId(01930000-0000-7000-8000-000000000004), version: 3 }
 - Reason "Reason the member will see" (required)
-  Paragraph text, 1–2000 characters, placeholder None, value Some("We reviewed your appeal and voided the case.")
+  description: Leave out staff names and private details.
+  Paragraph text, 1–2000 characters, placeholder None, value Some("We reviewed your appeal. The case no longer counts.")

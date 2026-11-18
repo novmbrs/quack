@@ -42,44 +42,44 @@ plain:   The moderators asked for more information.
 model:   [Fixed("The moderators asked for more information.")]
 
 ## InformationProvided by staff, staff view
-discord: <@222> added information.
-plain:   Sam added information.
-model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" added information.")]
+discord: <@222> replied to the appeal.
+plain:   Sam replied to the appeal.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" replied to the appeal.")]
 
 ## InformationProvided by staff, member view
-discord: You added information.
-plain:   You added information.
-model:   [Fixed("You added information.")]
+discord: You replied to the appeal.
+plain:   You replied to the appeal.
+model:   [Fixed("You replied to the appeal.")]
 
 ## InformationProvided by Quack, staff view
-discord: <@222> added information.
-plain:   Sam added information.
-model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" added information.")]
+discord: <@222> replied to the appeal.
+plain:   Sam replied to the appeal.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" replied to the appeal.")]
 
 ## InformationProvided by Quack, member view
-discord: You added information.
-plain:   You added information.
-model:   [Fixed("You added information.")]
+discord: You replied to the appeal.
+plain:   You replied to the appeal.
+model:   [Fixed("You replied to the appeal.")]
 
 ## Accepted by staff, staff view
-discord: <@333> accepted the appeal. The case is voided.
-plain:   Ana accepted the appeal. The case is voided.
-model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" accepted the appeal. The case is voided.")]
+discord: <@333> accepted the appeal. The case was voided and no longer counts.
+plain:   Ana accepted the appeal. The case was voided and no longer counts.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" accepted the appeal. The case was voided and no longer counts.")]
 
 ## Accepted by staff, member view
-discord: The moderators accepted the appeal. The case is voided.
-plain:   The moderators accepted the appeal. The case is voided.
-model:   [Fixed("The moderators accepted the appeal. The case is voided.")]
+discord: The moderators accepted the appeal. The case was voided and no longer counts.
+plain:   The moderators accepted the appeal. The case was voided and no longer counts.
+model:   [Fixed("The moderators accepted the appeal. The case was voided and no longer counts.")]
 
 ## Accepted by Quack, staff view
-discord: Quack accepted the appeal. The case is voided.
-plain:   Quack accepted the appeal. The case is voided.
-model:   [Fixed("Quack accepted the appeal. The case is voided.")]
+discord: Quack accepted the appeal. The case was voided and no longer counts.
+plain:   Quack accepted the appeal. The case was voided and no longer counts.
+model:   [Fixed("Quack accepted the appeal. The case was voided and no longer counts.")]
 
 ## Accepted by Quack, member view
-discord: The moderators accepted the appeal. The case is voided.
-plain:   The moderators accepted the appeal. The case is voided.
-model:   [Fixed("The moderators accepted the appeal. The case is voided.")]
+discord: The moderators accepted the appeal. The case was voided and no longer counts.
+plain:   The moderators accepted the appeal. The case was voided and no longer counts.
+model:   [Fixed("The moderators accepted the appeal. The case was voided and no longer counts.")]
 
 ## Rejected by staff, staff view
 discord: <@333> rejected the appeal. The case still counts.
@@ -112,14 +112,14 @@ plain:   The moderators closed the appeal.
 model:   [Fixed("The moderators closed the appeal.")]
 
 ## Closed by Quack, staff view
-discord: Closed because the case was voided.
-plain:   Closed because the case was voided.
-model:   [Fixed("Closed because the case was voided.")]
+discord: The appeal was closed because the case was voided.
+plain:   The appeal was closed because the case was voided.
+model:   [Fixed("The appeal was closed because the case was voided.")]
 
 ## Closed by Quack, member view
-discord: Closed because the case was voided.
-plain:   Closed because the case was voided.
-model:   [Fixed("Closed because the case was voided.")]
+discord: The appeal was closed because the case was voided.
+plain:   The appeal was closed because the case was voided.
+model:   [Fixed("The appeal was closed because the case was voided.")]
 
 ## Reopened by staff, staff view
 discord: <@333> reopened the appeal and asked for more information.

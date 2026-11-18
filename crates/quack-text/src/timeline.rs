@@ -11,5 +11,5 @@ pub fn case_added(number: u64) -> Text {
 
 /// The case was voided; its reason follows as a quote.
 pub fn case_voided(reason: &str) -> Text {
-    Text::fixed("The case was voided, so it no longer counts:\n> ").user(reason)
+    Text::fixed("The case was voided. It no longer counts.\n> ").user(reason)
 }

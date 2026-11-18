@@ -142,9 +142,9 @@ plain:   Case #12 is voided. Quack won't retry its ban.
 model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
 
 ## CaseVoided · member · all facts
-discord: Case #12 was voided, so there's nothing to appeal.
-plain:   Case #12 was voided, so there's nothing to appeal.
-model:   [Fixed("Case #12 was voided, so there's nothing to appeal.")]
+discord: Case #12 was voided and no longer counts. You can still review it on the dashboard.
+plain:   Case #12 was voided and no longer counts. You can still review it on the dashboard.
+model:   [Fixed("Case #12 was voided and no longer counts. You can still review it on the dashboard.")]
 
 ## CaseVoided · no facts
 discord: This case is voided. Quack won't retry its action.
@@ -492,9 +492,9 @@ plain:   This appeal changed since you opened it. Open it again to see the lates
 model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
 
 ## AppealChanged · member · all facts
-discord: This appeal changed since you opened it. Reload the page to see the latest question before you answer.
-plain:   This appeal changed since you opened it. Reload the page to see the latest question before you answer.
-model:   [Fixed("This appeal changed since you opened it. Reload the page to see the latest question before you answer.")]
+discord: The appeal changed while you were writing. Reload it and read the latest question before replying.
+plain:   The appeal changed while you were writing. Reload it and read the latest question before replying.
+model:   [Fixed("The appeal changed while you were writing. Reload it and read the latest question before replying.")]
 
 ## AppealChanged · no facts
 discord: This appeal changed since you opened it. Open it again to see the latest update.
@@ -502,24 +502,24 @@ plain:   This appeal changed since you opened it. Open it again to see the lates
 model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
 
 ## AppealExists · staff · all facts
-discord: You already appealed case #12. Open your appeal to check where it stands.
-plain:   You already appealed case #12. Open your appeal to check where it stands.
-model:   [Fixed("You already appealed case #12. Open your appeal to check where it stands.")]
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
 
 ## AppealExists · adding a case · all facts
-discord: You already appealed case #12. Open your appeal to check where it stands.
-plain:   You already appealed case #12. Open your appeal to check where it stands.
-model:   [Fixed("You already appealed case #12. Open your appeal to check where it stands.")]
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
 
 ## AppealExists · editing a rule · all facts
-discord: You already appealed case #12. Open your appeal to check where it stands.
-plain:   You already appealed case #12. Open your appeal to check where it stands.
-model:   [Fixed("You already appealed case #12. Open your appeal to check where it stands.")]
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
 
 ## AppealExists · member · all facts
-discord: You already appealed case #12. Open your appeal to check where it stands.
-plain:   You already appealed case #12. Open your appeal to check where it stands.
-model:   [Fixed("You already appealed case #12. Open your appeal to check where it stands.")]
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
 
 ## AppealExists · no facts
 discord: You already appealed this case. Open your appeal to see the latest update.
@@ -527,24 +527,24 @@ plain:   You already appealed this case. Open your appeal to see the latest upda
 model:   [Fixed("You already appealed this case. Open your appeal to see the latest update.")]
 
 ## AppealNotAllowed · staff · all facts
-discord: Case #12 can't be appealed.
-plain:   Case #12 can't be appealed.
-model:   [Fixed("Case #12 can't be appealed.")]
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
 
 ## AppealNotAllowed · adding a case · all facts
-discord: Case #12 can't be appealed.
-plain:   Case #12 can't be appealed.
-model:   [Fixed("Case #12 can't be appealed.")]
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
 
 ## AppealNotAllowed · editing a rule · all facts
-discord: Case #12 can't be appealed.
-plain:   Case #12 can't be appealed.
-model:   [Fixed("Case #12 can't be appealed.")]
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
 
 ## AppealNotAllowed · member · all facts
-discord: Case #12 can't be appealed.
-plain:   Case #12 can't be appealed.
-model:   [Fixed("Case #12 can't be appealed.")]
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
 
 ## AppealNotAllowed · no facts
 discord: This case can't be appealed. You can still review it on the dashboard.

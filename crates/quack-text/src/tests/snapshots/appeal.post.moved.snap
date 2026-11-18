@@ -3,8 +3,8 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 tone: Neutral
 --- discord ---
--# This appeal moved to <#444>.
+-# Appeals now go to <#444>. Review this appeal there or on the dashboard.
 --- plain ---
-This appeal moved to #appeals.
+Appeals now go to #appeals. Review this appeal there or on the dashboard.
 --- model ---
-Subtext [Fixed("This appeal moved to "), Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(".")]
+Subtext [Fixed("Appeals now go to "), Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(". Review this appeal there or on the dashboard.")]

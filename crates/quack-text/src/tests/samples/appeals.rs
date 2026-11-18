@@ -43,6 +43,7 @@ const POST_IDS: &[&str] = &[
     "appeal.button.accept",
     "appeal.button.reject",
     "appeal.button.open",
+    "appeal.post.trimmed",
 ];
 
 pub fn samples() -> Vec<Sample> {
@@ -167,6 +168,7 @@ pub fn samples() -> Vec<Sample> {
         &[
             "appeal.modal.accept.title",
             "appeal.modal.reason.label",
+            "appeal.modal.reason.description",
             "appeal.reason.default.accept",
         ],
         "",

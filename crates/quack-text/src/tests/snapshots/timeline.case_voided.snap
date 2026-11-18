@@ -1,8 +1,8 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: The case was voided, so it no longer counts:
+discord: The case was voided. It no longer counts.
 > Wrong member.
-plain:   The case was voided, so it no longer counts:
+plain:   The case was voided. It no longer counts.
 > Wrong member.
-model:   [Fixed("The case was voided, so it no longer counts:\n> "), User("Wrong member.")]
+model:   [Fixed("The case was voided. It no longer counts.\n> "), User("Wrong member.")]

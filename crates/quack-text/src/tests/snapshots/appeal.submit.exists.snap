@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: You already appealed case #12. Open your appeal to check where it stands.
-plain:   You already appealed case #12. Open your appeal to check where it stands.
-model:   [Fixed("You already appealed case #12. Open your appeal to check where it stands.")]
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
