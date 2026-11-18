@@ -3,6 +3,7 @@
 //! first, each list with an "Open a case" select.
 
 use quack_core::ids::{GuildId, MemberId, RuleId};
+use quack_core::permissions::Capability;
 use quack_db::cases::{CaseFilter, CaseSummary};
 use quack_discord::interaction::{Person, RuleArg, Source};
 use quack_engine::Principal;
@@ -117,6 +118,8 @@ async fn list_command(
     rule: Option<&RuleArg>,
 ) -> Result<Msg, Failure> {
     let principal = auth::principal(a.engine(), a.ix).await?;
+    // Before the rule lookup, so a refusal never tells which names exist.
+    auth::require(a.engine(), &principal, Capability::Moderate).await?;
     let rule = match rule {
         Some(arg) => match rule_filter(a, principal.guild, arg).await? {
             Some(found) => Some(found),
@@ -174,6 +177,8 @@ async fn list_page(
     rule: Option<RuleId>,
 ) -> Result<Msg, Failure> {
     let principal = auth::principal(a.engine(), a.ix).await?;
+    // Before the rule lookup, so a refusal never tells which names exist.
+    auth::require(a.engine(), &principal, Capability::Moderate).await?;
     let rule = match rule {
         Some(id) => rule_filter(a, principal.guild, &RuleArg::Id(id)).await?,
         None => None,

@@ -182,11 +182,12 @@ async fn apply_now(
 ) -> Result<Option<quack_text::Msg>, Failure> {
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
+    // Before the rule lookup, so a refusal never tells which names exist.
+    auth::require(engine, &principal, Capability::Moderate).await?;
     let (rule, cached, name) = rule_id(a, rule).await?;
     if let Some(found) = cached.as_ref()
         && found.definition.context_fields().iter().any(|f| f.required)
     {
-        auth::require(engine, &principal, Capability::Moderate).await?;
         let draft = uuid::Uuid::now_v7();
         let channel = a.ix.channel_id.ok_or_else(crate::router::expired)?;
         let form = CommandDraft {

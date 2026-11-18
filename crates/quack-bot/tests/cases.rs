@@ -391,3 +391,37 @@ async fn retry_dismiss_and_undo_from_the_card() -> Result {
     let _: Option<GuildId> = None;
     Ok(())
 }
+
+#[tokio::test]
+async fn a_non_moderator_learns_nothing_about_which_rule_names_exist() -> Result {
+    let w = World::new().await?;
+    w.h.rule(warning("Spam")).await?;
+    let mut answers = Vec::new();
+    for name in ["Spam", "No such rule"] {
+        let add = vec![
+            serde_json::json!({"name": "member", "type": 6, "value": MEMBER.to_string()}),
+            serde_json::json!({"name": "rule", "type": 3, "value": name}),
+        ];
+        w.send(&interaction(
+            2,
+            member(),
+            w.channel,
+            &payload::case("add", &serde_json::json!(add), Some(MEMBER)),
+        ))
+        .await;
+        answers.push(format!("{:?}", w.answer()));
+        let list = serde_json::json!([{"name": "rule", "type": 3, "value": name}]);
+        w.send(&interaction(
+            2,
+            member(),
+            w.channel,
+            &payload::case("list", &list, None),
+        ))
+        .await;
+        answers.push(format!("{:?}", w.answer()));
+    }
+    assert_eq!(answers[0], answers[2], "case add: the same refusal");
+    assert_eq!(answers[1], answers[3], "case list: the same refusal");
+    assert!(!answers[0].contains("find"), "{}", answers[0]);
+    Ok(())
+}
