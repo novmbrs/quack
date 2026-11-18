@@ -108,9 +108,10 @@ cargo deny check
   then `bun run api` in `apps/dashboard`, and commit both.
 - After changing the instrument catalog:
   `UPDATE_METRICS_DOC=1 cargo test -p quack-telemetry metrics_doc`.
-- Text changes: review the `insta` snapshots (`cargo insta review`); a new
-  message id goes into the design's catalog (§12) so the coverage test
-  passes.
+- Text changes: review the `insta` snapshots (`cargo insta review`); list a
+  new message id in the design's catalog (§12) and give it a sample: the
+  coverage test fails when an id named in §12 has no sample (it doesn't
+  find ids missing from §12).
 - Dashboard changes: `bun run check`, `bun run test`, and `bun run build`
   in `apps/dashboard`.
 - The whole system: `cargo test -p quack --test system` (the composed

@@ -159,12 +159,11 @@ pub struct VoidEffect {
 /// timeout, its end is still in the future; a `cancelled` original never
 /// does.
 ///
-/// A `done` ban gets its undo even when every attempt was `no_change`: the
-/// ban it found may be one another case placed whose own undo was skipped
-/// because this case still applied, and the unban's provenance check
-/// (§5.6) decides whether that ban is Quack's to remove. A `no_change`
-/// timeout gets none: the timeout it found ends at or after this case's
-/// own end, so it was not this case's, and it expires on its own.
+/// A `done` timeout or ban gets its undo even when every attempt was
+/// `no_change` (a timeout only while its end is still ahead): what it
+/// found may be another case's whose own undo was skipped because this
+/// case still applied, and the undo's guard and the unban's provenance
+/// check (§5.6) decide whether anything is Quack's to remove.
 pub fn on_void(facts: &VoidFacts<'_>) -> VoidEffect {
     if !facts.kind.is_original() {
         return VoidEffect {

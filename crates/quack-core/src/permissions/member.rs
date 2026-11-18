@@ -1,4 +1,4 @@
-//! Member checks (§2.3) and the Quack-side action pre-check (§5.4 step 6).
+//! Member checks (§2.3) and the Quack-side action pre-check (§5.4 step 1.8).
 
 use super::{DiscordPermission, Permission, Permissions};
 use crate::action::{ActionFailure, ActionKind, Failure};

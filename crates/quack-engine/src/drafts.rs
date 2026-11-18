@@ -305,8 +305,8 @@ pub struct CommandDraft {
 }
 
 /// Starts a draft: for the "Add case" commands (step 1), and for
-/// `/case add` right after its first form page opened, so the page's
-/// submit finds who and where the case is for even after a restart.
+/// `/case add` before its first form page opens, so the page's submit
+/// finds who and where the case is for even after a restart.
 pub async fn start(
     engine: &Engine,
     principal: &Principal,
