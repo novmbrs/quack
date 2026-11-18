@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::ImportError;
 use crate::convert::Snowflake;
 use crate::guild::Ctx;
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::{self, guarded};
 
 /// A hit's state and failure from the Go outcome (§19.4). `pending_case`
@@ -51,23 +51,14 @@ pub(crate) fn hit(
 pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let cleanups = cleanups(cx).await?;
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM honeypot_triggers WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "honeypot_triggers", "id").key().to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM honeypot_triggers WHERE guild_id = ? AND id > ? ORDER BY id",
+        "honeypot_triggers",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             trigger(cx, &Cols::new(row, "honeypot_triggers", "id"), &cleanups).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     Ok(())

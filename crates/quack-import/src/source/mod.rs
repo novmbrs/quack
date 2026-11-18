@@ -107,6 +107,49 @@ impl Source {
     }
 }
 
+/// A keyed walk over a query in [`Source::page`] batches, each batch
+/// starting after the last row's `key` column.
+pub(crate) struct Pages<'a> {
+    sql: &'a str,
+    table: &'static str,
+    key: &'static str,
+    after: String,
+    done: bool,
+}
+
+impl<'a> Pages<'a> {
+    /// A walk from the first row; `sql` is as [`Source::page`] takes it.
+    pub(crate) const fn new(sql: &'a str, table: &'static str, key: &'static str) -> Self {
+        Self {
+            sql,
+            table,
+            key,
+            after: String::new(),
+            done: false,
+        }
+    }
+
+    /// The next batch, or `None` after the last.
+    pub(crate) async fn next(
+        &mut self,
+        src: &mut Source,
+        binds: &[&str],
+    ) -> Result<Option<Vec<MySqlRow>>, ImportError> {
+        if self.done {
+            return Ok(None);
+        }
+        let rows = src.page(self.sql, binds, &self.after).await?;
+        let Some(last) = rows.last() else {
+            return Ok(None);
+        };
+        Cols::new(last, self.table, self.key)
+            .key()
+            .clone_into(&mut self.after);
+        self.done = rows.len() < BATCH;
+        Ok(Some(rows))
+    }
+}
+
 /// Typed access to one source row, with errors naming table, column, and key.
 pub(crate) struct Cols<'r> {
     row: &'r MySqlRow,

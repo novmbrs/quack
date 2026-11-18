@@ -6,7 +6,7 @@ use time::OffsetDateTime;
 use crate::ImportError;
 use crate::convert::has_class;
 use crate::guild::Ctx;
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::{self, DmState, NewDm};
 
 /// A Go notification row's facts.
@@ -104,16 +104,10 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     const SQL: &str = "SELECT n.* FROM case_notifications n JOIN cases c ON c.id = n.case_id
                        WHERE c.guild_id = ? AND n.id > ? ORDER BY n.id";
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let rows = cx.src.page(SQL, &[&g], &after).await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "case_notifications", "id").key().to_owned();
+    let mut pages = Pages::new(SQL, "case_notifications", "id");
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             one(cx, &Cols::new(row, "case_notifications", "id")).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     Ok(())

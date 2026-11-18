@@ -13,7 +13,7 @@ use self::transform::{Claim, Dropped};
 use crate::ImportError;
 use crate::convert::{self, Snowflake};
 use crate::guild::{CaseInfo, Ctx};
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::tables::rules::snapshot::{self, Snapshot};
 use crate::target::strict;
 
@@ -49,19 +49,13 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let accepted = accepted_appeal_cases(cx).await?;
     let mut problems = Vec::new();
     let mut claims = Vec::new();
-    let mut after = String::new();
+    let mut pages = Pages::new(
+        "SELECT * FROM cases WHERE guild_id = ? AND id > ? ORDER BY id",
+        "cases",
+        "id",
+    );
     let g = cx.g.ulid.clone();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM cases WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "cases", "id").key().to_owned();
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             let c = Cols::new(row, "cases", "id");
             match case_row(cx, &c, &accepted)? {
@@ -77,9 +71,6 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
                     insert(cx, &c, r).await?;
                 }
             }
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     if !problems.is_empty() {

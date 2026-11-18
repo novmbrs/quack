@@ -10,7 +10,7 @@ use time::OffsetDateTime;
 use crate::ImportError;
 use crate::convert::{self, Snowflake};
 use crate::guild::{Ctx, TicketInfo};
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::tables::publications::owned_id;
 use crate::target::{self, DmState, NewDm, NewMessage, guarded};
 
@@ -68,25 +68,16 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
             cx.f.in_flight("ticket_queue_send_unconfirmed_dropped", key);
         }
     }
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM tickets WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "tickets", "id").key().to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM tickets WHERE guild_id = ? AND id > ? ORDER BY id",
+        "tickets",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             let c = Cols::new(row, "tickets", "id");
             let extra = extra_live.contains(c.key());
             ticket(cx, &c, extra).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     journal(cx).await?;
@@ -234,13 +225,8 @@ async fn journal(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
         "SELECT * FROM ticket_message_journal WHERE guild_id = ? AND message_discord_id > ?
                        ORDER BY message_discord_id";
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let rows = cx.src.page(SQL, &[&g], &after).await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "ticket_message_journal", "message_discord_id")
-            .key()
-            .to_owned();
+    let mut pages = Pages::new(SQL, "ticket_message_journal", "message_discord_id");
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             let c = Cols::new(row, "ticket_message_journal", "message_discord_id");
             let key = cx.key(c.key());
@@ -285,9 +271,6 @@ async fn journal(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
             .bind(c.time("sent_at")?)
             .bind(c.opt_time("expires_at")?);
             guarded(&mut cx.tx, &mut cx.f, "ticket_messages", &key, q).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     Ok(())

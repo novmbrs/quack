@@ -14,7 +14,7 @@ use self::files::{MySqlFile, file, files_of};
 use crate::ImportError;
 use crate::convert::{self, Snowflake};
 use crate::guild::Ctx;
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::guarded;
 
 /// `capture_outcome` → `(state, failure)`.
@@ -55,20 +55,12 @@ pub(crate) fn embeds(raw: &Value) -> (Vec<EmbedSummary>, usize) {
 pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let dupes = duplicates(cx).await?;
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM case_evidence_snapshots WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "case_evidence_snapshots", "id")
-            .key()
-            .to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM case_evidence_snapshots WHERE guild_id = ? AND id > ? ORDER BY id",
+        "case_evidence_snapshots",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         let mut owners: Vec<String> = Vec::new();
         for row in &rows {
             let key = Cols::new(row, "case_evidence_snapshots", "id")
@@ -93,9 +85,6 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
                 mine.extend(files.iter().filter(|f| merged.contains(&f.evidence)));
             }
             snapshot(cx, &c, &mine).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     Ok(())

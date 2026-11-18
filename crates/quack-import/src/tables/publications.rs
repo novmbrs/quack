@@ -9,27 +9,19 @@ use uuid::Uuid;
 use crate::ImportError;
 use crate::convert::Snowflake;
 use crate::guild::Ctx;
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::{self, NewMessage};
 
 /// Imports the server's case receipts, a page of cases at a time.
 pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let cases = cx
-            .src
-            .page(
-                "SELECT DISTINCT p.case_id FROM case_publications p JOIN cases c ON c.id = p.case_id
+    let mut pages = Pages::new(
+        "SELECT DISTINCT p.case_id FROM case_publications p JOIN cases c ON c.id = p.case_id
                  WHERE c.guild_id = ? AND p.case_id > ? ORDER BY p.case_id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = cases.last() else { break };
-        after = Cols::new(last, "case_publications", "case_id")
-            .key()
-            .to_owned();
+        "case_publications",
+        "case_id",
+    );
+    while let Some(cases) = pages.next(cx.src, &[&g]).await? {
         let ids: Vec<String> = cases
             .iter()
             .map(|r| {
@@ -54,9 +46,6 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
                 continue;
             }
             one(cx, &c).await?;
-        }
-        if cases.len() < BATCH {
-            break;
         }
     }
     Ok(())

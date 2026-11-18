@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::ImportError;
 use crate::convert::{self, Snowflake};
 use crate::guild::Ctx;
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::guarded;
 
 /// Go results → `mod_log_result`.
@@ -55,23 +55,14 @@ struct Links {
 /// Imports the server's moderation log.
 pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM audit_log_entries WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "audit_log_entries", "id").key().to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM audit_log_entries WHERE guild_id = ? AND id > ? ORDER BY id",
+        "audit_log_entries",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             entry(cx, &Cols::new(row, "audit_log_entries", "id")).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     Ok(())

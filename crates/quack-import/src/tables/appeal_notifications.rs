@@ -8,7 +8,7 @@ use uuid::Uuid;
 use crate::ImportError;
 use crate::convert::Snowflake;
 use crate::guild::Ctx;
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::tables::notifications::{self, Notice};
 use crate::tables::publications::owned_id;
 use crate::target::{self, NewDm, NewMessage};
@@ -25,20 +25,12 @@ struct Post {
 pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let g = cx.g.ulid.clone();
     let mut posts: HashMap<Uuid, (time::OffsetDateTime, Post)> = HashMap::new();
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM appeal_notifications WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "appeal_notifications", "id")
-            .key()
-            .to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM appeal_notifications WHERE guild_id = ? AND id > ? ORDER BY id",
+        "appeal_notifications",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             let c = Cols::new(row, "appeal_notifications", "id");
             match c.text("audience")?.as_str() {
@@ -48,9 +40,6 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
                     cx.f.skip("appeal_notifications", "unknown_audience", cx.key(c.key()));
                 }
             }
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     let mut appeals: Vec<Uuid> = cx.appeals.keys().copied().collect();

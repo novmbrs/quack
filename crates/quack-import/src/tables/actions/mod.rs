@@ -19,7 +19,7 @@ use self::attempts::{Attempt, attempts_of, write_attempts};
 use self::state::{Facts, State};
 use crate::ImportError;
 use crate::guild::{ActionInfo, CaseInfo, Ctx};
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::{self, strict};
 
 const SELECT: &str = "SELECT e.* FROM case_action_executions e JOIN cases c ON c.id = e.case_id
@@ -31,13 +31,8 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     for undo in [false, true] {
         let sql = SELECT.replace("{}", if undo { "NOT" } else { "" });
         let g = cx.g.ulid.clone();
-        let mut after = String::new();
-        loop {
-            let rows = cx.src.page(&sql, &[&g], &after).await?;
-            let Some(last) = rows.last() else { break };
-            after = Cols::new(last, "case_action_executions", "id")
-                .key()
-                .to_owned();
+        let mut pages = Pages::new(&sql, "case_action_executions", "id");
+        while let Some(rows) = pages.next(cx.src, &[&g]).await? {
             let mut attempts = attempts_of(cx, &rows).await?;
             for row in &rows {
                 let c = Cols::new(row, "case_action_executions", "id");
@@ -56,9 +51,6 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
                     continue;
                 }
                 execution(cx, &c, undo, tries).await?;
-            }
-            if rows.len() < BATCH {
-                break;
             }
         }
     }

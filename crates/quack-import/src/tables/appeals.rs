@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::ImportError;
 use crate::convert::{self, Snowflake};
 use crate::guild::{AppealInfo, Ctx};
-use crate::source::{BATCH, Cols};
+use crate::source::{Cols, Pages};
 use crate::target::{guarded, strict};
 
 /// What an empty statement, reply, or reason is imported as.
@@ -72,26 +72,17 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let first_decided = first_decisions(cx).await?;
     let g = cx.g.ulid.clone();
     let mut problems = Vec::new();
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM appeals WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "appeals", "id").key().to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM appeals WHERE guild_id = ? AND id > ? ORDER BY id",
+        "appeals",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             let c = Cols::new(row, "appeals", "id");
             if let Err(p) = appeal(cx, &c, &first_decided).await? {
                 problems.push(format!("appeal {}: {p}", c.key()));
             }
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     if !problems.is_empty() {
@@ -226,23 +217,14 @@ async fn appeal(
 
 async fn events(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
     let g = cx.g.ulid.clone();
-    let mut after = String::new();
-    loop {
-        let rows = cx
-            .src
-            .page(
-                "SELECT * FROM appeal_events WHERE guild_id = ? AND id > ? ORDER BY id",
-                &[&g],
-                &after,
-            )
-            .await?;
-        let Some(last) = rows.last() else { break };
-        after = Cols::new(last, "appeal_events", "id").key().to_owned();
+    let mut pages = Pages::new(
+        "SELECT * FROM appeal_events WHERE guild_id = ? AND id > ? ORDER BY id",
+        "appeal_events",
+        "id",
+    );
+    while let Some(rows) = pages.next(cx.src, &[&g]).await? {
         for row in &rows {
             event(cx, &Cols::new(row, "appeal_events", "id")).await?;
-        }
-        if rows.len() < BATCH {
-            break;
         }
     }
     Ok(())
