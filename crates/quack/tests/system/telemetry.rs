@@ -11,9 +11,10 @@ use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use axum::http::{Method, StatusCode};
-use opentelemetry::trace::SpanKind;
+use opentelemetry::trace::{SpanId, SpanKind};
 use opentelemetry_sdk::trace::SpanData;
 use quack_core::ids::MessageId;
+use quack_db::jobs::RunnerConfig;
 use quack_telemetry::catalog::{self, InstrumentKind};
 use quack_testkit::fake::{Call, Script};
 use quack_testkit::{ADMIN, GUILD, MEMBER, MEMBER_2, MODERATOR, OWNER, sf};
@@ -296,4 +297,82 @@ fn looks_like_id_or_text(value: &str) -> bool {
     let words = value.split_whitespace().count() > 3;
     let punctuation = value.contains(['\'', '"', ',', '!', '?', '@', '#']);
     digits || words || punctuation || value.len() > 64
+}
+
+/// A case added in Discord enqueues its DM inside the interaction's trace;
+/// the runner's span for the DM job starts its own trace and links back to
+/// it (§18.4).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_job_span_links_to_the_interaction_that_enqueued_it() -> Result<()> {
+    let captured = capture::capture();
+    let sys = System::boot().await?;
+    sys.install().await?;
+    let admin = sys.login(ADMIN).await?;
+    let created = sys
+        .http(
+            Method::POST,
+            "/api/guilds/1001/rules",
+            Some(&admin),
+            Some(json!({
+                "name": "Spam", "description": "", "reason": "Please don't spam.",
+                "appealable": true, "counting_window_days": null, "fields": [],
+                "levels": [{"from_case_count": 1, "action": null, "send_dm": true}]
+            })),
+        )
+        .await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.json);
+    let rule = created.json["id"].as_str().context("rule id")?;
+    let interaction = ix(2, moderator(), sys.channel, &case_add(MEMBER, rule, None));
+    let interaction_id = interaction["id"].as_str().context("id")?.to_owned();
+    sys.send(&interaction).await;
+    // The real runner, which opens each job's span.
+    let runner = quack_engine::jobs::runner(
+        sys.app.engine.clone(),
+        RunnerConfig::new(4),
+        sys.app.module_jobs(),
+    );
+    runner.start();
+    let sent = tokio::time::timeout(Duration::from_secs(10), async {
+        while sys.dms(MEMBER).is_empty() {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await;
+    runner.shutdown(Duration::from_secs(5)).await;
+    assert!(sent.is_ok(), "the DM was sent");
+    captured.flush();
+
+    let spans = captured.spans();
+    let root = spans
+        .iter()
+        .find(|s| {
+            s.name.starts_with("interaction ")
+                && s.attributes.iter().any(|kv| {
+                    kv.key.as_str() == "quack.interaction.id"
+                        && kv.value.to_string() == interaction_id
+                })
+        })
+        .context("the interaction's span")?;
+    let trace = root.span_context.trace_id();
+    let job = spans
+        .iter()
+        .find(|s| {
+            s.name == "job send_dm"
+                && s.links
+                    .links
+                    .iter()
+                    .any(|l| l.span_context.trace_id() == trace)
+        })
+        .context("a send_dm job span linked to the interaction's trace")?;
+    assert_eq!(job.span_kind, SpanKind::Consumer);
+    assert_ne!(job.span_context.trace_id(), trace, "a trace of its own");
+    assert_eq!(job.parent_span_id, SpanId::INVALID, "a root");
+    let linked = job.links.links[0].span_context.span_id();
+    assert!(
+        spans
+            .iter()
+            .any(|s| s.span_context.span_id() == linked && s.span_context.trace_id() == trace),
+        "the link names a span that was exported"
+    );
+    Ok(())
 }
