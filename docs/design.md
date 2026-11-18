@@ -8181,3 +8181,7 @@ folds these into the sections (or changes the code) and removes them here.
     body-only `retry_after` as a cooldown to queued peers is not done:
     those requests still answer `RetryAfter` with the right delay, but a
     peer queued behind them may be sent and get its own 429.
+70. §17.3 outcomes (Discord review MINOR 17, in part) → an `Unknown …`
+    JSON code (10003, 10004, 10007, 10008, 10013, 10026) is read as
+    "absent" only with its documented 404; with another status it is an
+    `Other` refusal, so a 400 carrying 10007 is never "the member left".

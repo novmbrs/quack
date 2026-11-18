@@ -155,19 +155,21 @@ pub enum RefusalKind {
 
 impl RefusalKind {
     /// Maps Discord's answer. The JSON code decides when it is one Quack
-    /// knows; otherwise a bare 413 is `TooLarge` and anything else `Other`.
+    /// knows (an `Unknown …` code only with its documented 404, since Quack
+    /// reads it as "absent"); otherwise a bare 413 is `TooLarge` and
+    /// anything else `Other`.
     pub const fn from_answer(status: u16, code: Option<u32>) -> Self {
         match code {
             Some(50013) => Self::MissingPermissions,
             Some(50001) => Self::MissingAccess,
             Some(50007) => Self::CannotDm,
             Some(50278) => Self::NoMutualGuilds,
-            Some(10004) => Self::UnknownGuild,
-            Some(10007) => Self::UnknownMember,
-            Some(10013) => Self::UnknownUser,
-            Some(10026) => Self::UnknownBan,
-            Some(10008) => Self::UnknownMessage,
-            Some(10003) => Self::UnknownChannel,
+            Some(10004) if status == 404 => Self::UnknownGuild,
+            Some(10007) if status == 404 => Self::UnknownMember,
+            Some(10013) if status == 404 => Self::UnknownUser,
+            Some(10026) if status == 404 => Self::UnknownBan,
+            Some(10008) if status == 404 => Self::UnknownMessage,
+            Some(10003) if status == 404 => Self::UnknownChannel,
             Some(40005) => Self::TooLarge,
             _ if status == 413 => Self::TooLarge,
             _ => Self::Other,
@@ -301,6 +303,9 @@ mod tests {
     fn other_client_errors_are_refusals() {
         assert_eq!(refused(413, ""), RefusalKind::TooLarge);
         assert_eq!(refused(400, r#"{"code": 50035}"#), RefusalKind::Other);
+        // An "unknown" code means absent only with its 404.
+        assert_eq!(refused(400, r#"{"code": 10007}"#), RefusalKind::Other);
+        assert_eq!(refused(403, r#"{"code": 10003}"#), RefusalKind::Other);
         assert_eq!(refused(404, "<html>"), RefusalKind::Other);
         assert_eq!(refused(401, r#"{"code": 0}"#), RefusalKind::Other);
         assert_eq!(refused(403, ""), RefusalKind::Other);
