@@ -2512,7 +2512,7 @@ none):
 | MFA required | — | `error.mfa_required` | — |
 | member refused | member, action | `refusal.*` | see below |
 | case not found | scene, case number | member scene: `api.not_found`; else `error.case_not_found` | Quack couldn't find that case in this server. |
-| case already voided | case number | `error.case_already_voided` | This case is already voided. |
+| case already voided | case number | `error.case_already_voided` | This case is already voided and no longer counts. |
 | case voided | scene, case number, action | member scene: `appeal.submit.voided`; else `error.case_voided` (needs both number and action) | member scene: This case was voided and no longer counts. You can still review it on the dashboard. Else: This case is voided. Quack won't retry its action. |
 | replacement invalid | case number | `error.replacement_invalid` | That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement. |
 | rule not found | — | `error.rule_not_found` | — |
@@ -3264,7 +3264,7 @@ server activity channel.
 | `setup.tickets.entry_saved` | Members will open tickets from {channel}. |
 | `setup.tickets.queue_saved` | New tickets will be posted in {channel}. |
 | `setup.tickets.on` | Tickets are on. Quack will post the Open a ticket button in {channel}. |
-| `setup.tickets.off` | Tickets are off. Open tickets stay open until someone closes them. |
+| `setup.tickets.off` | Tickets are off. Tickets that are already open stay open until someone closes them. |
 | `setup.honeypot.explain` | When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots. |
 | `setup.honeypot.channel_saved` | The honeypot channel is {channel}. |
 | `setup.honeypot.rule_saved` | The honeypot rule is now {rule}. |
@@ -3531,7 +3531,7 @@ id fits, the API uses it (domain errors through
 | `api.settings_changed` | Someone else changed the staff roles. Reload the server settings and check the current roles before saving again. |
 | `api.appeal_exists` | You already appealed this case. Open your appeal to see the latest update. |
 | `api.appeal_not_allowed` | This case can't be appealed. You can still review it on the dashboard. |
-| `api.module_not_ready` | {Module} can't be turned on yet. Open its settings on the dashboard to see what needs fixing. |
+| `api.module_not_ready` | {Module} can't be turned on yet. Open the settings on the dashboard to see what needs fixing. |
 | `api.discord_unavailable` | Quack couldn't reach Discord, so nothing changed. Try again in a moment. |
 | `api.unavailable` | Quack is having trouble right now, so nothing changed. Try again in a moment. |
 | `api.internal_error` | Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again. |

@@ -4,14 +4,14 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Warning
 --- discord ---
 Some answers need fixing, so this page isn't saved yet:
-What happened?: an answer is required.
-Links posted: enter a number, like 3 or 2.5.
+What happened? — Enter an answer.
+Links posted — Enter a number, like 3 or 2.5.
 Select Try again to fix your answers.
 buttons: [Try again · Primary] DraftRetryPage(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 1 })
 --- plain ---
 Some answers need fixing, so this page isn't saved yet:
-What happened?: an answer is required.
-Links posted: enter a number, like 3 or 2.5.
+What happened? — Enter an answer.
+Links posted — Enter a number, like 3 or 2.5.
 Select Try again to fix your answers.
 --- model ---
-Text [Fixed("Some answers need fixing, so this page isn't saved yet:\nWhat happened?: an answer is required.\nLinks posted: enter a number, like 3 or 2.5.\nSelect Try again to fix your answers.")]
+Text [Fixed("Some answers need fixing, so this page isn't saved yet:\n"), User("What happened?"), Fixed(" — Enter an answer.\n"), User("Links posted"), Fixed(" — Enter a number, like 3 or 2.5.\nSelect Try again to fix your answers.")]

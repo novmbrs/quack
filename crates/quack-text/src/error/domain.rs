@@ -65,7 +65,7 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
         DomainError::CaseAlreadyVoided => case_or(
             f,
             super::case_already_voided,
-            "This case is already voided.",
+            "This case is already voided and no longer counts.",
         ),
         DomainError::CaseVoided if f.scene == Scene::Member => case_or(
             f,

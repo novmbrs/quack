@@ -4,7 +4,7 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 
-buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open on dashboard](https://quack.example/guilds/111/cases/12) | [View failed actions](https://quack.example/guilds/111/cases/12)
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open on dashboard](https://quack.example/guilds/111/cases/12) | [View failed actions](https://quack.example/guilds/111/failures)
 --- plain ---
 
 --- model ---

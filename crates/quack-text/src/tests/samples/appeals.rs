@@ -105,7 +105,9 @@ pub fn samples() -> Vec<Sample> {
                 state: AppealState::Accepted,
                 decided: decided.clone(),
                 information: Some("It was the wrong link.".to_owned()),
-                decision_reason: Some("We reviewed your appeal and voided the case.".to_owned()),
+                decision_reason: Some(
+                    "We reviewed your appeal. The case no longer counts.".to_owned(),
+                ),
                 ..post()
             },
         ),
@@ -114,7 +116,7 @@ pub fn samples() -> Vec<Sample> {
             AppealPost {
                 state: AppealState::Rejected,
                 decided: decided.clone(),
-                decision_reason: Some("We reviewed your appeal, and the case stands.".to_owned()),
+                decision_reason: Some("We reviewed your appeal. The case still counts.".to_owned()),
                 ..post()
             },
         ),

@@ -87,9 +87,9 @@ plain:   Please wait 30 seconds before trying again.
 model:   [Fixed("Please wait 30 seconds before trying again.")]
 
 ## module_not_ready
-discord: The honeypot can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
-plain:   The honeypot can't be turned on yet. Open its settings on the dashboard to see what needs fixing.
-model:   [Fixed("The honeypot can't be turned on yet. Open its settings on the dashboard to see what needs fixing.")]
+discord: The honeypot can't be turned on yet. Open the settings on the dashboard to see what needs fixing.
+plain:   The honeypot can't be turned on yet. Open the settings on the dashboard to see what needs fixing.
+model:   [Fixed("The honeypot can't be turned on yet. Open the settings on the dashboard to see what needs fixing.")]
 
 ## discord_unavailable
 discord: Quack couldn't reach Discord, so nothing changed. Try again in a moment.

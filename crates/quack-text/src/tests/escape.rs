@@ -70,7 +70,9 @@ fn names_never_render_as_text_on_discord() {
         "A member (ID 5)"
     );
     assert_eq!(
-        Text::fixed("Ask ").person(&Person::unnamed(account(5))).plain(),
+        Text::fixed("Ask ")
+            .person(&Person::unnamed(account(5)))
+            .plain(),
         "Ask a member (ID 5)"
     );
 }

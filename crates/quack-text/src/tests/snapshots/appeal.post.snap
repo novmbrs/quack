@@ -62,7 +62,7 @@ Accepted by <@333> <t:1795014309:R>.
 **Reply from the member**
 > It was the wrong link.
 **Reason shared with the member**
-> We reviewed your appeal and voided the case.
+> We reviewed your appeal. The case no longer counts.
 buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Appeal for case #12 · Spam
@@ -73,7 +73,7 @@ Appeal statement
 Reply from the member
 > It was the wrong link.
 Reason shared with the member
-> We reviewed your appeal and voided the case.
+> We reviewed your appeal. The case no longer counts.
 --- model ---
 Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
 Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
@@ -83,7 +83,7 @@ Quote [User("I posted that link by mistake.")]
 Text [Bold([Fixed("Reply from the member")])]
 Quote [User("It was the wrong link.")]
 Text [Bold([Fixed("Reason shared with the member")])]
-Quote [User("We reviewed your appeal and voided the case.")]
+Quote [User("We reviewed your appeal. The case no longer counts.")]
 
 ## rejected
 tone: Danger
@@ -94,7 +94,7 @@ Rejected by <@333> <t:1795014309:R>.
 **Appeal statement**
 > I posted that link by mistake.
 **Reason shared with the member**
-> We reviewed your appeal, and the case stands.
+> We reviewed your appeal. The case still counts.
 buttons: [Open appeal](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Appeal for case #12 · Spam
@@ -103,7 +103,7 @@ Rejected by Ana on 18 Nov 2026 at 15:05 UTC.
 Appeal statement
 > I posted that link by mistake.
 Reason shared with the member
-> We reviewed your appeal, and the case stands.
+> We reviewed your appeal. The case still counts.
 --- model ---
 Heading [Fixed("Appeal for case #12 · "), Bold([User("Spam")])]
 Text [Fixed("From "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · submitted "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
@@ -111,7 +111,7 @@ Text [Fixed("Rejected by "), Person(Person { id: AccountId(333), name: Some("Ana
 Text [Bold([Fixed("Appeal statement")])]
 Quote [User("I posted that link by mistake.")]
 Text [Bold([Fixed("Reason shared with the member")])]
-Quote [User("We reviewed your appeal, and the case stands.")]
+Quote [User("We reviewed your appeal. The case still counts.")]
 
 ## closed
 tone: Neutral

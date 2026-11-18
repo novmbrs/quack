@@ -6,7 +6,7 @@ use quack_core::ids::{
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::model::{Actor, ChannelRef, Command, Person, RoleRef, Text};
+use crate::model::{Actor, ChannelRef, Command, Person, RoleRef};
 use crate::render::CommandIds;
 
 pub fn t0() -> OffsetDateTime {
@@ -103,9 +103,4 @@ pub fn commands() -> CommandIds {
         (Command::Setup, 1_004),
         (Command::Help, 1_005),
     ])
-}
-
-/// One problem line for messages that list problems.
-pub fn problem(s: &str) -> Text {
-    Text::fixed(s)
 }

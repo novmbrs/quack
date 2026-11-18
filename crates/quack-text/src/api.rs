@@ -240,7 +240,7 @@ pub fn appeal_not_allowed() -> Text {
 /// `api.module_not_ready`.
 pub fn module_not_ready(module: ModuleName) -> Text {
     Text::fixed(format!(
-        "{} can't be turned on yet. Open its settings on the dashboard to see what needs fixing.",
+        "{} can't be turned on yet. Open the settings on the dashboard to see what needs fixing.",
         fmt::upper_first(module_name(module))
     ))
 }

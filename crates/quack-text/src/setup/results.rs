@@ -103,7 +103,7 @@ pub fn result(r: &SetupResult) -> Text {
             .channel(c)
             .s("."),
         SetupResult::TicketsOff => {
-            t.s("Tickets are off. Open tickets stay open until someone closes them.")
+            t.s("Tickets are off. Tickets that are already open stay open until someone closes them.")
         }
         SetupResult::HoneypotChannelSaved(c) => t.s("The honeypot channel is ").channel(c).s("."),
         SetupResult::HoneypotRuleSaved(rule) => {

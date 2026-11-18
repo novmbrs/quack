@@ -169,7 +169,7 @@ pub fn samples() -> Vec<Sample> {
         Out::Msg(Msg::default().buttons(vec![
             word::open_case_button(case_id()),
             word::dashboard_button(URL),
-            word::failed_actions_button(URL),
+            word::failed_actions_button("https://quack.example/guilds/111/failures"),
         ])),
     ));
     let options = vec![CaseOption {

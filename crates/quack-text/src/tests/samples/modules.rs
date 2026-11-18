@@ -70,7 +70,7 @@ fn tickets() -> Vec<Sample> {
     v.push(text(
         "ticket.open.opening",
         "",
-        ticket::open_opening(&channel("ticket-log")),
+        ticket::open_opening(&channel("support")),
     ));
     v.push(text(
         "ticket.open.exists",
@@ -82,7 +82,7 @@ fn tickets() -> Vec<Sample> {
     v.push(text(
         "ticket.open.failed",
         "",
-        ticket::open_failed(&channel("ticket-log")),
+        ticket::open_failed(&channel("support")),
     ));
     v.push(msg(
         "ticket.welcome",
@@ -171,7 +171,7 @@ fn tickets() -> Vec<Sample> {
     v.push(text(
         "ticket.fix.failed",
         "",
-        ticket::fix_failed(&channel("ticket-log")),
+        ticket::fix_failed(&channel("support")),
     ));
     v.push(covering(
         "dm.ticket_closed",

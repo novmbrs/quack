@@ -239,9 +239,24 @@ pub fn samples() -> Vec<Sample> {
         "",
         Out::Msg(case::draft_page_saved(1, 2, next)),
     ));
+    // The real context problems, as the engine passes them.
     let problems = [
-        problem("What happened?: an answer is required."),
-        problem("Links posted: enter a number, like 3 or 2.5."),
+        case::context_problem(
+            &ContextProblem {
+                key: "what_happened".to_owned(),
+                code: ContextProblemCode::Required,
+            },
+            Some("What happened?"),
+            Some(FieldKind::LongText),
+        ),
+        case::context_problem(
+            &ContextProblem {
+                key: "links_posted".to_owned(),
+                code: ContextProblemCode::NotANumber,
+            },
+            Some("Links posted"),
+            Some(FieldKind::Number),
+        ),
     ];
     v.push(covering(
         "case.draft.page_invalid",
