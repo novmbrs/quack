@@ -190,9 +190,12 @@ async fn post(cx: &mut Ctx<'_>, appeal: Uuid, found: Option<Post>) -> Result<(),
                 None => (None, None, 1, 0),
             }
         }
-        None if info.open && cx.appeal_channel.is_some() => {
-            cx.f.in_flight("appeal_post_created", &key);
-            (cx.appeal_channel, None, 1, 0)
+        // The Go bot never posted it: the row waits without a channel, so
+        // the import never creates a staff post Go didn't make. Saving the
+        // appeal channel after cutover binds it (§8.3).
+        None if info.open => {
+            cx.f.in_flight("appeal_post_unposted", &key);
+            (None, None, 1, 0)
         }
         None => (None, None, 1, 0),
     };

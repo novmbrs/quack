@@ -342,21 +342,22 @@ async fn dms_and_messages(s: &Scratch) -> Result<()> {
         .text(&format!("SELECT concat_ws('|', message_id, wanted_revision, posted_revision) FROM messages WHERE case_id = '{}'", id("CS", 1)))
         .await?;
     assert_eq!(receipts.as_deref(), Some("610000000000000002|1|1"));
-    // Open appeals' posts and the module messages are re-rendered.
+    // Open appeals' existing posts and the module messages are re-rendered.
     assert_eq!(
         s.count("SELECT count(*) FROM jobs WHERE kind = 'sync_message'")
             .await?,
-        4
+        3
     );
     assert_eq!(
         s.count("SELECT count(*) FROM messages WHERE wanted_revision > posted_revision AND channel_id IS NOT NULL").await?,
-        4
+        3
     );
-    // A decided appeal with no post waits for a channel and gets no job.
+    // An appeal Go never posted, open or decided, waits for a channel and
+    // gets no job: the import never makes a post Go didn't.
     assert_eq!(
         s.count("SELECT count(*) FROM messages WHERE channel_id IS NULL")
             .await?,
-        1
+        2
     );
     assert_eq!(
         s.count("SELECT count(*) FROM jobs WHERE kind = 'honeypot_cleanup'")
@@ -484,10 +485,8 @@ async fn appeals(s: &Scratch) -> Result<()> {
         s.text(&post(2)).await?.as_deref(),
         Some("400000000000000002|720000000000000002|2|1")
     );
-    assert_eq!(
-        s.text(&post(3)).await?.as_deref(),
-        Some("400000000000000002|-|1|0")
-    );
+    // Open, never posted by Go: no channel until settings bind it.
+    assert_eq!(s.text(&post(3)).await?.as_deref(), Some("-|-|1|0"));
     assert_eq!(
         s.text(&post(6)).await?.as_deref(),
         Some("400000000000000002|720000000000000006|1|1")

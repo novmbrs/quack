@@ -8060,3 +8060,8 @@ folds these into the sections (or changes the code) and removes them here.
     moderator ID is not a snowflake is written without its moderator and
     reported under `derived` as `case_moderator_invalid` (it was counted as
     a skipped case, which failed `every_case_accounted_for`).
+52. §19.4, §19.9 (application review MAJOR 15) → as the `appeal_notifications`
+    row of §19.4 says, an appeal the Go bot never posted for gets an
+    `appeal_post` with no channel and no job even while it is open
+    (reported `appeal_post_unposted`); it is bound when the appeal channel
+    is next saved. Only a known existing post is re-rendered at cutover.
