@@ -17,4 +17,5 @@ mod common;
 mod dm_failed;
 mod honeypot;
 mod moderation;
+mod shutdown;
 mod tickets;
