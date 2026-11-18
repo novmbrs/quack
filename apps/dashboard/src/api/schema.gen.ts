@@ -460,7 +460,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The server activity log module. Wire: `quack_activity_log::settings`. */
+        /**
+         * The server activity log module. Its counters are in-process and reset
+         *     when Quack restarts.
+         */
         get: operations["activity_log_module"];
         put?: never;
         post?: never;
@@ -478,7 +481,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Changes activity log settings. Wire: `quack_activity_log::update_settings`. */
+        /** Changes server activity log settings. */
         put: operations["update_activity_log_settings"];
         post?: never;
         delete?: never;
@@ -494,7 +497,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The honeypot module. Wire: `quack_honeypot::settings`. */
+        /** The honeypot module. */
         get: operations["honeypot_module"];
         put?: never;
         post?: never;
@@ -512,7 +515,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Changes honeypot settings. Wire: `quack_honeypot::update_settings`. */
+        /** Changes honeypot settings. */
         put: operations["update_honeypot_settings"];
         post?: never;
         delete?: never;
@@ -528,7 +531,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The tickets module. Wire: `quack_tickets::settings`. */
+        /** The tickets module. */
         get: operations["tickets_module"];
         put?: never;
         post?: never;
@@ -546,7 +549,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Changes ticket settings. Wire: `quack_tickets::update_settings`. */
+        /** Changes ticket settings. */
         put: operations["update_ticket_settings"];
         post?: never;
         delete?: never;
@@ -772,7 +775,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The server's tickets. Wire: `quack_tickets::list`. */
+        /** The server's tickets, newest first. */
         get: operations["list_tickets"];
         put?: never;
         post?: never;
@@ -789,7 +792,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One ticket: its member or staff. Wire: `quack_tickets::get`. */
+        /** One ticket: its member or staff. */
         get: operations["get_ticket"];
         put?: never;
         post?: never;
@@ -808,7 +811,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Closes a ticket. Wire: `quack_tickets::close`. */
+        /** Closes an open ticket: its member or staff with `moderate`. */
         post: operations["close_ticket"];
         delete?: never;
         options?: never;
@@ -823,7 +826,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A ticket's transcript. Wire: `quack_tickets::transcript`. */
+        /** A ticket's transcript until it expires (`404 file_unavailable` after). */
         get: operations["ticket_transcript"];
         put?: never;
         post?: never;
