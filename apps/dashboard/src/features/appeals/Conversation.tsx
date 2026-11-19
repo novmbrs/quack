@@ -135,8 +135,9 @@ function Message({
   children: ReactNode;
 }) {
   const { data: user, isPending } = useUser(guildId, userId);
+  const role = staff ? (userId ? "A moderator" : "The moderators") : "Member";
   const name =
-    user?.display_name ?? (staff ? (userId ? "A moderator" : "The moderators") : "Member");
+    user?.display_name ?? (userId ? (isPending ? userId : `${role} (ID ${userId})`) : role);
   return (
     <li className={cx(s.message, staff && s.staff)}>
       {userId && isPending ? (
@@ -146,9 +147,7 @@ function Message({
       )}
       <div className={s.body}>
         <header className={s.meta}>
-          <span className={s.author}>
-            {userId && isPending ? <Skeleton width={90} height={12} /> : name}
-          </span>
+          <span className={s.author}>{name}</span>
           {tag}
           <Time at={at} />
         </header>

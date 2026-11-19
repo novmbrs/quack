@@ -53,7 +53,8 @@ function MemberPage() {
   const columns = useMemo(() => caseColumns(guildId, { member: false }), [guildId]);
   const table = useTable({ features, columns, data: cases.data?.cases ?? EMPTY });
 
-  const name = user.data?.display_name ?? (user.isPending ? "" : "Unknown member");
+  const name =
+    user.data?.display_name ?? (user.isPending ? userId : `Unknown member (ID ${userId})`);
 
   return (
     <Page

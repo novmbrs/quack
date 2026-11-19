@@ -26,8 +26,14 @@ export function EvidenceMessage({
   files: string;
   guildId: string;
 }) {
-  const { data: author } = useUser(guildId, evidence.author_id);
-  const name = author?.display_name ?? (evidence.author_id ? "Unknown member" : "Message");
+  const { data: author, isPending } = useUser(guildId, evidence.author_id);
+  const name =
+    author?.display_name ??
+    (evidence.author_id
+      ? isPending
+        ? evidence.author_id
+        : `Unknown member (ID ${evidence.author_id})`
+      : "Message");
   const time = evidence.message_created_at ?? evidence.created_at;
   const previews = evidence.embeds
     .map((e) => e.title || e.type)
@@ -36,7 +42,7 @@ export function EvidenceMessage({
 
   return (
     <article className={s.message}>
-      <Avatar src={author?.avatar_url} name={name} size={40} />
+      <Avatar src={author?.avatar_url} name={author?.display_name ?? "?"} size={40} />
       <div className={s.body}>
         <header className={s.meta}>
           <span className={s.author}>{name}</span>

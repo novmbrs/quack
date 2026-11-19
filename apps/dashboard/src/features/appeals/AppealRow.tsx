@@ -54,7 +54,7 @@ export function AppealRow({
         )}
         <span className={s.text}>
           <span className={s.line}>
-            <span className={s.name}>{isPending ? <Skeleton width={90} height={12} /> : name}</span>
+            <span className={s.name}>{isPending ? a.member_id : name}</span>
             <time dateTime={last} title={fullDate(last)} className={s.time}>
               {ago(last)}
             </time>

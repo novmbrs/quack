@@ -27,23 +27,36 @@ export function UserChip({
 }) {
   const { data: user, isPending } = useUser(guildId, userId);
   if (!userId) return <span className={s.muted}>Quack</span>;
-  const name = user?.display_name ?? "Unknown member";
+  // Until the member resolves, and when they can't be, the ID stands in so
+  // staff can still tell who it is.
   const body = (
     <>
       {isPending ? (
         <Skeleton width={size} height={size} round />
       ) : (
-        <Avatar src={user?.avatar_url} name={name} size={size} />
+        <Avatar src={user?.avatar_url} name={user?.display_name ?? "?"} size={size} />
       )}
       <span className={s.text}>
-        {isPending ? (
-          <Skeleton width={90} height={12} />
+        {user ? (
+          <span className={s.name} title={`@${user.username} · ${userId}`}>
+            {user.display_name}
+          </span>
+        ) : isPending ? (
+          <span className={cx(s.name, s.id)} title={userId}>
+            {userId}
+          </span>
         ) : (
-          <span className={s.name} title={user ? `@${user.username} · ${userId}` : userId}>
-            {name}
+          <span className={s.name} title={userId}>
+            Unknown member
           </span>
         )}
-        {subtitle && user ? <span className={s.sub}>@{user.username}</span> : null}
+        {user ? (
+          subtitle ? (
+            <span className={s.sub}>@{user.username}</span>
+          ) : null
+        ) : isPending ? null : (
+          <span className={cx(s.sub, s.id)}>{userId}</span>
+        )}
       </span>
     </>
   );
