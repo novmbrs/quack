@@ -9,4 +9,4 @@ Everyone can view this channel. In Edit Channel → Permissions, turn off View C
 Quack posts moderation log entries in this staff-only channel.
 Log channel: An unknown channel (ID [id])
 {select: Choose a channel}
-[Create #moderation-log] [Stop posting log entries] [Back]
+[Create a new #moderation-log] [Stop posting log entries] [Back]

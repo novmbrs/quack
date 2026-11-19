@@ -8,7 +8,7 @@ tone: Neutral
 Quack posts moderation log entries in this staff-only channel.
 **Log channel:** <#444>
 select Setup(Log, Channel) "Choose a channel": text channels
-buttons: [Create #moderation-log · Secondary] Setup(Log, Create) | [Stop posting log entries · Secondary] Setup(Log, Clear) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create a new #moderation-log · Secondary] Setup(Log, Create) | [Stop posting log entries · Secondary] Setup(Log, Clear) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Log channel
 Quack posts moderation log entries in this staff-only channel.
@@ -42,7 +42,7 @@ tone: Neutral
 New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
 **Appeals:** <#444>, rejoin invite set
 select Setup(Appeals, Channel) "Choose a channel": text channels
-buttons: [Create #appeals · Secondary] Setup(Appeals, Create) | [Stop posting appeals · Secondary] Setup(Appeals, Clear) | [Set rejoin invite · Secondary] Setup(Appeals, SetInvite) | [Remove invite · Secondary] Setup(Appeals, ClearInvite) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create a new #appeals · Secondary] Setup(Appeals, Create) | [Stop posting appeals · Secondary] Setup(Appeals, Clear) | [Set rejoin invite · Secondary] Setup(Appeals, SetInvite) | [Remove invite · Secondary] Setup(Appeals, ClearInvite) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Appeals
 New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
@@ -76,7 +76,7 @@ tone: Neutral
 Quack copies evidence files to this staff-only channel so they last after the original message is deleted.
 **Evidence copies:** <#444>
 select Setup(Evidence, Channel) "Choose a channel": text channels
-buttons: [Create #evidence · Secondary] Setup(Evidence, Create) | [Stop copying files · Secondary] Setup(Evidence, Clear) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create a new #evidence · Secondary] Setup(Evidence, Create) | [Stop copying files · Secondary] Setup(Evidence, Clear) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Evidence copies
 Quack copies evidence files to this staff-only channel so they last after the original message is deleted.
@@ -111,7 +111,7 @@ Members open private tickets from a button in the entry channel. Staff see new t
 **Tickets:** On · members open tickets in <#444> · new tickets go to <#444>
 select Setup(Tickets, TicketEntry) "Channel where members open tickets": text channels
 select Setup(Tickets, TicketQueue) "Staff channel for new tickets": text channels
-buttons: [Create #support and #ticket-log · Secondary] Setup(Tickets, Create) | [Turn off · Secondary] Setup(Tickets, TurnOff) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create new #support and #ticket-log · Secondary] Setup(Tickets, Create) | [Turn off · Secondary] Setup(Tickets, TurnOff) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Tickets
 Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.
@@ -147,7 +147,7 @@ When the honeypot is on, a member who posts in this channel gets a case under th
 **Honeypot:** On · <#444> · rule **Honeypot**
 select Setup(Honeypot, Channel) "Choose a channel": text channels
 select Setup(Honeypot, Rule) "Rule the honeypot applies": Honeypot (Posting in the honeypot channel.)
-buttons: [Create #honeypot · Secondary] Setup(Honeypot, Create) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn off · Secondary] Setup(Honeypot, TurnOff) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create a new #honeypot · Secondary] Setup(Honeypot, Create) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn off · Secondary] Setup(Honeypot, TurnOff) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Honeypot
 When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
@@ -181,7 +181,7 @@ tone: Neutral
 Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.
 **Server activity log:** On · <#444>
 select Setup(ActivityLog, Channel) "Choose a channel": text channels
-buttons: [Create #server-log · Secondary] Setup(ActivityLog, Create) | [Turn off · Secondary] Setup(ActivityLog, TurnOff) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create a new #server-log · Secondary] Setup(ActivityLog, Create) | [Turn off · Secondary] Setup(ActivityLog, TurnOff) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Server activity log
 Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.
@@ -216,7 +216,7 @@ When the honeypot is on, a member who posts in this channel gets a case under th
 **Honeypot:** Off · <#444> · rule **Honeypot**
 select Setup(Honeypot, Channel) "Choose a channel": text channels
 select Setup(Honeypot, Rule) "Rule the honeypot applies": Honeypot (Posting in the honeypot channel.)
-buttons: [Create #honeypot · Secondary] Setup(Honeypot, Create) | [Clear rule · Secondary] Setup(Honeypot, ClearRule) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn on · Secondary] Setup(Honeypot, TurnOn) | [Back · Secondary] Setup(Home, Open)
+buttons: [Create a new #honeypot · Secondary] Setup(Honeypot, Create) | [Clear rule · Secondary] Setup(Honeypot, ClearRule) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn on · Secondary] Setup(Honeypot, TurnOn) | [Back · Secondary] Setup(Home, Open)
 --- plain ---
 Honeypot
 When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.

@@ -1349,6 +1349,14 @@ cache. Channel creation ("Create …", overwrites per §13.1.4) lives in
 
 Selects offer text channels only; a staff destination must pass §13.1.3.
 
+A "Create …" button always creates (after §13.1.4's 10-minute adoption
+window) and switches the setting to the new channel; the old channel is
+left as it is. So once a channel is saved for the area, the button says
+so: "Create a new #moderation-log" (likewise #appeals, #evidence,
+#honeypot, #server-log; tickets: "Create new #support and #ticket-log"
+once either is set). It stays, rather than hiding, so a channel can be
+replaced in one step.
+
 ### 11.9 Gateway intents and events
 
 Intents, fixed: `GUILDS`, `GUILD_MEMBERS` and `MESSAGE_CONTENT`

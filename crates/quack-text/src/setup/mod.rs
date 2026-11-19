@@ -202,12 +202,26 @@ fn explain(area: SetupArea) -> &'static str {
     }
 }
 
-fn create(kind: ChannelKind, area: SetupArea) -> Button {
-    button(
-        &format!("Create #{}", channel_name(kind)),
-        area,
-        SetupOp::Create,
-    )
+/// **Create #name**, or **Create a new #name** once a channel is saved for
+/// the area: a press then makes a second channel and switches to it
+/// (§11.8), which the label says.
+fn create(kind: ChannelKind, area: SetupArea, saved: bool) -> Button {
+    let label = if saved {
+        format!("Create a new #{}", channel_name(kind))
+    } else {
+        format!("Create #{}", channel_name(kind))
+    };
+    button(&label, area, SetupOp::Create)
+}
+
+/// The tickets area's **Create** button, which makes both channels.
+fn create_ticket_channels(s: &SetupState) -> Button {
+    let label = if s.ticket_entry.is_some() || s.ticket_queue.is_some() {
+        "Create new #support and #ticket-log"
+    } else {
+        "Create #support and #ticket-log"
+    };
+    button(label, SetupArea::Tickets, SetupOp::Create)
 }
 
 fn toggle(on: bool, area: SetupArea) -> Button {
@@ -239,14 +253,14 @@ pub fn area(area: SetupArea, s: &SetupState, result: Option<Text>, rules: &[Pick
         SetupArea::Home => {}
         SetupArea::Log => {
             msg = msg.select(channel_select(area, SetupOp::Channel, "Choose a channel"));
-            buttons.push(create(ChannelKind::Log, area));
+            buttons.push(create(ChannelKind::Log, area, s.log.is_some()));
             if s.log.is_some() {
                 buttons.push(button("Stop posting log entries", area, SetupOp::Clear));
             }
         }
         SetupArea::Appeals => {
             msg = msg.select(channel_select(area, SetupOp::Channel, "Choose a channel"));
-            buttons.push(create(ChannelKind::Appeals, area));
+            buttons.push(create(ChannelKind::Appeals, area, s.appeals.is_some()));
             if s.appeals.is_some() {
                 buttons.push(button("Stop posting appeals", area, SetupOp::Clear));
             }
@@ -257,7 +271,7 @@ pub fn area(area: SetupArea, s: &SetupState, result: Option<Text>, rules: &[Pick
         }
         SetupArea::Evidence => {
             msg = msg.select(channel_select(area, SetupOp::Channel, "Choose a channel"));
-            buttons.push(create(ChannelKind::Evidence, area));
+            buttons.push(create(ChannelKind::Evidence, area, s.evidence.is_some()));
             if s.evidence.is_some() {
                 buttons.push(button("Stop copying files", area, SetupOp::Clear));
             }
@@ -274,11 +288,7 @@ pub fn area(area: SetupArea, s: &SetupState, result: Option<Text>, rules: &[Pick
                     SetupOp::TicketQueue,
                     "Staff channel for new tickets",
                 ));
-            buttons.push(button(
-                "Create #support and #ticket-log",
-                area,
-                SetupOp::Create,
-            ));
+            buttons.push(create_ticket_channels(s));
             buttons.push(toggle(s.tickets_on, area));
         }
         SetupArea::Honeypot => {
@@ -301,7 +311,11 @@ pub fn area(area: SetupArea, s: &SetupState, result: Option<Text>, rules: &[Pick
                     options: SelectOptions::Strings(options),
                 });
             }
-            buttons.push(create(ChannelKind::Honeypot, area));
+            buttons.push(create(
+                ChannelKind::Honeypot,
+                area,
+                s.honeypot_channel.is_some(),
+            ));
             if !s.honeypot_on && s.honeypot_rule.is_some() {
                 buttons.push(button("Clear rule", area, SetupOp::ClearRule));
             }
@@ -310,7 +324,11 @@ pub fn area(area: SetupArea, s: &SetupState, result: Option<Text>, rules: &[Pick
         }
         SetupArea::ActivityLog => {
             msg = msg.select(channel_select(area, SetupOp::Channel, "Choose a channel"));
-            buttons.push(create(ChannelKind::ActivityLog, area));
+            buttons.push(create(
+                ChannelKind::ActivityLog,
+                area,
+                s.activity != ActivityRoutes::None,
+            ));
             buttons.push(toggle(s.activity_on, area));
         }
     }
