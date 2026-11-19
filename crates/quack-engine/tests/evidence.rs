@@ -7,13 +7,14 @@ use quack_core::DomainError;
 use quack_core::case::ContextInput;
 use quack_core::evidence::{EvidenceFailure, EvidenceState, FileCopyState};
 use quack_core::ids::{ChannelId, MessageId};
+use quack_core::permissions::Permission;
 use quack_core::rule::{Field, FieldKey, FieldKind};
 use quack_db::evidence::Evidence;
 use quack_db::jobs::JobKind;
 use quack_engine::CaseRef;
 use quack_engine::cases::{CaseError, add_evidence, edit_context};
 use quack_engine::port::RefusalKind;
-use quack_testkit::fake::{Call, Script};
+use quack_testkit::fake::{Call, GuildSetup, Script};
 use quack_testkit::rules_for_tests::{levels, warning};
 use quack_testkit::{GUILD, Harness, MEMBER, sf};
 
@@ -175,15 +176,22 @@ async fn capture_failures_have_their_reasons() -> Result<()> {
     h.fake.world(|w| {
         w.messages.remove(&gone);
     });
-    // The message's server is not the case's.
-    let other = h.fake.world(|w| {
-        let id = w.post(h.guild, channel, sf(MEMBER), "z", vec![]);
-        if let Some(m) = w.messages.get_mut(&id) {
-            m.fetched.guild_id = quack_core::ids::GuildId::new(999);
-        }
-        id
+    // A link naming this server but a channel of another one: the
+    // channel's server decides, not the link (or the fetched message,
+    // which names none).
+    let elsewhere: quack_core::ids::GuildId = sf(999);
+    let (far, other) = h.fake.world(|w| {
+        w.add_guild(&GuildSetup {
+            id: elsewhere,
+            owner: sf(MEMBER),
+            quack_position: 50,
+            quack_permissions: Permission::Administrator.into(),
+            mfa_required: false,
+        });
+        let far = w.add_text_channel(elsewhere, false);
+        (far, w.post(elsewhere, far, sf(MEMBER), "z", vec![]))
     });
-    add(&h, case, &[link(channel, gone), link(channel, other)]).await?;
+    add(&h, case, &[link(channel, gone), link(far, other)]).await?;
     h.settle().await?;
     let failures: Vec<Option<EvidenceFailure>> =
         items(&h, case).await?.iter().map(|e| e.failure).collect();

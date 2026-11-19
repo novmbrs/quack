@@ -9,7 +9,6 @@ pub(crate) fn fetched(m: model::Message) -> engine::FetchedMessage {
     engine::FetchedMessage {
         id: m.id,
         channel_id: m.channel_id,
-        guild_id: m.guild_id,
         author_name: m
             .author
             .global_name

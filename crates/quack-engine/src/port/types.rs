@@ -1,7 +1,7 @@
 //! The plain types the `Discord` port takes and returns that `quack-discord`
 //! shapes differently; the shared ones are in `quack_core::discord`.
 
-use quack_core::ids::{AccountId, AttachmentId, ChannelId, GuildId, MessageId};
+use quack_core::ids::{AccountId, AttachmentId, ChannelId, MessageId};
 use quack_core::permissions::Overwrite;
 use time::OffsetDateTime;
 
@@ -28,10 +28,10 @@ impl Nonce {
 pub struct FetchedMessage {
     /// The message.
     pub id: MessageId,
-    /// Its channel or thread.
+    /// Its channel or thread. A fetched message names no server (Discord
+    /// leaves `guild_id` out of REST reads); the channel's server is the
+    /// authority.
     pub channel_id: ChannelId,
-    /// Its server; `None` in DMs.
-    pub guild_id: Option<GuildId>,
     /// Its author.
     pub author_id: AccountId,
     /// The author's display name.

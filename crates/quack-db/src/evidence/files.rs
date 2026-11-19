@@ -52,7 +52,7 @@ pub struct NewFile {
     pub copy_state: FileCopyState,
 }
 
-/// Stores the snapshot and its files once (§7.2 step 4): only while the
+/// Stores the snapshot and its files once (§7.2 step 5): only while the
 /// item is `saving` and no snapshot was stored. Returns whether it stored.
 pub async fn save_snapshot(
     conn: &mut PgConnection,

@@ -93,7 +93,7 @@ async fn destination(engine: &Engine, item: &Evidence) -> Result<Destination, Db
     )
 }
 
-/// Step 5: copies each pending file.
+/// Step 6: copies each pending file.
 pub(super) async fn copy_pending(
     engine: &Engine,
     job: &ClaimedJob,

@@ -73,7 +73,6 @@ pub(super) fn send(
             fetched: FetchedMessage {
                 id,
                 channel_id: channel,
-                guild_id: guild,
                 author_id: w.quack,
                 author_name: "Quack".to_owned(),
                 author_bot: true,

@@ -1,6 +1,6 @@
-//! The `capture_evidence` handler (§7.2): check the adder's access, fetch
-//! the message, store the snapshot once under the case lock, copy files
-//! one per transaction, and settle.
+//! The `capture_evidence` handler (§7.2): check the channel is this
+//! server's and the adder's access, fetch the message, store the snapshot
+//! once under the case lock, copy files one per transaction, and settle.
 
 use quack_core::evidence::{
     EvidenceFailure, EvidenceState, FileCopyState, copy_eligibility, files_within_caps,
@@ -55,13 +55,32 @@ pub async fn capture(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbErr
     .await
 }
 
-/// Steps 2–4: access check, fetch, and the snapshot. `Some` when the run
-/// ends here.
+/// Steps 2–5: the channel's server, access check, fetch, and the
+/// snapshot. `Some` when the run ends here.
 async fn snapshot(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
 ) -> Result<Option<Handled>, DbError> {
+    // A fetched message names no server: its channel's server decides.
+    let here = match engine
+        .discord()
+        .channel_facts(item.guild, item.channel)
+        .await
+    {
+        Outcome::Done(found) => found.is_some(),
+        Outcome::Refused(_) => false,
+        other => return Ok(Some(Handled::Settle(retry(job, other.code())))),
+    };
+    if !here {
+        // Gone, or a channel of another server: the fetch tells which.
+        let failure = match fetch(engine, item).await {
+            Fetched::Message(_) => EvidenceFailure::OtherServer,
+            Fetched::Failed(failure) => failure,
+            Fetched::Retry(code) => return Ok(Some(Handled::Settle(retry(job, &code)))),
+        };
+        return fail(engine, job, item, failure).await.map(Some);
+    }
     if let Some(staff) = item.added_by {
         match can_read(engine, item.guild, item.channel, staff).await {
             Ok(true) => {}
@@ -73,36 +92,44 @@ async fn snapshot(
             Err(Unavailable) => return Ok(Some(Handled::Settle(retry(job, "facts_unavailable")))),
         }
     }
-    let message = match engine
-        .discord()
-        .fetch_message(item.channel, item.message)
-        .await
-    {
-        Outcome::Done(m) => m,
-        Outcome::Refused(r) => {
-            let failure = match r.kind {
-                RefusalKind::UnknownMessage | RefusalKind::UnknownChannel => {
-                    EvidenceFailure::MessageDeleted
-                }
-                RefusalKind::MissingAccess | RefusalKind::MissingPermissions => {
-                    EvidenceFailure::QuackNoAccess
-                }
-                _ => EvidenceFailure::DiscordError,
-            };
-            return fail(engine, job, item, failure).await.map(Some);
-        }
-        other => return Ok(Some(Handled::Settle(retry(job, other.code())))),
+    let message = match fetch(engine, item).await {
+        Fetched::Message(m) => m,
+        Fetched::Failed(failure) => return fail(engine, job, item, failure).await.map(Some),
+        Fetched::Retry(code) => return Ok(Some(Handled::Settle(retry(job, &code)))),
     };
-    if message.guild_id != Some(item.guild) {
-        return fail(engine, job, item, EvidenceFailure::OtherServer)
-            .await
-            .map(Some);
-    }
     save(engine, job, item, &message).await?;
     Ok(None)
 }
 
-/// Step 4: one transaction, the case then the item; files admitted under
+/// What fetching the item's message came to.
+enum Fetched {
+    Message(Box<FetchedMessage>),
+    Failed(EvidenceFailure),
+    Retry(String),
+}
+
+/// Step 4: fetch the message, with refusals as failure reasons.
+async fn fetch(engine: &Engine, item: &Evidence) -> Fetched {
+    match engine
+        .discord()
+        .fetch_message(item.channel, item.message)
+        .await
+    {
+        Outcome::Done(m) => Fetched::Message(Box::new(m)),
+        Outcome::Refused(r) => Fetched::Failed(match r.kind {
+            RefusalKind::UnknownMessage | RefusalKind::UnknownChannel => {
+                EvidenceFailure::MessageDeleted
+            }
+            RefusalKind::MissingAccess | RefusalKind::MissingPermissions => {
+                EvidenceFailure::QuackNoAccess
+            }
+            _ => EvidenceFailure::DiscordError,
+        }),
+        other => Fetched::Retry(other.code()),
+    }
+}
+
+/// Step 5: one transaction, the case then the item; files admitted under
 /// the per-message and per-case caps, each with its first copy state.
 async fn save(
     engine: &Engine,
@@ -171,7 +198,7 @@ async fn save(
     tx.commit().await
 }
 
-/// Step 6: every file left `pending`: the item is `saved`.
+/// Step 7: every file left `pending`: the item is `saved`.
 async fn settle_saved(
     engine: &Engine,
     job: &ClaimedJob,

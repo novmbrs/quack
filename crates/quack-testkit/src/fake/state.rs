@@ -347,10 +347,11 @@ impl World {
         self.messages.retain(|_, m| m.fetched.channel_id != channel);
     }
 
-    /// A member posts a message; returns its id.
+    /// A member posts a message in `guild`'s `channel`; returns its id.
+    /// Like Discord's REST reads, the fetched message names no server.
     pub fn post(
         &mut self,
-        guild: GuildId,
+        _guild: GuildId,
         channel: ChannelId,
         author: AccountId,
         content: &str,
@@ -364,7 +365,6 @@ impl World {
                 fetched: FetchedMessage {
                     id,
                     channel_id: channel,
-                    guild_id: Some(guild),
                     author_id: author,
                     author_name: format!("user{author}"),
                     author_bot: false,

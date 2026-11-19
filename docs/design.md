@@ -851,22 +851,27 @@ case lock (`422 evidence_limit_reached`, before any write). Each starts
 `quack_engine::evidence::capture`:
 
 1. Not `saving` → done.
-2. Added by staff: they must read the channel by current facts
+2. The channel's server decides where the message is: a fetched or
+   resolved message carries no `guild_id`, so its absence never means
+   "another server". The item's channel not among the server's channels
+   (`channel_facts`) → fetch: found → `other_server`, else the fetch's
+   failure below. Facts unavailable → retry.
+3. Added by staff: they must read the channel by current facts
    (`permissions::in_channel`: View Channel + Read Message History; threads
    use the parent; private threads also need membership or Manage
    Threads). No → `moderator_no_access`; facts unavailable → retry.
-3. Fetch: Unknown Message/Channel → `message_deleted`; Missing
-   Access/Permissions → `quack_no_access`; other refusal → `discord_error`;
-   another server → `other_server` (all `failed`). Unknown/rate limit →
-   retry (4 attempts, 10 s, 1 min, 5 min).
-4. **Snapshot** (case then evidence lock; stored once, guarded on
+4. Fetch: Unknown Message/Channel → `message_deleted`; Missing
+   Access/Permissions → `quack_no_access`; other refusal → `discord_error`
+   (all `failed`). Unknown/rate limit → retry (4 attempts, 10 s, 1 min,
+   5 min).
+5. **Snapshot** (case then evidence lock; stored once, guarded on
    `message_created_at IS NULL`): author, content (4,000), times, ≤ 10
    embeds `{type, title ≤ 256, description ≤ 1,000, url}`, files. Files
    are admitted below 10 per message and 100 per case (rest counted in
    `files_not_saved`) as `link_only` (no evidence channel), `too_large`,
    `unsupported_type`, or `pending`.
-5. **Copy** each `pending` file (§7.3), one per transaction.
-6. None `pending` → `saved`; bump. Metric
+6. **Copy** each `pending` file (§7.3), one per transaction.
+7. None `pending` → `saved`; bump. Metric
    `quack.evidence.captures{quack.outcome}`.
 
 Finalization: pending files → `copy_failed`; row → `saved` if the snapshot

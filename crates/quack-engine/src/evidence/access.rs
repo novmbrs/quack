@@ -1,5 +1,5 @@
 //! Whether a staff member can read a channel, from current facts (§7.2
-//! step 2): View Channel and Read Message History computed with
+//! step 3): View Channel and Read Message History computed with
 //! overwrites; threads use their parent channel; private threads also need
 //! thread membership or Manage Threads. Access is never assumed.
 
