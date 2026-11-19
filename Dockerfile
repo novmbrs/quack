@@ -49,4 +49,6 @@ ENV QUACK_DASHBOARD_DIR=/usr/share/quack/dashboard \
 USER nonroot:nonroot
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/quack"]
-CMD ["serve"]
+# Migrate, then serve: the image has no shell, so a host can't chain the two
+# itself.
+CMD ["serve", "--migrate"]

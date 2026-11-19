@@ -2600,6 +2600,9 @@ See the "May depend on" column of §17.2.
 
 **Startup (`quack serve`):**
 
+The container image's default command is `serve --migrate` (the image has
+no shell to chain `migrate` and `serve`).
+
 1. Load and validate the configuration (exit 2 on any problem).
 2. Start telemetry (§18.6).
 3. Connect the pool (5 s acquire and statement timeouts, 60 s idle in
