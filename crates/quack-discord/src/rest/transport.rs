@@ -23,7 +23,7 @@ use super::route::{Route, encode_component};
 
 /// What Discord's API expects in `User-Agent`.
 const QUACK_USER_AGENT: &str = concat!(
-    "DiscordBot (https://github.com/novmbrs/bot, ",
+    "DiscordBot (https://github.com/novmbrs/quack, ",
     env!("CARGO_PKG_VERSION"),
     ")"
 );
