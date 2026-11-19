@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Rejoin invite saved: [https://discord.gg/abc123](<https://discord.gg/abc123>). Quack includes it in DMs about accepted appeals for kicks and bans.
+plain:   Rejoin invite saved: https://discord.gg/abc123. Quack includes it in DMs about accepted appeals for kicks and bans.
+model:   [Fixed("Rejoin invite saved: "), Link { text: [Fixed("https://discord.gg/abc123")], url: "https://discord.gg/abc123" }, Fixed(". Quack includes it in DMs about accepted appeals for kicks and bans.")]

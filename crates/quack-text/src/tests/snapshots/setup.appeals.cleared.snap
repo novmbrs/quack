@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack stopped posting new appeals to Discord. You can still review them with </appeals:1002> or on the dashboard.
+plain:   Quack stopped posting new appeals to Discord. You can still review them with /appeals or on the dashboard.
+model:   [Fixed("Quack stopped posting new appeals to Discord. You can still review them with "), Command(Appeals), Fixed(" or on the dashboard.")]

@@ -1,9 +1,0 @@
-.git
-.env
-.env.*
-tmp/
-docs/
-*.md
-Dockerfile
-compose.yaml
-quack.toml

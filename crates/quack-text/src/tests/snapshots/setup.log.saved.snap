@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack will post moderation log entries in <#444>.
+plain:   Quack will post moderation log entries in #staff.
+model:   [Fixed("Quack will post moderation log entries in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

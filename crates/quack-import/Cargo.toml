@@ -1,0 +1,32 @@
+[package]
+name = "quack-import"
+description = "One-time import from Quack's old MySQL database into PostgreSQL"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quack-core = { workspace = true }
+quack-db = { workspace = true }
+aws-lc-rs = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# The only crate with the `mysql` driver: it reads the Go database. Queries
+# are runtime-checked so the crate builds without either database.
+sqlx = { workspace = true, features = ["mysql"] }
+thiserror = { workspace = true }
+time = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+proptest = { workspace = true }
+quack-telemetry = { workspace = true }
+tokio = { workspace = true }

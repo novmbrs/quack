@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT message_id, author_id, author_name, text, files AS \"files: Json<Vec<JournalFile>>\", sent_at\n               FROM ticket_messages\n               WHERE guild_id = $1 AND ticket_id = $2 AND message_id > $3\n               ORDER BY message_id LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ticket_messages",
+            "name": "message_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ticket_messages",
+            "name": "author_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "author_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ticket_messages",
+            "name": "author_name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "text",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ticket_messages",
+            "name": "text"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "files: Json<Vec<JournalFile>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ticket_messages",
+            "name": "files"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "sent_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ticket_messages",
+            "name": "sent_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "b8324072c3e07de22c303f143913c104051d934037ca1b375cd8851ffaeadb9b"
+}

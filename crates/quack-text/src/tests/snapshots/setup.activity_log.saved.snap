@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Server activity will be posted in <#444>.
+plain:   Server activity will be posted in #staff.
+model:   [Fixed("Server activity will be posted in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

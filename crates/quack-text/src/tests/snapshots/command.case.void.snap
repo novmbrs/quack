@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+void — Keep a case in the history and stop it from counting.
+
+## description
+Keep a case in the history and stop it from counting.

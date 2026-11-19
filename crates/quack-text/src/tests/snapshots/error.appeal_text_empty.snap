@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Write what you want the moderators to know before you send it.
+plain:   Write what you want the moderators to know before you send it.
+model:   [Fixed("Write what you want the moderators to know before you send it.")]

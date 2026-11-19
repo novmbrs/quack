@@ -1,0 +1,23 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Your appeal for case #12 in **Duck Pond**
+The moderators asked for more information:
+> We reviewed it.
+Select Reply to appeal to answer on the dashboard.
+-# <t:1795014309:f>
+buttons: [Reply to appeal](https://quack.example/guilds/111/cases/12/appeal)
+--- plain ---
+Your appeal for case #12 in Duck Pond
+The moderators asked for more information:
+> We reviewed it.
+Select Reply to appeal to answer on the dashboard.
+18 Nov 2026 at 15:05 UTC
+--- model ---
+Heading [Fixed("Your appeal for case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("The moderators asked for more information:")]
+Quote [User("We reviewed it.")]
+Text [Fixed("Select Reply to appeal to answer on the dashboard.")]
+Subtext [Time(2026-11-18 15:05:09.0 +00:00:00, Full)]

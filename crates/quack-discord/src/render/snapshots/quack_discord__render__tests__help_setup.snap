@@ -1,0 +1,26 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+expression: "json(&render(&quack_text::help::help(Some(Topic::Setup),\n\"https://quack.example\"), &ids()))"
+---
+[
+  {
+    "components": [
+      {
+        "content": "### Setup\nUse </setup:1000000000000000002> to pick channels or let Quack create them, and to turn on tickets, the honeypot, and the server activity log. Keep the log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members need access to the ticket entry and honeypot channels. You can also change these settings on the dashboard.",
+        "type": 10
+      },
+      {
+        "components": [
+          {
+            "label": "Open the dashboard",
+            "style": 5,
+            "type": 2,
+            "url": "https://quack.example"
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 17
+  }
+]

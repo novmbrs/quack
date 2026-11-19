@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+appeals
+
+## topic
+Appeals for moderators to review.
+
+## first message
+tone: Neutral
+--- discord ---
+### Appeals
+New appeals appear here. Accept or reject them here or on the dashboard.
+--- plain ---
+Appeals
+New appeals appear here. Accept or reject them here or on the dashboard.
+--- model ---
+Heading [Fixed("Appeals")]
+Text [Fixed("New appeals appear here. Accept or reject them here or on the dashboard.")]

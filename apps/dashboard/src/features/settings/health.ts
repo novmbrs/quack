@@ -1,4 +1,4 @@
-import type { GuildOps } from "~/api/types";
+import type { Health, ModuleName, Permission } from "~/api/types";
 
 /** HealthCheck is one line of the server health checklist. */
 export type HealthCheck = {
@@ -9,81 +9,105 @@ export type HealthCheck = {
   detail: string;
 };
 
-const permissions: Record<string, { label: string; needed: string }> = {
-  moderate_members: { label: "Timeout Members", needed: "Timeouts" },
-  kick_members: { label: "Kick Members", needed: "Kicks" },
-  ban_members: { label: "Ban Members", needed: "Bans and unbans" },
-  manage_channels: { label: "Manage Channels", needed: "Setting up Quack's channels" },
+/** permissionNames are Discord's own names for each permission (design §12.0). */
+export const permissionNames: Record<Permission, string> = {
+  view_channel: "View Channel",
+  send_messages: "Send Messages",
+  send_messages_in_threads: "Send Messages in Threads",
+  embed_links: "Embed Links",
+  attach_files: "Attach Files",
+  read_message_history: "Read Message History",
+  moderate_members: "Timeout Members",
+  kick_members: "Kick Members",
+  ban_members: "Ban Members",
+  manage_messages: "Manage Messages",
+  manage_channels: "Manage Channels",
+  manage_threads: "Manage Threads",
+  create_public_threads: "Create Public Threads",
+  create_private_threads: "Create Private Threads",
+  view_audit_log: "View Audit Log",
+  administrator: "Administrator",
+  manage_guild: "Manage Server",
+};
+
+/** permissionList joins permission names: "A", "A and B", "A, B, and C". */
+export function permissionList(permissions: readonly Permission[]): string {
+  const names = permissions.map((p) => permissionNames[p] ?? p);
+  if (names.length <= 2) return names.join(" and ");
+  return `${names.slice(0, -1).join(", ")}, and ${names.at(-1)}`;
+}
+
+/** settingNames names the channel settings health reports on. */
+export const settingNames: Record<string, string> = {
+  log_channel_id: "Log channel",
+  appeal_channel_id: "Appeal channel",
+  evidence_channel_id: "Evidence channel",
+  "tickets.queue_channel_id": "Ticket queue channel",
+  "tickets.entry_channel_id": "Ticket entry channel",
+  "activity_log.routes": "Server activity log channel",
+  "honeypot.channel_id": "Honeypot channel",
+};
+
+const moduleNames: Record<ModuleName, string> = {
+  tickets: "Tickets",
+  activity_log: "Server activity log",
+  honeypot: "Honeypot",
 };
 
 /**
- * healthChecklist turns GET /ops/status's guild health into a checklist:
- * Quack's connection to the server, each permission it needs, and the
- * channels it manages. Reasons the checklist doesn't already cover are
- * listed last so nothing the backend reports is hidden.
+ * healthChecklist turns GET …/health into a checklist: Quack's place in the
+ * server, the permissions its role is missing, each configured staff channel,
+ * and each module that is on. Problem messages come from the API as is.
  */
-export function healthChecklist(health: GuildOps["guild_health"]): HealthCheck[] {
-  const reasons = health.reasons ?? [];
+export function healthChecklist(health: Health): HealthCheck[] {
   const checks: HealthCheck[] = [];
-  const offline = reasons.includes("discord_bot_unavailable");
   checks.push({
-    key: "bot",
+    key: "quack",
     label: "Quack is in the server",
-    state: offline ? "problem" : "ok",
-    detail: offline
-      ? "Quack can't reach this server on Discord right now. Check that it's still a member."
-      : "Connected to Discord.",
+    state: health.quack_in_server ? "ok" : "problem",
+    detail: health.quack_in_server
+      ? "Quack is a member of this server."
+      : "Quack isn't in this server. Add Quack again to moderate here.",
   });
-  if (offline) return checks;
+  if (!health.quack_in_server) return checks;
 
-  const bot = health.bot_permissions ?? {};
-  for (const [key, meta] of Object.entries(permissions)) {
-    if (!(key in bot)) continue;
+  const missing = health.missing_permissions;
+  checks.push({
+    key: "permissions",
+    label: "Permissions",
+    state: missing.length ? "problem" : "ok",
+    detail: missing.length
+      ? `Quack's role is missing ${permissionList(missing)}. In Server Settings → Roles, give Quack's role ${missing.length === 1 ? "this permission" : "these permissions"}.`
+      : "Quack's role has every permission Quack asks for.",
+  });
+
+  for (const channel of health.channels) {
     checks.push({
-      key: `permission:${key}`,
-      label: meta.label,
-      state: bot[key] ? "ok" : "problem",
-      detail: bot[key]
-        ? "Quack has this permission."
-        : `${meta.needed} will fail until Quack's role has this permission.`,
+      key: `channel:${channel.setting}:${channel.channel_id}`,
+      label: settingNames[channel.setting] ?? channel.setting,
+      state: channel.problems.length ? "problem" : "ok",
+      detail: channel.problems.length
+        ? channel.problems.map((p) => p.message).join(" ")
+        : "Only staff can see it, and Quack can post there.",
     });
   }
 
-  const channels = health.managed_channels ?? {};
-  if ("evidence" in channels) {
+  for (const name of Object.keys(moduleNames) as ModuleName[]) {
+    const module = health.modules[name];
+    if (!module.enabled && module.problems.length === 0) continue;
     checks.push({
-      key: "channel:evidence",
-      label: "Evidence channel",
-      state: channels.evidence ? "ok" : "unset",
-      detail: channels.evidence
-        ? "Quack keeps copies of evidence files here."
-        : "Off. Pick a channel below to keep copies of evidence files.",
-    });
-  }
-  if ("audit_mirror" in channels) {
-    checks.push({
-      key: "channel:audit_mirror",
-      label: "Audit mirror",
-      state: channels.audit_mirror ? "ok" : "unset",
-      detail: channels.audit_mirror
-        ? "Important audit events post to a staff channel."
-        : "Off. Pick a channel below to mirror audit events.",
-    });
-  }
-
-  const covered = (reason: string) =>
-    reason.startsWith("missing_bot_permission:") ||
-    reason === "managed_evidence_channel_unavailable" ||
-    reason === "discord_bot_unavailable";
-  for (const reason of reasons) {
-    if (covered(reason)) continue;
-    const words = reason.replace(/[_:]+/g, " ").trim();
-    checks.push({
-      key: `reason:${reason}`,
-      label: words.charAt(0).toUpperCase() + words.slice(1),
-      state: "problem",
-      detail: "Quack reported this as a problem.",
+      key: `module:${name}`,
+      label: moduleNames[name],
+      state: module.problems.length ? "problem" : module.enabled ? "ok" : "unset",
+      detail: module.problems.length
+        ? module.problems.map((p) => p.message).join(" ")
+        : "On and working.",
     });
   }
   return checks;
+}
+
+/** healthy reports whether every check passed. */
+export function healthy(checks: readonly HealthCheck[]): boolean {
+  return checks.every((c) => c.state !== "problem");
 }

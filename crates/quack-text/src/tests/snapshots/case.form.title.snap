@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+Spam (1/2)
+
+## one page
+Spam
+
+## long rule name
+Long text with *stars* and <@1> mentio… (2/2)

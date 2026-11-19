@@ -1,0 +1,264 @@
+//! The `send_dm` handler (§6.4) and its finalize (§16.5).
+
+use std::time::{Duration, Instant};
+
+use quack_core::dm::{
+    CreateResult, DmEvent, DmFailure, DmKind, DmState, SendHistory, UNKNOWN_REPEAT_DELAY,
+    failure_for, transition, wait_fits,
+};
+use quack_core::ids::{ChannelId, GuildId};
+use quack_core::limits::NONCE_WINDOW;
+use quack_db::dms::{self, Dm};
+use quack_db::jobs::{ClaimedJob, Handled, JobResult, RunAt, fence};
+use quack_db::{DbError, cases};
+use time::OffsetDateTime;
+
+use super::render::render;
+use super::{Change, Payload, settle_dm};
+use crate::jobs::{dead, retry};
+use crate::port::{Nonce, Outcome};
+use crate::{Engine, obs};
+
+/// Sends one DM (§6.4). Safe to repeat: the nonce is the DM's id, a
+/// create is repeated only inside the window, and a DM whose result was
+/// never learned is settled `unknown`, never sent again.
+pub async fn send(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError> {
+    let (Some(guild), Ok(payload)) = (job.guild, job.payload::<Payload>()) else {
+        return Ok(dead("bad_payload"));
+    };
+    obs::use_case("send_dm", Some(guild), async {
+        let dm = {
+            let mut conn = engine.db().conn().await?;
+            dms::get(&mut conn, guild, payload.dm_id).await?
+        };
+        let Some(dm) = dm else {
+            return Ok(dead("dm_missing"));
+        };
+        if dm.state.is_terminal() {
+            return Ok(Handled::Settle(JobResult::Done));
+        }
+        let started = Instant::now();
+        // A run that finds the DM `sending` resumes one that may have
+        // crashed after Discord accepted a create.
+        let history = SendHistory::at_start(dm.state);
+        let (channel, first) = match (dm.state, dm.channel, dm.first_attempt_at) {
+            (DmState::Sending, Some(channel), Some(first)) => (channel, first),
+            _ => match start(engine, job, &dm, started).await? {
+                Started::Sending(channel, first) => (channel, first),
+                Started::Settled(handled) => return Ok(handled),
+            },
+        };
+        let dm = Dm {
+            state: DmState::Sending,
+            channel: Some(channel),
+            first_attempt_at: Some(first),
+            ..dm
+        };
+        deliver(engine, job, &dm, (guild, channel, first), history, started).await
+    })
+    .await
+}
+
+enum Started {
+    Sending(ChannelId, OffsetDateTime),
+    Settled(Handled),
+}
+
+/// Step 2: open the DM channel, then the start transaction (case DMs check
+/// the case is still valid under its lock) records the window's start.
+async fn start(
+    engine: &Engine,
+    job: &ClaimedJob,
+    dm: &Dm,
+    started: Instant,
+) -> Result<Started, DbError> {
+    let channel = match engine.discord().open_dm(dm.member.account()).await {
+        Outcome::Done(channel) => channel,
+        Outcome::Refused(r) => {
+            let failure = failure_for(DmState::Failed, DmEvent::OpenRefused, r.code)
+                .unwrap_or(DmFailure::DiscordRefused);
+            let change = Change::Failed(failure, r.code);
+            let handled =
+                settle_dm(engine, job, dm, change, JobResult::Done, Some(started)).await?;
+            return Ok(Started::Settled(handled));
+        }
+        Outcome::RetryAfter(d) => {
+            return Ok(Started::Settled(Handled::Settle(retry_after(job, d))));
+        }
+        other => return Ok(Started::Settled(Handled::Settle(retry(job, other.code())))),
+    };
+    let mut tx = engine.db().begin().await?;
+    let voided = match dm.case {
+        Some(case) if dm.kind == DmKind::Case => !cases::lock(&mut tx, dm.guild, case)
+            .await?
+            .is_some_and(|c| c.is_valid()),
+        Some(case) => {
+            cases::lock(&mut tx, dm.guild, case).await?;
+            false
+        }
+        None => false,
+    };
+    if voided {
+        tx.rollback().await?;
+        let handled = settle_dm(engine, job, dm, Change::NotNeeded, JobResult::Done, None).await?;
+        return Ok(Started::Settled(handled));
+    }
+    let first = dms::start_sending(&mut tx, dm.guild, dm.id, channel)
+        .await?
+        .ok_or(DbError::Stale)?;
+    fence(&mut tx, job).await?;
+    tx.commit().await?;
+    Ok(Started::Sending(channel, first))
+}
+
+/// Steps 3–6: create the message with the DM's nonce while the window
+/// lasts, and settle. Once `history` says a create may have reached
+/// Discord, the DM ends only `sent` or `unknown`.
+async fn deliver(
+    engine: &Engine,
+    job: &ClaimedJob,
+    dm: &Dm,
+    (guild, channel, first): (GuildId, ChannelId, OffsetDateTime),
+    mut history: SendHistory,
+    started: Instant,
+) -> Result<Handled, DbError> {
+    let done = |change| settle_dm(engine, job, dm, change, JobResult::Done, Some(started));
+    if !window_open(engine, dm).await? {
+        return out_of_window(engine, job, dm, history, Duration::ZERO, started).await;
+    }
+    let Some(rendered) = render(engine, dm).await? else {
+        tracing::warn!(guild_id = %guild, dm_id = %dm.id.get(), "a DM's records are missing");
+        return Ok(dead("dm_records_missing"));
+    };
+    let nonce = Nonce::new(dm.id.to_u22());
+    loop {
+        // The window is checked right before every create, on the clock
+        // that started it: after the render, and after every wait, however
+        // late the task wakes. A create past it could deliver a second
+        // message (§6.4, §10.4).
+        if !window_open(engine, dm).await? {
+            return out_of_window(engine, job, dm, history, Duration::ZERO, started).await;
+        }
+        let outcome = engine
+            .discord()
+            .send(channel, &rendered.msg, &rendered.files, &nonce)
+            .await;
+        let wait = match outcome {
+            Outcome::Done(sent) => return done(Change::Sent(sent.message_id)).await,
+            Outcome::Refused(r) => {
+                let event = history.refused();
+                return done(settled(dm.kind, event, r.code)).await;
+            }
+            Outcome::Unknown(_) => {
+                history = history.after(CreateResult::Unknown);
+                to_std(UNKNOWN_REPEAT_DELAY)
+            }
+            Outcome::RetryAfter(d) => {
+                history = history.after(CreateResult::RetryAfter);
+                d
+            }
+            // Nothing reached Discord: repeat, without counting it as a
+            // possible send.
+            Outcome::NotSent(_) => {
+                history = history.after(CreateResult::NotSent);
+                to_std(UNKNOWN_REPEAT_DELAY)
+            }
+        };
+        let fits = time::Duration::try_from(wait)
+            .is_ok_and(|w| wait_fits(first, OffsetDateTime::now_utc(), w));
+        if !fits {
+            return out_of_window(engine, job, dm, history, wait, started).await;
+        }
+        tokio::time::sleep(wait).await;
+    }
+}
+
+/// Whether the DM's create may still be repeated (the persisted window, on
+/// the database's clock). A DM no longer `sending` was settled by whoever
+/// holds the job now.
+async fn window_open(engine: &Engine, dm: &Dm) -> Result<bool, DbError> {
+    let mut conn = engine.db().conn().await?;
+    dms::send_window_open(&mut conn, dm.guild, dm.id, NONCE_WINDOW)
+        .await?
+        .ok_or(DbError::Stale)
+}
+
+/// The window is over (or the next wait would end past it): `unknown` if a
+/// create may have reached Discord, else back to `pending` and the job
+/// tries again later (after `wait`, a rate limit's, at the least) with a
+/// new window.
+async fn out_of_window(
+    engine: &Engine,
+    job: &ClaimedJob,
+    dm: &Dm,
+    history: SendHistory,
+    wait: Duration,
+    started: Instant,
+) -> Result<Handled, DbError> {
+    if history.maybe_sent() {
+        return settle_dm(
+            engine,
+            job,
+            dm,
+            Change::Unknown,
+            JobResult::Done,
+            Some(started),
+        )
+        .await;
+    }
+    let result = retry_after(job, wait);
+    settle_dm(engine, job, dm, Change::BackToPending, result, None).await
+}
+
+/// The settled change for a refused create, through the DM table: `failed`
+/// with its reason when nothing may have been sent, else `unknown`.
+fn settled(kind: DmKind, event: DmEvent, code: Option<u32>) -> Change {
+    match transition(kind, DmState::Sending, event) {
+        Ok(DmState::Failed) => Change::Failed(
+            failure_for(DmState::Failed, event, code).unwrap_or(DmFailure::DiscordRefused),
+            code,
+        ),
+        _ => Change::Unknown,
+    }
+}
+
+fn to_std(d: time::Duration) -> Duration {
+    Duration::try_from(d).unwrap_or_default()
+}
+
+/// Retry after `d`, or the kind's backoff when that is longer.
+fn retry_after(job: &ClaimedJob, d: Duration) -> JobResult {
+    JobResult::Retry {
+        at: RunAt::In(d.max(job.kind.policy().backoff(job.attempt))),
+        error: "rate_limited".to_owned(),
+    }
+}
+
+/// Settles a `send_dm` job whose budget is spent, without calling Discord:
+/// `pending` → `failed` (`discord_unavailable`), `sending` → `unknown`;
+/// a waiting kick or ban is woken.
+pub async fn finalize(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbError> {
+    let (Some(guild), Ok(payload)) = (job.guild, job.payload::<Payload>()) else {
+        return Ok(dead("bad_payload"));
+    };
+    obs::use_case("finalize_dm", Some(guild), async {
+        let dm = {
+            let mut conn = engine.db().conn().await?;
+            dms::get(&mut conn, guild, payload.dm_id).await?
+        };
+        let Some(dm) = dm else {
+            return Ok(dead("dm_missing"));
+        };
+        let change = match dm.state {
+            DmState::Pending => {
+                let failure = failure_for(DmState::Failed, DmEvent::BudgetSpent, None)
+                    .unwrap_or(DmFailure::DiscordUnavailable);
+                Change::Failed(failure, None)
+            }
+            DmState::Sending => Change::Unknown,
+            _ => return Ok(Handled::Settle(JobResult::Done)),
+        };
+        settle_dm(engine, job, &dm, change, JobResult::Done, None).await
+    })
+    .await
+}

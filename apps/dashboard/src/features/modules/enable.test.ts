@@ -1,31 +1,56 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { enableProblem } from "./enable";
+import { ApiError } from "~/api/client";
+
+import { disabledReasonText, enableProblem } from "./enable";
 
 describe("enableProblem", () => {
-  it("spots a module that was never set up", () => {
-    expect(
-      enableProblem(
-        "Guild settings validation failed: module is not configured; run /setup first.",
-      ),
-    ).toEqual({ message: "Module is not configured; run /setup first.", needsSetup: true });
-  });
-
-  it("keeps the module's own reason", () => {
-    expect(
-      enableProblem(
-        "Guild settings validation failed: ticket entry and staff queue channels must be separate.",
-      ),
-    ).toEqual({
-      message: "Ticket entry and staff queue channels must be separate.",
-      needsSetup: false,
+  it("lists every problem of a module that isn't ready", () => {
+    const error = new ApiError(409, "module_not_ready", "Tickets are still off.", {
+      problems: [
+        { code: "ticket_entry_missing", message: "Choose where members open tickets." },
+        { code: "ticket_queue_missing", message: "Choose a staff channel for new tickets." },
+      ],
+    });
+    expect(enableProblem(error)).toEqual({
+      message: "Tickets are still off.",
+      problems: ["Choose where members open tickets.", "Choose a staff channel for new tickets."],
     });
   });
 
-  it("leaves other messages alone", () => {
-    expect(enableProblem("That didn't work.")).toEqual({
-      message: "That didn't work.",
-      needsSetup: false,
+  it("keeps the API's message for other refusals", () => {
+    const error = new ApiError(
+      403,
+      "missing_capability",
+      "To change Quack's settings, you need Manage Server in Discord.",
+    );
+    expect(enableProblem(error)).toEqual({
+      message: "To change Quack's settings, you need Manage Server in Discord.",
+      problems: [],
     });
+  });
+
+  it("has a sentence for anything else", () => {
+    expect(enableProblem(new Error("boom")).message).toMatch(/^Quack couldn't/);
+  });
+});
+
+describe("disabledReasonText", () => {
+  it("explains why Quack turned a module off", () => {
+    expect(
+      disabledReasonText("honeypot", { enabled: false, disabled_reason: "channel_deleted" }),
+    ).toMatch(/^The honeypot was turned off because a channel it uses was deleted\./);
+    expect(
+      disabledReasonText("tickets", { enabled: false, disabled_reason: "quack_left" }),
+    ).toMatch(/^Tickets were turned off because Quack left the server\./);
+  });
+
+  it("is quiet when staff turned it off or it's on", () => {
+    expect(
+      disabledReasonText("activity_log", { enabled: false, disabled_reason: null }),
+    ).toBeNull();
+    expect(
+      disabledReasonText("activity_log", { enabled: true, disabled_reason: "channel_deleted" }),
+    ).toBeNull();
   });
 });

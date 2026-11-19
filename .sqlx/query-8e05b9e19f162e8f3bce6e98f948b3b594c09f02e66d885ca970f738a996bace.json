@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT max(created_at) FROM mod_log WHERE guild_id = $1 AND kind = 'log_channel_failed'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8e05b9e19f162e8f3bce6e98f948b3b594c09f02e66d885ca970f738a996bace"
+}

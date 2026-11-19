@@ -1,63 +1,58 @@
-import type { Template } from "~/api/types";
+import type { LevelAction, RuleDefinition } from "~/api/types";
+import { duration } from "~/lib/format";
 
-/**
- * honeypotRuleProblem says why a rule can't run with nobody at the
- * keyboard, or null if it can. It mirrors the backend's check
- * (ValidateHoneypotTemplate in internal/modules/honeypot/cases.go): active,
- * no required context, exactly one default level, and at most one timeout,
- * kick, or ban per level.
- */
-export function honeypotRuleProblem(rule: Template): string | null {
-  if (rule.archived_at) return "This rule is archived.";
-  if ((rule.context_fields ?? []).some((f) => f.required))
-    return "This rule asks for context the honeypot can't fill in. Make its context fields optional.";
-  const levels = rule.levels ?? [];
-  for (const level of levels) {
-    const actions = level.actions ?? [];
-    if (actions.length > 1) return "A level in this rule has more than one action.";
-    if (actions.some((a) => !["timeout_user", "kick_user", "ban_user"].includes(a.action_type)))
-      return "The honeypot can only time out, kick, or ban.";
+/** outcome is what a level can do to the poster, as the warning words it (design §12.13). */
+function outcome(action: LevelAction | null | undefined): string {
+  if (!action) return "give you a warning";
+  switch (action.kind) {
+    case "timeout":
+      return `time you out for ${duration(action.duration_seconds)}`;
+    case "kick":
+      return "remove you from the server";
+    case "ban":
+      return "ban you";
   }
-  if (levels.filter((l) => l.is_default).length !== 1)
-    return "This rule needs exactly one default level.";
-  return null;
 }
 
-const outcomes: Record<string, string> = {
-  ban_user: "ban you from this server",
-  kick_user: "kick you from this server",
-  timeout_user: "time you out",
-  send_dm: "send you a warning by DM",
-  "": "record a moderation case",
-};
+/** orList joins phrases as "a", "a or b", or "a, b, or c". */
+function orList(items: string[]): string {
+  if (items.length <= 2) return items.join(" or ");
+  return `${items.slice(0, -1).join(", ")}, or ${items.at(-1)}`;
+}
 
 /**
- * honeypotWarning is the warning Quack posts in the trap channel. A custom
- * text is used as is; otherwise Quack words one from the rule's
- * punishments, like resolveHoneypotWarning in
- * internal/modules/honeypot/warning.go. It is null when Quack couldn't word
- * one, such as with no rule picked.
+ * honeypotWarning is the warning Quack posts in the honeypot channel
+ * (honeypot.warning.*). A custom text replaces the heading and sentences;
+ * otherwise Quack words one from the rule's levels, each outcome once in
+ * level order. It is null when there's no custom text and no rule to word
+ * it from.
  */
-export function honeypotWarning(text: string, rule: Template | undefined): string | null {
+export function honeypotWarning(
+  text: string,
+  rule: Pick<RuleDefinition, "name" | "levels"> | undefined,
+): string | null {
   if (text.trim()) return text;
   if (!rule) return null;
   const said: string[] = [];
-  const levels = [...(rule.levels ?? [])].sort((a, b) => a.position - b.position);
+  const levels = [...rule.levels].sort((a, b) => a.from_case_count - b.from_case_count);
   for (const level of levels) {
-    const actions = level.actions ?? [];
-    const outcome = outcomes[actions.length === 1 ? actions[0]!.action_type : ""];
-    if (outcome === undefined) return null;
-    if (!said.includes(outcome)) said.push(outcome);
+    const o = outcome(level.action);
+    if (!said.includes(o)) said.push(o);
   }
-  if (said.length === 0) return null;
-  const consequence =
-    said.length === 1
-      ? `Posting here will ${said[0]}.`
-      : `Depending on your previous cases, posting here can ${said.join(" or ")}.`;
-  return `# Do not post here\n${consequence} This channel catches spam and scam accounts.`;
+  const lead = `If you post here, Quack can add a case under ${rule.name}.`;
+  const can =
+    said.length > 1
+      ? `This rule can ${orList(said)}. What happens depends on how many of your cases count under it.`
+      : `This rule can ${said[0] ?? "give you a warning"}.`;
+  return `### Don't post here\n${lead} ${can}\nThis channel catches spam accounts. Quack ignores posts from staff and bots.`;
 }
 
-/** incidentsCaught is the counter line under the warning post. */
-export function incidentsCaught(count: number): string {
-  return `${count} ${count === 1 ? "incident" : "incidents"} caught.`;
+/** honeypotWarningOff is what the warning post says while the honeypot is off. */
+export const honeypotWarningOff = "### The honeypot is off\nPosts here don't add cases right now.";
+
+/** honeypotCount is the count line under the warning post. */
+export function honeypotCount(count: number): string {
+  if (count === 0) return "No honeypot cases yet.";
+  if (count === 1) return "1 honeypot case so far.";
+  return `${count.toLocaleString("en-US")} honeypot cases so far.`;
 }

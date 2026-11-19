@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Case #1 is already saved. Run /case view and enter 1 as the number to see it.

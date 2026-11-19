@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]

@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+view — Open a case by number and see its action and DM outcomes.
+
+## description
+Open a case by number and see its action and DM outcomes.

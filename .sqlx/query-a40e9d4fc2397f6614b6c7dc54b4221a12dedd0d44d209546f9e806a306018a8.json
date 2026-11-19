@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM jobs WHERE ctid IN\n                   (SELECT ctid FROM jobs WHERE dead_at < now() - interval '7 days' LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a40e9d4fc2397f6614b6c7dc54b4221a12dedd0d44d209546f9e806a306018a8"
+}

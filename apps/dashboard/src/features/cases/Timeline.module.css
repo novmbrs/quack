@@ -46,6 +46,8 @@
 .text {
   font-size: 14px;
   color: var(--text);
+  /* Server texts can carry a quoted reason on its own line. */
+  white-space: pre-line;
 }
 
 .meta {

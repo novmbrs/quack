@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO jobs (id, kind, key, payload, max_attempts) VALUES ($1, 'housekeeping', $2, '{}', 1)\n             ON CONFLICT (key) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c8990a9a7f9277d3808b0f3d1cface0f0864603e595a4e1f0a6ab4b3fcc772d8"
+}

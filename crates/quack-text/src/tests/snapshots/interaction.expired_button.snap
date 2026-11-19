@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This button no longer works. Run the command again, or use the dashboard.
+plain:   This button no longer works. Run the command again, or use the dashboard.
+model:   [Fixed("This button no longer works. Run the command again, or use the dashboard.")]

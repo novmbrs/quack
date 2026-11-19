@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET\n               stale = CASE WHEN message_id IS NULL OR channel_id IS NULL THEN stale ELSE (\n                 SELECT COALESCE(jsonb_agg(e ORDER BY n), '[]'::jsonb)\n                 FROM jsonb_array_elements(stale || jsonb_build_array(jsonb_build_object(\n                        'channel_id', channel_id::text, 'message_id', message_id::text)))\n                      WITH ORDINALITY AS t(e, n)\n                 WHERE n > jsonb_array_length(stale) + 1 - 5) END,\n               channel_id = $3, message_id = NULL, attachment_id = NULL, generation = generation + 1, create_started_at = NULL,\n               state = 'active', wanted_revision = wanted_revision + 1, wanted_at = now(), updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND generation = $4",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "686f36adfb085de70675d76b76b02038ae0a608d6d251bdb0e2f196d58c21ebc"
+}

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 was added.
+plain:   Case #12 was added.
+model:   [Fixed("Case #12 was added.")]

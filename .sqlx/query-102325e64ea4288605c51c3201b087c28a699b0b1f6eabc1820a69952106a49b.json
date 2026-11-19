@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS (SELECT 1 FROM cases c JOIN actions a ON a.case_id = c.id AND a.kind = 'ban'\n                              WHERE c.guild_id = $1 AND c.number = $2 AND c.member_id = $3\n                                AND c.voided_at IS NOT NULL) AS \"found!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "found!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "102325e64ea4288605c51c3201b087c28a699b0b1f6eabc1820a69952106a49b"
+}

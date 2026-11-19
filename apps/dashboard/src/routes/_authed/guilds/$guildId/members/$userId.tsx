@@ -4,8 +4,9 @@ import { Check, Copy, Plus, ScrollText, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { useUser } from "~/api/directory";
-import { memberProfileQuery, templatesQuery } from "~/api/queries";
-import type { Case, CaseProfile } from "~/api/types";
+import { useCursorPager } from "~/api/paging";
+import { casesQuery, memberSummaryQuery } from "~/api/queries";
+import type { CaseSummary, MemberSummary } from "~/api/types";
 import { caseColumns } from "~/features/cases/columns";
 import { CreateCaseDialog } from "~/features/cases/CreateCaseDialog";
 import { plural } from "~/lib/format";
@@ -23,21 +24,14 @@ import s from "./member.module.css";
 
 const PAGE = 50;
 
-type Search = { offset?: number };
-
 export const Route = createFileRoute("/_authed/guilds/$guildId/members/$userId")({
-  validateSearch: (search: Record<string, unknown>): Search => {
-    const n =
-      typeof search.offset === "number"
-        ? search.offset
-        : Number.parseInt(String(search.offset), 10);
-    return { offset: Number.isFinite(n) && n > 0 ? n : undefined };
-  },
-  loaderDeps: ({ search }) => search,
-  loader: ({ context, params, deps }) =>
-    context.queryClient.ensureQueryData(
-      memberProfileQuery(params.guildId, params.userId, deps.offset),
-    ),
+  loader: ({ context, params }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(memberSummaryQuery(params.guildId, params.userId)),
+      context.queryClient.ensureQueryData(
+        casesQuery(params.guildId, { member_id: params.userId, limit: PAGE }),
+      ),
+    ]),
   component: MemberPage,
   errorComponent: ({ error, reset }) => (
     <Page icon={<UserRound size={20} />} title="Member">
@@ -48,17 +42,18 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/members/$userId")
 
 function MemberPage() {
   const { guildId, userId } = Route.useParams();
-  const { offset = 0 } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const can = useCan(guildId);
   const [creating, setCreating] = useState(false);
 
   const user = useUser(guildId, userId);
-  const profile = useQuery(memberProfileQuery(guildId, userId, offset));
+  const pager = useCursorPager(userId);
+  const summary = useQuery(memberSummaryQuery(guildId, userId));
+  const cases = useQuery(casesQuery(guildId, { member_id: userId, limit: PAGE }, pager.cursor));
   const columns = useMemo(() => caseColumns(guildId, { member: false }), [guildId]);
-  const table = useTable({ features, columns, data: profile.data?.cases ?? EMPTY });
+  const table = useTable({ features, columns, data: cases.data?.cases ?? EMPTY });
 
-  const name = user.data?.display_name ?? (user.isPending ? "" : "Unknown user");
+  const name = user.data?.display_name ?? (user.isPending ? "" : "Unknown member");
 
   return (
     <Page
@@ -67,21 +62,19 @@ function MemberPage() {
       topic="Case history in this server"
       actions={
         <>
-          {can("audit.read") ? (
-            <ButtonLink
-              to="/guilds/$guildId/audit"
-              params={{ guildId }}
-              search={{ member: userId }}
-              variant="ghost"
-              size="sm"
-              icon={<ScrollText size={16} />}
-            >
-              View in audit log
-            </ButtonLink>
-          ) : null}
-          {can("case.create") ? (
+          <ButtonLink
+            to="/guilds/$guildId/mod-log"
+            params={{ guildId }}
+            search={{ member: userId }}
+            variant="ghost"
+            size="sm"
+            icon={<ScrollText size={16} />}
+          >
+            Open in moderation log
+          </ButtonLink>
+          {can("moderate") ? (
             <Button size="sm" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
-              New case
+              Add case
             </Button>
           ) : null}
         </>
@@ -110,7 +103,7 @@ function MemberPage() {
             )}
             <div className={s.tags}>
               {user.data ? (
-                user.data.in_guild ? (
+                user.data.in_server ? (
                   <Badge tone="success" dot>
                     In this server
                   </Badge>
@@ -127,26 +120,26 @@ function MemberPage() {
         </div>
       </Panel>
 
-      {profile.isPending ? (
+      {cases.isPending ? (
         <SkeletonRows rows={8} />
-      ) : profile.isError ? (
-        <ErrorState error={profile.error} retry={() => void profile.refetch()} />
+      ) : cases.isError ? (
+        <ErrorState error={cases.error} retry={() => void cases.refetch()} />
       ) : (
         <>
-          <Summary guildId={guildId} profile={profile.data} />
+          {summary.data ? <Summary summary={summary.data} /> : null}
           <section className={s.block}>
             <Heading>Cases</Heading>
             <DataTable
               table={table}
-              dim={profile.isPlaceholderData}
+              dim={cases.isPlaceholderData}
               onRowClick={(row, newTab) => {
                 if (newTab) {
-                  window.open(`/guilds/${guildId}/cases/${row.case_number}`, "_blank");
+                  window.open(`/guilds/${guildId}/cases/${row.number}`, "_blank");
                   return;
                 }
                 void navigate({
                   to: "/guilds/$guildId/cases/$caseRef",
-                  params: { guildId, caseRef: String(row.case_number) },
+                  params: { guildId, caseRef: String(row.number) },
                 });
               }}
               empty={
@@ -154,22 +147,23 @@ function MemberPage() {
                   icon="case"
                   title="No cases"
                   action={
-                    can("case.create") ? (
+                    can("moderate") ? (
                       <Button variant="secondary" onClick={() => setCreating(true)}>
-                        Open a case
+                        Add case
                       </Button>
                     ) : null
                   }
                 >
-                  This member has a clean record here.
+                  This member has no cases in this server.
                 </Empty>
               }
             />
             <Pager
-              offset={offset}
-              limit={PAGE}
-              total={profile.data.total ?? 0}
-              onChange={(next) => void navigate({ search: { offset: next || undefined } })}
+              page={pager.page}
+              hasPrevious={pager.hasPrevious}
+              hasNext={Boolean(cases.data.next_cursor)}
+              onPrevious={pager.previous}
+              onNext={() => pager.next(cases.data.next_cursor)}
             />
           </section>
         </>
@@ -186,51 +180,42 @@ function MemberPage() {
 }
 
 /**
- * Summary counts the member's whole record, not just the page on screen:
- * totals by validity, then how many cases fall under each rule.
+ * Summary counts the member's whole case history, not just the page on
+ * screen: totals, then how many cases fall under each rule.
  */
-function Summary({ guildId, profile }: { guildId: string; profile: CaseProfile }) {
-  const templates = useQuery(templatesQuery(guildId));
-  const summary = profile.summary;
-  const total = summary?.total ?? 0;
-  const valid = summary?.by_validity?.valid ?? 0;
-  const voided = summary?.by_validity?.voided ?? 0;
+function Summary({ summary }: { summary: MemberSummary }) {
+  const rules = summary.by_rule
+    .map((r) => ({ ...r, count: r.valid + r.voided }))
+    .filter((r) => r.count > 0)
+    .sort((a, b) => b.count - a.count);
 
-  // Rule names come from the rules list. A case's own snapshot covers rules
-  // the list no longer has.
-  const names = new Map<string, string>();
-  for (const c of profile.cases ?? []) {
-    if (c.template_id && c.rule_name) names.set(c.template_id, c.rule_name);
-  }
-  for (const t of templates.data ?? []) names.set(t.id, t.name);
-  const rules = Object.entries(summary?.by_template ?? {})
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1]);
-
-  if (total === 0) return null;
+  if (summary.total === 0) return null;
   return (
     <div className={s.summary}>
       <div className={s.tiles}>
-        <Tile label="Total cases" value={total} />
-        <Tile label="Valid" value={valid} hint="Count toward escalation" />
-        <Tile label="Voided" value={voided} hint="No longer count" />
+        <Tile label="Total cases" value={summary.total} />
+        <Tile label="Valid" value={summary.valid} hint="Count toward the case count" />
+        <Tile label="Voided" value={summary.voided} hint="No longer count" />
       </div>
       {rules.length > 0 ? (
         <Panel>
           <Heading>By rule</Heading>
           <ul className={s.rules}>
-            {rules.map(([id, count]) => (
-              <li key={id} className={s.ruleRow}>
-                <span className={s.ruleName}>
-                  {names.get(id) ?? (templates.isPending ? "" : "Unknown rule")}
-                </span>
+            {rules.map((r) => (
+              <li key={r.rule_id ?? r.rule_name} className={s.ruleRow}>
+                <span className={s.ruleName}>{r.rule_name}</span>
                 <span className={s.bar}>
                   <span
                     className={s.fill}
-                    style={{ width: `${Math.max(4, Math.round((count / total) * 100))}%` }}
+                    style={{
+                      width: `${Math.max(4, Math.round((r.count / summary.total) * 100))}%`,
+                    }}
                   />
                 </span>
-                <span className={s.ruleCount}>{plural(count, "case")}</span>
+                <span className={s.ruleCount}>
+                  {plural(r.count, "case")}
+                  {r.voided > 0 ? ` (${r.voided.toLocaleString()} voided)` : ""}
+                </span>
               </li>
             ))}
           </ul>
@@ -262,13 +247,13 @@ function CopyId({ id }: { id: string }) {
     try {
       await navigator.clipboard.writeText(id);
       setCopied(true);
-      toast.success("User ID copied.");
+      toast.success("Member ID copied.");
     } catch {
       toast.error("Couldn't copy. Select the ID and copy it yourself.");
     }
   };
   return (
-    <Tooltip label="Copy user ID">
+    <Tooltip label="Copy member ID">
       <button type="button" onClick={copy} className={s.copy} data-copied={copied || undefined}>
         <span className={s.id}>{id}</span>
         {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -277,4 +262,4 @@ function CopyId({ id }: { id: string }) {
   );
 }
 
-const EMPTY: Case[] = [];
+const EMPTY: CaseSummary[] = [];

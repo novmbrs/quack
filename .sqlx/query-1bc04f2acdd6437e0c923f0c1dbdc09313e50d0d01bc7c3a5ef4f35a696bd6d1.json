@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT set_config('statement_timeout', $1::bigint::text || 'ms', true) AS \"statement!\",\n                          set_config('lock_timeout', $2::bigint::text || 'ms', true) AS \"lock!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "statement!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "lock!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "1bc04f2acdd6437e0c923f0c1dbdc09313e50d0d01bc7c3a5ef4f35a696bd6d1"
+}

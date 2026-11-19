@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]

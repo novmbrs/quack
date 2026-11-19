@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 would have more than 50 evidence items. Add fewer message links.
+plain:   Case #12 would have more than 50 evidence items. Add fewer message links.
+model:   [Fixed("Case #12 would have more than 50 evidence items. Add fewer message links.")]

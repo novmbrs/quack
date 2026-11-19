@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## middle page
+tone: Neutral
+--- discord ---
+
+buttons: [Previous · Secondary] RulesPage(1) | [Next · Secondary] RulesPage(3)
+--- plain ---
+
+--- model ---

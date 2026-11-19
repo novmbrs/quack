@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM operation_keys WHERE ctid IN\n                   (SELECT ctid FROM operation_keys WHERE expires_at < now() LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "119d702cde076b8fcdc07715d6c8fdd017c5bd95e8d015135baba8867191f579"
+}

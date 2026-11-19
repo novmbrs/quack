@@ -3,43 +3,44 @@ import { describe, expect, it } from "vite-plus/test";
 import type { Settings } from "~/api/types";
 
 import {
-  brandingProblem,
+  changes,
   formFromSettings,
+  inviteProblem,
   maxStaffRoles,
-  rejoinUrlProblem,
   type SettingsForm,
   settingsPatch,
   staffRolesProblem,
+  textProblem,
 } from "./form";
 
 const saved: SettingsForm = {
-  appealQueueChannel: "111111111111111111",
-  rejoinUrl: "https://discord.gg/quack",
-  reasonRequired: false,
-  auditMirrorChannel: "",
+  logChannel: "",
+  appealChannel: "111111111111111111",
   evidenceChannel: "",
-  introduction: "Hi from the mods.",
-  footer: "",
+  appealInvite: "https://discord.gg/quack",
+  dmIntro: "Hi from the mods.",
+  dmFooter: "",
   moderatorRoles: ["444444444444444444", "555555555555555555"],
   rulesManagerRoles: [],
 };
 
+const off = { enabled: false, problems: [] };
+
 describe("formFromSettings", () => {
   it("fills missing fields with empty values", () => {
     const settings: Settings = {
-      appeal_review_reason_required: true,
-      tickets_enabled: false,
+      version: 3,
       moderator_role_ids: [],
       rules_manager_role_ids: [],
+      modules: { tickets: off, activity_log: off, honeypot: off },
     };
     expect(formFromSettings(settings)).toEqual({
-      appealQueueChannel: "",
-      rejoinUrl: "",
-      reasonRequired: true,
-      auditMirrorChannel: "",
+      logChannel: "",
+      appealChannel: "",
       evidenceChannel: "",
-      introduction: "",
-      footer: "",
+      appealInvite: "",
+      dmIntro: "",
+      dmFooter: "",
       moderatorRoles: [],
       rulesManagerRoles: [],
     });
@@ -48,63 +49,78 @@ describe("formFromSettings", () => {
 
 describe("settingsPatch", () => {
   it("is empty when nothing changed", () => {
-    expect(settingsPatch(saved, { ...saved })).toEqual({});
+    expect(settingsPatch(saved, { ...saved }, 3)).toEqual({});
   });
 
   it("ignores whitespace-only edits", () => {
-    expect(settingsPatch(saved, { ...saved, introduction: "  Hi from the mods.\n" })).toEqual({});
+    expect(settingsPatch(saved, { ...saved, dmIntro: "  Hi from the mods.\n" }, 3)).toEqual({});
   });
 
-  it("sends only the changed fields", () => {
-    expect(
-      settingsPatch(saved, {
+  it("sends only the changed fields, without expected_version", () => {
+    const patch = settingsPatch(
+      saved,
+      {
         ...saved,
-        reasonRequired: true,
-        auditMirrorChannel: "222222222222222222",
+        logChannel: "222222222222222222",
         evidenceChannel: "333333333333333333",
-        footer: " Be kind. ",
-      }),
-    ).toEqual({
-      appeal_review_reason_required: true,
-      audit_mirror_channel_discord_id: "222222222222222222",
-      managed_evidence_channel_discord_id: "333333333333333333",
-      notification_footer: "Be kind.",
+        dmFooter: " Be kind. ",
+      },
+      3,
+    );
+    expect(patch).toEqual({
+      log_channel_id: "222222222222222222",
+      evidence_channel_id: "333333333333333333",
+      dm_footer: "Be kind.",
     });
+    expect(changes(patch)).toBe(true);
   });
 
-  it("clears a field with an empty string, never null", () => {
-    const patch = settingsPatch(saved, { ...saved, appealQueueChannel: "", rejoinUrl: "" });
-    expect(patch).toEqual({ appeal_queue_channel_discord_id: "", appeal_rejoin_url: "" });
+  it("clears a field with null", () => {
+    expect(settingsPatch(saved, { ...saved, appealChannel: "", appealInvite: " " }, 3)).toEqual({
+      appeal_channel_id: null,
+      appeal_invite_url: null,
+    });
   });
 });
 
 describe("settingsPatch staff roles", () => {
   it("ignores a reordered list", () => {
     expect(
-      settingsPatch(saved, {
-        ...saved,
-        moderatorRoles: ["555555555555555555", "444444444444444444"],
-      }),
+      settingsPatch(
+        saved,
+        { ...saved, moderatorRoles: ["555555555555555555", "444444444444444444"] },
+        3,
+      ),
     ).toEqual({});
   });
 
-  it("sends a changed list whole", () => {
+  it("sends a changed list whole, with expected_version", () => {
     expect(
-      settingsPatch(saved, {
-        ...saved,
-        moderatorRoles: ["444444444444444444"],
-        rulesManagerRoles: ["666666666666666666"],
-      }),
+      settingsPatch(
+        saved,
+        {
+          ...saved,
+          moderatorRoles: ["444444444444444444"],
+          rulesManagerRoles: ["666666666666666666"],
+        },
+        7,
+      ),
     ).toEqual({
       moderator_role_ids: ["444444444444444444"],
       rules_manager_role_ids: ["666666666666666666"],
+      expected_version: 7,
     });
   });
 
   it("clears a list with an empty array", () => {
-    expect(settingsPatch(saved, { ...saved, moderatorRoles: [] })).toEqual({
+    expect(settingsPatch(saved, { ...saved, moderatorRoles: [] }, 2)).toEqual({
       moderator_role_ids: [],
+      expected_version: 2,
     });
+  });
+
+  it("doesn't count expected_version as a change", () => {
+    expect(changes({ expected_version: 1 })).toBe(false);
   });
 });
 
@@ -117,7 +133,7 @@ describe("staffRolesProblem", () => {
     expect(staffRolesProblem(["3"], [], undefined)).toBeNull();
   });
 
-  it("lets saved roles deleted in Discord stay, since the server drops them", () => {
+  it("lets saved roles deleted in Discord stay", () => {
     expect(staffRolesProblem(["1", "3"], ["3"], known)).toBeNull();
   });
 
@@ -128,34 +144,39 @@ describe("staffRolesProblem", () => {
   });
 });
 
-describe("rejoinUrlProblem", () => {
-  it("accepts empty and Discord invites", () => {
-    expect(rejoinUrlProblem("")).toBeNull();
-    expect(rejoinUrlProblem("https://discord.gg/abc-DEF_1")).toBeNull();
-    expect(rejoinUrlProblem("https://discord.com/invite/abc")).toBeNull();
-    expect(rejoinUrlProblem(" https://www.discord.com/invite/abc ")).toBeNull();
+describe("inviteProblem", () => {
+  it("accepts empty and Discord invites in every form the API takes", () => {
+    for (const ok of [
+      "",
+      "https://discord.gg/abc-DEF_1",
+      "discord.gg/abc",
+      "http://discord.gg/abc",
+      "https://discord.com/invite/abc",
+      " https://www.discord.com/invite/abc ",
+      "discordapp.com/invite/abc",
+    ]) {
+      expect(inviteProblem(ok), ok).toBeNull();
+    }
   });
 
   it("rejects anything else", () => {
     for (const bad of [
-      "discord.gg/abc",
-      "http://discord.gg/abc",
       "https://discord.gg/",
+      "https://discord.gg/a",
       "https://discord.gg/abc?x=1",
-      "https://discord.gg/abc#top",
       "https://discord.com/channels/1/2",
       "https://example.com/abc",
-      "https://user@discord.gg/abc",
       "https://discord.gg/abc/def",
     ]) {
-      expect(rejoinUrlProblem(bad), bad).not.toBeNull();
+      expect(inviteProblem(bad), bad).not.toBeNull();
     }
   });
 });
 
-describe("brandingProblem", () => {
-  it("allows up to the limit after trimming", () => {
-    expect(brandingProblem(`  ${"a".repeat(2000)}  `)).toBeNull();
-    expect(brandingProblem("a".repeat(2001))).not.toBeNull();
+describe("textProblem", () => {
+  it("allows up to the limit after trimming, in characters", () => {
+    expect(textProblem(`  ${"a".repeat(1000)}  `, 1000)).toBeNull();
+    expect(textProblem("🦆".repeat(1000), 1000)).toBeNull();
+    expect(textProblem("a".repeat(1001), 1000)).not.toBeNull();
   });
 });

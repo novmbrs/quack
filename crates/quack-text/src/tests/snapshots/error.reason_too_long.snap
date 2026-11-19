@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This reason is too long. Shorten it to 1,000 characters or fewer.
+plain:   This reason is too long. Shorten it to 1,000 characters or fewer.
+model:   [Fixed("This reason is too long. Shorten it to 1,000 characters or fewer.")]

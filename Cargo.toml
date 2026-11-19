@@ -1,0 +1,129 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.100"
+license = "MIT"
+repository = "https://github.com/novmbrs/quack"
+publish = false
+
+# Exact pins verified in the stack audit. Members inherit only what they use
+# and add features locally; upgrade a family (Twilight, OTel, SQLx) together.
+[workspace.dependencies]
+# Internal crates.
+quack-core = { path = "crates/quack-core" }
+quack-text = { path = "crates/quack-text" }
+quack-telemetry = { path = "crates/quack-telemetry" }
+quack-db = { path = "crates/quack-db" }
+quack-discord = { path = "crates/quack-discord" }
+quack-engine = { path = "crates/quack-engine" }
+quack-tickets = { path = "crates/quack-tickets" }
+quack-activity-log = { path = "crates/quack-activity-log" }
+quack-honeypot = { path = "crates/quack-honeypot" }
+quack-api = { path = "crates/quack-api" }
+quack-bot = { path = "crates/quack-bot" }
+quack-import = { path = "crates/quack-import" }
+quack-testkit = { path = "crates/quack-testkit" }
+
+# Discord.
+twilight-gateway = { version = "=0.18.0", default-features = false, features = ["twilight-http", "rustls-platform-verifier", "zstd"] }
+twilight-model = { version = "=0.18.0" }
+twilight-cache-inmemory = { version = "=0.18.0" }
+twilight-util = { version = "=0.18.0", features = ["builder", "permission-calculator"] }
+# The REST rate limiter of twilight-http, driven directly by quack-discord's
+# own transport (twilight-http cannot send string nonces with enforce_nonce).
+twilight-http-ratelimiting = { version = "=0.18.0" }
+
+# Runtime and HTTP.
+tokio = { version = "=1.54.1", features = ["macros", "rt-multi-thread", "net", "signal", "sync", "time"] }
+tokio-util = { version = "=0.7.20", features = ["rt"] }
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "http2", "json", "matched-path", "query", "tokio"] }
+tower = { version = "=0.5.3", features = ["util"] }
+tower-http = { version = "=0.7.1", features = ["limit", "timeout", "sensitive-headers"] }
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "json"] }
+
+# Storage.
+sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "macros", "migrate", "uuid", "time", "json"] }
+
+# Telemetry.
+opentelemetry = { version = "=0.33.1", default-features = false, features = ["trace", "metrics", "logs"] }
+opentelemetry_sdk = { version = "=0.33.1", default-features = false, features = ["trace", "metrics", "logs", "spec_unstable_metrics_views", "internal-logs"] }
+opentelemetry-otlp = { version = "=0.33.1", default-features = false, features = ["trace", "metrics", "logs", "http-proto", "reqwest-blocking-client"] }
+opentelemetry-semantic-conventions = { version = "=0.33.1" }
+opentelemetry-appender-tracing = { version = "=0.33.1" }
+tracing = { version = "=0.1.44" }
+tracing-opentelemetry = { version = "=0.34.0", default-features = false }
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "json"] }
+
+# Sign-in (sessions are quack-db rows).
+oauth2 = { version = "=5.0.0", default-features = false }
+
+# Hashing (SHA-256 of operation-key requests); already in the graph
+# through rustls, so this adds no new code (design §20.5 #31).
+aws-lc-rs = { version = "=1.19.0", default-features = false, features = ["aws-lc-sys"] }
+
+# Config, errors, ids, time.
+config = { version = "=0.15.27", default-features = false, features = ["toml"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = { version = "=1.0.154" }
+thiserror = { version = "=2.0.21" }
+anyhow = { version = "=1.0.104" }
+uuid = { version = "=1.29.3", features = ["v7", "serde"] }
+time = { version = "=0.3.55", features = ["serde", "serde-well-known", "formatting", "parsing"] }
+
+# OpenAPI.
+utoipa = { version = "=6.0.0", features = ["axum_extras", "uuid", "time"] }
+utoipa-axum = { version = "=0.3.0" }
+
+# Tests only (dev-dependencies).
+httpmock = { version = "=0.9.0", default-features = false }
+insta = { version = "=1.49.0" }
+proptest = { version = "=1.12.0" }
+
+# CLI tools (installed with `cargo install --locked`, not dependencies):
+# sqlx-cli =0.9.0, cargo-nextest =0.9.152, cargo-deny =0.21.0,
+# cargo-machete =0.10.1, cargo-chef =0.1.78.
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[workspace.lints.cargo]
+# Unused dependencies and unused workspace pins are reported.
+unused_dependencies = "warn"
+unused_workspace_dependencies = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Panicking shortcuts are denied; clippy.toml allows them inside tests.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+# Pedantic lints we turn off, each for a stated reason:
+# - Crate-prefixed names (`TelemetryConfig` in `quack_telemetry`) read better
+#   at call sites that import many crates.
+module_name_repetitions = "allow"
+# - Errors are typed `thiserror` enums whose variants document themselves;
+#   an `# Errors` section on every fallible function would repeat them.
+missing_errors_doc = "allow"
+# - `#[must_use]` on every getter is noise; we add it where ignoring the
+#   result is a real bug.
+must_use_candidate = "allow"
+
+[profile.release]
+# Fast, small server binary: thin LTO is most of fat LTO's win at a fraction
+# of the link time; unwinding stays on so a panicking task is contained and
+# reported instead of aborting the process; symbols are kept for readable
+# backtraces while debug info is stripped.
+opt-level = 3
+lto = "thin"
+panic = "unwind"
+strip = "debuginfo"

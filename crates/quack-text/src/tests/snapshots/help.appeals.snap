@@ -1,0 +1,14 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Appeals
+Members can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use </setup:1004> to choose where new appeals appear. Moderators can also use </appeals:1002> or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed.
+buttons: [Open the dashboard](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Appeals
+Members can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use /setup to choose where new appeals appear. Moderators can also use /appeals or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed.
+--- model ---
+Heading [Fixed("Appeals")]
+Text [Fixed("Members can appeal eligible cases once, from Quack's DM or the dashboard, even after a ban. Use "), Command(Setup), Fixed(" to choose where new appeals appear. Moderators can also use "), Command(Appeals), Fixed(" or the dashboard. Accepting an appeal voids the case so it stops counting. Open the case to check whether its timeout or ban was removed.")]

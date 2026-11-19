@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't reach Discord, so nothing changed. Try again in a moment.
+plain:   Quack couldn't reach Discord, so nothing changed. Try again in a moment.
+model:   [Fixed("Quack couldn't reach Discord, so nothing changed. Try again in a moment.")]

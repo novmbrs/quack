@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't open your ticket. Ask a server administrator to check Quack's permissions in <#444>.
+plain:   Quack couldn't open your ticket. Ask a server administrator to check Quack's permissions in #support.
+model:   [Fixed("Quack couldn't open your ticket. Ask a server administrator to check Quack's permissions in "), Channel(ChannelRef { id: ChannelId(444), name: Some("support") }), Fixed(".")]

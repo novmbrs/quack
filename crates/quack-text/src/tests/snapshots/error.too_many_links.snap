@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Add at most 10 message links at a time.
+plain:   Add at most 10 message links at a time.
+model:   [Fixed("Add at most 10 message links at a time.")]

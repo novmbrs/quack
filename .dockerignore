@@ -1,7 +1,14 @@
-# Only the dashboard image builds from the repository root (apps/dashboard/Dockerfile);
-# send it just what it needs. The backend image uses apps/backend as its context.
+# The image builds from the repository root (Dockerfile): send only what
+# the dashboard and the Rust build need.
 *
+!Cargo.toml
+!Cargo.lock
+!rust-toolchain.toml
+!.sqlx
+!crates
 !assets/icons/quack/svg
 !apps/dashboard
 apps/dashboard/node_modules
-apps/dashboard/dist/app
+apps/dashboard/dist
+apps/dashboard/.tanstack
+**/target

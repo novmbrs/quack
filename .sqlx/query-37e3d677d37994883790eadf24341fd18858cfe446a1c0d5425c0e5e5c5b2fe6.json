@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO operation_keys (guild_id, account_id, operation, key, request_hash, response_status,\n                                         response, expires_at)\n             VALUES ($1, $2, $3, $4, $5, 0, '{}', now() + make_interval(secs => $6))\n             ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Text",
+        "Bytea",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "37e3d677d37994883790eadf24341fd18858cfe446a1c0d5425c0e5e5c5b2fe6"
+}

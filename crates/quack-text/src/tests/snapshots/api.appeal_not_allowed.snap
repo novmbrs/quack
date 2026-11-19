@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This case can't be appealed. You can still review it on the dashboard.
+plain:   This case can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("This case can't be appealed. You can still review it on the dashboard.")]

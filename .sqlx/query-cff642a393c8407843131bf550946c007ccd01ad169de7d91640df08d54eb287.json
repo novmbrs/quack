@@ -1,0 +1,277 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, number, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,\n                             closed_at, closed_by, close_reason, journal_gaps, welcome_started_at, welcome_posted_at,\n                             frozen_at, transcript_saved_at, thread_deleted_at, thread_delete_failed, created_at\n                      FROM tickets WHERE thread_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "ticket_state",
+            "kind": {
+              "Enum": [
+                "opening",
+                "open",
+                "closing",
+                "closed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "entry_channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "entry_channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "thread_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "thread_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "opened_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "opened_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "close_requested_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "close_requested_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "closed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "closed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "closed_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "closed_by"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "close_reason",
+        "type_info": {
+          "Custom": {
+            "name": "ticket_close_reason",
+            "kind": {
+              "Enum": [
+                "open_failed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "close_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "journal_gaps",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "journal_gaps"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "welcome_started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "welcome_started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "welcome_posted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "welcome_posted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "frozen_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "frozen_at"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "transcript_saved_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "transcript_saved_at"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "thread_deleted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "thread_deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "thread_delete_failed",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "thread_delete_failed"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "cff642a393c8407843131bf550946c007ccd01ad169de7d91640df08d54eb287"
+}

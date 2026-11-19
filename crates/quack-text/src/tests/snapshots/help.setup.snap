@@ -1,0 +1,14 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Setup
+Use </setup:1004> to pick channels or let Quack create them, and to turn on tickets, the honeypot, and the server activity log. Keep the log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members need access to the ticket entry and honeypot channels. You can also change these settings on the dashboard.
+buttons: [Open the dashboard](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Setup
+Use /setup to pick channels or let Quack create them, and to turn on tickets, the honeypot, and the server activity log. Keep the log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members need access to the ticket entry and honeypot channels. You can also change these settings on the dashboard.
+--- model ---
+Heading [Fixed("Setup")]
+Text [Fixed("Use "), Command(Setup), Fixed(" to pick channels or let Quack create them, and to turn on tickets, the honeypot, and the server activity log. Keep the log, appeal, evidence, ticket staff, and server activity log channels staff-only. Members need access to the ticket entry and honeypot channels. You can also change these settings on the dashboard.")]

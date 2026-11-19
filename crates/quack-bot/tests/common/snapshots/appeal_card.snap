@@ -1,0 +1,11 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[warning]
+Appeal for case #1 · Spam
+From a member (ID 40) · submitted on [date]
+Waiting for a decision.
+Appeal statement
+> It wasn't me.
+[Accept] [Reject] <Open appeal>

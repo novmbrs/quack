@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM case_drafts WHERE ctid IN (SELECT ctid FROM case_drafts WHERE expires_at < now() LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "983f3d3eb8b8e4d04b317738d6c503b75c422be7721b9a406ccbb1ad9e3b7737"
+}

@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+moderation-log
+
+## topic
+Quack's moderation log: cases, actions, appeals, and setting changes.
+
+## first message
+tone: Neutral
+--- discord ---
+### Moderation log
+Quack posts moderation log entries here. Only staff can see this channel.
+--- plain ---
+Moderation log
+Quack posts moderation log entries here. Only staff can see this channel.
+--- model ---
+Heading [Fixed("Moderation log")]
+Text [Fixed("Quack posts moderation log entries here. Only staff can see this channel.")]

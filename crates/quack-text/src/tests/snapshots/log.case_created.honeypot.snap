@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## kick · post
+tone: Neutral
+--- discord ---
+Quack added **[case #12](<https://quack.example/guilds/111/cases/12>)** for <@222> under **Spam** after <@222> posted in the honeypot channel. Action for this case: kick.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+--- plain ---
+Quack added case #12 for Sam under Spam after Sam posted in the honeypot channel. Action for this case: kick.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Fixed("Quack added "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(" after "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" posted in the honeypot channel. Action for this case: kick.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+## kick · dashboard text
+discord: Quack added case #12 for <@222> under **Spam** after <@222> posted in the honeypot channel. Action for this case: kick.
+plain:   Quack added case #12 for Sam under Spam after Sam posted in the honeypot channel. Action for this case: kick.
+model:   [Fixed("Quack added case #12 for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" under "), Bold([User("Spam")]), Fixed(" after "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" posted in the honeypot channel. Action for this case: kick.")]

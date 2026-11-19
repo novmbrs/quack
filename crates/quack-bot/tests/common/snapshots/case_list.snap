@@ -1,0 +1,19 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Recent cases
+#12 · a member (ID 41) · Spam · [date]
+#11 · a member (ID 40) · Spam · [date]
+#10 · a member (ID 40) · Spam · [date]
+#9 · a member (ID 40) · Spam · [date]
+#8 · a member (ID 40) · Spam · [date]
+#7 · a member (ID 40) · Spam · [date]
+#6 · a member (ID 40) · Spam · [date]
+#5 · a member (ID 40) · Spam · [date]
+#4 · a member (ID 40) · Spam · [date]
+#3 · a member (ID 40) · Spam · [date]
+Page 1 of 2
+{select: Open a case}
+[Next]

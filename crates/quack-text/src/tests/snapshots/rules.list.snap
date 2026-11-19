@@ -1,0 +1,76 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one rule, one archived
+tone: Neutral
+--- discord ---
+### Rules
+**Spam** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+-# Rules are edited on the dashboard. 1 archived rule is there too.
+--- plain ---
+Rules
+Spam · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Rules are edited on the dashboard. 1 archived rule is there too.
+--- model ---
+Heading [Fixed("Rules")]
+Text [Bold([User("Spam")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Subtext [Fixed("Rules are edited on the dashboard. 1 archived rule is there too.")]
+
+## page 2 of 3, three archived
+tone: Neutral
+--- discord ---
+### Rules
+**Spam** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+-# Rules are edited on the dashboard. 3 archived rules are there too. Page 2 of 3.
+buttons: [Previous · Secondary] RulesPage(1) | [Next · Secondary] RulesPage(3)
+--- plain ---
+Rules
+Spam · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Rules are edited on the dashboard. 3 archived rules are there too. Page 2 of 3.
+--- model ---
+Heading [Fixed("Rules")]
+Text [Bold([User("Spam")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Subtext [Fixed("Rules are edited on the dashboard. 3 archived rules are there too. Page 2 of 3.")]
+
+## maximal page
+tone: Neutral
+--- discord ---
+### Rules
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 0** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 1** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 2** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 3** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 4** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 5** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 6** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 7** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 8** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+**Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long t 9** · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · [Open rule](<https://quack.example/guilds/111/cases/12>)
+-# Rules are edited on the dashboard. Page 1 of 2.
+buttons: [Next · Secondary] RulesPage(2)
+--- plain ---
+Rules
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 0 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 1 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 2 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 3 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 4 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 5 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 6 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 7 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 8 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 9 · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · Open rule
+Rules are edited on the dashboard. Page 1 of 2.
+--- model ---
+Heading [Fixed("Rules")]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 0")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 1")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 2")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 3")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 4")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 5")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 6")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 7")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 8")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Text [Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long t 9")]), Fixed(" · at 1 case: warning · at 3 cases: timeout for 1 hour 30 minutes · at 4 cases: kick · at 5 cases: ban · at 6 cases: ban and delete the last day of messages · "), Link { text: [Fixed("Open rule")], url: "https://quack.example/guilds/111/cases/12" }]
+Subtext [Fixed("Rules are edited on the dashboard. Page 1 of 2.")]

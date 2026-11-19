@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+Page 1 of 2 is saved. Select Continue to finish adding the case.
+buttons: [Continue · Primary] DraftContinue(DraftPage { draft: CaseId(01930000-0000-7000-8000-000000000001), rule: RuleId(01930000-0000-7000-8000-000000000002), version: 3, page: 2 })
+--- plain ---
+Page 1 of 2 is saved. Select Continue to finish adding the case.
+--- model ---
+Text [Fixed("Page 1 of 2 is saved. Select Continue to finish adding the case.")]

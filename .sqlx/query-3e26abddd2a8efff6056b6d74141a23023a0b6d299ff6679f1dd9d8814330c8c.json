@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE case_counters SET last_number = last_number + 1 WHERE guild_id = $1 RETURNING last_number",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "case_counters",
+            "name": "last_number"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3e26abddd2a8efff6056b6d74141a23023a0b6d299ff6679f1dd9d8814330c8c"
+}

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack stopped copying evidence files. Existing copies stay where they are.
+plain:   Quack stopped copying evidence files. Existing copies stay where they are.
+model:   [Fixed("Quack stopped copying evidence files. Existing copies stay where they are.")]

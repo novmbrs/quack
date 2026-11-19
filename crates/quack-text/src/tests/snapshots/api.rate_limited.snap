@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## 12 seconds
+discord: Please wait 12 seconds before trying again.
+plain:   Please wait 12 seconds before trying again.
+model:   [Fixed("Please wait 12 seconds before trying again.")]
+
+## 1 second
+discord: Please wait 1 second before trying again.
+plain:   Please wait 1 second before trying again.
+model:   [Fixed("Please wait 1 second before trying again.")]

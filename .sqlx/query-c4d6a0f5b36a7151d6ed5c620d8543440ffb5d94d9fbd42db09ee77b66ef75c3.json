@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO discord_accounts (account_id, mfa_enabled, mfa_checked_at) VALUES ($1, $2, now())\n             ON CONFLICT (account_id) DO UPDATE SET\n               mfa_enabled = EXCLUDED.mfa_enabled, mfa_checked_at = now(), updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c4d6a0f5b36a7151d6ed5c620d8543440ffb5d94d9fbd42db09ee77b66ef75c3"
+}

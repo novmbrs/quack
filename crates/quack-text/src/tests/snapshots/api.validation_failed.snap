@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Check the marked fields and save again.
+plain:   Check the marked fields and save again.
+model:   [Fixed("Check the marked fields and save again.")]

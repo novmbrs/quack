@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack is having trouble right now, so nothing changed. Try again in a moment.
+plain:   Quack is having trouble right now, so nothing changed. Try again in a moment.
+model:   [Fixed("Quack is having trouble right now, so nothing changed. Try again in a moment.")]

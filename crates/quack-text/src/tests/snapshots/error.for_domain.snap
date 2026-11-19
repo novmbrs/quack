@@ -1,0 +1,652 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MissingCapability(Moderate) · staff · all facts
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
+
+## MissingCapability(Moderate) · adding a case · all facts
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
+
+## MissingCapability(Moderate) · editing a rule · all facts
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
+
+## MissingCapability(Moderate) · member · all facts
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
+
+## MissingCapability(Moderate) · no facts
+discord: Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+plain:   Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.
+model:   [Fixed("Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.")]
+
+## MfaRequired · staff · all facts
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
+
+## MfaRequired · adding a case · all facts
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
+
+## MfaRequired · editing a rule · all facts
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
+
+## MfaRequired · member · all facts
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
+
+## MfaRequired · no facts
+discord: This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+plain:   This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.
+model:   [Fixed("This server requires two-factor authentication for moderation. In Discord, open User Settings → My Account and turn on two-factor authentication. Then sign in to the Quack dashboard with Discord and try again.")]
+
+## MemberRefused(MemberIsBot) · staff · all facts
+discord: No case was added. <@222> is a bot, and cases are only for people.
+plain:   No case was added. Sam is a bot, and cases are only for people.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+
+## MemberRefused(MemberIsBot) · adding a case · all facts
+discord: No case was added. <@222> is a bot, and cases are only for people.
+plain:   No case was added. Sam is a bot, and cases are only for people.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+
+## MemberRefused(MemberIsBot) · editing a rule · all facts
+discord: No case was added. <@222> is a bot, and cases are only for people.
+plain:   No case was added. Sam is a bot, and cases are only for people.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+
+## MemberRefused(MemberIsBot) · member · all facts
+discord: No case was added. <@222> is a bot, and cases are only for people.
+plain:   No case was added. Sam is a bot, and cases are only for people.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" is a bot, and cases are only for people.")]
+
+## MemberRefused(MemberIsBot) · no facts
+discord: No case was added. The member is a bot, and cases are only for people.
+plain:   No case was added. The member is a bot, and cases are only for people.
+model:   [Fixed("No case was added. The member is a bot, and cases are only for people.")]
+
+## CaseNotFound · staff · all facts
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]
+
+## CaseNotFound · adding a case · all facts
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]
+
+## CaseNotFound · editing a rule · all facts
+discord: Case #12 wasn't found in this server. Check the number or use </case list:1001>.
+plain:   Case #12 wasn't found in this server. Check the number or use /case list.
+model:   [Fixed("Case #12 wasn't found in this server. Check the number or use "), Command(CaseList), Fixed(".")]
+
+## CaseNotFound · member · all facts
+discord: Quack couldn't find what you opened. Go back to the list and open it again.
+plain:   Quack couldn't find what you opened. Go back to the list and open it again.
+model:   [Fixed("Quack couldn't find what you opened. Go back to the list and open it again.")]
+
+## CaseNotFound · no facts
+discord: Quack couldn't find that case in this server.
+plain:   Quack couldn't find that case in this server.
+model:   [Fixed("Quack couldn't find that case in this server.")]
+
+## CaseAlreadyVoided · staff · all facts
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
+
+## CaseAlreadyVoided · adding a case · all facts
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
+
+## CaseAlreadyVoided · editing a rule · all facts
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
+
+## CaseAlreadyVoided · member · all facts
+discord: Case #12 is already voided and no longer counts.
+plain:   Case #12 is already voided and no longer counts.
+model:   [Fixed("Case #12 is already voided and no longer counts.")]
+
+## CaseAlreadyVoided · no facts
+discord: This case is already voided and no longer counts.
+plain:   This case is already voided and no longer counts.
+model:   [Fixed("This case is already voided and no longer counts.")]
+
+## CaseVoided · staff · all facts
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
+
+## CaseVoided · adding a case · all facts
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
+
+## CaseVoided · editing a rule · all facts
+discord: Case #12 is voided. Quack won't retry its ban.
+plain:   Case #12 is voided. Quack won't retry its ban.
+model:   [Fixed("Case #12 is voided. Quack won't retry its ban.")]
+
+## CaseVoided · member · all facts
+discord: Case #12 was voided and no longer counts. You can still review it on the dashboard.
+plain:   Case #12 was voided and no longer counts. You can still review it on the dashboard.
+model:   [Fixed("Case #12 was voided and no longer counts. You can still review it on the dashboard.")]
+
+## CaseVoided · no facts
+discord: This case is voided. Quack won't retry its action.
+plain:   This case is voided. Quack won't retry its action.
+model:   [Fixed("This case is voided. Quack won't retry its action.")]
+
+## ReplacementInvalid · staff · all facts
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
+
+## ReplacementInvalid · adding a case · all facts
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
+
+## ReplacementInvalid · editing a rule · all facts
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
+
+## ReplacementInvalid · member · all facts
+discord: Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("Case #12 can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
+
+## ReplacementInvalid · no facts
+discord: That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+plain:   That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.
+model:   [Fixed("That case can't be replaced. Choose a voided case in this server that doesn't already have a replacement.")]
+
+## RuleNotFound · staff · all facts
+discord: That rule doesn't exist anymore. Choose another rule.
+plain:   That rule doesn't exist anymore. Choose another rule.
+model:   [Fixed("That rule doesn't exist anymore. Choose another rule.")]
+
+## RuleNotFound · adding a case · all facts
+discord: That rule doesn't exist anymore. Choose another rule.
+plain:   That rule doesn't exist anymore. Choose another rule.
+model:   [Fixed("That rule doesn't exist anymore. Choose another rule.")]
+
+## RuleNotFound · editing a rule · all facts
+discord: That rule doesn't exist anymore. Choose another rule.
+plain:   That rule doesn't exist anymore. Choose another rule.
+model:   [Fixed("That rule doesn't exist anymore. Choose another rule.")]
+
+## RuleNotFound · member · all facts
+discord: That rule doesn't exist anymore. Choose another rule.
+plain:   That rule doesn't exist anymore. Choose another rule.
+model:   [Fixed("That rule doesn't exist anymore. Choose another rule.")]
+
+## RuleNotFound · no facts
+discord: That rule doesn't exist anymore. Choose another rule.
+plain:   That rule doesn't exist anymore. Choose another rule.
+model:   [Fixed("That rule doesn't exist anymore. Choose another rule.")]
+
+## RuleArchived · staff · all facts
+discord: The rule **Spam** is archived, so it can't be applied. Choose an active rule.
+plain:   The rule Spam is archived, so it can't be applied. Choose an active rule.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" is archived, so it can't be applied. Choose an active rule.")]
+
+## RuleArchived · adding a case · all facts
+discord: The rule **Spam** is archived, so it can't be applied. Choose an active rule.
+plain:   The rule Spam is archived, so it can't be applied. Choose an active rule.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" is archived, so it can't be applied. Choose an active rule.")]
+
+## RuleArchived · editing a rule · all facts
+discord: The rule **Spam** is archived, so it can't be applied. Choose an active rule.
+plain:   The rule Spam is archived, so it can't be applied. Choose an active rule.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" is archived, so it can't be applied. Choose an active rule.")]
+
+## RuleArchived · member · all facts
+discord: The rule **Spam** is archived, so it can't be applied. Choose an active rule.
+plain:   The rule Spam is archived, so it can't be applied. Choose an active rule.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" is archived, so it can't be applied. Choose an active rule.")]
+
+## RuleArchived · no facts
+discord: That rule is archived, so it can't be applied. Choose an active rule.
+plain:   That rule is archived, so it can't be applied. Choose an active rule.
+model:   [Fixed("That rule is archived, so it can't be applied. Choose an active rule.")]
+
+## RuleChanged · staff · all facts
+discord: Someone else saved this rule. Reload it to see the latest version before you save.
+plain:   Someone else saved this rule. Reload it to see the latest version before you save.
+model:   [Fixed("Someone else saved this rule. Reload it to see the latest version before you save.")]
+
+## RuleChanged · adding a case · all facts
+discord: The rule **Spam** changed while you were adding the case. Run </case add:1001> again to use the new version.
+plain:   The rule Spam changed while you were adding the case. Run /case add again to use the new version.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" changed while you were adding the case. Run "), Command(CaseAdd), Fixed(" again to use the new version.")]
+
+## RuleChanged · editing a rule · all facts
+discord: Someone else saved this rule. Reload it to see the latest version before you save.
+plain:   Someone else saved this rule. Reload it to see the latest version before you save.
+model:   [Fixed("Someone else saved this rule. Reload it to see the latest version before you save.")]
+
+## RuleChanged · member · all facts
+discord: Someone else saved this rule. Reload it to see the latest version before you save.
+plain:   Someone else saved this rule. Reload it to see the latest version before you save.
+model:   [Fixed("Someone else saved this rule. Reload it to see the latest version before you save.")]
+
+## RuleChanged · no facts
+discord: Someone else saved this rule. Reload it to see the latest version before you save.
+plain:   Someone else saved this rule. Reload it to see the latest version before you save.
+model:   [Fixed("Someone else saved this rule. Reload it to see the latest version before you save.")]
+
+## RuleNameTaken · staff · all facts
+discord: Another active rule is already called **Spam**. Choose a different name.
+plain:   Another active rule is already called Spam. Choose a different name.
+model:   [Fixed("Another active rule is already called "), Bold([User("Spam")]), Fixed(". Choose a different name.")]
+
+## RuleNameTaken · adding a case · all facts
+discord: Another active rule is already called **Spam**. Choose a different name.
+plain:   Another active rule is already called Spam. Choose a different name.
+model:   [Fixed("Another active rule is already called "), Bold([User("Spam")]), Fixed(". Choose a different name.")]
+
+## RuleNameTaken · editing a rule · all facts
+discord: Another active rule is already called **Spam**. Choose a different name.
+plain:   Another active rule is already called Spam. Choose a different name.
+model:   [Fixed("Another active rule is already called "), Bold([User("Spam")]), Fixed(". Choose a different name.")]
+
+## RuleNameTaken · member · all facts
+discord: Another active rule is already called **Spam**. Choose a different name.
+plain:   Another active rule is already called Spam. Choose a different name.
+model:   [Fixed("Another active rule is already called "), Bold([User("Spam")]), Fixed(". Choose a different name.")]
+
+## RuleNameTaken · no facts
+discord: Another active rule already has this name. Choose a different name.
+plain:   Another active rule already has this name. Choose a different name.
+model:   [Fixed("Another active rule already has this name. Choose a different name.")]
+
+## TooManyRules · staff · all facts
+discord: A server can have at most 100 active rules. Archive one first.
+plain:   A server can have at most 100 active rules. Archive one first.
+model:   [Fixed("A server can have at most 100 active rules. Archive one first.")]
+
+## TooManyRules · adding a case · all facts
+discord: A server can have at most 100 active rules. Archive one first.
+plain:   A server can have at most 100 active rules. Archive one first.
+model:   [Fixed("A server can have at most 100 active rules. Archive one first.")]
+
+## TooManyRules · editing a rule · all facts
+discord: A server can have at most 100 active rules. Archive one first.
+plain:   A server can have at most 100 active rules. Archive one first.
+model:   [Fixed("A server can have at most 100 active rules. Archive one first.")]
+
+## TooManyRules · member · all facts
+discord: A server can have at most 100 active rules. Archive one first.
+plain:   A server can have at most 100 active rules. Archive one first.
+model:   [Fixed("A server can have at most 100 active rules. Archive one first.")]
+
+## TooManyRules · no facts
+discord: A server can have at most 100 active rules. Archive one first.
+plain:   A server can have at most 100 active rules. Archive one first.
+model:   [Fixed("A server can have at most 100 active rules. Archive one first.")]
+
+## RuleUsedByHoneypot · staff · all facts
+discord: The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+plain:   The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+model:   [Fixed("The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.")]
+
+## RuleUsedByHoneypot · adding a case · all facts
+discord: The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+plain:   The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+model:   [Fixed("The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.")]
+
+## RuleUsedByHoneypot · editing a rule · all facts
+discord: The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+plain:   The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+model:   [Fixed("The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.")]
+
+## RuleUsedByHoneypot · member · all facts
+discord: The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+plain:   The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+model:   [Fixed("The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.")]
+
+## RuleUsedByHoneypot · no facts
+discord: The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+plain:   The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.
+model:   [Fixed("The honeypot uses this rule, so it can't be archived. Choose another rule for the honeypot first.")]
+
+## RequiredFieldOnHoneypotRule · staff · all facts
+discord: The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+plain:   The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]
+
+## RequiredFieldOnHoneypotRule · adding a case · all facts
+discord: The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+plain:   The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]
+
+## RequiredFieldOnHoneypotRule · editing a rule · all facts
+discord: The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+plain:   The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]
+
+## RequiredFieldOnHoneypotRule · member · all facts
+discord: The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+plain:   The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]
+
+## RequiredFieldOnHoneypotRule · no facts
+discord: The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+plain:   The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]
+
+## ActionNotRetryable · staff · all facts
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
+
+## ActionNotRetryable · adding a case · all facts
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
+
+## ActionNotRetryable · editing a rule · all facts
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
+
+## ActionNotRetryable · member · all facts
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
+
+## ActionNotRetryable · no facts
+discord: This action can no longer be retried. Open the case to see its current outcome.
+plain:   This action can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("This action can no longer be retried. Open the case to see its current outcome.")]
+
+## ActionNotDismissable · staff · all facts
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## ActionNotDismissable · adding a case · all facts
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## ActionNotDismissable · editing a rule · all facts
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## ActionNotDismissable · member · all facts
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## ActionNotDismissable · no facts
+discord: This failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   This failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("This failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## ActionNotUndoable · staff · all facts
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
+
+## ActionNotUndoable · adding a case · all facts
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
+
+## ActionNotUndoable · editing a rule · all facts
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
+
+## ActionNotUndoable · member · all facts
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
+
+## ActionNotUndoable · no facts
+discord: This action can't be undone from the case. Open the case to see its current outcome.
+plain:   This action can't be undone from the case. Open the case to see its current outcome.
+model:   [Fixed("This action can't be undone from the case. Open the case to see its current outcome.")]
+
+## TimeoutWindowPassed · staff · all facts
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
+
+## TimeoutWindowPassed · adding a case · all facts
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
+
+## TimeoutWindowPassed · editing a rule · all facts
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
+
+## TimeoutWindowPassed · member · all facts
+discord: The timeout's end time has passed, so Quack won't retry it. Check <@222>'s case history before adding another case.
+plain:   The timeout's end time has passed, so Quack won't retry it. Check Sam's case history before adding another case.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s case history before adding another case.")]
+
+## TimeoutWindowPassed · no facts
+discord: The timeout's end time has passed, so Quack won't retry it.
+plain:   The timeout's end time has passed, so Quack won't retry it.
+model:   [Fixed("The timeout's end time has passed, so Quack won't retry it.")]
+
+## AppealNotFound · staff · all facts
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
+
+## AppealNotFound · adding a case · all facts
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
+
+## AppealNotFound · editing a rule · all facts
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
+
+## AppealNotFound · member · all facts
+discord: Quack couldn't find what you opened. Go back to the list and open it again.
+plain:   Quack couldn't find what you opened. Go back to the list and open it again.
+model:   [Fixed("Quack couldn't find what you opened. Go back to the list and open it again.")]
+
+## AppealNotFound · no facts
+discord: Quack couldn't find this appeal. Open the case, or use </appeals:1002> to see appeals waiting for a decision.
+plain:   Quack couldn't find this appeal. Open the case, or use /appeals to see appeals waiting for a decision.
+model:   [Fixed("Quack couldn't find this appeal. Open the case, or use "), Command(Appeals), Fixed(" to see appeals waiting for a decision.")]
+
+## AppealChanged · staff · all facts
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
+
+## AppealChanged · adding a case · all facts
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
+
+## AppealChanged · editing a rule · all facts
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
+
+## AppealChanged · member · all facts
+discord: The appeal changed while you were writing. Reload it and read the latest question before replying.
+plain:   The appeal changed while you were writing. Reload it and read the latest question before replying.
+model:   [Fixed("The appeal changed while you were writing. Reload it and read the latest question before replying.")]
+
+## AppealChanged · no facts
+discord: This appeal changed since you opened it. Open it again to see the latest update.
+plain:   This appeal changed since you opened it. Open it again to see the latest update.
+model:   [Fixed("This appeal changed since you opened it. Open it again to see the latest update.")]
+
+## AppealExists · staff · all facts
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
+
+## AppealExists · adding a case · all facts
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
+
+## AppealExists · editing a rule · all facts
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
+
+## AppealExists · member · all facts
+discord: You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+plain:   You already appealed case #12. Open your appeal on the dashboard to see the latest update.
+model:   [Fixed("You already appealed case #12. Open your appeal on the dashboard to see the latest update.")]
+
+## AppealExists · no facts
+discord: You already appealed this case. Open your appeal to see the latest update.
+plain:   You already appealed this case. Open your appeal to see the latest update.
+model:   [Fixed("You already appealed this case. Open your appeal to see the latest update.")]
+
+## AppealNotAllowed · staff · all facts
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
+
+## AppealNotAllowed · adding a case · all facts
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
+
+## AppealNotAllowed · editing a rule · all facts
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
+
+## AppealNotAllowed · member · all facts
+discord: Case #12 can't be appealed. You can still review it on the dashboard.
+plain:   Case #12 can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("Case #12 can't be appealed. You can still review it on the dashboard.")]
+
+## AppealNotAllowed · no facts
+discord: This case can't be appealed. You can still review it on the dashboard.
+plain:   This case can't be appealed. You can still review it on the dashboard.
+model:   [Fixed("This case can't be appealed. You can still review it on the dashboard.")]
+
+## EvidenceLimitReached { count: 50 } · staff · all facts
+discord: Case #12 would have more than 50 evidence items. Add fewer message links.
+plain:   Case #12 would have more than 50 evidence items. Add fewer message links.
+model:   [Fixed("Case #12 would have more than 50 evidence items. Add fewer message links.")]
+
+## EvidenceLimitReached { count: 50 } · adding a case · all facts
+discord: Case #12 would have more than 50 evidence items. Add fewer message links.
+plain:   Case #12 would have more than 50 evidence items. Add fewer message links.
+model:   [Fixed("Case #12 would have more than 50 evidence items. Add fewer message links.")]
+
+## EvidenceLimitReached { count: 50 } · editing a rule · all facts
+discord: Case #12 would have more than 50 evidence items. Add fewer message links.
+plain:   Case #12 would have more than 50 evidence items. Add fewer message links.
+model:   [Fixed("Case #12 would have more than 50 evidence items. Add fewer message links.")]
+
+## EvidenceLimitReached { count: 50 } · member · all facts
+discord: Case #12 would have more than 50 evidence items. Add fewer message links.
+plain:   Case #12 would have more than 50 evidence items. Add fewer message links.
+model:   [Fixed("Case #12 would have more than 50 evidence items. Add fewer message links.")]
+
+## EvidenceLimitReached { count: 50 } · no facts
+discord: This case would have more than 50 evidence items. Add fewer message links.
+plain:   This case would have more than 50 evidence items. Add fewer message links.
+model:   [Fixed("This case would have more than 50 evidence items. Add fewer message links.")]
+
+## TooManyLinks · staff · all facts
+discord: Add at most 10 message links at a time.
+plain:   Add at most 10 message links at a time.
+model:   [Fixed("Add at most 10 message links at a time.")]
+
+## TooManyLinks · adding a case · all facts
+discord: Add at most 10 message links at a time.
+plain:   Add at most 10 message links at a time.
+model:   [Fixed("Add at most 10 message links at a time.")]
+
+## TooManyLinks · editing a rule · all facts
+discord: Add at most 10 message links at a time.
+plain:   Add at most 10 message links at a time.
+model:   [Fixed("Add at most 10 message links at a time.")]
+
+## TooManyLinks · member · all facts
+discord: Add at most 10 message links at a time.
+plain:   Add at most 10 message links at a time.
+model:   [Fixed("Add at most 10 message links at a time.")]
+
+## TooManyLinks · no facts
+discord: Add at most 10 message links at a time.
+plain:   Add at most 10 message links at a time.
+model:   [Fixed("Add at most 10 message links at a time.")]
+
+## SettingsChanged · staff · all facts
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
+
+## SettingsChanged · adding a case · all facts
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
+
+## SettingsChanged · editing a rule · all facts
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
+
+## SettingsChanged · member · all facts
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
+
+## SettingsChanged · no facts
+discord: Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+plain:   Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.
+model:   [Fixed("Someone else changed the staff roles. Reload the server settings and check the current roles before saving again.")]
+
+## TicketNotOpen · staff · all facts
+discord: This ticket is already closed or closing.
+plain:   This ticket is already closed or closing.
+model:   [Fixed("This ticket is already closed or closing.")]
+
+## TicketNotOpen · adding a case · all facts
+discord: This ticket is already closed or closing.
+plain:   This ticket is already closed or closing.
+model:   [Fixed("This ticket is already closed or closing.")]
+
+## TicketNotOpen · editing a rule · all facts
+discord: This ticket is already closed or closing.
+plain:   This ticket is already closed or closing.
+model:   [Fixed("This ticket is already closed or closing.")]
+
+## TicketNotOpen · member · all facts
+discord: This ticket is already closed or closing.
+plain:   This ticket is already closed or closing.
+model:   [Fixed("This ticket is already closed or closing.")]
+
+## TicketNotOpen · no facts
+discord: This ticket is already closed or closing.
+plain:   This ticket is already closed or closing.
+model:   [Fixed("This ticket is already closed or closing.")]

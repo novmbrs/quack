@@ -21,36 +21,3 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-
-.offers {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.offer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-  animation: rise-in var(--slow) var(--ease-out);
-}
-
-.offerText {
-  flex-grow: 1;
-  min-width: 200px;
-}
-
-.offerTitle {
-  font-weight: 650;
-  color: var(--text-strong);
-}
-
-.offerBody {
-  font-size: 14px;
-  color: var(--text-muted);
-}

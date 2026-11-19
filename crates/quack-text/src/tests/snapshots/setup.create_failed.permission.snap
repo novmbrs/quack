@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one permission
+discord: Quack couldn't create #moderation-log. In Server Settings → Roles, give Quack's role Manage Channels. Or choose an existing channel.
+plain:   Quack couldn't create #moderation-log. In Server Settings → Roles, give Quack's role Manage Channels. Or choose an existing channel.
+model:   [Fixed("Quack couldn't create #moderation-log. In Server Settings → Roles, give Quack's role Manage Channels. Or choose an existing channel.")]
+
+## two permissions
+discord: Quack couldn't create #support. In Server Settings → Roles, give Quack's role Manage Channels and Manage Threads. Or choose an existing channel.
+plain:   Quack couldn't create #support. In Server Settings → Roles, give Quack's role Manage Channels and Manage Threads. Or choose an existing channel.
+model:   [Fixed("Quack couldn't create #support. In Server Settings → Roles, give Quack's role Manage Channels and Manage Threads. Or choose an existing channel.")]

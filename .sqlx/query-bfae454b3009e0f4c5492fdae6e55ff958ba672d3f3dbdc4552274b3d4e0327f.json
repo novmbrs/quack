@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_settings SET log_channel_posted_at = now()\n             WHERE guild_id = $1 AND log_channel_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bfae454b3009e0f4c5492fdae6e55ff958ba672d3f3dbdc4552274b3d4e0327f"
+}

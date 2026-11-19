@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actions SET state = 'cancelled', next_attempt_at = NULL, updated_at = now()\n             WHERE guild_id = $1 AND case_id = $2 AND undo_of_action_id IS NULL AND state = 'pending'\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "79a977bf78db51d120e7653ff0beedd49dcc5a92822158f805f8da47dcec1d4b"
+}

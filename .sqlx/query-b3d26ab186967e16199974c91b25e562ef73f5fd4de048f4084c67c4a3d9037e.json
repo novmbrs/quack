@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence_files SET copy_attempts = copy_attempts - 1\n             WHERE guild_id = $1 AND id = $2 AND copy_state = 'pending' AND copy_attempts > 0",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b3d26ab186967e16199974c91b25e562ef73f5fd4de048f4084c67c4a3d9037e"
+}

@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ActorNotInServer
+discord: No case was added. You're not in this server anymore.
+plain:   No case was added. You're not in this server anymore.
+model:   [Fixed("No case was added. You're not in this server anymore.")]
+
+## ActorNotInServer, no member known
+discord: No case was added. You're not in this server anymore.
+plain:   No case was added. You're not in this server anymore.
+model:   [Fixed("No case was added. You're not in this server anymore.")]

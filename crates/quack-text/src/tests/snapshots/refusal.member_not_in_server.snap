@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MemberNotInServer
+discord: No case was added. <@222> isn't in this server. Choose a current member.
+plain:   No case was added. Sam isn't in this server. Choose a current member.
+model:   [Fixed("No case was added. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in this server. Choose a current member.")]
+
+## MemberNotInServer, no member known
+discord: No case was added. The member isn't in this server. Choose a current member.
+plain:   No case was added. The member isn't in this server. Choose a current member.
+model:   [Fixed("No case was added. The member isn't in this server. Choose a current member.")]

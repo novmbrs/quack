@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM case_drafts WHERE id = $1 AND guild_id = $2 AND actor_id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "923261777d0734cafc56f89d80692875a0bd27829f2084e7697007cee5f4c31e"
+}

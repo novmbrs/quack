@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+rule — Only show cases under this rule.
+
+## description
+Only show cases under this rule.

@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+modal "Appeal this case" Appeal(CaseId(01930000-0000-7000-8000-000000000001))
+- Statement "Why should moderators reconsider this case?" (required)
+  description: Explain what you want the moderators to review. You can appeal this case once.
+  Paragraph text, 1–4000 characters, placeholder None, value None

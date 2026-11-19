@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+history — Show a member's case history.
+
+## description
+Show a member's case history.

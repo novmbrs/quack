@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dms SET state = 'not_needed', settled_at = now()\n             WHERE guild_id = $1 AND case_id = $2 AND kind = 'case' AND state = 'pending'\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "198921c9c3723056bca63b13f215c92204a8e494b840e7ed54876f5d8ca882a5"
+}

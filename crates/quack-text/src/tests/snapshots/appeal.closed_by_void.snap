@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The appeal was closed because the case was voided.
+plain:   The appeal was closed because the case was voided.
+model:   [Fixed("The appeal was closed because the case was voided.")]

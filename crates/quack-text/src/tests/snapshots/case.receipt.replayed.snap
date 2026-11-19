@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Case #12 is already saved. Run </case view:1001> and enter 12 as the number to see it.
+plain:   Case #12 is already saved. Run /case view and enter 12 as the number to see it.
+model:   [Fixed("Case #12 is already saved. Run "), Command(CaseView), Fixed(" and enter 12 as the number to see it.")]

@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guilds (guild_id, name, icon_hash, owner_id, mfa_required)\n               VALUES ($1, $2, $3, $4, $5)\n               ON CONFLICT (guild_id) DO UPDATE SET\n                 name = EXCLUDED.name, icon_hash = EXCLUDED.icon_hash, owner_id = EXCLUDED.owner_id,\n                 mfa_required = EXCLUDED.mfa_required, installed = true, left_at = NULL, updated_at = now()\n               RETURNING old.installed AS \"was_installed?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "was_installed?",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "installed"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text",
+        "Int8",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8262067cb5ad1cd9a6e4ada4371139d739764b8bc9d64374d670fceddf63bd07"
+}

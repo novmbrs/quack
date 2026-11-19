@@ -27,7 +27,7 @@ export function UserChip({
 }) {
   const { data: user, isPending } = useUser(guildId, userId);
   if (!userId) return <span className={s.muted}>Quack</span>;
-  const name = user?.display_name ?? "Unknown user";
+  const name = user?.display_name ?? "Unknown member";
   const body = (
     <>
       {isPending ? (
@@ -60,7 +60,7 @@ export function UserChip({
   );
 }
 
-/** Mention renders a user as an inline @mention pill. */
+/** Mention renders a member as an inline @mention pill. */
 export function Mention({ guildId, userId }: { guildId: string; userId: string }) {
   const { data: user } = useUser(guildId, userId);
   return (

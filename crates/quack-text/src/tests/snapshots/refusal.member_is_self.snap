@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MemberIsSelf
+discord: No case was added. You can't add a case about yourself. Ask another moderator.
+plain:   No case was added. You can't add a case about yourself. Ask another moderator.
+model:   [Fixed("No case was added. You can't add a case about yourself. Ask another moderator.")]
+
+## MemberIsSelf, no member known
+discord: No case was added. You can't add a case about yourself. Ask another moderator.
+plain:   No case was added. You can't add a case about yourself. Ask another moderator.
+model:   [Fixed("No case was added. You can't add a case about yourself. Ask another moderator.")]

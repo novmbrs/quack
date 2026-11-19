@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack created the rule **Honeypot** for the honeypot. Edit it on the dashboard to change what it does.
+plain:   Quack created the rule Honeypot for the honeypot. Edit it on the dashboard to change what it does.
+model:   [Fixed("Quack created the rule "), Bold([User("Honeypot")]), Fixed(" for the honeypot. Edit it on the dashboard to change what it does.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack shortened this message to fit in Discord.
+plain:   Quack shortened this message to fit in Discord.
+model:   [Fixed("Quack shortened this message to fit in Discord.")]

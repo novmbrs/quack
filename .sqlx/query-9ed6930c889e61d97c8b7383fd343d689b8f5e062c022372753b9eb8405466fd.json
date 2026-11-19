@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM ticket_messages WHERE ctid IN\n                   (SELECT ctid FROM ticket_messages WHERE expires_at < now() LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9ed6930c889e61d97c8b7383fd343d689b8f5e062c022372753b9eb8405466fd"
+}

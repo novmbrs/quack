@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Sign in with Discord to continue.
+plain:   Sign in with Discord to continue.
+model:   [Fixed("Sign in with Discord to continue.")]

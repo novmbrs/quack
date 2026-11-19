@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+No case was added. user10 owns this server. Quack doesn't add cases about the server owner.

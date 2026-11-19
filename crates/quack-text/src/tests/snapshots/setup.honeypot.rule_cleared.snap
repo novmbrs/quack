@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot no longer uses a rule. Choose one before turning it on.
+plain:   The honeypot no longer uses a rule. Choose one before turning it on.
+model:   [Fixed("The honeypot no longer uses a rule. Choose one before turning it on.")]

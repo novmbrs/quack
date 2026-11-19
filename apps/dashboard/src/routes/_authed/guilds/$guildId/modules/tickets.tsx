@@ -1,32 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, Ticket } from "lucide-react";
+import { ExternalLink, Ticket as TicketIcon } from "lucide-react";
 import { useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
-import { ticketQuery, ticketTranscriptQuery } from "~/api/modules";
+import { ApiError, api, write } from "~/api/client";
+import { useCursorPager } from "~/api/paging";
 import {
   guildMeQuery,
+  healthQuery,
   keys,
-  ticketSettingsQuery,
+  type TicketListState,
+  ticketQuery,
+  ticketsModuleQuery,
   ticketsQuery,
-  ticketStatusQuery,
+  ticketTranscriptQuery,
 } from "~/api/queries";
-import type { Ticket as TicketRow, TicketEvent, TicketSettings } from "~/api/types";
+import type { Ticket, TicketSettings, TicketState } from "~/api/types";
 import { ChannelPicker } from "~/features/channels/ChannelPicker";
 import { discordChannelUrl } from "~/features/channels/channels";
+import { errorText } from "~/features/modules/enable";
 import { Command, ModuleHeader, StatTiles, useModuleSwitch } from "~/features/modules/ModuleParts";
 import { UserChip } from "~/features/people/User";
-import { cx } from "~/lib/cx";
 import { ago, fullDate, stamp } from "~/lib/format";
 import { useCan } from "~/lib/permissions";
 import { Badge, type Tone } from "~/ui/Badge";
 import { Button, ExternalButton } from "~/ui/Button";
 import { ConfirmDialog } from "~/ui/ConfirmDialog";
+import { Pager } from "~/ui/DataTable";
 import { Details } from "~/ui/Details";
 import { Field, TextInput } from "~/ui/Field";
 import { Heading, Page, Panel, Section } from "~/ui/Page";
-import { QuackIcon, type QuackIconName } from "~/ui/QuackIcon";
 import { SaveBar } from "~/ui/SaveBar";
 import { Segmented } from "~/ui/Segmented";
 import { Empty, ErrorState, Skeleton, SkeletonRows } from "~/ui/States";
@@ -34,22 +37,16 @@ import { toast } from "~/ui/Toast";
 
 import s from "./tickets.module.css";
 
-type QueueStatus = TicketRow["status"];
-
 export const Route = createFileRoute("/_authed/guilds/$guildId/modules/tickets")({
   loader: async ({ context, params }) => {
     const { queryClient } = context;
     const me = await queryClient.ensureQueryData(guildMeQuery(params.guildId));
-    const can = (p: string) => me.permissions[p] === true;
     // Warm what this person may see without failing the page over it.
     await Promise.all([
-      can("guild_settings.write") || can("ticket.resolve")
-        ? queryClient.prefetchQuery(ticketStatusQuery(params.guildId))
+      me.capabilities.manage_settings
+        ? queryClient.prefetchQuery(ticketsModuleQuery(params.guildId))
         : null,
-      can("guild_settings.write")
-        ? queryClient.prefetchQuery(ticketSettingsQuery(params.guildId))
-        : null,
-      can("ticket.resolve")
+      me.capabilities.moderate
         ? queryClient.prefetchQuery(ticketsQuery(params.guildId, "open"))
         : null,
     ]);
@@ -60,14 +57,15 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/modules/tickets")
 function TicketsPage() {
   const { guildId } = Route.useParams();
   const can = useCan(guildId);
-  const canManage = can("guild_settings.write");
-  const canModerate = can("ticket.resolve");
+  const canManage = can("manage_settings");
+  const canModerate = can("moderate");
 
   if (!canManage && !canModerate) {
     return (
-      <Page icon={<Ticket size={22} />} title="Tickets">
+      <Page icon={<TicketIcon size={22} />} title="Tickets">
         <Empty icon="lock" title="Tickets are for staff">
-          Ticket settings need Manage Server, and the queue is for moderators.
+          Ticket settings need Manage Server in Discord, and the tickets themselves are for
+          moderators.
         </Empty>
       </Page>
     );
@@ -75,9 +73,9 @@ function TicketsPage() {
 
   return (
     <Page
-      icon={<Ticket size={22} />}
+      icon={<TicketIcon size={22} />}
       title="Tickets"
-      topic="Private support threads with your staff."
+      topic="Private support threads between a member and your staff."
     >
       <TicketsOverview guildId={guildId} canManage={canManage} canModerate={canModerate} />
     </Page>
@@ -93,42 +91,32 @@ function TicketsOverview({
   canManage: boolean;
   canModerate: boolean;
 }) {
-  const status = useQuery(ticketStatusQuery(guildId));
-  const settings = useQuery({ ...ticketSettingsQuery(guildId), enabled: canManage });
-  const toggle = useModuleSwitch(guildId, "tickets", "Tickets");
+  const module = useQuery({ ...ticketsModuleQuery(guildId), enabled: canManage });
+  const toggle = useModuleSwitch(guildId, "tickets");
   const [dirty, setDirty] = useState(false);
 
   return (
     <>
       <div className={s.column}>
         <ModuleHeader
+          module="tickets"
           icon="ticket"
-          title="Tickets"
-          enabled={status.data?.enabled}
+          state={module.data}
           onToggle={toggle.toggle}
           pending={toggle.pending}
           canManage={canManage}
-          locked={dirty ? "Save or reset your changes before switching tickets on or off." : null}
+          locked={dirty ? "Save or reset your changes before turning tickets on or off." : null}
           problem={toggle.problem}
-          setupCommand="/setup tickets"
         >
-          Members press Open ticket in your support channel to start a private thread with your
-          staff. When it's closed, Quack keeps a transcript and sends the member a copy.
+          Members select Open a ticket in your ticket channel to start a private thread with your
+          staff. When the ticket closes, Quack saves a transcript and sends the member a copy in a
+          DM.
         </ModuleHeader>
 
-        {status.isError ? (
-          <ErrorState error={status.error} retry={() => void status.refetch()} />
-        ) : status.data ? (
-          <StatTiles
-            items={[
-              { label: "Open tickets", value: status.data.open_tickets },
-              {
-                label: "Entry channel",
-                value: status.data.entry_configured ? "Set" : "Not set",
-                tone: status.data.entry_configured ? undefined : "warning",
-              },
-            ]}
-          />
+        {!canManage ? null : module.isError ? (
+          <ErrorState error={module.error} retry={() => void module.refetch()} />
+        ) : module.data ? (
+          <StatTiles items={[{ label: "Open tickets", value: module.data.open_tickets }]} />
         ) : (
           <Skeleton height={78} />
         )}
@@ -138,15 +126,14 @@ function TicketsOverview({
 
       {canManage ? (
         <div className={s.column}>
-          {settings.isPending ? (
+          {module.isPending ? (
             <SkeletonRows rows={3} />
-          ) : settings.isError ? (
-            <ErrorState error={settings.error} retry={() => void settings.refetch()} />
-          ) : (
+          ) : module.isError ? null : (
             <TicketSettingsForm
               guildId={guildId}
-              enabled={settings.data.enabled}
-              saved={settings.data.settings}
+              enabled={module.data.enabled}
+              saved={module.data.settings}
+              version={module.data.version}
               onDirtyChange={setDirty}
             />
           )}
@@ -159,37 +146,40 @@ function TicketsOverview({
 type Draft = { entry: string; queue: string; retention: string };
 
 const draftFrom = (saved: TicketSettings): Draft => ({
-  entry: saved.entry_channel_discord_id ?? "",
-  queue: saved.queue_channel_discord_id ?? "",
-  retention: String(saved.transcript_retention_days ?? 90),
+  entry: saved.entry_channel_id ?? "",
+  queue: saved.queue_channel_id ?? "",
+  retention: String(saved.transcript_retention_days),
 });
+
+const differs = (a: Draft, b: Draft) =>
+  a.entry !== b.entry || a.queue !== b.queue || a.retention !== b.retention;
 
 function TicketSettingsForm({
   guildId,
   enabled,
   saved,
+  version,
   onDirtyChange,
 }: {
   guildId: string;
   enabled: boolean;
   saved: TicketSettings;
+  /** The settings' version, sent back so a newer save isn't overwritten. */
+  version: number;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const [edits, setEdits] = useState<Draft | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<unknown>(null);
   const base = draftFrom(saved);
   const form = edits ?? base;
-  const dirty =
-    form.entry !== base.entry || form.queue !== base.queue || form.retention !== base.retention;
+  const dirty = differs(form, base);
 
   const set = (patch: Partial<Draft>) => {
     const next = { ...form, ...patch };
     setEdits(next);
     setSaveError(null);
-    onDirtyChange(
-      next.entry !== base.entry || next.queue !== base.queue || next.retention !== base.retention,
-    );
+    onDirtyChange(differs(next, base));
   };
   const reset = () => {
     setEdits(null);
@@ -197,49 +187,46 @@ function TicketSettingsForm({
     onDirtyChange(false);
   };
 
+  const apiField = (path: string) =>
+    saveError instanceof ApiError ? saveError.field(path) : undefined;
   const days = Number(form.retention);
+  const retentionValid = Number.isInteger(days) && days >= 1 && days <= 365;
   const retentionError =
-    Number.isInteger(days) && days >= 1 && days <= 365 ? null : "Pick 1 to 365 days";
-  const entryError =
+    apiField("transcript_retention_days") ?? (retentionValid ? null : "Choose 1 to 365 days");
+  const entryProblem =
     enabled && !form.entry ? "Tickets need an entry channel while they're on" : null;
-  const queueError =
+  const queueProblem =
     enabled && !form.queue
-      ? "Tickets need a staff queue while they're on"
+      ? "Tickets need a staff channel while they're on"
       : form.queue && form.queue === form.entry
         ? "Use a different channel from the entry channel"
         : null;
-  const invalid = Boolean(retentionError || entryError || queueError);
+  const entryError = apiField("entry_channel_id") ?? entryProblem;
+  const queueError = apiField("queue_channel_id") ?? queueProblem;
+  const invalid = Boolean(!retentionValid || entryProblem || queueProblem);
 
   const save = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.PUT("/guilds/{discordGuildID}/modules/tickets/settings", {
-          params: { path: { discordGuildID: guildId } },
+      write((init) =>
+        api.PUT("/api/guilds/{guild_id}/modules/tickets/settings", {
+          params: { path: { guild_id: guildId } },
           body: {
-            enabled,
-            settings: {
-              ...saved,
-              entry_channel_discord_id: form.entry,
-              queue_channel_discord_id: form.queue,
-              transcript_retention_days: days,
-            },
+            expected_version: version,
+            entry_channel_id: form.entry || null,
+            queue_channel_id: form.queue || null,
+            transcript_retention_days: days,
           },
+          ...init,
         }),
       ),
     onSuccess: (data) => {
-      queryClient.setQueryData(ticketSettingsQuery(guildId).queryKey, data);
+      queryClient.setQueryData(ticketsModuleQuery(guildId).queryKey, data);
       void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
+      void queryClient.invalidateQueries({ queryKey: healthQuery(guildId).queryKey });
       reset();
       toast.success("Ticket settings saved.");
     },
-    onError: (e) =>
-      setSaveError(
-        e instanceof ApiError && e.status === 400
-          ? "Quack couldn't save these settings. Check the channels and try again."
-          : e instanceof ApiError
-            ? e.message
-            : "Couldn't save ticket settings.",
-      ),
+    onError: setSaveError,
   });
 
   return (
@@ -253,9 +240,9 @@ function TicketSettingsForm({
           error={entryError}
           hint={
             <>
-              Members open tickets from the button here, and their threads live under it. Moving it
-              doesn't move the button: run <Command>/setup tickets</Command> in Discord to post it
-              in the new channel.
+              Members open tickets with the button Quack posts here, and their threads live under
+              it. When you change it, Quack moves the button. You can also set this up with{" "}
+              <Command>/setup</Command> in Discord.
             </>
           }
         >
@@ -273,9 +260,9 @@ function TicketSettingsForm({
           )}
         </Field>
         <Field
-          label="Staff queue channel"
+          label="Staff channel for new tickets"
           error={queueError}
-          hint="Quack posts each new ticket here and attaches the transcript when it closes. Pick a channel only staff can see."
+          hint="Quack posts each new ticket here and attaches the transcript when it closes. Choose a channel only staff can see."
         >
           {(id) => (
             <ChannelPicker
@@ -284,7 +271,7 @@ function TicketSettingsForm({
               value={form.queue}
               onChange={(queue) => set({ queue })}
               clearable={!enabled}
-              noneLabel="No staff queue"
+              noneLabel="No staff channel"
               invalid={Boolean(queueError)}
             />
           )}
@@ -292,7 +279,7 @@ function TicketSettingsForm({
         <Field
           label="Keep transcripts for"
           error={retentionError}
-          hint="After this, Quack deletes the transcript and the saved messages. Members keep the copy Quack sent them."
+          hint="After this, the transcript is no longer available on the dashboard. Members keep the copy Quack sent them in a DM."
         >
           {(id) => (
             <div className={s.daysRow}>
@@ -314,42 +301,43 @@ function TicketSettingsForm({
         onReset={reset}
         onSave={() => save.mutate()}
         pending={save.isPending}
-        error={saveError}
+        error={errorText(saveError)}
         saveDisabled={invalid}
       />
     </Section>
   );
 }
 
-const statusMeta: Record<QueueStatus, { label: string; tone: Tone }> = {
+const stateMeta: Record<TicketState, { label: string; tone: Tone }> = {
+  opening: { label: "Opening", tone: "info" },
   open: { label: "Open", tone: "success" },
-  resolved: { label: "Resolved", tone: "neutral" },
-  cancelled: { label: "Cancelled", tone: "neutral" },
+  closing: { label: "Closing", tone: "warning" },
+  closed: { label: "Closed", tone: "neutral" },
 };
 
 function TicketQueue({ guildId }: { guildId: string }) {
-  const [status, setStatus] = useState<QueueStatus>("open");
+  const [state, setState] = useState<TicketListState>("open");
   const [selected, setSelected] = useState<string | null>(null);
-  const tickets = useQuery(ticketsQuery(guildId, status));
-  const list = tickets.data ?? [];
+  const pager = useCursorPager(state);
+  const tickets = useQuery(ticketsQuery(guildId, state, pager.cursor));
+  const list = tickets.data?.tickets ?? [];
   const current = list.find((t) => t.id === selected) ? selected : (list[0]?.id ?? null);
 
   return (
     <Section
-      title="Queue"
+      title="Tickets"
       description="Oldest first, so whoever has waited longest is on top."
       actions={
         <Segmented
-          label="Ticket status"
-          value={status}
+          label="Ticket state"
+          value={state}
           onChange={(next) => {
-            setStatus(next);
+            setState(next);
             setSelected(null);
           }}
           options={[
             { value: "open", label: "Open" },
-            { value: "resolved", label: "Resolved" },
-            { value: "cancelled", label: "Cancelled" },
+            { value: "closed", label: "Closed" },
           ]}
         />
       }
@@ -362,72 +350,83 @@ function TicketQueue({ guildId }: { guildId: string }) {
         <Panel>
           <Empty
             icon="ticket"
-            title={status === "open" ? "No open tickets" : "Nothing here yet"}
+            title={state === "open" ? "No open tickets" : "No closed tickets"}
             compact
           >
-            {status === "open"
+            {state === "open"
               ? "When a member opens a ticket, it shows up here."
-              : `${statusMeta[status].label} tickets show up here.`}
+              : "Closed tickets and their transcripts show up here."}
           </Empty>
         </Panel>
       ) : (
-        <div className={s.split} data-dim={tickets.isPlaceholderData || undefined}>
-          <ul className={s.list} aria-label="Tickets">
-            {list.map((t) => (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  aria-current={t.id === current || undefined}
-                  onClick={() => setSelected(t.id)}
-                  className={s.row}
-                >
-                  <UserChip guildId={guildId} userId={t.owner_discord_user_id} link={false} />
-                  <time
-                    dateTime={t.created_at}
-                    title={fullDate(t.created_at)}
-                    className={s.rowTime}
+        <>
+          <div className={s.split} data-dim={tickets.isPlaceholderData || undefined}>
+            <ul className={s.list} aria-label="Tickets">
+              {list.map((t) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    aria-current={t.id === current || undefined}
+                    onClick={() => setSelected(t.id)}
+                    className={s.row}
                   >
-                    {ago(t.created_at)}
-                  </time>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {current ? <TicketDetail key={current} guildId={guildId} ticketId={current} /> : null}
-        </div>
+                    <UserChip guildId={guildId} userId={t.member_id} link={false} />
+                    <time
+                      dateTime={t.created_at}
+                      title={fullDate(t.created_at)}
+                      className={s.rowTime}
+                    >
+                      {ago(t.created_at)}
+                    </time>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {current ? <TicketDetail key={current} guildId={guildId} ticketId={current} /> : null}
+          </div>
+          <Pager
+            page={pager.page}
+            hasPrevious={pager.hasPrevious}
+            hasNext={Boolean(tickets.data?.next_cursor)}
+            onPrevious={pager.previous}
+            onNext={() => pager.next(tickets.data?.next_cursor)}
+          />
+        </>
       )}
     </Section>
   );
+}
+
+/** stateText is the ticket's state in a sentence, like the staff post in Discord (ticket.post.*). */
+function stateText(ticket: Ticket): string | null {
+  if (ticket.state === "opening") return "Quack is opening this ticket.";
+  if (ticket.close_reason === "open_failed")
+    return "Quack couldn't open this ticket. Check that Quack can create private threads in the ticket entry channel.";
+  if (ticket.state === "closing") return "Closing. Quack is saving the transcript.";
+  return null;
 }
 
 function TicketDetail({ guildId, ticketId }: { guildId: string; ticketId: string }) {
   const queryClient = useQueryClient();
   const detail = useQuery(ticketQuery(guildId, ticketId));
   const [closing, setClosing] = useState(false);
-  const [closeError, setCloseError] = useState<string | null>(null);
+  const [closeError, setCloseError] = useState<unknown>(null);
 
   const close = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/modules/tickets/{ticketID}/close", {
-          params: { path: { discordGuildID: guildId, ticketID: ticketId } },
+      write((init) =>
+        api.POST("/api/guilds/{guild_id}/tickets/{ticket_id}/close", {
+          params: { path: { guild_id: guildId, ticket_id: ticketId } },
+          ...init,
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (ticket) => {
       setClosing(false);
-      toast.success("Ticket closed.");
+      queryClient.setQueryData(ticketQuery(guildId, ticketId).queryKey, ticket);
+      toast.success("Quack is closing this ticket and saving the transcript.");
       void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
     },
-    onError: (e) =>
-      setCloseError(
-        e instanceof ApiError && e.status === 409
-          ? "Quack is still catching up on this ticket's messages, or it's already closing. Try again in a moment."
-          : e instanceof ApiError && e.status === 502
-            ? "Discord didn't finish closing the ticket. Check the thread, then try again."
-            : e instanceof ApiError
-              ? e.message
-              : "Couldn't close the ticket.",
-      ),
+    onError: setCloseError,
   });
 
   if (detail.isPending) {
@@ -445,30 +444,33 @@ function TicketDetail({ guildId, ticketId }: { guildId: string; ticketId: string
     );
   }
 
-  const { ticket, events } = detail.data;
-  const open = ticket.status === "open";
+  const ticket = detail.data;
+  const open = ticket.state === "open";
+  const note = stateText(ticket);
   return (
     <Panel className={s.detail}>
       <div className={s.detailHead}>
-        <UserChip guildId={guildId} userId={ticket.owner_discord_user_id} size={40} subtitle />
-        <Badge tone={statusMeta[ticket.status].tone} dot>
-          {statusMeta[ticket.status].label}
+        <UserChip guildId={guildId} userId={ticket.member_id} size={40} subtitle />
+        <Badge tone={stateMeta[ticket.state].tone} dot>
+          {stateMeta[ticket.state].label}
         </Badge>
       </div>
 
       <div className={s.actions}>
         {open ? (
           <>
-            <ExternalButton
-              size="sm"
-              variant="secondary"
-              href={discordChannelUrl(guildId, ticket.thread_discord_channel_id)}
-              target="_blank"
-              rel="noreferrer"
-              icon={<ExternalLink size={14} />}
-            >
-              Open thread in Discord
-            </ExternalButton>
+            {ticket.thread_id ? (
+              <ExternalButton
+                size="sm"
+                variant="secondary"
+                href={discordChannelUrl(guildId, ticket.thread_id)}
+                target="_blank"
+                rel="noreferrer"
+                icon={<ExternalLink size={14} />}
+              >
+                Open thread
+              </ExternalButton>
+            ) : null}
             <Button size="sm" variant="danger" onClick={() => setClosing(true)}>
               Close ticket
             </Button>
@@ -476,26 +478,34 @@ function TicketDetail({ guildId, ticketId }: { guildId: string; ticketId: string
         ) : null}
       </div>
 
+      {note ? <p className={s.sub}>{note}</p> : null}
+      {ticket.thread_delete_failed ? (
+        <p className={s.sub}>
+          Quack closed the ticket but couldn't delete the thread. Ask someone with Manage Threads to
+          delete it.
+        </p>
+      ) : null}
+
       <Details
         items={[
           {
             label: "Opened",
-            value: <time title={fullDate(ticket.created_at)}>{stamp(ticket.created_at)}</time>,
+            value: (
+              <time title={fullDate(ticket.opened_at ?? ticket.created_at)}>
+                {stamp(ticket.opened_at ?? ticket.created_at)}
+              </time>
+            ),
           },
-          ticket.resolved_at
+          ticket.closed_at
             ? {
                 label: "Closed",
                 value: (
                   <span className={s.inline}>
-                    <time title={fullDate(ticket.resolved_at)}>{stamp(ticket.resolved_at)}</time>
-                    {ticket.resolved_by_discord_user_id ? (
+                    <time title={fullDate(ticket.closed_at)}>{stamp(ticket.closed_at)}</time>
+                    {ticket.closed_by ? (
                       <>
                         <span className={s.muted}>by</span>
-                        <UserChip
-                          guildId={guildId}
-                          userId={ticket.resolved_by_discord_user_id}
-                          size={20}
-                        />
+                        <UserChip guildId={guildId} userId={ticket.closed_by} size={20} />
                       </>
                     ) : null}
                   </span>
@@ -505,14 +515,9 @@ function TicketDetail({ guildId, ticketId }: { guildId: string; ticketId: string
         ]}
       />
 
-      {events?.length ? (
-        <section className={s.block}>
-          <Heading>History</Heading>
-          <TicketTimeline events={events} guildId={guildId} />
-        </section>
+      {ticket.state === "closed" && ticket.close_reason !== "open_failed" ? (
+        <Transcript guildId={guildId} ticket={ticket} />
       ) : null}
-
-      {open ? null : <Transcript guildId={guildId} ticket={ticket} />}
 
       <ConfirmDialog
         open={closing}
@@ -521,89 +526,78 @@ function TicketDetail({ guildId, ticketId }: { guildId: string; ticketId: string
           setCloseError(null);
         }}
         title="Close this ticket?"
-        description="Quack saves a transcript, sends the member a copy, and deletes the thread. Closed tickets can't be reopened."
+        description="Quack saves a transcript, sends the member a copy in a DM, and deletes the thread. A closed ticket can't be opened again."
         confirmLabel="Close ticket"
         tone="danger"
         pending={close.isPending}
-        error={closeError}
+        error={errorText(closeError)}
         onConfirm={() => close.mutate()}
       />
     </Panel>
   );
 }
 
-function Transcript({ guildId, ticket }: { guildId: string; ticket: TicketRow }) {
-  const transcript = useQuery(ticketTranscriptQuery(guildId, ticket.id));
-  const gone = transcript.error instanceof ApiError && transcript.error.status === 404;
+const partialText = {
+  history: "Some messages may be missing because Quack couldn't read the full thread.",
+  trimmed: "Some messages are missing because Quack reached the 8 MB limit.",
+} as const;
+
+/** downloadTranscript saves a transcript as a text file. */
+function downloadTranscript(ticketId: string, content: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ticket-${ticketId}.txt`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function Transcript({ guildId, ticket }: { guildId: string; ticket: Ticket }) {
+  const info = ticket.transcript;
+  const available = info?.state === "available";
+  const transcript = useQuery({ ...ticketTranscriptQuery(guildId, ticket.id), enabled: available });
+  const gone =
+    info?.state === "expired" ||
+    (transcript.error instanceof ApiError && transcript.error.status === 404);
   return (
     <section className={s.block}>
       <Heading
         actions={
-          ticket.transcript_url ? (
-            <a href={ticket.transcript_url} target="_blank" rel="noreferrer" className={s.link}>
+          transcript.data && !gone ? (
+            <button
+              type="button"
+              className={s.link}
+              onClick={() => downloadTranscript(ticket.id, transcript.data.content)}
+            >
               Download
-            </a>
+            </button>
           ) : null
         }
       >
         Transcript
       </Heading>
-      {transcript.isPending ? (
-        <Skeleton height={160} />
+      {!info ? (
+        <p className={s.muted}>Quack couldn't save a transcript for this ticket.</p>
       ) : gone ? (
-        <p className={s.muted}>
-          No transcript is kept for this ticket. It may have passed the retention period.
-        </p>
+        <p className={s.muted}>The transcript expired on {fullDate(info.expires_at)}.</p>
+      ) : transcript.isPending ? (
+        <Skeleton height={160} />
       ) : transcript.isError ? (
         <ErrorState error={transcript.error} retry={() => void transcript.refetch()} />
       ) : (
         <>
           <pre className={s.transcript} tabIndex={0}>
-            {transcript.data.content?.trim() || "The transcript is empty."}
+            {transcript.data.content.trim() || "The transcript is empty."}
           </pre>
-          {transcript.data.expires_at ? (
-            <p className={s.sub}>Kept until {fullDate(transcript.data.expires_at)}.</p>
-          ) : null}
+          {info.partial_cause ? <p className={s.sub}>{partialText[info.partial_cause]}</p> : null}
+          <p className={s.sub}>
+            The transcript is available on the dashboard until{" "}
+            {fullDate(transcript.data.expires_at)}.
+          </p>
         </>
       )}
     </section>
-  );
-}
-
-const eventIcons: Record<TicketEvent["type"], QuackIconName> = {
-  opened: "ticket",
-  replied: "reply",
-  resolved: "lock",
-  cancelled: "decline",
-  reopened: "unlock",
-  channel_missing: "warn",
-  permissions_repaired: "shield",
-};
-
-/** TicketTimeline lists a ticket's events oldest first. */
-function TicketTimeline({ events, guildId }: { events: TicketEvent[]; guildId: string }) {
-  const sorted = [...events].sort((a, b) => a.created_at.localeCompare(b.created_at));
-  return (
-    <ol className={s.timeline}>
-      {sorted.map((e) => (
-        <li key={e.id} className={s.event}>
-          <QuackIcon name={eventIcons[e.type] ?? "info"} size={18} />
-          <div className={s.eventBody}>
-            <p className={s.eventText}>{e.body}</p>
-            <p className={cx(s.sub, s.inline)}>
-              {e.actor_discord_user_id ? (
-                <>
-                  <UserChip guildId={guildId} userId={e.actor_discord_user_id} size={16} />
-                  <span>·</span>
-                </>
-              ) : null}
-              <time dateTime={e.created_at} title={fullDate(e.created_at)}>
-                {stamp(e.created_at)}
-              </time>
-            </p>
-          </div>
-        </li>
-      ))}
-    </ol>
   );
 }

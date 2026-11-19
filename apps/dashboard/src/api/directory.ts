@@ -2,15 +2,15 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import { api, unwrap } from "./client";
 import { keys } from "./queries";
-import type { DirectoryUser } from "./types";
+import type { DirectoryMember } from "./types";
 
 type Pending = {
-  resolve: (user: DirectoryUser | null) => void;
+  resolve: (user: DirectoryMember | null) => void;
   reject: (e: unknown) => void;
 };
 
 /**
- * Batcher collects user lookups made in the same tick and resolves them with
+ * Batcher collects member lookups made in the same tick and resolves them with
  * one request, so a page of fifty cases costs one call instead of fifty.
  */
 class Batcher {
@@ -19,7 +19,7 @@ class Batcher {
 
   constructor(private guildId: string) {}
 
-  load(userId: string): Promise<DirectoryUser | null> {
+  load(userId: string): Promise<DirectoryMember | null> {
     return new Promise((resolve, reject) => {
       const waiting = this.queue.get(userId) ?? [];
       waiting.push({ resolve, reject });
@@ -39,15 +39,15 @@ class Batcher {
     for (let i = 0; i < ids.length; i += 100) {
       const chunk = ids.slice(i, i + 100);
       try {
-        const { users } = await unwrap(
-          api.GET("/guilds/{discordGuildID}/directory/users", {
+        const { members } = await unwrap(
+          api.GET("/api/guilds/{guild_id}/directory/members", {
             params: {
-              path: { discordGuildID: this.guildId },
+              path: { guild_id: this.guildId },
               query: { ids: chunk.join(",") },
             },
           }),
         );
-        const found = new Map(users.map((u) => [u.id, u]));
+        const found = new Map(members.map((u) => [u.id, u]));
         for (const id of chunk)
           for (const p of batch.get(id) ?? []) p.resolve(found.get(id) ?? null);
       } catch (error) {
@@ -70,14 +70,14 @@ function batcher(guildId: string): Batcher {
 
 export const userQuery = (guildId: string, userId: string) =>
   queryOptions({
-    queryKey: [...keys.guild(guildId), "user", userId],
+    queryKey: [...keys.guild(guildId), "member", userId],
     queryFn: () => batcher(guildId).load(userId),
     staleTime: 10 * 60_000,
     gcTime: 30 * 60_000,
     retry: false,
   });
 
-/** useUser resolves a Discord user ID to a display name and avatar. */
+/** useUser resolves a Discord ID to a member's display name and avatar. */
 export function useUser(guildId: string, userId: string | undefined | null) {
   return useQuery({
     ...userQuery(guildId, userId ?? ""),
@@ -90,9 +90,9 @@ export const memberSearchQuery = (guildId: string, query: string) =>
     queryKey: [...keys.guild(guildId), "member-search", query],
     queryFn: () =>
       unwrap(
-        api.GET("/guilds/{discordGuildID}/directory/members", {
+        api.GET("/api/guilds/{guild_id}/directory/members", {
           params: {
-            path: { discordGuildID: guildId },
+            path: { guild_id: guildId },
             query: { query, limit: 10 },
           },
         }),
@@ -105,8 +105,8 @@ export const channelsQuery = (guildId: string) =>
     queryKey: [...keys.guild(guildId), "channels"],
     queryFn: () =>
       unwrap(
-        api.GET("/guilds/{discordGuildID}/directory/channels", {
-          params: { path: { discordGuildID: guildId } },
+        api.GET("/api/guilds/{guild_id}/directory/channels", {
+          params: { path: { guild_id: guildId } },
         }),
       ).then((r) => r.channels),
     staleTime: 30_000,
@@ -118,8 +118,8 @@ export const rolesQuery = (guildId: string) =>
     queryKey: [...keys.guild(guildId), "roles"],
     queryFn: () =>
       unwrap(
-        api.GET("/guilds/{discordGuildID}/directory/roles", {
-          params: { path: { discordGuildID: guildId } },
+        api.GET("/api/guilds/{guild_id}/directory/roles", {
+          params: { path: { guild_id: guildId } },
         }),
       ).then((r) => r.roles),
     staleTime: 30_000,

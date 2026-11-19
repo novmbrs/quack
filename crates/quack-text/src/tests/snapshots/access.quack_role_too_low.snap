@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+
+## no name
+discord: Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack's highest role must be above the member's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]

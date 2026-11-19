@@ -1,0 +1,24 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+<@333> voided **[case #12](<https://quack.example/guilds/111/cases/12>)** for <@222>.
+> Wrong member.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+--- plain ---
+Ana voided case #12 for Sam.
+> Wrong member.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" voided "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(" for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+Quote [User("Wrong member.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+##  · dashboard text
+discord: <@333> voided case #12 for <@222>.
+> Wrong member.
+plain:   Ana voided case #12 for Sam.
+> Wrong member.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" voided case #12 for "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".\n> "), User("Wrong member.")]

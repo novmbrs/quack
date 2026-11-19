@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets SET state = 'closed', closed_at = now(), updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'closing'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dca93f9e81752ed24817017b425b1997c7320926ee86007db50be912d136f93b"
+}

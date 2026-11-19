@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM oauth_states WHERE ctid IN (SELECT ctid FROM oauth_states WHERE expires_at < now() LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "28679e3a2d3e18e78e783574b74a977f490d4dd51df3d93f47bbe86b2eb4afc4"
+}

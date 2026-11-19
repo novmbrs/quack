@@ -1,0 +1,31 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+<@222> closed their ticket. Open the ticket on the dashboard to check for a transcript.
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Sam closed their ticket. Open the ticket on the dashboard to check for a transcript.
+17 Nov 2026 at 14:05 UTC · Open moderation log
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" closed their ticket. Open the ticket on the dashboard to check for a transcript.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: <@333> closed <@222>'s ticket. Open the ticket on the dashboard to check for a transcript.
+plain:   Ana closed Sam's ticket. Open the ticket on the dashboard to check for a transcript.
+model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" closed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ticket. Open the ticket on the dashboard to check for a transcript.")]
+
+## closed by staff · post
+tone: Neutral
+--- discord ---
+<@333> closed <@222>'s ticket. Open the ticket on the dashboard to check for a transcript.
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Ana closed Sam's ticket. Open the ticket on the dashboard to check for a transcript.
+17 Nov 2026 at 14:05 UTC · Open moderation log
+--- model ---
+Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" closed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ticket. Open the ticket on the dashboard to check for a transcript.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]

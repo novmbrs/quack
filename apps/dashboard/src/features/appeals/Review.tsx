@@ -1,26 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
+import { ApiError, api, write } from "~/api/client";
+import { useUser } from "~/api/directory";
 import { appealQuery, keys } from "~/api/queries";
-import type { Appeal, AppealStatus } from "~/api/types";
-import { actionMeta } from "~/lib/format";
+import type { Appeal } from "~/api/types";
+import { stamp } from "~/lib/format";
 import { useCan } from "~/lib/permissions";
 import { Button } from "~/ui/Button";
 import { ConfirmDialog } from "~/ui/ConfirmDialog";
-import { QuackIcon } from "~/ui/QuackIcon";
 import { toast } from "~/ui/Toast";
 
-import { type Decision, decisionReason, decisionsFrom, reasonRequired } from "./decisions";
+import {
+  type Decision,
+  decisionReason,
+  decisionsFrom,
+  defaultReason,
+  reasonRequired,
+} from "./decisions";
 import s from "./Review.module.css";
-
-const paths = {
-  accept: "/guilds/{discordGuildID}/appeals/{appealID}/accept",
-  reject: "/guilds/{discordGuildID}/appeals/{appealID}/reject",
-  request_information: "/guilds/{discordGuildID}/appeals/{appealID}/request-information",
-  close: "/guilds/{discordGuildID}/appeals/{appealID}/close",
-  reopen: "/guilds/{discordGuildID}/appeals/{appealID}/reopen",
-} as const;
 
 type Copy = {
   button: string;
@@ -31,9 +29,11 @@ type Copy = {
   tone: "success" | "danger" | "primary";
   label: string;
   placeholder: string;
-  default?: string;
-  done: string;
+  /** The confirmation once it's saved (design §12.9 appeal.decided.*). */
+  done: (caseNumber: number, member: string) => string;
 };
+
+const reasonLabel = "Reason the member will see";
 
 const copy: Record<Decision, Copy> = {
   accept: {
@@ -41,69 +41,105 @@ const copy: Record<Decision, Copy> = {
     variant: "success",
     title: "Accept this appeal?",
     description: (n) =>
-      `Quack voids case #${n} so it stops counting toward escalation, and lifts any timeout or ban it applied. The member gets a DM with your reason.`,
+      `Quack voids case #${n}, so it no longer counts, and tries to remove any timeout or ban the case applied. A kick can't be undone. The member gets a DM with your reason.`,
     confirm: "Accept appeal",
     tone: "success",
-    label: "Reason sent to the member",
+    label: reasonLabel,
     placeholder: "Why are you accepting it?",
-    done: "Appeal accepted. The case is voided.",
+    done: (n, member) =>
+      `Appeal accepted. Case #${n} is voided and no longer counts. Quack will try to send ${member} a DM. Open the case to check the outcome of any timeout or ban.`,
   },
   reject: {
     button: "Reject",
     variant: "danger",
     title: "Reject this appeal?",
-    description: () => "The case stays in place. The member gets a DM with your reason.",
+    description: (n) => `Case #${n} still counts. The member gets a DM with your reason.`,
     confirm: "Reject appeal",
     tone: "danger",
-    label: "Reason sent to the member",
-    placeholder: "Why does the case stand?",
-    done: "Appeal rejected.",
+    label: reasonLabel,
+    placeholder: "Why does the case still count?",
+    done: (n, member) =>
+      `Appeal rejected. Case #${n} still counts. Quack will try to send ${member} a DM.`,
   },
   request_information: {
-    button: "Ask for info",
+    button: "Request more information",
     variant: "secondary",
-    title: "Ask the member for more information",
+    title: "Request more information",
     description: () =>
-      "The member gets a DM with your question and can answer from the dashboard. The appeal comes back to the queue when they do.",
+      "Quack tries to send the member a DM with your question. They can reply on the dashboard, and the appeal comes back to the queue when they do.",
     confirm: "Send question",
     tone: "primary",
-    label: "Message to the member",
+    label: "Question the member will see",
     placeholder: "What do you need to know?",
-    done: "Question sent to the member.",
+    done: (_, member) =>
+      `Question saved. Quack will try to send ${member} a DM. They can reply on the dashboard.`,
   },
   close: {
     button: "Close",
     variant: "secondary",
-    title: "Close without a decision?",
-    description: () =>
-      "The case stays in place and the appeal leaves the queue. You can reopen it later. The member gets a DM with your reason.",
+    title: "Close this appeal?",
+    description: (n) =>
+      `Case #${n} still counts and the appeal leaves the queue. You can reopen it later. The member gets a DM with your reason.`,
     confirm: "Close appeal",
     tone: "primary",
-    label: "Reason sent to the member",
+    label: reasonLabel,
     placeholder: "Why are you closing it?",
-    done: "Appeal closed.",
+    done: (_, member) => `Appeal closed. Quack will try to send ${member} a DM.`,
   },
   reopen: {
     button: "Reopen",
     variant: "primary",
     title: "Reopen this appeal?",
     description: () =>
-      "Quack asks the member your question. The appeal comes back to the queue when they answer.",
+      "Reopening asks the member for more information. The appeal comes back to the queue when they reply.",
     confirm: "Reopen and ask",
     tone: "primary",
-    label: "Message to the member",
+    label: "Question the member will see",
     placeholder: "What should the member tell you?",
-    done: "Appeal reopened. Quack asked the member your question.",
+    done: () =>
+      "Appeal reopened. Quack will try to send the member a DM. They can reply on the dashboard.",
   },
 };
 
-const statusLine: Record<AppealStatus, string> = {
-  pending: "Waiting for a decision.",
-  needs_information: "Waiting for the member to answer. Close it if they don't.",
-  accepted: "Accepted. The case is voided.",
-  rejected: "Rejected. The case stands.",
-  closed: "Closed without a decision.",
-};
+/**
+ * StatusLine says where the appeal stands (design §12.9 appeal.post.state.*).
+ */
+function StatusLine({ guildId, appeal: a }: { guildId: string; appeal: Appeal }) {
+  const { data: member } = useUser(guildId, a.member_id);
+  const { data: actor } = useUser(guildId, a.decided_by);
+  const closedByVoid = a.state === "closed" && a.events.at(-1)?.closed_by_void === true;
+  const by = actor?.display_name;
+  const when = a.decided_at ? ` ${stamp(a.decided_at)}` : "";
+  let line: string;
+  switch (a.state) {
+    case "pending":
+      line = "Waiting for a decision.";
+      break;
+    case "needs_information":
+      line = `Waiting for ${member?.display_name ?? "the member"} to reply.`;
+      break;
+    case "accepted":
+      line = by ? `Accepted by ${by}${when}.` : "Accepted.";
+      break;
+    case "rejected":
+      line = by ? `Rejected by ${by}${when}.` : "Rejected.";
+      break;
+    case "closed":
+      line = closedByVoid
+        ? "Closed because the case was voided."
+        : by
+          ? `Closed by ${by}${when}.`
+          : "Closed.";
+      break;
+  }
+  const reason = !closedByVoid && a.state !== "pending" ? a.decision_reason : null;
+  return (
+    <p className={s.status}>
+      {line}
+      {reason ? <> Reason shared with the member: “{reason}”</> : null}
+    </p>
+  );
+}
 
 /**
  * DecisionBar sits under the conversation with the moves valid for the
@@ -116,31 +152,42 @@ export function DecisionBar({ guildId, appeal }: { guildId: string; appeal: Appe
   const [open, setOpen] = useState<Decision | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { data: member } = useUser(guildId, appeal.member_id);
+
   const decide = useMutation({
     mutationFn: ({ decision, reason }: { decision: Decision; reason: string }) =>
-      unwrap(
-        api.POST(paths[decision], {
-          params: { path: { discordGuildID: guildId, appealID: appeal.id } },
-          body: { reason },
+      write((init) =>
+        api.POST("/api/guilds/{guild_id}/appeals/{appeal_id}/decision", {
+          params: { path: { guild_id: guildId, appeal_id: appeal.id } },
+          body: { decision, reason, expected_version: appeal.version },
+          ...init,
         }),
-      ).then((r) => r.appeal),
+      ),
     onSuccess: (updated, { decision }) => {
       queryClient.setQueryData(appealQuery(guildId, appeal.id).queryKey, updated);
       void queryClient.invalidateQueries({ queryKey: keys.appeals(guildId) });
       void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
-      toast.success(copy[decision].done);
+      void queryClient.invalidateQueries({ queryKey: keys.guild(guildId) });
+      toast.success(copy[decision].done(appeal.case_number, member?.display_name ?? "the member"));
       setOpen(null);
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : "Couldn't save the decision."),
+    onError: (e) => {
+      setError(errorText(e));
+      // Someone else decided first: show their decision behind the dialog.
+      if (e instanceof ApiError && e.code === "appeal_changed") {
+        void queryClient.invalidateQueries({ queryKey: appealQuery(guildId, appeal.id).queryKey });
+      }
+    },
   });
 
-  const decisions = can("appeal.review") ? decisionsFrom[appeal.status] : [];
+  const decisions = can("moderate") ? decisionsFrom[appeal.state] : [];
   const current = open ? copy[open] : null;
-  const required = open ? reasonRequired(open, appeal.review_reason_required) : true;
+  const required = open ? reasonRequired(open) : true;
+  const fallback = open ? defaultReason(open) : undefined;
 
   return (
     <div className={s.bar}>
-      <p className={s.status}>{statusLine[appeal.status]}</p>
+      <StatusLine guildId={guildId} appeal={appeal} />
       {decisions.length > 0 ? (
         <div className={s.buttons}>
           {decisions.map((d) => (
@@ -176,7 +223,9 @@ export function DecisionBar({ guildId, appeal }: { guildId: string; appeal: Appe
                 label: current.label,
                 required,
                 placeholder: current.placeholder,
-                hint: required ? undefined : `Leave it blank to send "${decisionReason(open, "")}"`,
+                hint: fallback
+                  ? `Leave out staff names and private details. Leave it blank to send “${fallback}”`
+                  : "Leave out staff names and private details.",
               }
             : undefined
         }
@@ -190,68 +239,8 @@ export function DecisionBar({ guildId, appeal }: { guildId: string; appeal: Appe
   );
 }
 
-/**
- * ReversalOffers lists punishments still in place after an accepted appeal.
- * Accepting queues their removal itself, so these are the ones that
- * couldn't be queued then, such as an action that succeeded afterwards.
- */
-export function ReversalOffers({ guildId, appeal }: { guildId: string; appeal: Appeal }) {
-  const queryClient = useQueryClient();
-  const reverse = useMutation({
-    mutationFn: (offer: NonNullable<Appeal["reversal_offers"]>[number]) =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/appeals/{appealID}/reversals", {
-          params: { path: { discordGuildID: guildId, appealID: appeal.id } },
-          body: {
-            action_type: offer.action_type,
-            original_execution_id: offer.original_execution_id,
-            confirm: true,
-          },
-        }),
-      ),
-    onSuccess: (_, offer) => {
-      toast.success(
-        offer.action_type === "unban_user" ? "Unban queued." : "Timeout removal queued.",
-      );
-      void queryClient.invalidateQueries({ queryKey: keys.appeals(guildId) });
-      void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
-    },
-  });
-
-  const offers = appeal.reversal_offers ?? [];
-  if (appeal.status !== "accepted" || offers.length === 0) return null;
-
-  return (
-    <div className={s.offers}>
-      {offers.map((o) => {
-        const unban = o.action_type === "unban_user";
-        return (
-          <div key={o.original_execution_id} className={s.offer}>
-            <QuackIcon name={actionMeta[o.action_type].icon} size={24} />
-            <div className={s.offerText}>
-              <p className={s.offerTitle}>
-                {unban ? "The member is still banned" : "The member is still timed out"}
-              </p>
-              <p className={s.offerBody}>
-                Quack didn't lift it when the appeal was accepted. Confirm to{" "}
-                {unban ? "unban them" : "remove the timeout"}; Quack checks your Discord permissions
-                first.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="success"
-              pending={
-                reverse.isPending &&
-                reverse.variables?.original_execution_id === o.original_execution_id
-              }
-              onClick={() => reverse.mutate(o)}
-            >
-              {unban ? "Confirm unban" : "Confirm timeout removal"}
-            </Button>
-          </div>
-        );
-      })}
-    </div>
-  );
+/** errorText is the API's message, with the trace of an unexpected failure. */
+function errorText(e: unknown): string {
+  if (!(e instanceof ApiError)) return "Quack couldn't save the decision. Try again.";
+  return e.unexpected && e.traceId ? `${e.message} (Trace ID ${e.traceId})` : e.message;
 }

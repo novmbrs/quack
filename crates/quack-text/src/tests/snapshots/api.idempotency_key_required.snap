@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack didn't save this change. Reload the dashboard and try again.
+plain:   Quack didn't save this change. Reload the dashboard and try again.
+model:   [Fixed("Quack didn't save this change. Reload the dashboard and try again.")]

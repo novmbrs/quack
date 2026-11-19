@@ -1,77 +1,85 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
-import { keys } from "~/api/queries";
+import { api, write } from "~/api/client";
+import { healthQuery, keys } from "~/api/queries";
+import { type ModuleName, type ModuleState, moduleSegment } from "~/api/types";
 import { Badge } from "~/ui/Badge";
-import { Switch } from "~/ui/Field";
+import { Button } from "~/ui/Button";
 import { QuackIcon, type QuackIconName } from "~/ui/QuackIcon";
 import { toast } from "~/ui/Toast";
 
-import { type EnableProblem, enableProblem, type ModuleKey } from "./enable";
+import { disabledReasonText, type EnableProblem, enableProblem, moduleWords } from "./enable";
 import s from "./ModuleParts.module.css";
 
 /**
- * useModuleSwitch turns a module on or off through the settings API, which
- * re-runs the module's /setup checks against live Discord before switching
- * it on. A refusal is kept as problem to show next to the switch.
+ * useModuleSwitch turns a module on or off with its own enable and disable
+ * routes (design §13.1.7). Turning on re-checks the module's channels and
+ * Quack's permissions; a refusal is kept as problem to show under the
+ * header, one line per thing to fix.
  */
-export function useModuleSwitch(guildId: string, module: ModuleKey, name: string) {
+export function useModuleSwitch(guildId: string, module: ModuleName) {
   const queryClient = useQueryClient();
   const [problem, setProblem] = useState<EnableProblem | null>(null);
+  const words = moduleWords[module];
   const mutation = useMutation({
     mutationFn: (on: boolean) =>
-      unwrap(
-        api.PATCH("/guilds/{discordGuildID}/settings", {
-          params: { path: { discordGuildID: guildId } },
-          body: { [`${module}_enabled`]: on },
-        }),
+      write((init) =>
+        api.POST(
+          on
+            ? "/api/guilds/{guild_id}/modules/{module}/enable"
+            : "/api/guilds/{guild_id}/modules/{module}/disable",
+          { params: { path: { guild_id: guildId, module: moduleSegment[module] } }, ...init },
+        ),
       ),
     onMutate: () => setProblem(null),
-    onSuccess: (_, on) => {
-      toast.success(on ? `${name} is on.` : `${name} is off.`);
+    onSuccess: (state: ModuleState, on) => {
+      const verb = module === "tickets" ? "are" : "is";
+      toast.success(
+        on && state.enabled ? `${words.Noun} ${verb} on.` : `${words.Noun} ${verb} off.`,
+      );
       void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
       void queryClient.invalidateQueries({ queryKey: keys.settings(guildId) });
+      void queryClient.invalidateQueries({ queryKey: healthQuery(guildId).queryKey });
     },
-    onError: (e) =>
-      setProblem(
-        enableProblem(e instanceof ApiError ? e.message : `Couldn't switch ${name.toLowerCase()}.`),
-      ),
+    onError: (e) => setProblem(enableProblem(e)),
   });
   return { toggle: mutation.mutate, pending: mutation.isPending, problem };
 }
 
 /**
  * ModuleHeader introduces a module: what it does in a sentence or two,
- * whether it's on, and the switch. A refused switch explains itself
- * underneath, pointing at /setup in Discord when the module was never set
- * up.
+ * whether it's on, and the button that turns it on or off. Below it are why
+ * Quack turned it off by itself, what it currently can't do, and what
+ * stopped the last switch.
  */
 export function ModuleHeader({
+  module,
   icon,
-  title,
   children,
-  enabled,
+  state,
   onToggle,
   pending,
   canManage,
   locked,
   problem,
-  setupCommand,
 }: {
+  module: ModuleName;
   icon: QuackIconName;
-  title: string;
   /** One or two plain sentences on what the module does. */
   children: ReactNode;
-  enabled: boolean | undefined;
+  /** The module's state, undefined while it loads. */
+  state: Pick<ModuleState, "enabled" | "disabled_reason" | "problems"> | undefined;
   onToggle: (on: boolean) => void;
   pending?: boolean;
   canManage: boolean;
-  /** Why the switch is unavailable right now, such as unsaved changes. */
+  /** Why the button is unavailable right now, such as unsaved changes. */
   locked?: string | null;
   problem?: EnableProblem | null;
-  setupCommand: string;
 }) {
+  const words = moduleWords[module];
+  const enabled = state?.enabled;
+  const reason = state ? disabledReasonText(module, state) : null;
   return (
     <div className={s.header}>
       <div className={s.top}>
@@ -80,7 +88,7 @@ export function ModuleHeader({
         </span>
         <div className={s.text}>
           <div className={s.titleRow}>
-            <h2 className={s.title}>{title}</h2>
+            <h2 className={s.title}>{words.title}</h2>
             {enabled === undefined ? null : enabled ? (
               <Badge tone="success" dot>
                 On
@@ -95,32 +103,57 @@ export function ModuleHeader({
           {locked ? <p className={s.locked}>{locked}</p> : null}
         </div>
         {canManage && enabled !== undefined ? (
-          <Switch
-            label={enabled ? `Turn off ${title}` : `Turn on ${title}`}
-            checked={enabled}
-            disabled={pending || Boolean(locked)}
-            onChange={onToggle}
-          />
+          <Button
+            size="sm"
+            variant={enabled ? "secondary" : "primary"}
+            pending={pending}
+            disabled={Boolean(locked)}
+            onClick={() => onToggle(!enabled)}
+          >
+            {enabled ? "Turn off" : "Turn on"}
+          </Button>
         ) : null}
       </div>
+      {reason ? (
+        <Callout tone="danger" icon="error" title={`Quack turned ${words.noun} off`}>
+          {reason}
+        </Callout>
+      ) : null}
+      {state?.problems.length ? (
+        <Callout
+          tone="warning"
+          icon="warn"
+          title={enabled ? "Fix these to get everything working" : "Fix these before turning it on"}
+        >
+          <ProblemList items={state.problems.map((p) => p.message)} />
+        </Callout>
+      ) : null}
       {problem ? (
-        problem.needsSetup ? (
-          <Callout tone="warning" icon="settings" title={`Set up ${title.toLowerCase()} first`}>
-            Run <Command>{setupCommand}</Command> in your server. Quack picks or creates the
-            channels it needs, checks its permissions, and turns {title.toLowerCase()} on.
-          </Callout>
-        ) : (
-          <Callout
-            tone="danger"
-            icon="error"
-            title={`Quack couldn't turn ${title.toLowerCase()} on`}
-          >
-            {problem.message} Fix it below, or run <Command>{setupCommand}</Command> in Discord to
-            let Quack set it up for you.
-          </Callout>
-        )
+        <Callout tone="danger" icon="error" title={problem.message}>
+          {problem.problems.length ? <ProblemList items={problem.problems} /> : null}
+          {problem.problems.length ? (
+            <>
+              {" "}
+              Fix these here, or open <Command>/setup</Command> in Discord and choose{" "}
+              {words.setupArea} to let Quack set it up.
+            </>
+          ) : null}
+        </Callout>
       ) : null}
     </div>
+  );
+}
+
+/** ProblemList shows one sentence per problem, inside a callout's text. */
+function ProblemList({ items }: { items: string[] }) {
+  return (
+    <>
+      {items.map((item) => (
+        <span key={item} className={s.problem}>
+          {item}
+        </span>
+      ))}
+    </>
   );
 }
 

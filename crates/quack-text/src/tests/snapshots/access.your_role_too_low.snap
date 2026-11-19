@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Your highest role must be above <@222>'s highest role. Ask a moderator whose highest role is above <@222>'s.
+plain:   Your highest role must be above Sam's highest role. Ask a moderator whose highest role is above Sam's.
+model:   [Fixed("Your highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask a moderator whose highest role is above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s.")]
+
+## no name
+discord: Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs.
+plain:   Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs.
+model:   [Fixed("Your highest role must be above the member's highest role. Ask a moderator whose highest role is above theirs.")]

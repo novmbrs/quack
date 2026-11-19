@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: You're not in this server anymore.
+plain:   You're not in this server anymore.
+model:   [Fixed("You're not in this server anymore.")]

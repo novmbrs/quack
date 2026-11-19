@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 
-import type { ContextFieldType } from "~/api/types";
+import type { FieldKind } from "~/api/types";
 import { Button } from "~/ui/Button";
 import { Checkbox, Field, Select, TextInput } from "~/ui/Field";
 import { InlineError } from "~/ui/States";
@@ -9,18 +9,18 @@ import { IconButton } from "./controls";
 import { type FieldDraft, type Issues, limits, newField, slugify } from "./draft";
 import s from "./FieldsEditor.module.css";
 
-/** fieldTypes names each context field type the way moderators see it. */
-export const fieldTypes: { value: ContextFieldType; label: string }[] = [
+/** fieldTypes names each case context field kind the way moderators see it. */
+export const fieldTypes: { value: FieldKind; label: string }[] = [
   { value: "short_text", label: "Short text" },
   { value: "long_text", label: "Long text" },
   { value: "boolean", label: "Yes / no" },
   { value: "number", label: "Number" },
-  { value: "discord_message_link", label: "Discord message link" },
+  { value: "message_link", label: "Discord message link" },
 ];
 
 /**
- * FieldsEditor edits the extra details a moderator fills in when applying
- * the rule. Keys follow the label until the admin types one.
+ * FieldsEditor edits the case context a moderator fills in when applying
+ * the rule. Keys follow the label until the rules manager types one.
  */
 export function FieldsEditor({
   fields,
@@ -46,12 +46,14 @@ export function FieldsEditor({
   return (
     <div className={s.list}>
       {fields.length === 0 ? (
-        <p className={s.empty}>No extra details. Moderators only pick the member and the rule.</p>
+        <p className={s.empty}>
+          No questions. Moderators can still add details as free text, and the member sees them.
+        </p>
       ) : null}
       {fields.map((f, i) => (
         <div key={f.id} className={s.row}>
           <div className={s.grid}>
-            <Field label="Label" error={issues[`fields.${f.id}.label`]}>
+            <Field label="Question" error={issues[`fields.${f.id}.label`]}>
               {(id) => (
                 <TextInput
                   id={id}
@@ -86,12 +88,12 @@ export function FieldsEditor({
                 />
               )}
             </Field>
-            <Field label="Type">
+            <Field label="Answer">
               {(id) => (
                 <Select
                   id={id}
-                  value={f.type}
-                  onChange={(e) => patch(f.id, { type: e.currentTarget.value as ContextFieldType })}
+                  value={f.kind}
+                  onChange={(e) => patch(f.id, { kind: e.currentTarget.value as FieldKind })}
                 >
                   {fieldTypes.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -103,7 +105,7 @@ export function FieldsEditor({
             </Field>
           </div>
           <div className={s.tools}>
-            {f.type === "boolean" ? (
+            {f.kind === "boolean" ? (
               <span className={s.note}>Always answered</span>
             ) : (
               <Checkbox
@@ -126,7 +128,7 @@ export function FieldsEditor({
                   <ArrowDown size={16} />
                 </IconButton>
                 <IconButton
-                  label="Remove field"
+                  label={`Remove ${f.label.trim() || "this field"}`}
                   tone="danger"
                   onClick={() => onChange(fields.filter((x) => x.id !== f.id))}
                 >

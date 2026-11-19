@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO evidence (id, guild_id, case_id, channel_id, message_id, added_by)\n               SELECT $1, c.guild_id, c.id, $4, $5, $6 FROM cases c WHERE c.guild_id = $2 AND c.id = $3\n               ON CONFLICT (case_id, message_id) DO UPDATE SET state = 'saving', failure = NULL\n                 WHERE evidence.state = 'failed' AND evidence.guild_id = EXCLUDED.guild_id\n               RETURNING id, (old.id IS NULL) AS \"inserted!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "inserted!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "18aa8a8e84108039639c0f02762d125cd1297730c0c6b65508cd2dcb4c6b5c54"
+}

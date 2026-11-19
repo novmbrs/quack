@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+The channel #old\-channel was deleted.
+--- plain ---
+The channel #old-channel was deleted.
+--- model ---
+Text [Fixed("The channel #"), User("old-channel"), Fixed(" was deleted.")]

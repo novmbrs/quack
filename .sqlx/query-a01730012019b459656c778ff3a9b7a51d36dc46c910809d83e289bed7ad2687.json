@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE appeals SET state = $5, version = version + 1, updated_at = now(),\n                                decided_by = CASE WHEN $6::bigint IS NULL THEN decided_by ELSE $6 END,\n                                decided_at = CASE WHEN $6::bigint IS NULL THEN decided_at ELSE now() END,\n                                decision_reason = CASE WHEN $6::bigint IS NULL THEN decision_reason ELSE $7 END,\n                                first_decided_at = CASE WHEN $5::appeal_state IN ('accepted', 'rejected', 'closed')\n                                                        THEN COALESCE(first_decided_at, now())\n                                                        ELSE first_decided_at END\n             WHERE guild_id = $1 AND id = $2 AND state = $3 AND ($4::integer IS NULL OR version = $4)\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "appeals",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "Int4",
+        {
+          "Custom": {
+            "name": "appeal_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "needs_information",
+                "accepted",
+                "rejected",
+                "closed"
+              ]
+            }
+          }
+        },
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a01730012019b459656c778ff3a9b7a51d36dc46c910809d83e289bed7ad2687"
+}

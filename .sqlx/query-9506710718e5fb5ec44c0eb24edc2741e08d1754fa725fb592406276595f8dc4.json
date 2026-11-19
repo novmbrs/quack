@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence_files f\n               SET copy_started_at = CASE WHEN f.copy_started_at IS NULL\n                                            OR f.copy_started_at <= now() - make_interval(secs => $3)\n                                          THEN now() ELSE f.copy_started_at END\n               FROM evidence e\n               WHERE f.guild_id = $1 AND f.id = $2 AND f.copy_state = 'pending'\n                 AND e.id = f.evidence_id AND e.state = 'saving'\n               RETURNING f.copy_started_at AS \"started!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "started!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence_files",
+            "name": "copy_started_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "9506710718e5fb5ec44c0eb24edc2741e08d1754fa725fb592406276595f8dc4"
+}

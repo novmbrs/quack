@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE actions SET state = 'skipped', skip_reason = $5, skipped_because_case_id = $6,\n                                next_attempt_at = NULL, updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = $3\n               AND ($4::int IS NULL\n                    OR (SELECT max(a.number) FROM action_attempts a WHERE a.action_id = actions.id) = $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "action_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "running",
+                "done",
+                "failed",
+                "cancelled",
+                "skipped"
+              ]
+            }
+          }
+        },
+        "Int4",
+        {
+          "Custom": {
+            "name": "action_skip_reason",
+            "kind": {
+              "Enum": [
+                "other_case_applies",
+                "changed_outside_case"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "df96dbb67118cc4426ac30cd6fcf84322d43293fb5f080b27b618eefdc67011c"
+}

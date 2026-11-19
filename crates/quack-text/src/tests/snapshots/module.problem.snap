@@ -1,0 +1,57 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ticket_entry_missing
+discord: Choose where members open tickets.
+plain:   Choose where members open tickets.
+model:   [Fixed("Choose where members open tickets.")]
+
+## ticket_queue_missing
+discord: Choose a staff channel for new tickets.
+plain:   Choose a staff channel for new tickets.
+model:   [Fixed("Choose a staff channel for new tickets.")]
+
+## ticket_same_channel
+discord: The entry channel and the staff channel must be different.
+plain:   The entry channel and the staff channel must be different.
+model:   [Fixed("The entry channel and the staff channel must be different.")]
+
+## honeypot_channel_missing
+discord: Choose the honeypot channel.
+plain:   Choose the honeypot channel.
+model:   [Fixed("Choose the honeypot channel.")]
+
+## honeypot_rule_missing
+discord: Choose the rule the honeypot applies.
+plain:   Choose the rule the honeypot applies.
+model:   [Fixed("Choose the rule the honeypot applies.")]
+
+## honeypot_rule_required_fields
+discord: The rule **Honeypot** has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+plain:   The rule Honeypot has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+model:   [Fixed("The rule "), Bold([User("Honeypot")]), Fixed(" has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.")]
+
+## activity_no_route
+discord: Choose a channel for server activity.
+plain:   Choose a channel for server activity.
+model:   [Fixed("Choose a channel for server activity.")]
+
+## activity_needs_audit_log
+discord: In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.
+plain:   In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.
+model:   [Fixed("In Server Settings → Roles, give Quack's role View Audit Log. Quack uses it to show who banned or unbanned a member.")]
+
+## channel_permissions
+discord: In <#444> → Edit Channel → Permissions, allow Manage Messages and Read Message History for Quack.
+plain:   In #staff → Edit Channel → Permissions, allow Manage Messages and Read Message History for Quack.
+model:   [Fixed("In "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" → Edit Channel → Permissions, allow Manage Messages and Read Message History for Quack.")]
+
+## channel_not_staff_only
+discord: <#444> can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.
+plain:   #staff can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.
+model:   [Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" can be viewed by members outside staff. Fix its View Channel permissions or choose another channel.")]
+
+## honeypot_rule_required_fields, rule name unknown
+discord: The rule the honeypot uses has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+plain:   The rule the honeypot uses has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.
+model:   [Fixed("The rule the honeypot uses has required case context, which the honeypot can't fill in. Choose another rule or make those fields optional on the dashboard.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.
+plain:   Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.
+model:   [Fixed("Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.")]

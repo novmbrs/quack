@@ -1,0 +1,72 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## name_length
+discord: Give the rule a name of 1 to 100 characters.
+plain:   Give the rule a name of 1 to 100 characters.
+model:   [Fixed("Give the rule a name of 1 to 100 characters.")]
+
+## description_length
+discord: Keep the description to 500 characters or fewer.
+plain:   Keep the description to 500 characters or fewer.
+model:   [Fixed("Keep the description to 500 characters or fewer.")]
+
+## reason_length
+discord: Give the rule a reason of 1 to 1,000 characters.
+plain:   Give the rule a reason of 1 to 1,000 characters.
+model:   [Fixed("Give the rule a reason of 1 to 1,000 characters.")]
+
+## counting_window
+discord: Count cases from the last 1 to 36,500 days, or count every case.
+plain:   Count cases from the last 1 to 36,500 days, or count every case.
+model:   [Fixed("Count cases from the last 1 to 36,500 days, or count every case.")]
+
+## too_many_fields
+discord: A rule can have at most 10 context fields.
+plain:   A rule can have at most 10 context fields.
+model:   [Fixed("A rule can have at most 10 context fields.")]
+
+## field_key
+discord: Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit.
+plain:   Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit.
+model:   [Fixed("Use 2 to 64 lowercase letters, digits, dashes, or underscores for the field name in the API, starting with a letter or digit.")]
+
+## field_key_duplicate
+discord: Another field of this rule already uses this field name.
+plain:   Another field of this rule already uses this field name.
+model:   [Fixed("Another field of this rule already uses this field name.")]
+
+## field_label_length
+discord: Give the field a label of 1 to 100 characters.
+plain:   Give the field a label of 1 to 100 characters.
+model:   [Fixed("Give the field a label of 1 to 100 characters.")]
+
+## level_count
+discord: A rule needs 1 to 10 levels.
+plain:   A rule needs 1 to 10 levels.
+model:   [Fixed("A rule needs 1 to 10 levels.")]
+
+## first_level_not_one
+discord: The first level must start at a case count of 1.
+plain:   The first level must start at a case count of 1.
+model:   [Fixed("The first level must start at a case count of 1.")]
+
+## level_case_count
+discord: Start each later level at a case count from 2 to 1,000,000.
+plain:   Start each later level at a case count from 2 to 1,000,000.
+model:   [Fixed("Start each later level at a case count from 2 to 1,000,000.")]
+
+## level_order
+discord: Start each level at a higher case count than the level before it.
+plain:   Start each level at a higher case count than the level before it.
+model:   [Fixed("Start each level at a higher case count than the level before it.")]
+
+## timeout_duration
+discord: A timeout lasts from 1 second to 28 days.
+plain:   A timeout lasts from 1 second to 28 days.
+model:   [Fixed("A timeout lasts from 1 second to 28 days.")]
+
+## ban_delete_window
+discord: A ban can delete at most the last 7 days of messages.
+plain:   A ban can delete at most the last 7 days of messages.
+model:   [Fixed("A ban can delete at most the last 7 days of messages.")]

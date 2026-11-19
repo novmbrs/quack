@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dms SET state = 'not_needed', settled_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "287a03ae2ed325a09a6975558ca3cb9dabc88c505c0e4607e34690f8cca2d5f7"
+}

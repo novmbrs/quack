@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: A server can have at most 100 active rules. Archive one first.
+plain:   A server can have at most 100 active rules. Archive one first.
+model:   [Fixed("A server can have at most 100 active rules. Archive one first.")]

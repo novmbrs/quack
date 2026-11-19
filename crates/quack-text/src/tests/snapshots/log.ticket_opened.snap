@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Neutral
+--- discord ---
+<@222> opened a ticket: <#555>.
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Sam opened a ticket: #ticket-abc.
+17 Nov 2026 at 14:05 UTC · Open moderation log
+--- model ---
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" opened a ticket: "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: <@222> opened a ticket: <#555>.
+plain:   Sam opened a ticket: #ticket-abc.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" opened a ticket: "), Channel(ChannelRef { id: ChannelId(555), name: Some("ticket-abc") }), Fixed(".")]

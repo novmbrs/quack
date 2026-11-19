@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot channel is <#444>.
+plain:   The honeypot channel is #staff.
+model:   [Fixed("The honeypot channel is "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

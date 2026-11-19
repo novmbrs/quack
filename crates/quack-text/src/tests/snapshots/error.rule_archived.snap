@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The rule **Spam** is archived, so it can't be applied. Choose an active rule.
+plain:   The rule Spam is archived, so it can't be applied. Choose an active rule.
+model:   [Fixed("The rule "), Bold([User("Spam")]), Fixed(" is archived, so it can't be applied. Choose an active rule.")]

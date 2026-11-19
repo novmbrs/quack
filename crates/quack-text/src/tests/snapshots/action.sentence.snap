@@ -1,0 +1,527 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout Pending
+discord: Quack will time out <@222> until <t:1795014309:f> (<t:1795014309:R>).
+plain:   Quack will time out Sam until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack will time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Pending retry scheduled
+discord: Quack will try to time out <@222> again <t:1795014309:R>.
+plain:   Quack will try to time out Sam again on 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack will try to time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## Timeout Running
+discord: Quack is timing out <@222> until <t:1795014309:f> (<t:1795014309:R>).
+plain:   Quack is timing out Sam until 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack is timing out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" until "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Done
+discord: Quack set <@222>'s timeout to end <t:1795014309:f> (<t:1795014309:R>).
+plain:   Quack set Sam's timeout to end 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack set "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout to end "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+
+## Timeout Done no change
+discord: <@222> already had a timeout ending at or after <t:1795014309:f>. Quack left it in place.
+plain:   Sam already had a timeout ending at or after 18 Nov 2026 at 15:05 UTC. Quack left it in place.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" already had a timeout ending at or after "), Time(2026-11-18 15:05:09.0 +00:00:00, Full), Fixed(". Quack left it in place.")]
+
+## Timeout Failed QuackNotInServer
+discord: Quack couldn't time out <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack couldn't time out Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
+
+## Timeout Failed QuackMissingPermission
+discord: Quack couldn't time out <@222>. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't time out Sam. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Timeout Failed QuackMissingPermission after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord timed out <@222>. Check <@222>'s timeout in Discord. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't confirm whether Discord timed out Sam. Check Sam's timeout in Discord. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't confirm whether Discord timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Timeout Failed QuackRoleTooLow
+discord: Quack couldn't time out <@222>. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack couldn't time out Sam. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+
+## Timeout Failed MemberIsOwner
+discord: Quack couldn't time out <@222>. <@222> owns this server. Discord doesn't allow this action on the server owner.
+plain:   Quack couldn't time out Sam. Sam owns this server. Discord doesn't allow this action on the server owner.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Discord doesn't allow this action on the server owner.")]
+
+## Timeout Failed MemberNotInServer
+discord: Quack couldn't time out <@222>. <@222> isn't in the server, so Discord can't time them out.
+plain:   Quack couldn't time out Sam. Sam isn't in the server, so Discord can't time them out.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server, so Discord can't time them out.")]
+
+## Timeout Failed MemberIsAdministrator
+discord: Quack couldn't time out <@222>. <@222> has Administrator, and Discord doesn't allow timeouts for members with Administrator.
+plain:   Quack couldn't time out Sam. Sam has Administrator, and Discord doesn't allow timeouts for members with Administrator.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" has Administrator, and Discord doesn't allow timeouts for members with Administrator.")]
+
+## Timeout Failed TimeoutWindowPassed
+discord: Quack couldn't time out <@222>. The timeout would already have ended, so Quack didn't apply it.
+plain:   Quack couldn't time out Sam. The timeout would already have ended, so Quack didn't apply it.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The timeout would already have ended, so Quack didn't apply it.")]
+
+## Timeout Failed DiscordRefused
+discord: Quack couldn't time out <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+plain:   Quack couldn't time out Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.")]
+
+## Timeout Failed DiscordRefused dismissed
+discord: Quack couldn't time out <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. <@333> dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't time out Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. Ana dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Timeout Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't time out <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't time out Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Timeout Failed RetriesExhausted
+discord: Quack couldn't time out <@222>. Quack stopped trying after 8 attempts. Discord didn't apply it.
+plain:   Quack couldn't time out Sam. Quack stopped trying after 8 attempts. Discord didn't apply it.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack stopped trying after 8 attempts. Discord didn't apply it.")]
+
+## Timeout Failed RetriesExhausted after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord timed out <@222>. Check <@222>'s timeout in Discord. Quack stopped trying after 8 attempts.
+plain:   Quack couldn't confirm whether Discord timed out Sam. Check Sam's timeout in Discord. Quack stopped trying after 8 attempts.
+model:   [Fixed("Quack couldn't confirm whether Discord timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord. Quack stopped trying after 8 attempts.")]
+
+## Timeout Failed RetriesExhausted after one attempt
+discord: Quack couldn't time out <@222>. Quack stopped after one attempt. Discord didn't apply it.
+plain:   Quack couldn't time out Sam. Quack stopped after one attempt. Discord didn't apply it.
+model:   [Fixed("Quack couldn't time out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack stopped after one attempt. Discord didn't apply it.")]
+
+## Timeout Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord timed out <@222>. Check <@222>'s timeout in Discord.
+plain:   Quack couldn't confirm whether Discord timed out Sam. Check Sam's timeout in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
+## Timeout Cancelled
+discord: Case #12 was voided before Quack timed out <@222>.
+plain:   Case #12 was voided before Quack timed out Sam.
+model:   [Fixed("Case #12 was voided before Quack timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Timeout Cancelled after an attempt that may have applied
+discord: Case #12 was voided. Quack couldn't confirm whether Discord timed out <@222>. Quack won't try again. Quack will check whether the timeout can be removed.
+plain:   Case #12 was voided. Quack couldn't confirm whether Discord timed out Sam. Quack won't try again. Quack will check whether the timeout can be removed.
+model:   [Fixed("Case #12 was voided. Quack couldn't confirm whether Discord timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack won't try again. Quack will check whether the timeout can be removed.")]
+
+## Kick Pending
+discord: Quack will remove <@222> from the server.
+plain:   Quack will remove Sam from the server.
+model:   [Fixed("Quack will remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
+
+## Kick Pending retry scheduled
+discord: Quack will try to remove <@222> from the server again <t:1795014309:R>.
+plain:   Quack will try to remove Sam from the server again on 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack will try to remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## Kick Running
+discord: Quack is removing <@222> from the server.
+plain:   Quack is removing Sam from the server.
+model:   [Fixed("Quack is removing "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
+
+## Kick Done
+discord: Quack removed <@222> from the server.
+plain:   Quack removed Sam from the server.
+model:   [Fixed("Quack removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
+
+## Kick Done no change
+discord: <@222> left the server after this case was added, so Quack didn't remove them.
+plain:   Sam left the server after this case was added, so Quack didn't remove them.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" left the server after this case was added, so Quack didn't remove them.")]
+
+## Kick Failed QuackNotInServer
+discord: Quack couldn't remove <@222> from the server. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack couldn't remove Sam from the server. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Quack is no longer in this server. Ask an administrator to add Quack again.")]
+
+## Kick Failed QuackMissingPermission
+discord: Quack couldn't remove <@222> from the server. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't remove Sam from the server. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Kick Failed QuackMissingPermission after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord removed <@222> from the server. Check Server Settings → Audit Log in Discord for the kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't confirm whether Discord removed Sam from the server. Check Server Settings → Audit Log in Discord for the kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Check Server Settings → Audit Log in Discord for the kick. Quack needs Kick Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Kick Failed QuackRoleTooLow
+discord: Quack couldn't remove <@222> from the server. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack couldn't remove Sam from the server. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+
+## Kick Failed MemberIsOwner
+discord: Quack couldn't remove <@222> from the server. <@222> owns this server. Discord doesn't allow this action on the server owner.
+plain:   Quack couldn't remove Sam from the server. Sam owns this server. Discord doesn't allow this action on the server owner.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Discord doesn't allow this action on the server owner.")]
+
+## Kick Failed DiscordRefused
+discord: Quack couldn't remove <@222> from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+plain:   Quack couldn't remove Sam from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.")]
+
+## Kick Failed DiscordRefused dismissed
+discord: Quack couldn't remove <@222> from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. <@333> dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't remove Sam from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. Ana dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Kick Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't remove <@222> from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't remove Sam from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Kick Failed RetriesExhausted
+discord: Quack couldn't remove <@222> from the server. Quack stopped trying after 8 attempts. Discord didn't apply it.
+plain:   Quack couldn't remove Sam from the server. Quack stopped trying after 8 attempts. Discord didn't apply it.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Quack stopped trying after 8 attempts. Discord didn't apply it.")]
+
+## Kick Failed RetriesExhausted after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord removed <@222> from the server. Check Server Settings → Audit Log in Discord for the kick. Quack stopped trying after 8 attempts.
+plain:   Quack couldn't confirm whether Discord removed Sam from the server. Check Server Settings → Audit Log in Discord for the kick. Quack stopped trying after 8 attempts.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Check Server Settings → Audit Log in Discord for the kick. Quack stopped trying after 8 attempts.")]
+
+## Kick Failed RetriesExhausted after one attempt
+discord: Quack couldn't remove <@222> from the server. Quack stopped after one attempt. Discord didn't apply it.
+plain:   Quack couldn't remove Sam from the server. Quack stopped after one attempt. Discord didn't apply it.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Quack stopped after one attempt. Discord didn't apply it.")]
+
+## Kick Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord removed <@222> from the server. Check Server Settings → Audit Log in Discord for the kick.
+plain:   Quack couldn't confirm whether Discord removed Sam from the server. Check Server Settings → Audit Log in Discord for the kick.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Check Server Settings → Audit Log in Discord for the kick.")]
+
+## Kick Cancelled
+discord: Case #12 was voided before Quack removed <@222> from the server.
+plain:   Case #12 was voided before Quack removed Sam from the server.
+model:   [Fixed("Case #12 was voided before Quack removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
+
+## Kick Cancelled after an attempt that may have applied
+discord: Case #12 was voided. Quack couldn't confirm whether Discord removed <@222> from the server. Quack won't try again. A kick can't be undone.
+plain:   Case #12 was voided. Quack couldn't confirm whether Discord removed Sam from the server. Quack won't try again. A kick can't be undone.
+model:   [Fixed("Case #12 was voided. Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server. Quack won't try again. A kick can't be undone.")]
+
+## Ban Pending
+discord: Quack will ban <@222>.
+plain:   Quack will ban Sam.
+model:   [Fixed("Quack will ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Ban Pending retry scheduled
+discord: Quack will try to ban <@222> again <t:1795014309:R>.
+plain:   Quack will try to ban Sam again on 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack will try to ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## Ban Running
+discord: Quack is banning <@222>.
+plain:   Quack is banning Sam.
+model:   [Fixed("Quack is banning "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Ban Done
+discord: Quack banned <@222>.
+plain:   Quack banned Sam.
+model:   [Fixed("Quack banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Ban Done no change
+discord: <@222> was already banned when Quack checked.
+plain:   Sam was already banned when Quack checked.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" was already banned when Quack checked.")]
+
+## Ban Done deleting a day of messages
+discord: Quack banned <@222> and deleted their messages from the last day.
+plain:   Quack banned Sam and deleted their messages from the last day.
+model:   [Fixed("Quack banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" and deleted their messages from the last day.")]
+
+## Ban Failed QuackNotInServer
+discord: Quack couldn't ban <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack couldn't ban Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
+
+## Ban Failed QuackMissingPermission
+discord: Quack couldn't ban <@222>. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't ban Sam. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Ban Failed QuackMissingPermission after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't confirm whether Discord banned Sam. Check Server Settings → Bans in Discord. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Ban Failed QuackRoleTooLow
+discord: Quack couldn't ban <@222>. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack couldn't ban Sam. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+
+## Ban Failed MemberIsOwner
+discord: Quack couldn't ban <@222>. <@222> owns this server. Discord doesn't allow this action on the server owner.
+plain:   Quack couldn't ban Sam. Sam owns this server. Discord doesn't allow this action on the server owner.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Discord doesn't allow this action on the server owner.")]
+
+## Ban Failed DiscordRefused
+discord: Quack couldn't ban <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+plain:   Quack couldn't ban Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.")]
+
+## Ban Failed DiscordRefused dismissed
+discord: Quack couldn't ban <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. <@333> dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't ban Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. Ana dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Ban Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't ban <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't ban Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Ban Failed RetriesExhausted
+discord: Quack couldn't ban <@222>. Quack stopped trying after 8 attempts. Discord didn't apply it.
+plain:   Quack couldn't ban Sam. Quack stopped trying after 8 attempts. Discord didn't apply it.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack stopped trying after 8 attempts. Discord didn't apply it.")]
+
+## Ban Failed RetriesExhausted after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord. Quack stopped trying after 8 attempts.
+plain:   Quack couldn't confirm whether Discord banned Sam. Check Server Settings → Bans in Discord. Quack stopped trying after 8 attempts.
+model:   [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord. Quack stopped trying after 8 attempts.")]
+
+## Ban Failed RetriesExhausted after one attempt
+discord: Quack couldn't ban <@222>. Quack stopped after one attempt. Discord didn't apply it.
+plain:   Quack couldn't ban Sam. Quack stopped after one attempt. Discord didn't apply it.
+model:   [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack stopped after one attempt. Discord didn't apply it.")]
+
+## Ban Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't confirm whether Discord banned Sam. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord.")]
+
+## Ban Cancelled
+discord: Case #12 was voided before Quack banned <@222>.
+plain:   Case #12 was voided before Quack banned Sam.
+model:   [Fixed("Case #12 was voided before Quack banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Ban Cancelled after an attempt that may have applied
+discord: Case #12 was voided. Quack couldn't confirm whether Discord banned <@222>. Quack won't try again. Quack will check whether the ban can be removed.
+plain:   Case #12 was voided. Quack couldn't confirm whether Discord banned Sam. Quack won't try again. Quack will check whether the ban can be removed.
+model:   [Fixed("Case #12 was voided. Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack won't try again. Quack will check whether the ban can be removed.")]
+
+## RemoveTimeout Pending
+discord: Quack will remove <@222>'s timeout.
+plain:   Quack will remove Sam's timeout.
+model:   [Fixed("Quack will remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
+
+## RemoveTimeout Pending retry scheduled
+discord: Quack will try to remove <@222>'s timeout again <t:1795014309:R>.
+plain:   Quack will try to remove Sam's timeout again on 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack will try to remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## RemoveTimeout Running
+discord: Quack is removing <@222>'s timeout.
+plain:   Quack is removing Sam's timeout.
+model:   [Fixed("Quack is removing "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
+
+## RemoveTimeout Done
+discord: Quack removed <@222>'s timeout.
+plain:   Quack removed Sam's timeout.
+model:   [Fixed("Quack removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout.")]
+
+## RemoveTimeout Done no change
+discord: <@222> had no active timeout when Quack checked.
+plain:   Sam had no active timeout when Quack checked.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" had no active timeout when Quack checked.")]
+
+## RemoveTimeout Failed QuackNotInServer
+discord: Quack couldn't remove <@222>'s timeout. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack couldn't remove Sam's timeout. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Quack is no longer in this server. Ask an administrator to add Quack again.")]
+
+## RemoveTimeout Failed QuackMissingPermission
+discord: Quack couldn't remove <@222>'s timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't remove Sam's timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## RemoveTimeout Failed QuackMissingPermission after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord removed <@222>'s timeout. Check <@222>'s timeout in Discord. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't confirm whether Discord removed Sam's timeout. Check Sam's timeout in Discord. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord. Quack needs Timeout Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## RemoveTimeout Failed QuackRoleTooLow
+discord: Quack couldn't remove <@222>'s timeout. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack couldn't remove Sam's timeout. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+
+## RemoveTimeout Failed MemberIsOwner
+discord: Quack couldn't remove <@222>'s timeout. <@222> owns this server. Discord doesn't allow this action on the server owner.
+plain:   Quack couldn't remove Sam's timeout. Sam owns this server. Discord doesn't allow this action on the server owner.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Discord doesn't allow this action on the server owner.")]
+
+## RemoveTimeout Failed MemberNotInServer
+discord: Quack couldn't remove <@222>'s timeout. <@222> isn't in the server.
+plain:   Quack couldn't remove Sam's timeout. Sam isn't in the server.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" isn't in the server.")]
+
+## RemoveTimeout Failed DiscordRefused
+discord: Quack couldn't remove <@222>'s timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+plain:   Quack couldn't remove Sam's timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.")]
+
+## RemoveTimeout Failed DiscordRefused dismissed
+discord: Quack couldn't remove <@222>'s timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. <@333> dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't remove Sam's timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. Ana dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## RemoveTimeout Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't remove <@222>'s timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't remove Sam's timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## RemoveTimeout Failed RetriesExhausted
+discord: Quack couldn't remove <@222>'s timeout. Quack stopped trying after 8 attempts. Discord didn't apply it.
+plain:   Quack couldn't remove Sam's timeout. Quack stopped trying after 8 attempts. Discord didn't apply it.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Quack stopped trying after 8 attempts. Discord didn't apply it.")]
+
+## RemoveTimeout Failed RetriesExhausted after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord removed <@222>'s timeout. Check <@222>'s timeout in Discord. Quack stopped trying after 8 attempts.
+plain:   Quack couldn't confirm whether Discord removed Sam's timeout. Check Sam's timeout in Discord. Quack stopped trying after 8 attempts.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord. Quack stopped trying after 8 attempts.")]
+
+## RemoveTimeout Failed RetriesExhausted after one attempt
+discord: Quack couldn't remove <@222>'s timeout. Quack stopped after one attempt. Discord didn't apply it.
+plain:   Quack couldn't remove Sam's timeout. Quack stopped after one attempt. Discord didn't apply it.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Quack stopped after one attempt. Discord didn't apply it.")]
+
+## RemoveTimeout Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord removed <@222>'s timeout. Check <@222>'s timeout in Discord.
+plain:   Quack couldn't confirm whether Discord removed Sam's timeout. Check Sam's timeout in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
+## RemoveTimeout Failed OriginalUnconfirmed
+discord: Quack couldn't remove <@222>'s timeout. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check <@222>'s timeout in Discord.
+plain:   Quack couldn't remove Sam's timeout. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Sam's timeout in Discord.
+model:   [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. The timeout Quack tried for this case was never confirmed, and Discord doesn't show it now. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
+## RemoveTimeout Skipped OtherCaseApplies
+discord: Quack left <@222>'s timeout in place because case #7 still applies.
+plain:   Quack left Sam's timeout in place because case #7 still applies.
+model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in place because case #7 still applies.")]
+
+## RemoveTimeout Skipped ChangedOutsideCase
+discord: Quack left <@222>'s timeout in place because it no longer matches case #12. Check <@222>'s timeout in Discord.
+plain:   Quack left Sam's timeout in place because it no longer matches case #12. Check Sam's timeout in Discord.
+model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in place because it no longer matches case #12. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
+## Unban Pending
+discord: Quack will unban <@222>.
+plain:   Quack will unban Sam.
+model:   [Fixed("Quack will unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Unban Pending retry scheduled
+discord: Quack will try to unban <@222> again <t:1795014309:R>.
+plain:   Quack will try to unban Sam again on 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Quack will try to unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## Unban Running
+discord: Quack is unbanning <@222>.
+plain:   Quack is unbanning Sam.
+model:   [Fixed("Quack is unbanning "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Unban Done
+discord: Quack unbanned <@222>.
+plain:   Quack unbanned Sam.
+model:   [Fixed("Quack unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Unban Done no change
+discord: <@222> wasn't banned when Quack checked.
+plain:   Sam wasn't banned when Quack checked.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" wasn't banned when Quack checked.")]
+
+## Unban Failed QuackNotInServer
+discord: Quack couldn't unban <@222>. Quack is no longer in this server. Ask an administrator to add Quack again.
+plain:   Quack couldn't unban Sam. Quack is no longer in this server. Ask an administrator to add Quack again.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack is no longer in this server. Ask an administrator to add Quack again.")]
+
+## Unban Failed QuackMissingPermission
+discord: Quack couldn't unban <@222>. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't unban Sam. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Unban Failed QuackMissingPermission after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord unbanned <@222>. Check Server Settings → Bans in Discord. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+plain:   Quack couldn't confirm whether Discord unbanned Sam. Check Server Settings → Bans in Discord. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
+model:   [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
+
+## Unban Failed QuackRoleTooLow
+discord: Quack couldn't unban <@222>. Quack's highest role must be above <@222>'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+plain:   Quack couldn't unban Sam. Quack's highest role must be above Sam's highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack's highest role must be above "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s highest role. Ask an administrator to move Quack's role up in Server Settings → Roles.")]
+
+## Unban Failed MemberIsOwner
+discord: Quack couldn't unban <@222>. <@222> owns this server. Discord doesn't allow this action on the server owner.
+plain:   Quack couldn't unban Sam. Sam owns this server. Discord doesn't allow this action on the server owner.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" owns this server. Discord doesn't allow this action on the server owner.")]
+
+## Unban Failed DiscordRefused
+discord: Quack couldn't unban <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+plain:   Quack couldn't unban Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.")]
+
+## Unban Failed DiscordRefused dismissed
+discord: Quack couldn't unban <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. <@333> dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't unban Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. Ana dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Unban Failed DiscordRefused dismissed by an unrecorded moderator
+discord: Quack couldn't unban <@222>. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure <t:1795014309:R>. The case keeps its history.
+plain:   Quack couldn't unban Sam. Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure on 18 Nov 2026 at 15:05 UTC. The case keeps its history.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles. A moderator dismissed this failure "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". The case keeps its history.")]
+
+## Unban Failed RetriesExhausted
+discord: Quack couldn't unban <@222>. Quack stopped trying after 8 attempts. Discord didn't apply it.
+plain:   Quack couldn't unban Sam. Quack stopped trying after 8 attempts. Discord didn't apply it.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack stopped trying after 8 attempts. Discord didn't apply it.")]
+
+## Unban Failed RetriesExhausted after an attempt that may have applied
+discord: Quack couldn't confirm whether Discord unbanned <@222>. Check Server Settings → Bans in Discord. Quack stopped trying after 8 attempts.
+plain:   Quack couldn't confirm whether Discord unbanned Sam. Check Server Settings → Bans in Discord. Quack stopped trying after 8 attempts.
+model:   [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord. Quack stopped trying after 8 attempts.")]
+
+## Unban Failed RetriesExhausted after one attempt
+discord: Quack couldn't unban <@222>. Quack stopped after one attempt. Discord didn't apply it.
+plain:   Quack couldn't unban Sam. Quack stopped after one attempt. Discord didn't apply it.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack stopped after one attempt. Discord didn't apply it.")]
+
+## Unban Failed Unconfirmed
+discord: Quack couldn't confirm whether Discord unbanned <@222>. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't confirm whether Discord unbanned Sam. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord.")]
+
+## Unban Failed OriginalUnconfirmed
+discord: Quack couldn't unban <@222>. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't unban Sam. The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". The ban Quack tried for this case was never confirmed, and Discord doesn't show it now. Check Server Settings → Bans in Discord.")]
+
+## Unban Skipped OtherCaseApplies
+discord: Quack left <@222>'s ban in place because case #7 still applies.
+plain:   Quack left Sam's ban in place because case #7 still applies.
+model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ban in place because case #7 still applies.")]
+
+## Unban Skipped ChangedOutsideCase
+discord: Quack left <@222>'s ban in place because it may not have come from case #12. Check Server Settings → Bans in Discord.
+plain:   Quack left Sam's ban in place because it may not have come from case #12. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack left "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s ban in place because it may not have come from case #12. Check Server Settings → Bans in Discord.")]
+
+## Timeout Running without an end time
+discord: Quack is timing out <@222>.
+plain:   Quack is timing out Sam.
+model:   [Fixed("Quack is timing out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Timeout Done without an end time
+discord: Quack timed out <@222>.
+plain:   Quack timed out Sam.
+model:   [Fixed("Quack timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+
+## Timeout Done no change without an end time
+discord: <@222> already had a timeout. Quack left it in place.
+plain:   Sam already had a timeout. Quack left it in place.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" already had a timeout. Quack left it in place.")]

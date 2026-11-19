@@ -1,0 +1,7 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[warning]
+Remove a member (ID 40)'s timeout for case #1?
+[Yes, remove timeout]

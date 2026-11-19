@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot is on in <#444>.
+plain:   The honeypot is on in #staff.
+model:   [Fixed("The honeypot is on in "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

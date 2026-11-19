@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout
+discord: The timeout failure for case #12 was dismissed. The case keeps its history.
+plain:   The timeout failure for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The timeout failure for case #12 was dismissed. The case keeps its history.")]
+
+## Kick
+discord: The kick failure for case #12 was dismissed. The case keeps its history.
+plain:   The kick failure for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The kick failure for case #12 was dismissed. The case keeps its history.")]
+
+## Ban
+discord: The ban failure for case #12 was dismissed. The case keeps its history.
+plain:   The ban failure for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The ban failure for case #12 was dismissed. The case keeps its history.")]
+
+## RemoveTimeout
+discord: The failed attempt to remove the timeout for case #12 was dismissed. The case keeps its history.
+plain:   The failed attempt to remove the timeout for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The failed attempt to remove the timeout for case #12 was dismissed. The case keeps its history.")]
+
+## Unban
+discord: The failed attempt to unban the member for case #12 was dismissed. The case keeps its history.
+plain:   The failed attempt to unban the member for case #12 was dismissed. The case keeps its history.
+model:   [Fixed("The failed attempt to unban the member for case #12 was dismissed. The case keeps its history.")]

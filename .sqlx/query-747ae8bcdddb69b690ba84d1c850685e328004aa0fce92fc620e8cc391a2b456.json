@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET attachment_id = $3, updated_at = now()\n             WHERE id = $1 AND generation = $2 AND guild_id = $4 AND state = 'active'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "747ae8bcdddb69b690ba84d1c850685e328004aa0fce92fc620e8cc391a2b456"
+}

@@ -1,0 +1,234 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, member_id, kind, case_id, appeal_event_id, ticket_id, state, failure,\n                             failure_discord_code, channel_id, message_id, first_attempt_at, settled_at, created_at\n                      FROM dms WHERE guild_id = $1 AND id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "member_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "member_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "dm_kind",
+            "kind": {
+              "Enum": [
+                "case",
+                "appeal_update",
+                "ticket_closed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "appeal_event_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "appeal_event_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "ticket_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "ticket_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "dm_state",
+            "kind": {
+              "Enum": [
+                "pending",
+                "sending",
+                "sent",
+                "failed",
+                "unknown",
+                "not_needed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "failure",
+        "type_info": {
+          "Custom": {
+            "name": "dm_failure",
+            "kind": {
+              "Enum": [
+                "dms_closed",
+                "not_in_shared_server",
+                "discord_unavailable",
+                "discord_refused"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "failure"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "failure_discord_code",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "failure_discord_code"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "message_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "message_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "first_attempt_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "first_attempt_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "settled_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "settled_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "7bda1b33af96300c4045f03ddaebf23f22f4c6200738e439bc9b76864a306faa"
+}

@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ShortText
+discord: What happened? has two answers. Keep one answer and save again.
+plain:   What happened? has two answers. Keep one answer and save again.
+model:   [User("What happened?"), Fixed(" has two answers. Keep one answer and save again.")]

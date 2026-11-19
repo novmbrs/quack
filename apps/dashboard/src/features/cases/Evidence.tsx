@@ -1,38 +1,38 @@
 import { ExternalLink, FileText } from "lucide-react";
 
 import { useUser } from "~/api/directory";
-import type { CaseEvidence } from "~/api/types";
+import type { Evidence, EvidenceFile } from "~/api/types";
 import { bytes, stamp } from "~/lib/format";
 import { Avatar } from "~/ui/Avatar";
 import { QuackIcon } from "~/ui/QuackIcon";
 
 import s from "./Evidence.module.css";
 
-type Attachment = NonNullable<CaseEvidence["attachments"]>[number];
-
 /**
- * EvidenceMessage renders a captured Discord message the way Discord shows
- * it, from Quack's snapshot, so it still reads right after the original is
- * edited or deleted.
+ * EvidenceMessage renders a saved Discord message the way Discord shows it,
+ * from Quack's snapshot, so it still reads right after the original is
+ * edited or deleted. Saving and failure states use the server's text.
  */
 export function EvidenceMessage({
   evidence,
   files,
   guildId,
 }: {
-  evidence: CaseEvidence;
+  evidence: Evidence;
   /**
-   * The case's evidence file route, such as `/api/members/me/cases/{id}/evidence/files`.
+   * The case's evidence file route, such as `/api/guilds/{id}/cases/{ref}/evidence`.
    * It redirects to a freshly signed copy, since stored Discord links expire.
    */
   files: string;
-  /** Staff views resolve the author; member views pass nothing. */
-  guildId?: string;
+  guildId: string;
 }) {
-  const { data: author } = useUser(guildId ?? "", guildId ? evidence.author_discord_user_id : null);
-  const name = author?.display_name ?? "Message author";
-  const failed =
-    evidence.capture_outcome !== "captured" && !evidence.content && !evidence.attachments?.length;
+  const { data: author } = useUser(guildId, evidence.author_id);
+  const name = author?.display_name ?? (evidence.author_id ? "Unknown member" : "Message");
+  const time = evidence.message_created_at ?? evidence.created_at;
+  const previews = evidence.embeds
+    .map((e) => e.title || e.type)
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <article className={s.message}>
@@ -40,35 +40,36 @@ export function EvidenceMessage({
       <div className={s.body}>
         <header className={s.meta}>
           <span className={s.author}>{name}</span>
-          <time dateTime={evidence.message_created_at} className={s.time}>
-            {stamp(evidence.message_created_at)}
+          <time dateTime={time} className={s.time}>
+            {stamp(time)}
           </time>
           {evidence.message_edited_at ? <span className={s.time}>(edited)</span> : null}
-          {evidence.message_url ? (
-            <a href={evidence.message_url} target="_blank" rel="noreferrer" className={s.jump}>
-              Jump <ExternalLink size={12} />
-            </a>
-          ) : null}
+          <a href={evidence.url} target="_blank" rel="noreferrer" className={s.jump}>
+            Open message <ExternalLink size={12} />
+          </a>
         </header>
-        {failed ? (
-          <p className={s.muted}>Quack couldn't capture this message.</p>
-        ) : evidence.content ? (
-          <p className={s.content}>{evidence.content}</p>
-        ) : null}
-        {evidence.attachments?.length ? (
+        {evidence.state === "saved" ? (
+          evidence.content ? (
+            <p className={s.content}>{evidence.content}</p>
+          ) : null
+        ) : evidence.state === "saving" ? (
+          <p className={s.muted}>{evidence.state_text}</p>
+        ) : (
+          <p className={s.warning}>
+            <QuackIcon name="warn" size={14} /> {evidence.state_text}
+          </p>
+        )}
+        {previews ? <p className={s.muted}>Link previews: {previews}</p> : null}
+        {evidence.files.length ? (
           <div className={s.attachments}>
-            {evidence.attachments.map((a, i) => (
-              <AttachmentView
-                key={`${a.filename}-${i}`}
-                attachment={a}
-                url={`${files}/${encodeURIComponent(a.id)}`}
-              />
+            {evidence.files.map((f) => (
+              <FileView key={f.id} file={f} url={`${files}/${encodeURIComponent(f.id)}`} />
             ))}
           </div>
         ) : null}
-        {evidence.capture_warning ? (
+        {evidence.files_not_saved > 0 ? (
           <p className={s.warning}>
-            <QuackIcon name="warn" size={14} /> {evidence.capture_warning}
+            <QuackIcon name="warn" size={14} /> {filesNotSaved(evidence.files_not_saved)}
           </p>
         ) : null}
       </div>
@@ -76,27 +77,34 @@ export function EvidenceMessage({
   );
 }
 
-function AttachmentView({ attachment: a, url }: { attachment: Attachment; url: string }) {
-  const image = a.content_type.startsWith("image/");
+/** filesNotSaved is design §12.6 evidence.files_not_saved. */
+export function filesNotSaved(count: number): string {
+  const lead =
+    count === 1 ? "1 more file wasn't saved" : `${count.toLocaleString()} more files weren't saved`;
+  return `${lead}, because a case keeps at most 100 files and 10 per message.`;
+}
+
+function FileView({ file: f, url }: { file: EvidenceFile; url: string }) {
+  const image = (f.content_type ?? "").startsWith("image/");
   return (
     <div className={s.attachment}>
       {image ? (
         <a href={url} target="_blank" rel="noreferrer">
-          <img src={url} alt={a.filename} loading="lazy" className={s.image} />
+          <img src={url} alt={f.filename} loading="lazy" className={s.image} />
         </a>
       ) : (
         <a href={url} target="_blank" rel="noreferrer" className={s.file}>
           <FileText size={28} />
           <span className={s.fileText}>
-            <span className={s.fileName}>{a.filename}</span>
-            <span className={s.time}>{bytes(a.size_bytes)}</span>
+            <span className={s.fileName}>{f.filename}</span>
+            <span className={s.time}>{bytes(f.size_bytes)}</span>
           </span>
         </a>
       )}
-      {a.warning ? (
+      {f.copy_state !== "copied" ? (
         <p className={s.warning}>
-          <QuackIcon name="warn" size={14} />
-          {a.warning}
+          {f.copy_state === "pending" ? null : <QuackIcon name="warn" size={14} />}
+          {f.state_text}
         </p>
       ) : null}
     </div>

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: There's no question waiting for you to answer. Open your appeal to see the latest update.
+plain:   There's no question waiting for you to answer. Open your appeal to see the latest update.
+model:   [Fixed("There's no question waiting for you to answer. Open your appeal to see the latest update.")]

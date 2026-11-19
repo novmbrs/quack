@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE action_attempts SET finished_at = now(), outcome = $4, http_status = $5, discord_code = $6\n             WHERE guild_id = $1 AND action_id = $2 AND number = $3 AND finished_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int4",
+        {
+          "Custom": {
+            "name": "attempt_outcome",
+            "kind": {
+              "Enum": [
+                "done",
+                "no_change",
+                "refused",
+                "not_sent",
+                "unknown",
+                "interrupted"
+              ]
+            }
+          }
+        },
+        "Int2",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bcddda88ec5359379f9ace83d4d93021ef827dd0fd44b476bc5d2fb61791bbdc"
+}

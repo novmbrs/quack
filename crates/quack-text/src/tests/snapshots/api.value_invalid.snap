@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't read this value. Go back, choose it again, and retry.
+plain:   Quack couldn't read this value. Go back, choose it again, and retry.
+model:   [Fixed("Quack couldn't read this value. Go back, choose it again, and retry.")]

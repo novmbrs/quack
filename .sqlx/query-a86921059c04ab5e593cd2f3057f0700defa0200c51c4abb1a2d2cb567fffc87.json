@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT enabled, disabled_reason, include_message_content, include_file_names, include_embed_types,\n                        version FROM activity_log_settings WHERE guild_id = $1 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enabled",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "enabled"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "disabled_reason",
+        "type_info": {
+          "Custom": {
+            "name": "module_disabled_reason",
+            "kind": {
+              "Enum": [
+                "channel_deleted",
+                "quack_left"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "disabled_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "include_message_content",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "include_message_content"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "include_file_names",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "include_file_names"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "include_embed_types",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "include_embed_types"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a86921059c04ab5e593cd2f3057f0700defa0200c51c4abb1a2d2cb567fffc87"
+}

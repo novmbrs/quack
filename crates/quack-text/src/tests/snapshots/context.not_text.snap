@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ShortText
+discord: What happened? — Enter text.
+plain:   What happened? — Enter text.
+model:   [User("What happened?"), Fixed(" — Enter text.")]

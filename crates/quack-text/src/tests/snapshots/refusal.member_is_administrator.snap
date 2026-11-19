@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MemberIsAdministrator
+discord: No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+plain:   No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+model:   [Fixed("No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.")]
+
+## MemberIsAdministrator, no member known
+discord: No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+plain:   No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.
+model:   [Fixed("No case was added. This rule calls for a timeout, and Discord doesn't allow timeouts for members with Administrator.")]

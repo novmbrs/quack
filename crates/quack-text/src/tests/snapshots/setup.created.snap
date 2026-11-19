@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack created <#444> with staff-only permissions and saved it.
+plain:   Quack created #staff with staff-only permissions and saved it.
+model:   [Fixed("Quack created "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" with staff-only permissions and saved it.")]

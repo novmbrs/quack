@@ -1,0 +1,50 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+expression: "json(&render(&quack_text::case::picker(&member, case(2), &rules, 1, 2),\n&CommandIds::EMPTY))"
+---
+[
+  {
+    "components": [
+      {
+        "content": "Choose a rule for the case about <@9>.",
+        "type": 10
+      },
+      {
+        "components": [
+          {
+            "custom_id": "1:rp:AAAAAAAAAAAAAAAAAAAAAg",
+            "disabled": false,
+            "options": [
+              {
+                "default": false,
+                "description": "Unwanted ads",
+                "label": "Spam",
+                "value": "AAAAAAAAAAAAAAAAAAAABQ"
+              },
+              {
+                "default": false,
+                "label": "Harassment",
+                "value": "AAAAAAAAAAAAAAAAAAAABg"
+              }
+            ],
+            "placeholder": "Choose a rule",
+            "type": 3
+          }
+        ],
+        "type": 1
+      },
+      {
+        "components": [
+          {
+            "custom_id": "1:rpp:AAAAAAAAAAAAAAAAAAAAAg:2",
+            "label": "Next",
+            "style": 2,
+            "type": 2
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 17
+  }
+]

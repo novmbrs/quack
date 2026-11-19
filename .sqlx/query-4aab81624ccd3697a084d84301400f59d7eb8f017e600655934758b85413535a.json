@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guild_settings SET starter_rule_id = $2 WHERE guild_id = $1 AND starter_rule_id IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4aab81624ccd3697a084d84301400f59d7eb8f017e600655934758b85413535a"
+}

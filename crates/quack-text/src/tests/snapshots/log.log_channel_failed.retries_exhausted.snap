@@ -1,0 +1,19 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+##  · post
+tone: Danger
+--- discord ---
+Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.
+-# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+--- plain ---
+Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.
+17 Nov 2026 at 14:05 UTC · Open moderation log
+--- model ---
+Text [Fixed("Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+
+##  · dashboard text
+discord: Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.
+plain:   Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.
+model:   [Fixed("Quack couldn't confirm whether an entry reached the log channel. The entries are saved in the moderation log.")]

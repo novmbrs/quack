@@ -1,0 +1,13 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+
+select OpenCase "Open a case": #12 · Spam
+--- plain ---
+
+--- model ---
+
+## placeholder
+Open a case

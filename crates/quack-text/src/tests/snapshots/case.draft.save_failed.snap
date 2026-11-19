@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## internal error
+tone: Danger
+--- discord ---
+Something went wrong inside Quack, so nothing changed. Try again in a moment.
+buttons: [Try again · Primary] DraftSaveAgain(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Something went wrong inside Quack, so nothing changed. Try again in a moment.
+--- model ---
+Text [Fixed("Something went wrong inside Quack, so nothing changed. Try again in a moment.")]

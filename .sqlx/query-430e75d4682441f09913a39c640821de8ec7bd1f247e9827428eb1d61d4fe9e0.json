@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH a AS (\n               UPDATE actions SET state = 'running', attempts = attempts + 1, last_attempt_at = now(),\n                                  next_attempt_at = NULL, updated_at = now()\n               WHERE guild_id = $1 AND id = $2 AND state = 'pending'\n               RETURNING guild_id, id\n             )\n             INSERT INTO action_attempts (guild_id, action_id, number, started_at)\n             SELECT a.guild_id, a.id,\n                    COALESCE((SELECT max(number) FROM action_attempts WHERE action_id = a.id), 0) + 1, now()\n             FROM a\n             RETURNING number",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "number",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "action_attempts",
+            "name": "number"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "430e75d4682441f09913a39c640821de8ec7bd1f247e9827428eb1d61d4fe9e0"
+}

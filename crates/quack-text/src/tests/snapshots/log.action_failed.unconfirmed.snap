@@ -1,0 +1,102 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout Unconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't confirm whether Discord timed out <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Check <@222>'s timeout in Discord.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+buttons: [Retry timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't confirm whether Discord timed out Sam for case #12. Check Sam's timeout in Discord.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Fixed("Quack couldn't confirm whether Discord timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+## Timeout Unconfirmed · dashboard text
+discord: Quack couldn't confirm whether Discord timed out <@222> for case #12. Check <@222>'s timeout in Discord.
+plain:   Quack couldn't confirm whether Discord timed out Sam for case #12. Check Sam's timeout in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord timed out "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
+## Kick Unconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't confirm whether Discord removed <@222> from the server for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Check Server Settings → Audit Log in Discord for the kick.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+buttons: [Retry kick · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't confirm whether Discord removed Sam from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Check Server Settings → Audit Log in Discord for the kick.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+## Kick Unconfirmed · dashboard text
+discord: Quack couldn't confirm whether Discord removed <@222> from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
+plain:   Quack couldn't confirm whether Discord removed Sam from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.")]
+
+## Ban Unconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't confirm whether Discord banned <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Check Server Settings → Bans in Discord.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't confirm whether Discord banned Sam for case #12. Check Server Settings → Bans in Discord.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Check Server Settings → Bans in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+## Ban Unconfirmed · dashboard text
+discord: Quack couldn't confirm whether Discord banned <@222> for case #12. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't confirm whether Discord banned Sam for case #12. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Check Server Settings → Bans in Discord.")]
+
+## RemoveTimeout Unconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't confirm whether Discord removed <@222>'s timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Check <@222>'s timeout in Discord.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+buttons: [Retry removing timeout · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't confirm whether Discord removed Sam's timeout for case #12. Check Sam's timeout in Discord.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+## RemoveTimeout Unconfirmed · dashboard text
+discord: Quack couldn't confirm whether Discord removed <@222>'s timeout for case #12. Check <@222>'s timeout in Discord.
+plain:   Quack couldn't confirm whether Discord removed Sam's timeout for case #12. Check Sam's timeout in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout for case #12. Check "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout in Discord.")]
+
+## Unban Unconfirmed · post
+tone: Danger
+--- discord ---
+Quack couldn't confirm whether Discord unbanned <@222> for **[case #12](<https://quack.example/guilds/111/cases/12>)**. Check Server Settings → Bans in Discord.
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
+buttons: [Retry unban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000000000003))
+--- plain ---
+Quack couldn't confirm whether Discord unbanned Sam for case #12. Check Server Settings → Bans in Discord.
+17 Nov 2026 at 14:05 UTC · Open case
+--- model ---
+Text [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(". Check Server Settings → Bans in Discord.")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
+
+## Unban Unconfirmed · dashboard text
+discord: Quack couldn't confirm whether Discord unbanned <@222> for case #12. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't confirm whether Discord unbanned Sam for case #12. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord unbanned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12. Check Server Settings → Bans in Discord.")]
+
+## Kick Unconfirmed · no names known
+discord: Quack couldn't confirm whether Discord removed the member from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
+plain:   Quack couldn't confirm whether Discord removed the member from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.
+model:   [Fixed("Quack couldn't confirm whether Discord removed the member from the server for case #12. Check Server Settings → Audit Log in Discord for the kick.")]
+
+## Unban Unconfirmed · no names known
+discord: Quack couldn't confirm whether Discord unbanned the member for case #12. Check Server Settings → Bans in Discord.
+plain:   Quack couldn't confirm whether Discord unbanned the member for case #12. Check Server Settings → Bans in Discord.
+model:   [Fixed("Quack couldn't confirm whether Discord unbanned the member for case #12. Check Server Settings → Bans in Discord.")]

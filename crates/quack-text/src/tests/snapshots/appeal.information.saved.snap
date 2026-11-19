@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Your reply was added to the appeal for case #12. It's waiting for a decision.
+plain:   Your reply was added to the appeal for case #12. It's waiting for a decision.
+model:   [Fixed("Your reply was added to the appeal for case #12. It's waiting for a decision.")]

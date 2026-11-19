@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Tickets are off. Tickets that are already open stay open until someone closes them.
+plain:   Tickets are off. Tickets that are already open stay open until someone closes them.
+model:   [Fixed("Tickets are off. Tickets that are already open stay open until someone closes them.")]

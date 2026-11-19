@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Something went wrong inside Quack, so nothing changed. Try again in a moment.
+plain:   Something went wrong inside Quack, so nothing changed. Try again in a moment.
+model:   [Fixed("Something went wrong inside Quack, so nothing changed. Try again in a moment.")]

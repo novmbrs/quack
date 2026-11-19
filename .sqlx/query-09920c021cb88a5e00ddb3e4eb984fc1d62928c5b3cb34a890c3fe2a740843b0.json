@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id, c.number\n             FROM actions a JOIN cases c ON c.guild_id = a.guild_id AND c.id = a.case_id\n             WHERE a.guild_id = $1 AND a.member_id = $2 AND a.kind = $3 AND a.case_id <> $4\n               AND c.voided_at IS NULL AND a.state = 'done'\n               AND (a.kind <> 'timeout' OR a.timeout_ends_at > now())\n             ORDER BY c.number DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "cases",
+            "name": "number"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "09920c021cb88a5e00ddb3e4eb984fc1d62928c5b3cb34a890c3fe2a740843b0"
+}

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: No case was added. This server has reached the highest case number Quack can store.
+plain:   No case was added. This server has reached the highest case number Quack can store.
+model:   [Fixed("No case was added. This server has reached the highest case number Quack can store.")]

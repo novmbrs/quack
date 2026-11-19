@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE dms SET state = 'sending', channel_id = $3, first_attempt_at = now()\n               WHERE guild_id = $1 AND id = $2 AND state = 'pending'\n               RETURNING first_attempt_at AS \"first_attempt_at!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "first_attempt_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "dms",
+            "name": "first_attempt_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "b56a248ab2f1cffe2bdba6e0c95e30bd811e5426ac75b25f3112aec0ff225d3b"
+}

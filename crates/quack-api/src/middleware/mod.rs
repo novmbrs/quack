@@ -1,0 +1,75 @@
+//! The middleware stack, outermost first (§14.7, §14.8, §18.4):
+//!
+//! 1. `telemetry`: the request's span (its trace ID is the request ID,
+//!    returned as `traceparent` and in every error), `http.server.*`
+//!    metrics by route template.
+//! 2. `headers`: security headers; `no-store` and a deny-all CSP on API
+//!    and health responses (a caught panic's answer included).
+//! 3. panic catching: a panicking handler answers `500 internal_error`.
+//! 4. gzip compression of text responses.
+//! 5. the 10 s deadline for reads (`503 unavailable`).
+//! 6. the 256 KiB body cap (`413 body_too_large`).
+//! 7. `auth`: the session, resolved once; origin and CSRF checks on
+//!    every API mutation.
+//! 8. `rate_limit`: the route's class, keyed by account (and server) or
+//!    client IP (`429 rate_limited` with `Retry-After`).
+
+pub(crate) mod auth;
+pub(crate) mod headers;
+pub(crate) mod limits;
+pub(crate) mod rate_limit;
+pub(crate) mod telemetry;
+
+use axum::Router;
+use axum::extract::DefaultBodyLimit;
+use axum::middleware::{from_fn, from_fn_with_state};
+use tower_http::catch_panic::CatchPanicLayer;
+use tower_http::compression::CompressionLayer;
+
+use crate::state::ApiState;
+
+/// Wraps every route (and the fallback) in the stack above.
+pub(crate) fn stack(router: Router<ApiState>, state: &ApiState) -> Router<ApiState> {
+    router
+        .layer(from_fn_with_state(state.clone(), rate_limit::layer))
+        .layer(from_fn_with_state(state.clone(), auth::layer))
+        .layer(DefaultBodyLimit::max(limits::MAX_BODY))
+        .layer(from_fn(limits::body_limit))
+        .layer(from_fn(|request, next| {
+            limits::deadline(limits::DEADLINE, request, next)
+        }))
+        .layer(CompressionLayer::new().gzip(true))
+        // Inside the headers layer, so a caught panic's answer gets the
+        // security and cache headers too.
+        .layer(CatchPanicLayer::custom(limits::panicked))
+        .layer(from_fn_with_state(state.clone(), headers::layer))
+        .layer(from_fn(telemetry::layer))
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::Router;
+    use axum::body::Body;
+    use axum::http::Request;
+    use axum::routing::get;
+    use tower::ServiceExt as _;
+    use tower_http::catch_panic::CatchPanicLayer;
+
+    #[tokio::test]
+    async fn a_panicking_handler_answers_with_the_envelope() {
+        let app = Router::new()
+            .route("/boom", get(|| async { panic!("boom") }))
+            .layer(CatchPanicLayer::custom(super::limits::panicked));
+        let response = app
+            .oneshot(Request::get("/boom").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 500);
+        let body = axum::body::to_bytes(response.into_body(), 1 << 16)
+            .await
+            .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["error"]["code"], "internal_error");
+        assert!(!json.to_string().contains("boom"));
+    }
+}

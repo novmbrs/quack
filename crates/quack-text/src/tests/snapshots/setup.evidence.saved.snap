@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack will copy evidence files to <#444>.
+plain:   Quack will copy evidence files to #staff.
+model:   [Fixed("Quack will copy evidence files to "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(".")]

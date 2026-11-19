@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind, count(*) AS \"n!\" FROM mod_log\n               WHERE guild_id = $1 AND created_at >= $2 AND created_at < $3 GROUP BY 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "mod_log_kind",
+            "kind": {
+              "Enum": [
+                "case_created",
+                "case_create_refused",
+                "case_voided",
+                "case_context_edited",
+                "evidence_added",
+                "action_done",
+                "action_failed",
+                "action_retry_requested",
+                "action_dismissed",
+                "action_undo_requested",
+                "action_undo_skipped",
+                "dm_sent",
+                "dm_failed",
+                "appeal_submitted",
+                "appeal_information_requested",
+                "appeal_information_provided",
+                "appeal_accepted",
+                "appeal_rejected",
+                "appeal_closed",
+                "appeal_reopened",
+                "rule_created",
+                "rule_edited",
+                "rule_archived",
+                "rule_restored",
+                "rule_imported",
+                "settings_changed",
+                "module_enabled",
+                "module_disabled",
+                "module_settings_changed",
+                "quack_joined",
+                "quack_left",
+                "channel_setting_cleared",
+                "log_channel_failed",
+                "ticket_opened",
+                "ticket_closed",
+                "honeypot_case_failed",
+                "legacy"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "mod_log",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "61ecfdb6e8563761dd35129e12a014a490e180525296f78bccddd0cbfe1a2f35"
+}

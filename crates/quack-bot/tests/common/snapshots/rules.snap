@@ -1,0 +1,10 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Rules
+Insults · at 1 case: warning · Open rule
+Raids · at 1 case: warning · Open rule
+Spam · at 1 case: warning · Open rule
+Rules are edited on the dashboard.

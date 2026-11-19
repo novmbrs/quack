@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## ShortText
+discord: One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.
+plain:   One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.
+model:   [Fixed("One answer belongs to a field this rule no longer uses. Open the latest form and enter your answers there.")]

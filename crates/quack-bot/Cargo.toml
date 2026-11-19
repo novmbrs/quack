@@ -1,0 +1,41 @@
+[package]
+name = "quack-bot"
+description = "Quack's interaction and gateway event routing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# The optional modules plug in through `modules::Module` (an integration
+# point); their crates are added here when they are connected.
+[dependencies]
+quack-core = { workspace = true }
+quack-text = { workspace = true }
+quack-engine = { workspace = true }
+quack-discord = { workspace = true }
+quack-db = { workspace = true }
+quack-tickets = { workspace = true }
+quack-honeypot = { workspace = true }
+quack-activity-log = { workspace = true }
+quack-telemetry = { workspace = true }
+opentelemetry = { workspace = true }
+serde_json = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+quack-testkit = { workspace = true }
+anyhow = { workspace = true }
+insta = { workspace = true, features = ["filters"] }
+serde_json = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+time = { workspace = true }
+uuid = { workspace = true }

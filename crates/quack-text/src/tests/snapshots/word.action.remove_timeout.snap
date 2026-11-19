@@ -1,0 +1,4 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+remove timeout

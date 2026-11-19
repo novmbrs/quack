@@ -1,0 +1,26 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Your appeal for case #12 in **Duck Pond**
+The moderators accepted your appeal. Case #12 no longer counts.
+> We reviewed it.
+Open your case to check whether any timeout or ban was removed.
+Once your ban is removed, you can try this invite to rejoin the server: [https://discord.gg/abc123](<https://discord.gg/abc123>)
+-# <t:1795014309:f>
+buttons: [Open your case](https://quack.example/guilds/111/cases/12/appeal)
+--- plain ---
+Your appeal for case #12 in Duck Pond
+The moderators accepted your appeal. Case #12 no longer counts.
+> We reviewed it.
+Open your case to check whether any timeout or ban was removed.
+Once your ban is removed, you can try this invite to rejoin the server: https://discord.gg/abc123
+18 Nov 2026 at 15:05 UTC
+--- model ---
+Heading [Fixed("Your appeal for case #12 in "), Bold([User("Duck Pond")])]
+Text [Fixed("The moderators accepted your appeal. Case #12 no longer counts.")]
+Quote [User("We reviewed it.")]
+Text [Fixed("Open your case to check whether any timeout or ban was removed.")]
+Text [Fixed("Once your ban is removed, you can try this invite to rejoin the server: "), Link { text: [Fixed("https://discord.gg/abc123")], url: "https://discord.gg/abc123" }]
+Subtext [Time(2026-11-18 15:05:09.0 +00:00:00, Full)]

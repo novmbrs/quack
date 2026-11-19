@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+reason — Why you're voiding the case. The member can see this reason.
+
+## description
+Why you're voiding the case. The member can see this reason.

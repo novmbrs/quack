@@ -1,0 +1,22 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## staff, one
+discord: Quack needs View Channel in <#444>. Ask an administrator to allow it for Quack in the channel's Edit Channel → Permissions.
+plain:   Quack needs View Channel in #general. Ask an administrator to allow it for Quack in the channel's Edit Channel → Permissions.
+model:   [Fixed("Quack needs View Channel in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(". Ask an administrator to allow it for Quack in the channel's Edit Channel → Permissions.")]
+
+## staff, two
+discord: Quack needs View Channel and Read Message History in <#444>. Ask an administrator to allow them for Quack in the channel's Edit Channel → Permissions.
+plain:   Quack needs View Channel and Read Message History in #general. Ask an administrator to allow them for Quack in the channel's Edit Channel → Permissions.
+model:   [Fixed("Quack needs View Channel and Read Message History in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(". Ask an administrator to allow them for Quack in the channel's Edit Channel → Permissions.")]
+
+## administrator, one
+discord: In <#444> → Edit Channel → Permissions, allow View Channel for Quack.
+plain:   In #general → Edit Channel → Permissions, allow View Channel for Quack.
+model:   [Fixed("In "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(" → Edit Channel → Permissions, allow View Channel for Quack.")]
+
+## administrator, two
+discord: In <#444> → Edit Channel → Permissions, allow View Channel and Read Message History for Quack.
+plain:   In #general → Edit Channel → Permissions, allow View Channel and Read Message History for Quack.
+model:   [Fixed("In "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(" → Edit Channel → Permissions, allow View Channel and Read Message History for Quack.")]

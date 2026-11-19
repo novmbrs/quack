@@ -3,24 +3,24 @@ import { Fragment } from "react";
 
 import { QuackIcon, type QuackIconName } from "~/ui/QuackIcon";
 
-import { type Enforcement, outcome, range, shortOutcome, type Step, summarize } from "./draft";
+import { type ActionChoice, outcome, range, shortOutcome, type Step, summarize } from "./draft";
 import s from "./Ladder.module.css";
 
-/** enforcementIcon is the Signals icon for a level's outcome. */
-export const enforcementIcon: Record<Enforcement, QuackIconName> = {
+/** actionIcon is the Signals icon for a level's action. */
+export const actionIcon: Record<ActionChoice, QuackIconName> = {
   none: "warn",
-  timeout_user: "timeout",
-  kick_user: "kick",
-  ban_user: "ban",
+  timeout: "timeout",
+  kick: "kick",
+  ban: "ban",
 };
 
 /**
- * Ladder shows a rule's escalation top to bottom, the way an admin reasons
- * about it: "Cases 3–4: Timeout for 1 day, DM'd".
+ * Ladder shows a rule's levels top to bottom, the way a rules manager reasons
+ * about them: "Case count 3–4: Timeout for 1 day. Sends a DM".
  */
 export function Ladder({ steps }: { steps: Step[] }) {
   return (
-    <ol className={s.list} aria-label="Escalation">
+    <ol className={s.list} aria-label="Levels">
       {steps.map((step) => (
         <li
           key={step.id}
@@ -30,7 +30,7 @@ export function Ladder({ steps }: { steps: Step[] }) {
         >
           <div className={s.rail}>
             <span className={s.node}>
-              <QuackIcon name={enforcementIcon[step.action]} size={18} />
+              <QuackIcon name={actionIcon[step.action]} size={18} />
             </span>
             <span className={s.line} />
           </div>
@@ -38,9 +38,9 @@ export function Ladder({ steps }: { steps: Step[] }) {
             <p className={s.range}>{range(step)}</p>
             <p className={s.outcome}>{outcome(step)}</p>
             <p className={s.meta}>
-              {step.name || (step.isDefault ? "Default level" : "Unnamed level")}
+              Level {step.index}
               {" · "}
-              {step.notify ? "DMs the member" : "No DM"}
+              {step.sendDm ? "Sends a DM" : "No DM"}
             </p>
           </div>
         </li>
@@ -51,7 +51,7 @@ export function Ladder({ steps }: { steps: Step[] }) {
 
 /**
  * LadderInline is the one-line version for lists:
- * Cases 1–2 Warning → 3–4 Timeout 1 day → 5+ Ban.
+ * 1–2 Warning → 3–4 Timeout for 1 day → 5+ Ban.
  */
 export function LadderInline({ steps }: { steps: Step[] }) {
   const shown = steps.filter((step) => !step.unreachable);
@@ -61,8 +61,8 @@ export function LadderInline({ steps }: { steps: Step[] }) {
         <Fragment key={step.id}>
           {i > 0 ? <ChevronRight size={14} aria-hidden className={s.arrow} /> : null}
           <span className={s.chip} data-action={step.action} aria-hidden>
-            <QuackIcon name={enforcementIcon[step.action]} size={16} />
-            <span className={s.chipRange}>{range(step, i > 0)}</span>
+            <QuackIcon name={actionIcon[step.action]} size={16} />
+            <span className={s.chipRange}>{range(step, true)}</span>
             <span>{shortOutcome(step)}</span>
           </span>
         </Fragment>

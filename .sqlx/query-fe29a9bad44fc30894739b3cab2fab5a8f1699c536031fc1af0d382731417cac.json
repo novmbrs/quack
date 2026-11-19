@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets t SET journal_gaps = true, updated_at = now()\n             FROM unnest($1::bigint[], $2::uuid[]) AS d(guild_id, id)\n             WHERE t.guild_id = d.guild_id AND t.id = d.id AND NOT t.journal_gaps",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fe29a9bad44fc30894739b3cab2fab5a8f1699c536031fc1af0d382731417cac"
+}

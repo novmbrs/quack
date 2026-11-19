@@ -1,0 +1,126 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## LogChannel · post
+tone: Neutral
+--- discord ---
+The log channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The log channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The log channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## LogChannel · dashboard text
+discord: The log channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The log channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The log channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## AppealChannel · post
+tone: Neutral
+--- discord ---
+The appeal channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The appeal channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The appeal channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## AppealChannel · dashboard text
+discord: The appeal channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The appeal channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The appeal channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## EvidenceChannel · post
+tone: Neutral
+--- discord ---
+The evidence channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The evidence channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The evidence channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## EvidenceChannel · dashboard text
+discord: The evidence channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The evidence channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The evidence channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## TicketEntryChannel · post
+tone: Neutral
+--- discord ---
+The ticket entry channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The ticket entry channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The ticket entry channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## TicketEntryChannel · dashboard text
+discord: The ticket entry channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The ticket entry channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The ticket entry channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## TicketQueueChannel · post
+tone: Neutral
+--- discord ---
+The ticket staff channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The ticket staff channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The ticket staff channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## TicketQueueChannel · dashboard text
+discord: The ticket staff channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The ticket staff channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The ticket staff channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## HoneypotChannel · post
+tone: Neutral
+--- discord ---
+The honeypot channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The honeypot channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The honeypot channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## HoneypotChannel · dashboard text
+discord: The honeypot channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The honeypot channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The honeypot channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## ActivityLogRoute · post
+tone: Neutral
+--- discord ---
+The server activity channel was deleted. Choose a new channel in </setup:1004>.
+-# <t:1794924309:f> · [Open settings](<https://quack.example/guilds/111/settings>)
+--- plain ---
+The server activity channel was deleted. Choose a new channel in /setup.
+17 Nov 2026 at 14:05 UTC · Open settings
+--- model ---
+Text [Fixed("The server activity channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open settings")], url: "https://quack.example/guilds/111/settings" }]
+
+## ActivityLogRoute · dashboard text
+discord: The server activity channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The server activity channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The server activity channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]
+
+## AppealChannel · no names known
+discord: The appeal channel was deleted. Choose a new channel in </setup:1004>.
+plain:   The appeal channel was deleted. Choose a new channel in /setup.
+model:   [Fixed("The appeal channel was deleted. Choose a new channel in "), Command(Setup), Fixed(".")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles.
+plain:   To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles.
+model:   [Fixed("To change Quack's settings, you need Manage Server in Discord. Ask an administrator to check your roles in Server Settings → Roles.")]

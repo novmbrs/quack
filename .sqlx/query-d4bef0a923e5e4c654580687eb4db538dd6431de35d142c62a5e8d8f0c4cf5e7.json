@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickets SET journal_gaps = true, updated_at = now()\n             WHERE state IN ('opening', 'open', 'closing') AND frozen_at IS NULL AND NOT journal_gaps",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "d4bef0a923e5e4c654580687eb4db538dd6431de35d142c62a5e8d8f0c4cf5e7"
+}

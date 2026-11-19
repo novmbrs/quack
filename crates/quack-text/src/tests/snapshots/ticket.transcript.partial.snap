@@ -1,0 +1,8 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## History
+Some messages may be missing because Quack couldn't read the full thread.
+
+## Trimmed
+Some messages are missing because Quack reached the 8 MB limit.

@@ -4,14 +4,15 @@ import { Scale } from "lucide-react";
 import { useEffect } from "react";
 
 import { cx } from "~/lib/cx";
-import { type AppealFilters, appealsQuery } from "~/api/queries";
-import type { Appeal } from "~/api/types";
+import { useCursorPager } from "~/api/paging";
+import { type AppealFilters, appealsQuery, guildMeQuery } from "~/api/queries";
+import type { AppealSummary } from "~/api/types";
 import { AppealRow } from "~/features/appeals/AppealRow";
 import {
   type FilterTab,
   filterOf,
-  parseStatusFilter,
-  type StatusFilter,
+  parseStateFilter,
+  type StateFilter,
   tabOf,
 } from "~/features/appeals/decisions";
 import { Pager } from "~/ui/DataTable";
@@ -22,17 +23,14 @@ import s from "./appeals.module.css";
 
 const PAGE = 50;
 
-/** AppealSearch is the queue's filter in the URL; no status means pending. */
-export type AppealSearch = { status?: StatusFilter; offset?: number };
+/** AppealSearch is the queue's filter in the URL; no state means pending. */
+export type AppealSearch = { state?: StateFilter };
 
 export const Route = createFileRoute("/_authed/guilds/$guildId/appeals")({
   validateSearch: (raw: Record<string, unknown>): AppealSearch => {
-    const status = parseStatusFilter(raw.status);
-    const offset = Number(raw.offset);
-    return {
-      status: status === "pending" ? undefined : status,
-      offset: Number.isInteger(offset) && offset > 0 ? offset : undefined,
-    };
+    // "status" is the Go-era name, kept so old links keep their filter.
+    const state = parseStateFilter(raw.state ?? raw.status);
+    return { state: state === "pending" ? undefined : state };
   },
   loaderDeps: ({ search }) => search,
   loader: ({ context, params, deps }) =>
@@ -41,13 +39,13 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/appeals")({
 });
 
 function filters(q: AppealSearch): AppealFilters {
-  const status = q.status ?? "pending";
-  return { status: status === "all" ? undefined : status, limit: PAGE, offset: q.offset };
+  const state = q.state ?? "pending";
+  return { state: state === "all" ? undefined : state, limit: PAGE };
 }
 
 const tabs: { value: FilterTab; label: string }[] = [
-  { value: "pending", label: "Pending" },
-  { value: "needs_information", label: "Needs info" },
+  { value: "pending", label: "Waiting for a decision" },
+  { value: "needs_information", label: "Waiting for the member" },
   { value: "decided", label: "Decided" },
   { value: "all", label: "All" },
 ];
@@ -61,17 +59,19 @@ function AppealsLayout() {
   const search = Route.useSearch();
   const { appealId } = useParams({ strict: false });
   const navigate = useNavigate({ from: Route.fullPath });
-  const filter = search.status ?? "pending";
+  const filter = search.state ?? "pending";
+  const pager = useCursorPager(filter);
 
-  const appeals = useQuery(appealsQuery(guildId, filters(search)));
-  // Shared with the sidebar's badge, so this costs nothing extra.
-  const pending = useQuery(appealsQuery(guildId, { status: "pending", limit: 1 }));
+  const appeals = useQuery(appealsQuery(guildId, filters(search), pager.cursor));
+  // The same exact count the sidebar's badge shows.
+  const me = useQuery(guildMeQuery(guildId));
+  const pendingCount = me.data?.counts?.pending_appeals;
   const list = appeals.data?.appeals ?? EMPTY;
 
-  const setFilter = (status: StatusFilter) =>
-    void navigate({ search: { status: status === "pending" ? undefined : status } });
+  const setFilter = (state: StateFilter) =>
+    void navigate({ search: { state: state === "pending" ? undefined : state } });
 
-  const open = (a: Appeal, focus = false) => {
+  const open = (a: AppealSummary, focus = false) => {
     void navigate({
       to: "/guilds/$guildId/appeals/$appealId",
       params: { guildId, appealId: a.id },
@@ -88,7 +88,7 @@ function AppealsLayout() {
   };
 
   // j and k move through the queue from anywhere on the page, like a mail
-  // client, unless the user is typing or a dialog is open.
+  // client, unless the reader is typing or a dialog is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
@@ -107,18 +107,20 @@ function AppealsLayout() {
     <Page
       icon={<Scale size={22} />}
       title="Appeals"
-      topic="Members asking for a second look at a case. Press J and K to move through the queue."
+      topic="Members asking the moderators to review a case. Press J and K to move through the queue."
       flush
     >
       <div className={s.split}>
         <aside className={cx(s.list, appealId ? s.hideNarrow : null)}>
           <div className={s.filters}>
             <Segmented
-              label="Status"
+              label="State"
               value={tabOf(filter)}
               onChange={(tab) => setFilter(filterOf(tab))}
               options={tabs.map((t) =>
-                t.value === "pending" ? { ...t, count: pending.data?.total ?? 0 } : t,
+                t.value === "pending" && pendingCount !== undefined
+                  ? { ...t, count: pendingCount }
+                  : t,
               )}
             />
             {tabOf(filter) === "decided" ? (
@@ -167,12 +169,11 @@ function AppealsLayout() {
           {appeals.data ? (
             <div className={s.pager}>
               <Pager
-                offset={search.offset ?? 0}
-                limit={PAGE}
-                total={appeals.data.total ?? 0}
-                onChange={(offset) =>
-                  void navigate({ search: (prev) => ({ ...prev, offset: offset || undefined }) })
-                }
+                page={pager.page}
+                hasPrevious={pager.hasPrevious}
+                hasNext={Boolean(appeals.data.next_cursor)}
+                onPrevious={pager.previous}
+                onNext={() => pager.next(appeals.data?.next_cursor)}
               />
             </div>
           ) : null}
@@ -185,28 +186,28 @@ function AppealsLayout() {
   );
 }
 
-function EmptyQueue({ filter }: { filter: StatusFilter }) {
+function EmptyQueue({ filter }: { filter: StateFilter }) {
   if (filter === "pending") {
     return (
       <Empty icon="success" title="You're all caught up" compact>
-        No appeals are waiting for review. New ones show up here and in the sidebar.
+        No appeals are waiting for a decision. New ones show up here and in the sidebar.
       </Empty>
     );
   }
   if (filter === "needs_information") {
     return (
-      <Empty icon="reply" title="No one to wait on" compact>
-        Appeals land here while staff wait for the member to answer a question.
+      <Empty icon="reply" title="No appeals waiting for a reply" compact>
+        Appeals wait here after the moderators ask the member for more information.
       </Empty>
     );
   }
   return (
     <Empty icon="appeal" title="No appeals here" compact>
-      Members can appeal a case from the link in Quack's DM when its rule allows it.
+      Members can appeal a case from Quack's DM or the dashboard when its rule allows it.
     </Empty>
   );
 }
 
 const rowId = (id: string) => `appeal-row-${id}`;
 
-const EMPTY: Appeal[] = [];
+const EMPTY: AppealSummary[] = [];

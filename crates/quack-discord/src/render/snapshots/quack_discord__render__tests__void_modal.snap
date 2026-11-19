@@ -1,0 +1,23 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+expression: "(&void.custom_id, &void.title, &void.components)"
+---
+[
+  "1:vdm:AAAAAAAAAAAAAAAAAAAAAw",
+  "Void case #12",
+  [
+    {
+      "type": 18,
+      "label": "Why are you voiding this case?",
+      "description": "The member can see this reason.",
+      "component": {
+        "type": 4,
+        "custom_id": "reason",
+        "max_length": 1000,
+        "min_length": 1,
+        "required": true,
+        "style": 2
+      }
+    }
+  ]
+]

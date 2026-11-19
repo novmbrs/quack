@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack will check whether it can remove <@222>'s timeout. Open case #12 to see the outcome.
+plain:   Quack will check whether it can remove Sam's timeout. Open case #12 to see the outcome.
+model:   [Fixed("Quack will check whether it can remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Open case #12 to see the outcome.")]

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT clock_timestamp() - first_attempt_at < make_interval(secs => $3) AS \"open!\"\n               FROM dms\n               WHERE guild_id = $1 AND id = $2 AND state = 'sending' AND first_attempt_at IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "open!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2cb6c9aee61ee61dd10931271ead9b1c274b732c13bf7b85043c9f953e964e2a"
+}

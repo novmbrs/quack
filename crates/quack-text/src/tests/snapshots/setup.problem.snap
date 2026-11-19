@@ -1,0 +1,42 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## not_text
+discord: Choose a text channel in this server.
+plain:   Choose a text channel in this server.
+model:   [Fixed("Choose a text channel in this server.")]
+
+## everyone_can_view
+discord: Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.
+plain:   Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.
+model:   [Fixed("Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.")]
+
+## role_can_view
+discord: <@&666> can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+plain:   @Helpers can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+model:   [Role(RoleRef { id: RoleId(666), name: Some("Helpers") }), Fixed(" can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.")]
+
+## member_can_view
+discord: <@222> can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.
+plain:   Sam can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.")]
+
+## quack_missing
+discord: In <#444> → Edit Channel → Permissions, allow View Channel, Send Messages, and Attach Files for Quack. Then choose the channel again.
+plain:   In #staff → Edit Channel → Permissions, allow View Channel, Send Messages, and Attach Files for Quack. Then choose the channel again.
+model:   [Fixed("In "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" → Edit Channel → Permissions, allow View Channel, Send Messages, and Attach Files for Quack. Then choose the channel again.")]
+
+## inaccessible
+discord: Quack can't check this channel. In Edit Channel → Permissions, allow View Channel for Quack, then choose the channel again.
+plain:   Quack can't check this channel. In Edit Channel → Permissions, allow View Channel for Quack, then choose the channel again.
+model:   [Fixed("Quack can't check this channel. In Edit Channel → Permissions, allow View Channel for Quack, then choose the channel again.")]
+
+## missing
+discord: This channel no longer exists. Choose another channel.
+plain:   This channel no longer exists. Choose another channel.
+model:   [Fixed("This channel no longer exists. Choose another channel.")]
+
+## role and member without names
+discord: <@&666> can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+plain:   An unnamed role (ID 666) can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+model:   [Role(RoleRef { id: RoleId(666), name: None }), Fixed(" can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.")]

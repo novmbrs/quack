@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.
+plain:   Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.
+model:   [Fixed("Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.")]

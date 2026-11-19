@@ -3,8 +3,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { FolderOpen, Hash, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { casesQuery, type CaseFilters, templatesQuery } from "~/api/queries";
-import type { Case, ExecutionStatus, Validity } from "~/api/types";
+import { useCursorPager } from "~/api/paging";
+import { casesQuery, type CaseFilters, rulesQuery } from "~/api/queries";
+import type { ActionState, CaseSummary } from "~/api/types";
 import { caseColumns } from "~/features/cases/columns";
 import { CreateCaseDialog } from "~/features/cases/CreateCaseDialog";
 import { MemberPicker } from "~/features/people/MemberPicker";
@@ -20,22 +21,23 @@ import s from "./cases.module.css";
 
 const PAGE = 50;
 
+type CaseState = "valid" | "voided";
+const actionStates: ActionState[] = ["done", "failed", "cancelled", "skipped"];
+
 type Search = {
-  offset?: number;
-  validity?: Validity;
+  state?: CaseState;
   rule?: string;
   member?: string;
-  result?: ExecutionStatus;
+  action?: ActionState;
   number?: number;
 };
 
 export const Route = createFileRoute("/_authed/guilds/$guildId/cases/")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    offset: num(s.offset),
-    validity: s.validity === "valid" || s.validity === "voided" ? s.validity : undefined,
+    state: s.state === "valid" || s.state === "voided" ? s.state : undefined,
     rule: str(s.rule),
     member: str(s.member),
-    result: str(s.result) as ExecutionStatus | undefined,
+    action: actionStates.includes(s.action as ActionState) ? (s.action as ActionState) : undefined,
     number: num(s.number),
   }),
   loaderDeps: ({ search }) => search,
@@ -47,12 +49,11 @@ export const Route = createFileRoute("/_authed/guilds/$guildId/cases/")({
 function filters(s: Search): CaseFilters {
   return {
     limit: PAGE,
-    offset: s.offset,
-    validity: s.validity,
-    template_id: s.rule,
-    target_discord_user_id: s.member,
-    action_result: s.result,
-    case_number: s.number,
+    state: s.state,
+    rule_id: s.rule,
+    member_id: s.member,
+    action_state: s.action,
+    number: s.number,
   };
 }
 
@@ -64,28 +65,31 @@ function Cases() {
   const [creating, setCreating] = useState(false);
   const [number, setNumber] = useState(search.number ? String(search.number) : "");
 
-  const cases = useQuery(casesQuery(guildId, filters(search)));
-  const templates = useQuery(templatesQuery(guildId));
+  const pager = useCursorPager(JSON.stringify(filters(search)));
+  const cases = useQuery(casesQuery(guildId, filters(search), pager.cursor));
+  const active = useQuery(rulesQuery(guildId));
+  const archived = useQuery(rulesQuery(guildId, true));
+  const rules = [...(active.data ?? []), ...(archived.data ?? [])];
 
   const set = (patch: Partial<Search>) =>
-    void navigate({ search: (prev) => ({ ...prev, offset: undefined, ...patch }) });
+    void navigate({ search: (prev) => ({ ...prev, ...patch }) });
 
   const columns = useMemo(() => caseColumns(guildId), [guildId]);
 
   const table = useTable({ features, columns, data: cases.data?.cases ?? EMPTY });
   const filtered = Boolean(
-    search.validity || search.rule || search.member || search.result || search.number,
+    search.state || search.rule || search.member || search.action || search.number,
   );
 
   return (
     <Page
       icon={<FolderOpen size={22} />}
       title="Cases"
-      topic="Every case opened in this server, newest first."
+      topic="Every case in this server, newest first."
       actions={
-        can("case.create") ? (
+        can("moderate") ? (
           <Button size="sm" icon={<Plus size={16} />} onClick={() => setCreating(true)}>
-            New case
+            Add case
           </Button>
         ) : null
       }
@@ -93,8 +97,8 @@ function Cases() {
       <div className={s.filters}>
         <Segmented
           label="Status"
-          value={search.validity ?? "all"}
-          onChange={(v) => set({ validity: v === "all" ? undefined : (v as Validity) })}
+          value={search.state ?? "all"}
+          onChange={(v) => set({ state: v === "all" ? undefined : (v as CaseState) })}
           options={[
             { value: "all", label: "All" },
             { value: "valid", label: "Valid" },
@@ -138,26 +142,26 @@ function Cases() {
           className={s.select}
         >
           <option value="">Any rule</option>
-          {(templates.data ?? []).map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-              {t.archived_at ? " (archived)" : ""}
+          {rules.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+              {r.archived_at ? " (archived)" : ""}
             </option>
           ))}
         </Select>
         <Select
-          aria-label="Action result"
-          value={search.result ?? ""}
+          aria-label="Action outcome"
+          value={search.action ?? ""}
           onChange={(e) =>
-            set({ result: (e.currentTarget.value || undefined) as ExecutionStatus | undefined })
+            set({ action: (e.currentTarget.value || undefined) as ActionState | undefined })
           }
           className={s.select}
         >
           <option value="">Any outcome</option>
-          <option value="succeeded">Action done</option>
+          <option value="done">Action done</option>
           <option value="failed">Action failed</option>
-          <option value="pending">Action queued</option>
           <option value="cancelled">Action cancelled</option>
+          <option value="skipped">Action left in place</option>
         </Select>
         {filtered ? (
           <Button
@@ -185,12 +189,12 @@ function Cases() {
             dim={cases.isPlaceholderData}
             onRowClick={(row, newTab) => {
               if (newTab) {
-                window.open(`/guilds/${guildId}/cases/${row.case_number}`, "_blank");
+                window.open(`/guilds/${guildId}/cases/${row.number}`, "_blank");
                 return;
               }
               void navigate({
                 to: "/guilds/$guildId/cases/$caseRef",
-                params: { guildId, caseRef: String(row.case_number) },
+                params: { guildId, caseRef: String(row.number) },
               });
             }}
             empty={
@@ -203,8 +207,8 @@ function Cases() {
                   icon="case"
                   title="No cases yet"
                   action={
-                    can("case.create") ? (
-                      <Button onClick={() => setCreating(true)}>Open the first case</Button>
+                    can("moderate") ? (
+                      <Button onClick={() => setCreating(true)}>Add the first case</Button>
                     ) : null
                   }
                 >
@@ -215,12 +219,11 @@ function Cases() {
             }
           />
           <Pager
-            offset={search.offset ?? 0}
-            limit={PAGE}
-            total={cases.data.total ?? 0}
-            onChange={(offset) =>
-              void navigate({ search: (prev) => ({ ...prev, offset: offset || undefined }) })
-            }
+            page={pager.page}
+            hasPrevious={pager.hasPrevious}
+            hasNext={Boolean(cases.data.next_cursor)}
+            onPrevious={pager.previous}
+            onNext={() => pager.next(cases.data.next_cursor)}
           />
         </>
       )}
@@ -235,7 +238,7 @@ function Cases() {
   );
 }
 
-const EMPTY: Case[] = [];
+const EMPTY: CaseSummary[] = [];
 
 function num(v: unknown): number | undefined {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number.parseInt(v, 10) : Number.NaN;

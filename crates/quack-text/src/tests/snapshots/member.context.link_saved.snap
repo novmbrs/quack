@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: A message saved as evidence
+plain:   A message saved as evidence
+model:   [Fixed("A message saved as evidence")]

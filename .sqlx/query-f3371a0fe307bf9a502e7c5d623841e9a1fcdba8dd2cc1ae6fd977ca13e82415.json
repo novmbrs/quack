@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind,\n                      count(*) FILTER (WHERE dead_at IS NULL AND locked_until IS NULL AND run_at <= now()) AS \"ready!\",\n                      EXTRACT(EPOCH FROM now() - min(run_at)\n                        FILTER (WHERE dead_at IS NULL AND locked_until IS NULL AND run_at <= now()))::float8 AS \"age\",\n                      count(*) FILTER (WHERE dead_at IS NOT NULL) AS \"dead!\"\n               FROM jobs GROUP BY kind",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "job_kind",
+            "kind": {
+              "Enum": [
+                "run_action",
+                "send_dm",
+                "sync_message",
+                "post_mod_log",
+                "capture_evidence",
+                "honeypot_case",
+                "honeypot_cleanup",
+                "open_ticket",
+                "close_ticket",
+                "housekeeping"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "age",
+        "type_info": "Float8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "dead!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f3371a0fe307bf9a502e7c5d623841e9a1fcdba8dd2cc1ae6fd977ca13e82415"
+}

@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## timeout
+discord: The timeout failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The timeout failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The timeout failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## kick
+discord: The kick failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The kick failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The kick failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## ban
+discord: The ban failure can no longer be dismissed. Open the case to see its current outcome.
+plain:   The ban failure can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The ban failure can no longer be dismissed. Open the case to see its current outcome.")]
+
+## remove timeout
+discord: The failed attempt to remove the timeout can no longer be dismissed. Open the case to see its current outcome.
+plain:   The failed attempt to remove the timeout can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The failed attempt to remove the timeout can no longer be dismissed. Open the case to see its current outcome.")]
+
+## unban
+discord: The failed attempt to unban the member can no longer be dismissed. Open the case to see its current outcome.
+plain:   The failed attempt to unban the member can no longer be dismissed. Open the case to see its current outcome.
+model:   [Fixed("The failed attempt to unban the member can no longer be dismissed. Open the case to see its current outcome.")]

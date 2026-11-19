@@ -3,7 +3,7 @@ import { Hash } from "lucide-react";
 import { useMemo } from "react";
 
 import { channelsQuery } from "~/api/directory";
-import type { ChannelType } from "~/api/types";
+import type { ChannelKind } from "~/api/types";
 import { cx } from "~/lib/cx";
 import { Select } from "~/ui/Field";
 import { Skeleton } from "~/ui/States";
@@ -34,7 +34,7 @@ export function ChannelPicker({
   value: string;
   onChange: (channelId: string) => void;
   id?: string;
-  types?: readonly ChannelType[];
+  types?: readonly ChannelKind[];
   /** Adds a "None" option that reports "". */
   clearable?: boolean;
   noneLabel?: string;
@@ -70,10 +70,10 @@ export function ChannelPicker({
           {clearable ? noneLabel : "Choose a channel"}
         </option>
       ) : null}
-      {missing ? <option value={value}>Missing channel ({value})</option> : null}
+      {missing ? <option value={value}>Unknown channel (ID {value})</option> : null}
       {channels.isError ? (
         <option value="" disabled>
-          Couldn't load channels
+          Quack couldn't load the channels
         </option>
       ) : null}
       {groups.map((group) =>

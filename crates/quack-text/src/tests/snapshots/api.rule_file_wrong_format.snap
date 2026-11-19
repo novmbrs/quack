@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This file isn't a Quack rule file. Choose a file you exported from a rule's page.
+plain:   This file isn't a Quack rule file. Choose a file you exported from a rule's page.
+model:   [Fixed("This file isn't a Quack rule file. Choose a file you exported from a rule's page.")]

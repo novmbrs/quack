@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot rule is now **Honeypot**.
+plain:   The honeypot rule is now Honeypot.
+model:   [Fixed("The honeypot rule is now "), Bold([User("Honeypot")]), Fixed(".")]

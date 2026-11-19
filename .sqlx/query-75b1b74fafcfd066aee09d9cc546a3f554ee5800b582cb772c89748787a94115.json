@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH c AS (INSERT INTO case_counters (guild_id) VALUES ($1) ON CONFLICT DO NOTHING),\n                    t AS (INSERT INTO ticket_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING),\n                    a AS (INSERT INTO activity_log_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING),\n                    h AS (INSERT INTO honeypot_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING),\n                    s AS (INSERT INTO guild_settings (guild_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING 1)\n               SELECT count(*) AS \"n!\" FROM s",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "75b1b74fafcfd066aee09d9cc546a3f554ee5800b582cb772c89748787a94115"
+}

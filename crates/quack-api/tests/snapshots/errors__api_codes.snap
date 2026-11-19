@@ -1,0 +1,217 @@
+---
+source: crates/quack-api/tests/errors.rs
+expression: all
+---
+[
+  {
+    "envelope": {
+      "error": {
+        "code": "validation_failed",
+        "message": "Check the marked fields and save again.",
+        "trace_id": null
+      }
+    },
+    "status": 400
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "invalid_json",
+        "message": "Quack couldn't read your changes. Reload this page and try again.",
+        "trace_id": null
+      }
+    },
+    "status": 400
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "sign_in_required",
+        "message": "Sign in with Discord to continue.",
+        "trace_id": null
+      }
+    },
+    "status": 401
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "session_expired",
+        "message": "Your session has ended. Sign in with Discord again.",
+        "trace_id": null
+      }
+    },
+    "status": 401
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "origin_rejected",
+        "message": "Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.",
+        "trace_id": null
+      }
+    },
+    "status": 403
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "csrf_rejected",
+        "message": "Quack couldn't verify your sign-in. Reload this page and try again.",
+        "trace_id": null
+      }
+    },
+    "status": 403
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "not_found",
+        "message": "Quack couldn't find what you opened. Go back to the list and open it again.",
+        "trace_id": null
+      }
+    },
+    "status": 404
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "action_not_found",
+        "message": "Quack couldn't find that action in this server. Open the case again to see its actions.",
+        "trace_id": null
+      }
+    },
+    "status": 404
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "server_not_found",
+        "message": "Quack couldn't open that server. Choose a server from your dashboard.",
+        "trace_id": null
+      }
+    },
+    "status": 404
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "file_unavailable",
+        "message": "This file is no longer available. Go back to the page where you opened it to check for another copy.",
+        "trace_id": null
+      }
+    },
+    "status": 404
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "idempotency_key_reused",
+        "message": "Quack didn't save this change because it conflicts with an earlier save. Reload the dashboard, check what's saved, and try again.",
+        "trace_id": null
+      }
+    },
+    "status": 409
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "context_changed",
+        "message": "Someone else changed this case's context. Open it again to see their changes before you save.",
+        "trace_id": null
+      }
+    },
+    "status": 409
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "case_numbers_exhausted",
+        "message": "No case was added. This server has reached the highest case number Quack can store.",
+        "trace_id": null
+      }
+    },
+    "status": 409
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "body_too_large",
+        "message": "Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.",
+        "trace_id": null
+      }
+    },
+    "status": 413
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "unsupported_media_type",
+        "message": "Quack couldn't read your changes. Reload this page and try again.",
+        "trace_id": null
+      }
+    },
+    "status": 415
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "idempotency_key_required",
+        "message": "Quack didn't save this change. Reload the dashboard and try again.",
+        "trace_id": null
+      }
+    },
+    "status": 428
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "rate_limited",
+        "message": "Please wait 12 seconds before trying again.",
+        "retry_after_seconds": 12,
+        "trace_id": null
+      }
+    },
+    "status": 429
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "module_not_ready",
+        "message": "Tickets can't be turned on yet. Open the settings on the dashboard to see what needs fixing.",
+        "trace_id": null
+      }
+    },
+    "status": 409
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "discord_unavailable",
+        "message": "Quack couldn't reach Discord, so nothing changed. Try again in a moment.",
+        "trace_id": null
+      }
+    },
+    "status": 502
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "unavailable",
+        "message": "Quack is having trouble right now, so nothing changed. Try again in a moment.",
+        "trace_id": null
+      }
+    },
+    "status": 503
+  },
+  {
+    "envelope": {
+      "error": {
+        "code": "internal_error",
+        "message": "Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.",
+        "trace_id": null
+      }
+    },
+    "status": 500
+  }
+]

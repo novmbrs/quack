@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ticket_messages SET expires_at = now() + make_interval(days => $3)\n             WHERE guild_id = $1 AND ticket_id = $2 AND expires_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "644eb5d010d36674a0e0bb12f4622f761ca03e8cdf111676b3d50ab7179203b4"
+}

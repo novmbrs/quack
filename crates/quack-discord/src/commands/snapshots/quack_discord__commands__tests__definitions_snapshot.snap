@@ -1,0 +1,235 @@
+---
+source: crates/quack-discord/src/commands/tests.rs
+expression: local_json()
+---
+[
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": null,
+    "description": "Add, find, and void moderation cases.",
+    "integration_types": [
+      0
+    ],
+    "name": "case",
+    "options": [
+      {
+        "description": "Add a case by applying a rule to a member.",
+        "name": "add",
+        "options": [
+          {
+            "description": "The member this case is about.",
+            "name": "member",
+            "required": true,
+            "type": 6
+          },
+          {
+            "autocomplete": true,
+            "choices": [],
+            "description": "The rule to apply.",
+            "max_length": 100,
+            "name": "rule",
+            "required": true,
+            "type": 3
+          },
+          {
+            "description": "Show the receipt only to you.",
+            "name": "private",
+            "required": false,
+            "type": 5
+          }
+        ],
+        "type": 1
+      },
+      {
+        "description": "Open a case by number and see its action and DM outcomes.",
+        "name": "view",
+        "options": [
+          {
+            "autocomplete": false,
+            "choices": [],
+            "description": "The case number shown on its receipt.",
+            "min_value": 1,
+            "name": "number",
+            "required": true,
+            "type": 4
+          }
+        ],
+        "type": 1
+      },
+      {
+        "description": "List recent cases.",
+        "name": "list",
+        "options": [
+          {
+            "description": "Only show cases about this member.",
+            "name": "member",
+            "required": false,
+            "type": 6
+          },
+          {
+            "autocomplete": true,
+            "choices": [],
+            "description": "Only show cases under this rule.",
+            "name": "rule",
+            "required": false,
+            "type": 3
+          }
+        ],
+        "type": 1
+      },
+      {
+        "description": "Keep a case in the history and stop it from counting.",
+        "name": "void",
+        "options": [
+          {
+            "autocomplete": false,
+            "choices": [],
+            "description": "The case number shown on its receipt.",
+            "min_value": 1,
+            "name": "number",
+            "required": true,
+            "type": 4
+          },
+          {
+            "autocomplete": false,
+            "choices": [],
+            "description": "Why you're voiding the case. The member can see this reason.",
+            "max_length": 1000,
+            "min_length": 1,
+            "name": "reason",
+            "required": true,
+            "type": 3
+          }
+        ],
+        "type": 1
+      },
+      {
+        "description": "Show a member's case history.",
+        "name": "history",
+        "options": [
+          {
+            "description": "The member whose cases to show.",
+            "name": "member",
+            "required": true,
+            "type": 6
+          }
+        ],
+        "type": 1
+      }
+    ],
+    "type": 1,
+    "version": "1"
+  },
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": null,
+    "description": "Review appeals waiting for a decision.",
+    "integration_types": [
+      0
+    ],
+    "name": "appeals",
+    "options": [],
+    "type": 1,
+    "version": "1"
+  },
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": null,
+    "description": "List active rules and open them on the dashboard.",
+    "integration_types": [
+      0
+    ],
+    "name": "rules",
+    "options": [],
+    "type": 1,
+    "version": "1"
+  },
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": "32",
+    "description": "Set up Quack for this server.",
+    "integration_types": [
+      0
+    ],
+    "name": "setup",
+    "options": [],
+    "type": 1,
+    "version": "1"
+  },
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": null,
+    "description": "Learn how Quack works.",
+    "integration_types": [
+      0
+    ],
+    "name": "help",
+    "options": [
+      {
+        "autocomplete": false,
+        "choices": [
+          {
+            "name": "Cases",
+            "value": "cases"
+          },
+          {
+            "name": "Rules",
+            "value": "rules"
+          },
+          {
+            "name": "Appeals",
+            "value": "appeals"
+          },
+          {
+            "name": "Setup",
+            "value": "setup"
+          }
+        ],
+        "description": "What you want to know about.",
+        "name": "topic",
+        "required": false,
+        "type": 3
+      }
+    ],
+    "type": 1,
+    "version": "1"
+  },
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": null,
+    "description": "",
+    "integration_types": [
+      0
+    ],
+    "name": "Add case",
+    "options": [],
+    "type": 3,
+    "version": "1"
+  },
+  {
+    "contexts": [
+      0
+    ],
+    "default_member_permissions": null,
+    "description": "",
+    "integration_types": [
+      0
+    ],
+    "name": "Add case",
+    "options": [],
+    "type": 2,
+    "version": "1"
+  }
+]

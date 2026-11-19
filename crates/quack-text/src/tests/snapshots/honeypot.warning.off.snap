@@ -1,0 +1,13 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### The honeypot is off
+Posts here don't add cases right now.
+--- plain ---
+The honeypot is off
+Posts here don't add cases right now.
+--- model ---
+Heading [Fixed("The honeypot is off")]
+Text [Fixed("Posts here don't add cases right now.")]

@@ -1,0 +1,227 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Log set
+tone: Neutral
+--- discord ---
+### Log channel
+Quack posts moderation log entries in this staff-only channel.
+**Log channel:** <#444>
+select Setup(Log, Channel) "Choose a channel": text channels
+buttons: [Create a new #moderation-log · Secondary] Setup(Log, Create) | [Stop posting log entries · Secondary] Setup(Log, Clear) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Log channel
+Quack posts moderation log entries in this staff-only channel.
+Log channel: #moderation-log
+--- model ---
+Heading [Fixed("Log channel")]
+Text [Fixed("Quack posts moderation log entries in this staff-only channel.")]
+Field "Log channel" [Channel(ChannelRef { id: ChannelId(444), name: Some("moderation-log") })]
+
+## Log not set
+tone: Neutral
+--- discord ---
+### Log channel
+Quack posts moderation log entries in this staff-only channel.
+**Log channel:** Not set
+select Setup(Log, Channel) "Choose a channel": text channels
+buttons: [Create #moderation-log · Secondary] Setup(Log, Create) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Log channel
+Quack posts moderation log entries in this staff-only channel.
+Log channel: Not set
+--- model ---
+Heading [Fixed("Log channel")]
+Text [Fixed("Quack posts moderation log entries in this staff-only channel.")]
+Field "Log channel" [Fixed("Not set")]
+
+## Appeals set
+tone: Neutral
+--- discord ---
+### Appeals
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
+**Appeals:** <#444>, rejoin invite set
+select Setup(Appeals, Channel) "Choose a channel": text channels
+buttons: [Create a new #appeals · Secondary] Setup(Appeals, Create) | [Stop posting appeals · Secondary] Setup(Appeals, Clear) | [Set rejoin invite · Secondary] Setup(Appeals, SetInvite) | [Remove invite · Secondary] Setup(Appeals, ClearInvite) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Appeals
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
+Appeals: #appeals, rejoin invite set
+--- model ---
+Heading [Fixed("Appeals")]
+Text [Fixed("New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.")]
+Field "Appeals" [Channel(ChannelRef { id: ChannelId(444), name: Some("appeals") }), Fixed(", rejoin invite set")]
+
+## Appeals not set
+tone: Neutral
+--- discord ---
+### Appeals
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
+**Appeals:** Not set
+select Setup(Appeals, Channel) "Choose a channel": text channels
+buttons: [Create #appeals · Secondary] Setup(Appeals, Create) | [Set rejoin invite · Secondary] Setup(Appeals, SetInvite) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Appeals
+New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.
+Appeals: Not set
+--- model ---
+Heading [Fixed("Appeals")]
+Text [Fixed("New appeals are posted in this staff-only channel for moderators to review. Quack can include a rejoin invite in DMs about accepted appeals for kicks and bans.")]
+Field "Appeals" [Fixed("Not set")]
+
+## Evidence set
+tone: Neutral
+--- discord ---
+### Evidence copies
+Quack copies evidence files to this staff-only channel so they last after the original message is deleted.
+**Evidence copies:** <#444>
+select Setup(Evidence, Channel) "Choose a channel": text channels
+buttons: [Create a new #evidence · Secondary] Setup(Evidence, Create) | [Stop copying files · Secondary] Setup(Evidence, Clear) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Evidence copies
+Quack copies evidence files to this staff-only channel so they last after the original message is deleted.
+Evidence copies: #evidence
+--- model ---
+Heading [Fixed("Evidence copies")]
+Text [Fixed("Quack copies evidence files to this staff-only channel so they last after the original message is deleted.")]
+Field "Evidence copies" [Channel(ChannelRef { id: ChannelId(444), name: Some("evidence") })]
+
+## Evidence not set
+tone: Neutral
+--- discord ---
+### Evidence copies
+Quack copies evidence files to this staff-only channel so they last after the original message is deleted.
+**Evidence copies:** Off
+select Setup(Evidence, Channel) "Choose a channel": text channels
+buttons: [Create #evidence · Secondary] Setup(Evidence, Create) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Evidence copies
+Quack copies evidence files to this staff-only channel so they last after the original message is deleted.
+Evidence copies: Off
+--- model ---
+Heading [Fixed("Evidence copies")]
+Text [Fixed("Quack copies evidence files to this staff-only channel so they last after the original message is deleted.")]
+Field "Evidence copies" [Fixed("Off")]
+
+## Tickets set
+tone: Neutral
+--- discord ---
+### Tickets
+Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.
+**Tickets:** On · members open tickets in <#444> · new tickets go to <#444>
+select Setup(Tickets, TicketEntry) "Channel where members open tickets": text channels
+select Setup(Tickets, TicketQueue) "Staff channel for new tickets": text channels
+buttons: [Create new #support and #ticket-log · Secondary] Setup(Tickets, Create) | [Turn off · Secondary] Setup(Tickets, TurnOff) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Tickets
+Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.
+Tickets: On · members open tickets in #support · new tickets go to #ticket-log
+--- model ---
+Heading [Fixed("Tickets")]
+Text [Fixed("Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.")]
+Field "Tickets" [Fixed("On · members open tickets in "), Channel(ChannelRef { id: ChannelId(444), name: Some("support") }), Fixed(" · new tickets go to "), Channel(ChannelRef { id: ChannelId(444), name: Some("ticket-log") })]
+
+## Tickets not set
+tone: Neutral
+--- discord ---
+### Tickets
+Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.
+**Tickets:** Off
+select Setup(Tickets, TicketEntry) "Channel where members open tickets": text channels
+select Setup(Tickets, TicketQueue) "Staff channel for new tickets": text channels
+buttons: [Create #support and #ticket-log · Secondary] Setup(Tickets, Create) | [Turn on · Secondary] Setup(Tickets, TurnOn) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Tickets
+Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.
+Tickets: Off
+--- model ---
+Heading [Fixed("Tickets")]
+Text [Fixed("Members open private tickets from a button in the entry channel. Staff see new tickets in the staff channel.")]
+Field "Tickets" [Fixed("Off")]
+
+## Honeypot set
+tone: Neutral
+--- discord ---
+### Honeypot
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
+**Honeypot:** On · <#444> · rule **Honeypot**
+select Setup(Honeypot, Channel) "Choose a channel": text channels
+select Setup(Honeypot, Rule) "Rule the honeypot applies": Honeypot (Posting in the honeypot channel.)
+buttons: [Create a new #honeypot · Secondary] Setup(Honeypot, Create) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn off · Secondary] Setup(Honeypot, TurnOff) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Honeypot
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
+Honeypot: On · #honeypot · rule Honeypot
+--- model ---
+Heading [Fixed("Honeypot")]
+Text [Fixed("When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.")]
+Field "Honeypot" [Fixed("On · "), Channel(ChannelRef { id: ChannelId(444), name: Some("honeypot") }), Fixed(" · rule "), Bold([User("Honeypot")])]
+
+## Honeypot not set
+tone: Neutral
+--- discord ---
+### Honeypot
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
+**Honeypot:** Off
+select Setup(Honeypot, Channel) "Choose a channel": text channels
+buttons: [Create #honeypot · Secondary] Setup(Honeypot, Create) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn on · Secondary] Setup(Honeypot, TurnOn) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Honeypot
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
+Honeypot: Off
+--- model ---
+Heading [Fixed("Honeypot")]
+Text [Fixed("When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.")]
+Field "Honeypot" [Fixed("Off")]
+
+## ActivityLog set
+tone: Neutral
+--- discord ---
+### Server activity log
+Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.
+**Server activity log:** On · <#444>
+select Setup(ActivityLog, Channel) "Choose a channel": text channels
+buttons: [Create a new #server-log · Secondary] Setup(ActivityLog, Create) | [Turn off · Secondary] Setup(ActivityLog, TurnOff) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Server activity log
+Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.
+Server activity log: On · #server-log
+--- model ---
+Heading [Fixed("Server activity log")]
+Text [Fixed("Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.")]
+Field "Server activity log" [Fixed("On · "), Channel(ChannelRef { id: ChannelId(444), name: Some("server-log") })]
+
+## ActivityLog not set
+tone: Neutral
+--- discord ---
+### Server activity log
+Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.
+**Server activity log:** Off
+select Setup(ActivityLog, Channel) "Choose a channel": text channels
+buttons: [Create #server-log · Secondary] Setup(ActivityLog, Create) | [Turn on · Secondary] Setup(ActivityLog, TurnOn) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Server activity log
+Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.
+Server activity log: Off
+--- model ---
+Heading [Fixed("Server activity log")]
+Text [Fixed("Quack posts message edits and deletions, members joining and leaving, bans, and server changes here.")]
+Field "Server activity log" [Fixed("Off")]
+
+## Honeypot off with a rule
+tone: Neutral
+--- discord ---
+### Honeypot
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
+**Honeypot:** Off · <#444> · rule **Honeypot**
+select Setup(Honeypot, Channel) "Choose a channel": text channels
+select Setup(Honeypot, Rule) "Rule the honeypot applies": Honeypot (Posting in the honeypot channel.)
+buttons: [Create a new #honeypot · Secondary] Setup(Honeypot, Create) | [Clear rule · Secondary] Setup(Honeypot, ClearRule) | [Edit warning · Secondary] Setup(Honeypot, EditWarning) | [Turn on · Secondary] Setup(Honeypot, TurnOn) | [Back · Secondary] Setup(Home, Open)
+--- plain ---
+Honeypot
+When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.
+Honeypot: Off · #honeypot · rule Honeypot
+--- model ---
+Heading [Fixed("Honeypot")]
+Text [Fixed("When the honeypot is on, a member who posts in this channel gets a case under the chosen rule. Quack ignores posts from staff and bots.")]
+Field "Honeypot" [Fixed("Off · "), Channel(ChannelRef { id: ChannelId(444), name: Some("honeypot") }), Fixed(" · rule "), Bold([User("Honeypot")])]

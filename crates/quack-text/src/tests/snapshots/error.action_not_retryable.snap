@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## timeout
+discord: The timeout can no longer be retried. Open the case to see its current outcome.
+plain:   The timeout can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The timeout can no longer be retried. Open the case to see its current outcome.")]
+
+## kick
+discord: The kick can no longer be retried. Open the case to see its current outcome.
+plain:   The kick can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The kick can no longer be retried. Open the case to see its current outcome.")]
+
+## ban
+discord: The ban can no longer be retried. Open the case to see its current outcome.
+plain:   The ban can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("The ban can no longer be retried. Open the case to see its current outcome.")]
+
+## remove timeout
+discord: Removing the timeout can no longer be retried. Open the case to see its current outcome.
+plain:   Removing the timeout can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("Removing the timeout can no longer be retried. Open the case to see its current outcome.")]
+
+## unban
+discord: Unbanning the member can no longer be retried. Open the case to see its current outcome.
+plain:   Unbanning the member can no longer be retried. Open the case to see its current outcome.
+model:   [Fixed("Unbanning the member can no longer be retried. Open the case to see its current outcome.")]

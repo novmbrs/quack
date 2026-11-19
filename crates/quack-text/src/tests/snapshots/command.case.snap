@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+case — Add, find, and void moderation cases.
+
+## description
+Add, find, and void moderation cases.

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE honeypot_settings SET channel_id = NULL,\n                 disabled_reason = CASE WHEN enabled THEN 'channel_deleted' ELSE disabled_reason END,\n                 enabled = false, version = version + 1, updated_at = now(), updated_by = NULL\n               WHERE guild_id = $1 AND channel_id = $2\n               RETURNING old.enabled AS \"was_enabled!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "was_enabled!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "honeypot_settings",
+            "name": "enabled"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f98092429a3701ddf664b237de488f800dff856ab79e8199599a7a48053a25ad"
+}

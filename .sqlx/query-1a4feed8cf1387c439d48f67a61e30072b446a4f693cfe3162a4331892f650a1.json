@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE activity_log_settings SET enabled = $2, disabled_reason = $3, version = version + 1,\n                                                      updated_at = now(), updated_by = $4\n                     WHERE guild_id = $1 AND enabled <> $2 RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "activity_log_settings",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Bool",
+        {
+          "Custom": {
+            "name": "module_disabled_reason",
+            "kind": {
+              "Enum": [
+                "channel_deleted",
+                "quack_left"
+              ]
+            }
+          }
+        },
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1a4feed8cf1387c439d48f67a61e30072b446a4f693cfe3162a4331892f650a1"
+}

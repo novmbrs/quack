@@ -1,0 +1,46 @@
+[package]
+name = "quack-api"
+description = "Quack's HTTP API and dashboard host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quack-core = { workspace = true }
+quack-text = { workspace = true }
+quack-db = { workspace = true }
+quack-engine = { workspace = true }
+quack-tickets = { workspace = true }
+quack-activity-log = { workspace = true }
+quack-honeypot = { workspace = true }
+quack-telemetry = { workspace = true }
+aws-lc-rs = { workspace = true }
+axum = { workspace = true }
+base64 = { version = "=0.22.1" }
+oauth2 = { workspace = true }
+opentelemetry = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true, features = ["raw_value"] }
+thiserror = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+tower = { workspace = true }
+tower-http = { workspace = true, features = ["compression-gzip", "catch-panic"] }
+tracing = { workspace = true }
+url = { version = "=2.5.8" }
+utoipa = { workspace = true }
+utoipa-axum = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+quack-testkit = { workspace = true }
+httpmock = { workspace = true }
+insta = { workspace = true, features = ["json"] }
+tokio = { workspace = true, features = ["test-util"] }

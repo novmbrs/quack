@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+plain:   The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.
+model:   [Fixed("The honeypot uses this rule, so its fields can't be required. Make the fields optional or choose another rule for the honeypot.")]

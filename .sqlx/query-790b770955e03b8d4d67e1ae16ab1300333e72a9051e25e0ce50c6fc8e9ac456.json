@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT log_channel_posted_at FROM guild_settings WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "log_channel_posted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "guild_settings",
+            "name": "log_channel_posted_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "790b770955e03b8d4d67e1ae16ab1300333e72a9051e25e0ce50c6fc8e9ac456"
+}

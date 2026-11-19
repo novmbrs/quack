@@ -1,0 +1,280 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, kind, case_id, appeal_id, ticket_id, channel_id, message_id, generation,\n                               create_started_at, private, interaction_token, token_expires_at, wanted_revision,\n                               posted_revision, wanted_at, state, stale AS \"stale: Json<Vec<Location>>\",\n                               attachment_id, last_error\n                        FROM messages WHERE channel_id = $1 AND message_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "message_kind",
+            "kind": {
+              "Enum": [
+                "case_receipt",
+                "appeal_post",
+                "ticket_panel",
+                "ticket_post",
+                "honeypot_warning"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "appeal_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "appeal_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "ticket_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "ticket_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "message_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "message_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "generation",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "generation"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "create_started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "create_started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "private",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "private"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "interaction_token",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "interaction_token"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "token_expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "token_expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "wanted_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "wanted_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "posted_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "posted_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "wanted_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "wanted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "message_state",
+            "kind": {
+              "Enum": [
+                "active",
+                "gone"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "stale: Json<Vec<Location>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "stale"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "attachment_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "attachment_id"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "last_error",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "last_error"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "ce5ba306b0e971c1cfb830a89ebf0634ba58f7fd3c0ac81f93648151894b162d"
+}

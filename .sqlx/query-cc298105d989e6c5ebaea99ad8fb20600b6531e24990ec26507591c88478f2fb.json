@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET state = 'active', channel_id = $3, message_id = NULL, attachment_id = NULL, generation = generation + 1,\n                                 create_started_at = NULL, wanted_revision = wanted_revision + 1, wanted_at = now(),\n                                 updated_at = now()\n             WHERE guild_id = $1 AND kind = $2 AND state = 'gone' AND case_id IS NULL AND appeal_id IS NULL\n               AND ticket_id IS NULL\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        {
+          "Custom": {
+            "name": "message_kind",
+            "kind": {
+              "Enum": [
+                "case_receipt",
+                "appeal_post",
+                "ticket_panel",
+                "ticket_post",
+                "honeypot_warning"
+              ]
+            }
+          }
+        },
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cc298105d989e6c5ebaea99ad8fb20600b6531e24990ec26507591c88478f2fb"
+}

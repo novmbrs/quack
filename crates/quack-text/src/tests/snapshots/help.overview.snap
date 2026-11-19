@@ -1,0 +1,26 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### Quack
+Quack keeps track of moderation cases. Rules managers define the rules on the dashboard, moderators apply them, and Quack carries out the rule's action.
+**Moderators:** </case add:1001>, </case view:1001>, </case list:1001>, </case history:1001>, </case void:1001>, </appeals:1002>
+**Rules:** </rules:1003> (rules are edited on the dashboard)
+**Setup:** </setup:1004> (needs Manage Server)
+Use </help:1005> with a topic for more.
+buttons: [Open the dashboard](https://quack.example/guilds/111/cases/12)
+--- plain ---
+Quack
+Quack keeps track of moderation cases. Rules managers define the rules on the dashboard, moderators apply them, and Quack carries out the rule's action.
+Moderators: /case add, /case view, /case list, /case history, /case void, /appeals
+Rules: /rules (rules are edited on the dashboard)
+Setup: /setup (needs Manage Server)
+Use /help with a topic for more.
+--- model ---
+Heading [Fixed("Quack")]
+Text [Fixed("Quack keeps track of moderation cases. Rules managers define the rules on the dashboard, moderators apply them, and Quack carries out the rule's action.")]
+Text [Bold([Fixed("Moderators:")]), Fixed(" "), Command(CaseAdd), Fixed(", "), Command(CaseView), Fixed(", "), Command(CaseList), Fixed(", "), Command(CaseHistory), Fixed(", "), Command(CaseVoid), Fixed(", "), Command(Appeals)]
+Text [Bold([Fixed("Rules:")]), Fixed(" "), Command(Rules), Fixed(" (rules are edited on the dashboard)")]
+Text [Bold([Fixed("Setup:")]), Fixed(" "), Command(Setup), Fixed(" (needs Manage Server)")]
+Text [Fixed("Use "), Command(Help), Fixed(" with a topic for more.")]

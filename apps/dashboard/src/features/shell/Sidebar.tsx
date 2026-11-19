@@ -15,7 +15,7 @@ import s from "./Sidebar.module.css";
 
 /**
  * Sidebar is the navigation column: a header, a scrolling list, and the
- * signed-in user pinned to the bottom.
+ * signed-in account pinned to the bottom.
  */
 export function Sidebar({ header, children }: { header: ReactNode; children: ReactNode }) {
   const open = useNavOpen();
@@ -69,20 +69,20 @@ function UserPanel() {
   const { data: me } = useQuery(authQuery);
   const queryClient = useQueryClient();
   if (!me) return null;
-  const name = me.user.global_name || me.user.username;
+  const name = me.account.global_name || me.account.username;
 
   const signOut = async () => {
-    await api.POST("/auth/logout").catch(() => undefined);
+    await api.POST("/api/auth/logout").catch(() => undefined);
     queryClient.clear();
     window.location.assign("/login");
   };
 
   return (
     <div className={s.panel}>
-      <Avatar src={me.user.avatar_url} name={name} size={32} />
+      <Avatar src={me.account.avatar_url} name={name} size={32} />
       <div className={s.who}>
         <span className={s.name}>{name}</span>
-        <span className={s.handle}>{me.user.username}</span>
+        <span className={s.handle}>{me.account.username}</span>
       </div>
       <Tooltip label="Sign out">
         <button type="button" aria-label="Sign out" onClick={signOut} className={s.panelButton}>

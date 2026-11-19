@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence SET state = 'failed', failure = $3 WHERE guild_id = $1 AND id = $2 AND state = 'saving'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "evidence_failure",
+            "kind": {
+              "Enum": [
+                "message_deleted",
+                "moderator_no_access",
+                "quack_no_access",
+                "other_server",
+                "discord_error"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4e097b2a8581556e3b71dd5eea501eaf9e9d19e985c2742321f6b576e84e4fc8"
+}

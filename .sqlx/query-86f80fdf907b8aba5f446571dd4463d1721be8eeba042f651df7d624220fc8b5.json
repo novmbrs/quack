@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ticket_settings SET\n                 entry_channel_id = NULLIF(entry_channel_id, $2), queue_channel_id = NULLIF(queue_channel_id, $2),\n                 disabled_reason = CASE WHEN enabled THEN 'channel_deleted' ELSE disabled_reason END,\n                 enabled = false, version = version + 1, updated_at = now(), updated_by = NULL\n               WHERE guild_id = $1 AND (entry_channel_id = $2 OR queue_channel_id = $2)\n               RETURNING old.enabled AS \"was_enabled!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "was_enabled!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "ticket_settings",
+            "name": "enabled"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "86f80fdf907b8aba5f446571dd4463d1721be8eeba042f651df7d624220fc8b5"
+}

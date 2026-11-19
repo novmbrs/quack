@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Your message is too long. Shorten it to 4,000 characters or fewer.
+plain:   Your message is too long. Shorten it to 4,000 characters or fewer.
+model:   [Fixed("Your message is too long. Shorten it to 4,000 characters or fewer.")]

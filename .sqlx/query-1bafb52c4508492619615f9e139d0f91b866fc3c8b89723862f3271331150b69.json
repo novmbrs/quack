@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE honeypot_hits SET state = 'failed', failure = $3, updated_at = now()\n             WHERE guild_id = $1 AND message_id = ANY($2) AND state = 'pending'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1bafb52c4508492619615f9e139d0f91b866fc3c8b89723862f3271331150b69"
+}

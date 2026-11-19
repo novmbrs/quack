@@ -1,37 +1,18 @@
-import { queryOptions } from "@tanstack/react-query";
-
-import { api, unwrap } from "~/api/client";
-import { keys } from "~/api/queries";
-import type { Template } from "~/api/types";
-import { decayStart } from "~/lib/escalation";
+import type { CasePreview } from "~/api/types";
+import { capitalize, countedCase, last, levelName, levelOutcome } from "~/lib/format";
 
 /**
- * casePreviewQuery counts valid offences at the preview's fixed reference
- * time. Query completion must not move the cutoff and trigger another fetch.
+ * describePreview words the server's case preview (design §14.3 route 58):
+ * what the level does, which level it is, and which counted case this is.
  */
-export function casePreviewQuery(
-  guildId: string,
-  member: string,
-  template: Pick<Template, "id" | "case_decay_days">,
-  previewTime: number,
-) {
-  const since = decayStart(template.case_decay_days, previewTime);
-  return queryOptions({
-    queryKey: [...keys.cases(guildId), "count", member, template.id, since ?? "all"],
-    queryFn: () =>
-      unwrap(
-        api.GET("/guilds/{discordGuildID}/cases", {
-          params: {
-            path: { discordGuildID: guildId },
-            query: {
-              target_discord_user_id: member,
-              template_id: template.id,
-              validity: "valid",
-              created_after: since,
-              limit: 1,
-            },
-          },
-        }),
-      ).then((r) => r.total ?? 0),
-  });
+export function describePreview(p: CasePreview): { title: string; level: string; detail: string } {
+  const window = p.counting_window_days
+    ? `, counting cases from the last ${last(p.counting_window_days * 86400)}`
+    : "";
+  const dm = p.level.send_dm ? "The member gets a DM." : "This level doesn't send a DM.";
+  return {
+    title: capitalize(levelOutcome(p.level.action)),
+    level: levelName(p.level_index, p.level.from_case_count),
+    detail: `This will be ${countedCase(p.case_count)}${window}. ${dm}`,
+  };
 }

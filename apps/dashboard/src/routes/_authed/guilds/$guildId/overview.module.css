@@ -297,3 +297,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.bannerActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}

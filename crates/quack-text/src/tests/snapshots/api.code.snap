@@ -1,0 +1,107 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## validation_failed
+discord: Check the marked fields and save again.
+plain:   Check the marked fields and save again.
+model:   [Fixed("Check the marked fields and save again.")]
+
+## invalid_json
+discord: Quack couldn't read your changes. Reload this page and try again.
+plain:   Quack couldn't read your changes. Reload this page and try again.
+model:   [Fixed("Quack couldn't read your changes. Reload this page and try again.")]
+
+## sign_in_required
+discord: Sign in with Discord to continue.
+plain:   Sign in with Discord to continue.
+model:   [Fixed("Sign in with Discord to continue.")]
+
+## session_expired
+discord: Your session has ended. Sign in with Discord again.
+plain:   Your session has ended. Sign in with Discord again.
+model:   [Fixed("Your session has ended. Sign in with Discord again.")]
+
+## origin_rejected
+discord: Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.
+plain:   Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.
+model:   [Fixed("Quack only accepts changes made from its own dashboard. Open the dashboard and try again there.")]
+
+## csrf_rejected
+discord: Quack couldn't verify your sign-in. Reload this page and try again.
+plain:   Quack couldn't verify your sign-in. Reload this page and try again.
+model:   [Fixed("Quack couldn't verify your sign-in. Reload this page and try again.")]
+
+## not_found
+discord: Quack couldn't find what you opened. Go back to the list and open it again.
+plain:   Quack couldn't find what you opened. Go back to the list and open it again.
+model:   [Fixed("Quack couldn't find what you opened. Go back to the list and open it again.")]
+
+## action_not_found
+discord: Quack couldn't find that action in this server. Open the case again to see its actions.
+plain:   Quack couldn't find that action in this server. Open the case again to see its actions.
+model:   [Fixed("Quack couldn't find that action in this server. Open the case again to see its actions.")]
+
+## server_not_found
+discord: Quack couldn't open that server. Choose a server from your dashboard.
+plain:   Quack couldn't open that server. Choose a server from your dashboard.
+model:   [Fixed("Quack couldn't open that server. Choose a server from your dashboard.")]
+
+## file_unavailable
+discord: This file is no longer available. Go back to the page where you opened it to check for another copy.
+plain:   This file is no longer available. Go back to the page where you opened it to check for another copy.
+model:   [Fixed("This file is no longer available. Go back to the page where you opened it to check for another copy.")]
+
+## idempotency_key_reused
+discord: Quack didn't save this change because it conflicts with an earlier save. Reload the dashboard, check what's saved, and try again.
+plain:   Quack didn't save this change because it conflicts with an earlier save. Reload the dashboard, check what's saved, and try again.
+model:   [Fixed("Quack didn't save this change because it conflicts with an earlier save. Reload the dashboard, check what's saved, and try again.")]
+
+## context_changed
+discord: Someone else changed this case's context. Open it again to see their changes before you save.
+plain:   Someone else changed this case's context. Open it again to see their changes before you save.
+model:   [Fixed("Someone else changed this case's context. Open it again to see their changes before you save.")]
+
+## case_numbers_exhausted
+discord: No case was added. This server has reached the highest case number Quack can store.
+plain:   No case was added. This server has reached the highest case number Quack can store.
+model:   [Fixed("No case was added. This server has reached the highest case number Quack can store.")]
+
+## body_too_large
+discord: Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.
+plain:   Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.
+model:   [Fixed("Quack couldn't save this because it's over 256 KB. Shorten the text or save fewer changes at once.")]
+
+## unsupported_media_type
+discord: Quack couldn't read your changes. Reload this page and try again.
+plain:   Quack couldn't read your changes. Reload this page and try again.
+model:   [Fixed("Quack couldn't read your changes. Reload this page and try again.")]
+
+## idempotency_key_required
+discord: Quack didn't save this change. Reload the dashboard and try again.
+plain:   Quack didn't save this change. Reload the dashboard and try again.
+model:   [Fixed("Quack didn't save this change. Reload the dashboard and try again.")]
+
+## rate_limited
+discord: Please wait 30 seconds before trying again.
+plain:   Please wait 30 seconds before trying again.
+model:   [Fixed("Please wait 30 seconds before trying again.")]
+
+## module_not_ready
+discord: The honeypot can't be turned on yet. Open the settings on the dashboard to see what needs fixing.
+plain:   The honeypot can't be turned on yet. Open the settings on the dashboard to see what needs fixing.
+model:   [Fixed("The honeypot can't be turned on yet. Open the settings on the dashboard to see what needs fixing.")]
+
+## discord_unavailable
+discord: Quack couldn't reach Discord, so nothing changed. Try again in a moment.
+plain:   Quack couldn't reach Discord, so nothing changed. Try again in a moment.
+model:   [Fixed("Quack couldn't reach Discord, so nothing changed. Try again in a moment.")]
+
+## unavailable
+discord: Quack is having trouble right now, so nothing changed. Try again in a moment.
+plain:   Quack is having trouble right now, so nothing changed. Try again in a moment.
+model:   [Fixed("Quack is having trouble right now, so nothing changed. Try again in a moment.")]
+
+## internal_error
+discord: Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.
+plain:   Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.
+model:   [Fixed("Something went wrong inside Quack. Reload the page and check whether your changes were saved before trying again.")]

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The honeypot settings changed, so Quack didn't add a case for this post.
+plain:   The honeypot settings changed, so Quack didn't add a case for this post.
+model:   [Fixed("The honeypot settings changed, so Quack didn't add a case for this post.")]

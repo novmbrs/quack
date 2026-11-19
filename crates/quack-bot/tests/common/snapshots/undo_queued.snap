@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Quack will check whether it can remove a member (ID 40)'s timeout. Open case #1 to see the outcome.

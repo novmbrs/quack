@@ -1,0 +1,12 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Log channel
+Quack didn't save an unknown channel (ID [id]):
+Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.
+Quack posts moderation log entries in this staff-only channel.
+Log channel: An unknown channel (ID [id])
+{select: Choose a channel}
+[Create a new #moderation-log] [Stop posting log entries] [Back]

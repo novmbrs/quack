@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## Timeout
+discord: Quack will try again to time out the member for case #12. Open the case to see the outcome.
+plain:   Quack will try again to time out the member for case #12. Open the case to see the outcome.
+model:   [Fixed("Quack will try again to time out the member for case #12. Open the case to see the outcome.")]
+
+## Kick
+discord: Quack will try again to remove the member from the server for case #12. Open the case to see the outcome.
+plain:   Quack will try again to remove the member from the server for case #12. Open the case to see the outcome.
+model:   [Fixed("Quack will try again to remove the member from the server for case #12. Open the case to see the outcome.")]
+
+## Ban
+discord: Quack will try again to ban the member for case #12. Open the case to see the outcome.
+plain:   Quack will try again to ban the member for case #12. Open the case to see the outcome.
+model:   [Fixed("Quack will try again to ban the member for case #12. Open the case to see the outcome.")]
+
+## RemoveTimeout
+discord: Quack will try again to remove the timeout for case #12. Open the case to see the outcome.
+plain:   Quack will try again to remove the timeout for case #12. Open the case to see the outcome.
+model:   [Fixed("Quack will try again to remove the timeout for case #12. Open the case to see the outcome.")]
+
+## Unban
+discord: Quack will try again to unban the member for case #12. Open the case to see the outcome.
+plain:   Quack will try again to unban the member for case #12. Open the case to see the outcome.
+model:   [Fixed("Quack will try again to unban the member for case #12. Open the case to see the outcome.")]

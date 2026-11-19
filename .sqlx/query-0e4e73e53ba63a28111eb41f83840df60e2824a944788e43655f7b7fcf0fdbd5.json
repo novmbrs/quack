@@ -1,0 +1,175 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH picked AS (\n                 SELECT id FROM jobs\n                 WHERE kind = $1 AND dead_at IS NULL AND locked_until IS NULL AND run_at <= now()\n                 ORDER BY run_at, id\n                 LIMIT $2\n                 FOR UPDATE SKIP LOCKED\n               )\n               UPDATE jobs j\n               SET claim_token  = gen_random_uuid(),\n                   locked_until = now() + make_interval(secs => $3),\n                   attempts     = j.attempts + 1,\n                   updated_at   = now()\n               FROM picked\n               WHERE j.id = picked.id\n               RETURNING j.id, j.key, j.guild_id, j.payload, j.attempts, j.max_attempts,\n                         j.claim_token AS \"claim_token!\", j.locked_until AS \"locked_until!\",\n                         j.trace_context, j.run_at, j.created_at,\n                         EXTRACT(EPOCH FROM j.locked_until - clock_timestamp())::float8 AS \"left!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "key"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "payload"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "max_attempts",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "max_attempts"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "claim_token!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "claim_token"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "locked_until!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "locked_until"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "trace_context",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "trace_context"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "run_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "run_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "left!",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "job_kind",
+            "kind": {
+              "Enum": [
+                "run_action",
+                "send_dm",
+                "sync_message",
+                "post_mod_log",
+                "capture_evidence",
+                "honeypot_case",
+                "honeypot_cleanup",
+                "open_ticket",
+                "close_ticket",
+                "housekeeping"
+              ]
+            }
+          }
+        },
+        "Int8",
+        "Float8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "0e4e73e53ba63a28111eb41f83840df60e2824a944788e43655f7b7fcf0fdbd5"
+}

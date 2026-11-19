@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack found <#444> and saved it.
+plain:   Quack found #staff and saved it.
+model:   [Fixed("Quack found "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(" and saved it.")]

@@ -15,6 +15,7 @@ import { Route as DocsRouteRouteImport } from "./routes/docs/route"
 import { Route as InviteRouteImport } from "./routes/invite"
 import { Route as LoginRouteImport } from "./routes/login"
 import { Route as SupportRouteImport } from "./routes/support"
+import { Route as AuthedCasesRouteImport } from "./routes/_authed/cases"
 import { Route as DocsIndexRouteImport } from "./routes/docs/index"
 import { Route as DocsAppealsRouteImport } from "./routes/docs/appeals"
 import { Route as DocsCasesRouteImport } from "./routes/docs/cases"
@@ -30,12 +31,14 @@ import { Route as AuthedGuildsGuildIdIndexRouteImport } from "./routes/_authed/g
 import { Route as AuthedGuildsGuildIdAppealsRouteRouteImport } from "./routes/_authed/guilds/$guildId/appeals/route"
 import { Route as AuthedGuildsGuildIdAuditRouteImport } from "./routes/_authed/guilds/$guildId/audit"
 import { Route as AuthedGuildsGuildIdFailuresRouteImport } from "./routes/_authed/guilds/$guildId/failures"
+import { Route as AuthedGuildsGuildIdModLogRouteImport } from "./routes/_authed/guilds/$guildId/mod-log"
 import { Route as AuthedGuildsGuildIdSettingsRouteImport } from "./routes/_authed/guilds/$guildId/settings"
 import { Route as AuthedGuildsGuildIdAppealsIndexRouteImport } from "./routes/_authed/guilds/$guildId/appeals/index"
 import { Route as AuthedGuildsGuildIdAppealsAppealIdRouteImport } from "./routes/_authed/guilds/$guildId/appeals/$appealId"
 import { Route as AuthedGuildsGuildIdCasesIndexRouteImport } from "./routes/_authed/guilds/$guildId/cases/index"
 import { Route as AuthedGuildsGuildIdCasesCaseRefRouteImport } from "./routes/_authed/guilds/$guildId/cases/$caseRef"
 import { Route as AuthedGuildsGuildIdMembersUserIdRouteImport } from "./routes/_authed/guilds/$guildId/members/$userId"
+import { Route as AuthedGuildsGuildIdModulesActivityLogRouteImport } from "./routes/_authed/guilds/$guildId/modules/activity-log"
 import { Route as AuthedGuildsGuildIdModulesHoneypotRouteImport } from "./routes/_authed/guilds/$guildId/modules/honeypot"
 import { Route as AuthedGuildsGuildIdModulesLoggingRouteImport } from "./routes/_authed/guilds/$guildId/modules/logging"
 import { Route as AuthedGuildsGuildIdModulesTicketsRouteImport } from "./routes/_authed/guilds/$guildId/modules/tickets"
@@ -72,6 +75,11 @@ const SupportRoute = SupportRouteImport.update({
   id: "/support",
   path: "/support",
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedCasesRoute = AuthedCasesRouteImport.update({
+  id: "/cases",
+  path: "/cases",
+  getParentRoute: () => AuthedRoute,
 } as any)
 const DocsIndexRoute = DocsIndexRouteImport.update({
   id: "/",
@@ -152,6 +160,12 @@ const AuthedGuildsGuildIdFailuresRoute =
     path: "/failures",
     getParentRoute: () => AuthedGuildsGuildIdRoute,
   } as any)
+const AuthedGuildsGuildIdModLogRoute =
+  AuthedGuildsGuildIdModLogRouteImport.update({
+    id: "/mod-log",
+    path: "/mod-log",
+    getParentRoute: () => AuthedGuildsGuildIdRoute,
+  } as any)
 const AuthedGuildsGuildIdSettingsRoute =
   AuthedGuildsGuildIdSettingsRouteImport.update({
     id: "/settings",
@@ -186,6 +200,12 @@ const AuthedGuildsGuildIdMembersUserIdRoute =
   AuthedGuildsGuildIdMembersUserIdRouteImport.update({
     id: "/members/$userId",
     path: "/members/$userId",
+    getParentRoute: () => AuthedGuildsGuildIdRoute,
+  } as any)
+const AuthedGuildsGuildIdModulesActivityLogRoute =
+  AuthedGuildsGuildIdModulesActivityLogRouteImport.update({
+    id: "/modules/activity-log",
+    path: "/modules/activity-log",
     getParentRoute: () => AuthedGuildsGuildIdRoute,
   } as any)
 const AuthedGuildsGuildIdModulesHoneypotRoute =
@@ -237,6 +257,7 @@ export interface FileRoutesByFullPath {
   "/invite": typeof InviteRoute
   "/login": typeof LoginRoute
   "/support": typeof SupportRoute
+  "/cases": typeof AuthedCasesRoute
   "/docs/appeals": typeof DocsAppealsRoute
   "/docs/cases": typeof DocsCasesRoute
   "/docs/commands": typeof DocsCommandsRoute
@@ -251,11 +272,13 @@ export interface FileRoutesByFullPath {
   "/guilds/$guildId/appeals": typeof AuthedGuildsGuildIdAppealsRouteRouteWithChildren
   "/guilds/$guildId/audit": typeof AuthedGuildsGuildIdAuditRoute
   "/guilds/$guildId/failures": typeof AuthedGuildsGuildIdFailuresRoute
+  "/guilds/$guildId/mod-log": typeof AuthedGuildsGuildIdModLogRoute
   "/guilds/$guildId/settings": typeof AuthedGuildsGuildIdSettingsRoute
   "/guilds/$guildId/": typeof AuthedGuildsGuildIdIndexRoute
   "/guilds/$guildId/appeals/$appealId": typeof AuthedGuildsGuildIdAppealsAppealIdRoute
   "/guilds/$guildId/cases/$caseRef": typeof AuthedGuildsGuildIdCasesCaseRefRoute
   "/guilds/$guildId/members/$userId": typeof AuthedGuildsGuildIdMembersUserIdRoute
+  "/guilds/$guildId/modules/activity-log": typeof AuthedGuildsGuildIdModulesActivityLogRoute
   "/guilds/$guildId/modules/honeypot": typeof AuthedGuildsGuildIdModulesHoneypotRoute
   "/guilds/$guildId/modules/logging": typeof AuthedGuildsGuildIdModulesLoggingRoute
   "/guilds/$guildId/modules/tickets": typeof AuthedGuildsGuildIdModulesTicketsRoute
@@ -271,6 +294,7 @@ export interface FileRoutesByTo {
   "/invite": typeof InviteRoute
   "/login": typeof LoginRoute
   "/support": typeof SupportRoute
+  "/cases": typeof AuthedCasesRoute
   "/docs/appeals": typeof DocsAppealsRoute
   "/docs/cases": typeof DocsCasesRoute
   "/docs/commands": typeof DocsCommandsRoute
@@ -283,11 +307,13 @@ export interface FileRoutesByTo {
   "/guilds": typeof AuthedGuildsIndexRoute
   "/guilds/$guildId/audit": typeof AuthedGuildsGuildIdAuditRoute
   "/guilds/$guildId/failures": typeof AuthedGuildsGuildIdFailuresRoute
+  "/guilds/$guildId/mod-log": typeof AuthedGuildsGuildIdModLogRoute
   "/guilds/$guildId/settings": typeof AuthedGuildsGuildIdSettingsRoute
   "/guilds/$guildId": typeof AuthedGuildsGuildIdIndexRoute
   "/guilds/$guildId/appeals/$appealId": typeof AuthedGuildsGuildIdAppealsAppealIdRoute
   "/guilds/$guildId/cases/$caseRef": typeof AuthedGuildsGuildIdCasesCaseRefRoute
   "/guilds/$guildId/members/$userId": typeof AuthedGuildsGuildIdMembersUserIdRoute
+  "/guilds/$guildId/modules/activity-log": typeof AuthedGuildsGuildIdModulesActivityLogRoute
   "/guilds/$guildId/modules/honeypot": typeof AuthedGuildsGuildIdModulesHoneypotRoute
   "/guilds/$guildId/modules/logging": typeof AuthedGuildsGuildIdModulesLoggingRoute
   "/guilds/$guildId/modules/tickets": typeof AuthedGuildsGuildIdModulesTicketsRoute
@@ -306,6 +332,7 @@ export interface FileRoutesById {
   "/invite": typeof InviteRoute
   "/login": typeof LoginRoute
   "/support": typeof SupportRoute
+  "/_authed/cases": typeof AuthedCasesRoute
   "/docs/appeals": typeof DocsAppealsRoute
   "/docs/cases": typeof DocsCasesRoute
   "/docs/commands": typeof DocsCommandsRoute
@@ -320,11 +347,13 @@ export interface FileRoutesById {
   "/_authed/guilds/$guildId/appeals": typeof AuthedGuildsGuildIdAppealsRouteRouteWithChildren
   "/_authed/guilds/$guildId/audit": typeof AuthedGuildsGuildIdAuditRoute
   "/_authed/guilds/$guildId/failures": typeof AuthedGuildsGuildIdFailuresRoute
+  "/_authed/guilds/$guildId/mod-log": typeof AuthedGuildsGuildIdModLogRoute
   "/_authed/guilds/$guildId/settings": typeof AuthedGuildsGuildIdSettingsRoute
   "/_authed/guilds/$guildId/": typeof AuthedGuildsGuildIdIndexRoute
   "/_authed/guilds/$guildId/appeals/$appealId": typeof AuthedGuildsGuildIdAppealsAppealIdRoute
   "/_authed/guilds/$guildId/cases/$caseRef": typeof AuthedGuildsGuildIdCasesCaseRefRoute
   "/_authed/guilds/$guildId/members/$userId": typeof AuthedGuildsGuildIdMembersUserIdRoute
+  "/_authed/guilds/$guildId/modules/activity-log": typeof AuthedGuildsGuildIdModulesActivityLogRoute
   "/_authed/guilds/$guildId/modules/honeypot": typeof AuthedGuildsGuildIdModulesHoneypotRoute
   "/_authed/guilds/$guildId/modules/logging": typeof AuthedGuildsGuildIdModulesLoggingRoute
   "/_authed/guilds/$guildId/modules/tickets": typeof AuthedGuildsGuildIdModulesTicketsRoute
@@ -343,6 +372,7 @@ export interface FileRouteTypes {
     | "/invite"
     | "/login"
     | "/support"
+    | "/cases"
     | "/docs/appeals"
     | "/docs/cases"
     | "/docs/commands"
@@ -357,11 +387,13 @@ export interface FileRouteTypes {
     | "/guilds/$guildId/appeals"
     | "/guilds/$guildId/audit"
     | "/guilds/$guildId/failures"
+    | "/guilds/$guildId/mod-log"
     | "/guilds/$guildId/settings"
     | "/guilds/$guildId/"
     | "/guilds/$guildId/appeals/$appealId"
     | "/guilds/$guildId/cases/$caseRef"
     | "/guilds/$guildId/members/$userId"
+    | "/guilds/$guildId/modules/activity-log"
     | "/guilds/$guildId/modules/honeypot"
     | "/guilds/$guildId/modules/logging"
     | "/guilds/$guildId/modules/tickets"
@@ -377,6 +409,7 @@ export interface FileRouteTypes {
     | "/invite"
     | "/login"
     | "/support"
+    | "/cases"
     | "/docs/appeals"
     | "/docs/cases"
     | "/docs/commands"
@@ -389,11 +422,13 @@ export interface FileRouteTypes {
     | "/guilds"
     | "/guilds/$guildId/audit"
     | "/guilds/$guildId/failures"
+    | "/guilds/$guildId/mod-log"
     | "/guilds/$guildId/settings"
     | "/guilds/$guildId"
     | "/guilds/$guildId/appeals/$appealId"
     | "/guilds/$guildId/cases/$caseRef"
     | "/guilds/$guildId/members/$userId"
+    | "/guilds/$guildId/modules/activity-log"
     | "/guilds/$guildId/modules/honeypot"
     | "/guilds/$guildId/modules/logging"
     | "/guilds/$guildId/modules/tickets"
@@ -411,6 +446,7 @@ export interface FileRouteTypes {
     | "/invite"
     | "/login"
     | "/support"
+    | "/_authed/cases"
     | "/docs/appeals"
     | "/docs/cases"
     | "/docs/commands"
@@ -425,11 +461,13 @@ export interface FileRouteTypes {
     | "/_authed/guilds/$guildId/appeals"
     | "/_authed/guilds/$guildId/audit"
     | "/_authed/guilds/$guildId/failures"
+    | "/_authed/guilds/$guildId/mod-log"
     | "/_authed/guilds/$guildId/settings"
     | "/_authed/guilds/$guildId/"
     | "/_authed/guilds/$guildId/appeals/$appealId"
     | "/_authed/guilds/$guildId/cases/$caseRef"
     | "/_authed/guilds/$guildId/members/$userId"
+    | "/_authed/guilds/$guildId/modules/activity-log"
     | "/_authed/guilds/$guildId/modules/honeypot"
     | "/_authed/guilds/$guildId/modules/logging"
     | "/_authed/guilds/$guildId/modules/tickets"
@@ -493,6 +531,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/support"
       preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    "/_authed/cases": {
+      id: "/_authed/cases"
+      path: "/cases"
+      fullPath: "/cases"
+      preLoaderRoute: typeof AuthedCasesRouteImport
+      parentRoute: typeof AuthedRoute
     }
     "/docs/": {
       id: "/docs/"
@@ -599,6 +644,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthedGuildsGuildIdFailuresRouteImport
       parentRoute: typeof AuthedGuildsGuildIdRoute
     }
+    "/_authed/guilds/$guildId/mod-log": {
+      id: "/_authed/guilds/$guildId/mod-log"
+      path: "/mod-log"
+      fullPath: "/guilds/$guildId/mod-log"
+      preLoaderRoute: typeof AuthedGuildsGuildIdModLogRouteImport
+      parentRoute: typeof AuthedGuildsGuildIdRoute
+    }
     "/_authed/guilds/$guildId/settings": {
       id: "/_authed/guilds/$guildId/settings"
       path: "/settings"
@@ -639,6 +691,13 @@ declare module "@tanstack/react-router" {
       path: "/members/$userId"
       fullPath: "/guilds/$guildId/members/$userId"
       preLoaderRoute: typeof AuthedGuildsGuildIdMembersUserIdRouteImport
+      parentRoute: typeof AuthedGuildsGuildIdRoute
+    }
+    "/_authed/guilds/$guildId/modules/activity-log": {
+      id: "/_authed/guilds/$guildId/modules/activity-log"
+      path: "/modules/activity-log"
+      fullPath: "/guilds/$guildId/modules/activity-log"
+      preLoaderRoute: typeof AuthedGuildsGuildIdModulesActivityLogRouteImport
       parentRoute: typeof AuthedGuildsGuildIdRoute
     }
     "/_authed/guilds/$guildId/modules/honeypot": {
@@ -742,10 +801,12 @@ interface AuthedGuildsGuildIdRouteChildren {
   AuthedGuildsGuildIdAppealsRouteRoute: typeof AuthedGuildsGuildIdAppealsRouteRouteWithChildren
   AuthedGuildsGuildIdAuditRoute: typeof AuthedGuildsGuildIdAuditRoute
   AuthedGuildsGuildIdFailuresRoute: typeof AuthedGuildsGuildIdFailuresRoute
+  AuthedGuildsGuildIdModLogRoute: typeof AuthedGuildsGuildIdModLogRoute
   AuthedGuildsGuildIdSettingsRoute: typeof AuthedGuildsGuildIdSettingsRoute
   AuthedGuildsGuildIdIndexRoute: typeof AuthedGuildsGuildIdIndexRoute
   AuthedGuildsGuildIdCasesCaseRefRoute: typeof AuthedGuildsGuildIdCasesCaseRefRoute
   AuthedGuildsGuildIdMembersUserIdRoute: typeof AuthedGuildsGuildIdMembersUserIdRoute
+  AuthedGuildsGuildIdModulesActivityLogRoute: typeof AuthedGuildsGuildIdModulesActivityLogRoute
   AuthedGuildsGuildIdModulesHoneypotRoute: typeof AuthedGuildsGuildIdModulesHoneypotRoute
   AuthedGuildsGuildIdModulesLoggingRoute: typeof AuthedGuildsGuildIdModulesLoggingRoute
   AuthedGuildsGuildIdModulesTicketsRoute: typeof AuthedGuildsGuildIdModulesTicketsRoute
@@ -760,10 +821,13 @@ const AuthedGuildsGuildIdRouteChildren: AuthedGuildsGuildIdRouteChildren = {
     AuthedGuildsGuildIdAppealsRouteRouteWithChildren,
   AuthedGuildsGuildIdAuditRoute: AuthedGuildsGuildIdAuditRoute,
   AuthedGuildsGuildIdFailuresRoute: AuthedGuildsGuildIdFailuresRoute,
+  AuthedGuildsGuildIdModLogRoute: AuthedGuildsGuildIdModLogRoute,
   AuthedGuildsGuildIdSettingsRoute: AuthedGuildsGuildIdSettingsRoute,
   AuthedGuildsGuildIdIndexRoute: AuthedGuildsGuildIdIndexRoute,
   AuthedGuildsGuildIdCasesCaseRefRoute: AuthedGuildsGuildIdCasesCaseRefRoute,
   AuthedGuildsGuildIdMembersUserIdRoute: AuthedGuildsGuildIdMembersUserIdRoute,
+  AuthedGuildsGuildIdModulesActivityLogRoute:
+    AuthedGuildsGuildIdModulesActivityLogRoute,
   AuthedGuildsGuildIdModulesHoneypotRoute:
     AuthedGuildsGuildIdModulesHoneypotRoute,
   AuthedGuildsGuildIdModulesLoggingRoute:
@@ -780,12 +844,14 @@ const AuthedGuildsGuildIdRouteWithChildren =
   AuthedGuildsGuildIdRoute._addFileChildren(AuthedGuildsGuildIdRouteChildren)
 
 interface AuthedRouteChildren {
+  AuthedCasesRoute: typeof AuthedCasesRoute
   AuthedGuildsGuildIdRoute: typeof AuthedGuildsGuildIdRouteWithChildren
   AuthedGuildsIndexRoute: typeof AuthedGuildsIndexRoute
   AuthedGuildsGuildIdCasesCaseIdAppealRoute: typeof AuthedGuildsGuildIdCasesCaseIdAppealRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedCasesRoute: AuthedCasesRoute,
   AuthedGuildsGuildIdRoute: AuthedGuildsGuildIdRouteWithChildren,
   AuthedGuildsIndexRoute: AuthedGuildsIndexRoute,
   AuthedGuildsGuildIdCasesCaseIdAppealRoute:

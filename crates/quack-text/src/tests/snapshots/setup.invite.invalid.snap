@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: That isn't a Discord invite link. Use a link like https://discord.gg/abc123.
+plain:   That isn't a Discord invite link. Use a link like https://discord.gg/abc123.
+model:   [Fixed("That isn't a Discord invite link. Use a link like https://discord.gg/abc123.")]

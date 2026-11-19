@@ -3,7 +3,7 @@ import { Search, X } from "lucide-react";
 import { useDeferredValue, useId, useRef, useState } from "react";
 
 import { memberSearchQuery, useUser } from "~/api/directory";
-import type { DirectoryUser } from "~/api/types";
+import type { DirectoryMember } from "~/api/types";
 import { cx } from "~/lib/cx";
 import { isSnowflake } from "~/lib/format";
 import { Avatar } from "~/ui/Avatar";
@@ -15,7 +15,7 @@ import s from "./MemberPicker.module.css";
 
 /**
  * MemberPicker searches the server's current members by name, or takes a
- * pasted user ID, and reports the chosen member's Discord ID.
+ * pasted Discord ID, and reports the chosen member's Discord ID.
  */
 export function MemberPicker({
   guildId,
@@ -44,11 +44,11 @@ export function MemberPicker({
     enabled: query.length >= 1 && !isSnowflake(query),
     placeholderData: keepPreviousData,
   });
-  const results: DirectoryUser[] = search.data ?? [];
+  const results: DirectoryMember[] = search.data ?? [];
 
   if (value) return <Selected guildId={guildId} userId={value} onClear={() => onChange(null)} />;
 
-  const pick = (user: DirectoryUser) => {
+  const pick = (user: DirectoryMember) => {
     onChange(user.id);
     setText("");
     setOpen(false);
@@ -110,7 +110,7 @@ export function MemberPicker({
             }}
             className={cx(s.option, s.optionActive)}
           >
-            Use user ID {text.trim()}
+            Use member ID {text.trim()}
           </button>
         ) : showResults ? (
           <ul id={listId} role="listbox" className={s.list}>
@@ -155,7 +155,7 @@ function Selected({
       <Avatar src={user?.avatar_url} name={name} size={28} />
       <span className={s.name}>{name}</span>
       {user ? <span className={s.handle}>{user.username}</span> : null}
-      {user && !user.in_guild ? <span className={s.gone}>Not in server</span> : null}
+      {user && !user.in_server ? <span className={s.gone}>Not in server</span> : null}
       <button type="button" aria-label="Clear member" onClick={onClear} className={s.clear}>
         <X size={16} />
       </button>

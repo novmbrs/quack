@@ -1,44 +1,44 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { duration } from "~/lib/format";
+import { last } from "~/lib/format";
 import { Button } from "~/ui/Button";
-import { Field, Select, Switch, TextInput } from "~/ui/Field";
+import { Field, Select, Switch } from "~/ui/Field";
 import { QuackIcon } from "~/ui/QuackIcon";
 import { Segmented } from "~/ui/Segmented";
 import { InlineError } from "~/ui/States";
 
 import { DurationPicker, IconButton, NumberInput } from "./controls";
 import {
-  defaultRetries,
-  type Enforcement,
+  type ActionChoice,
   type Issues,
   type LevelDraft,
   limits,
   newLevel,
   sortLevels,
 } from "./draft";
-import { enforcementIcon } from "./Ladder";
+import { actionIcon } from "./Ladder";
 import s from "./LevelsEditor.module.css";
 
-const actions: { value: Enforcement; label: string }[] = [
-  { value: "none", label: "Warning only" },
-  { value: "timeout_user", label: "Timeout" },
-  { value: "kick_user", label: "Kick" },
-  { value: "ban_user", label: "Ban" },
+const actions: { value: ActionChoice; label: string }[] = [
+  { value: "none", label: "Warning" },
+  { value: "timeout", label: "Timeout" },
+  { value: "kick", label: "Kick" },
+  { value: "ban", label: "Ban" },
 ];
 
 const deleteChoices = [
   { seconds: 0, label: "Don't delete any" },
-  { seconds: 3600, label: "Previous hour" },
-  { seconds: 86400, label: "Previous 24 hours" },
-  { seconds: 7 * 86400, label: "Previous 7 days" },
+  { seconds: 3600, label: "The last hour" },
+  { seconds: 86400, label: "The last day" },
+  { seconds: 7 * 86400, label: "The last 7 days" },
 ];
 
 /**
- * LevelsEditor edits a rule's escalation: the default level and the levels
- * that take over at higher case counts. Levels re-sort by their starting
- * case once the admin leaves that box, so the list always reads in order.
+ * LevelsEditor edits a rule's levels: the first starts at a case count of 1
+ * and each later one takes over at a higher case count. Levels re-sort by
+ * their case count once the rules manager leaves that box, so the list
+ * always reads in order.
  */
 export function LevelsEditor({
   levels,
@@ -58,7 +58,7 @@ export function LevelsEditor({
   const add = () => {
     const highest = Math.max(
       1,
-      ...levels.filter((l) => !l.isDefault && Number.isFinite(l.trigger)).map((l) => l.trigger),
+      ...levels.filter((l) => Number.isFinite(l.from)).map((l) => l.from),
     );
     const level = newLevel(highest + 2);
     setAdded(level.id);
@@ -67,9 +67,11 @@ export function LevelsEditor({
 
   return (
     <div className={s.list}>
-      {levels.map((level) => (
+      {levels.map((level, i) => (
         <LevelCard
           key={level.id}
+          index={i + 1}
+          first={i === 0}
           level={level}
           issues={issues}
           readOnly={readOnly}
@@ -80,7 +82,7 @@ export function LevelsEditor({
         />
       ))}
       {issues.levels ? <InlineError>{issues.levels}</InlineError> : null}
-      {readOnly ? null : (
+      {readOnly || levels.length >= limits.levels ? null : (
         <div>
           <Button variant="secondary" size="sm" icon={<Plus size={16} />} onClick={add}>
             Add level
@@ -92,6 +94,8 @@ export function LevelsEditor({
 }
 
 function LevelCard({
+  index,
+  first,
   level,
   issues,
   readOnly,
@@ -100,6 +104,9 @@ function LevelCard({
   onSettle,
   onRemove,
 }: {
+  index: number;
+  /** The first level always starts at a case count of 1. */
+  first: boolean;
   level: LevelDraft;
   issues: Issues;
   readOnly?: boolean;
@@ -113,66 +120,62 @@ function LevelCard({
     ? deleteChoices
     : [
         ...deleteChoices,
-        { seconds: level.deleteSeconds, label: `Previous ${duration(level.deleteSeconds)}` },
+        { seconds: level.deleteSeconds, label: `The last ${last(level.deleteSeconds)}` },
       ];
 
   return (
-    <div className={s.card} data-default={level.isDefault || undefined} data-action={level.action}>
+    <div className={s.card} data-default={first || undefined} data-action={level.action}>
       <div className={s.head}>
         <span className={s.badge}>
-          <QuackIcon name={enforcementIcon[level.action]} size={20} />
+          <QuackIcon name={actionIcon[level.action]} size={20} />
         </span>
-        <div className={s.kicker}>{level.isDefault ? "Default level" : "Escalation level"}</div>
-        {readOnly || level.isDefault ? null : (
-          <IconButton label="Remove level" tone="danger" onClick={onRemove}>
+        <div className={s.kicker}>Level {index}</div>
+        {readOnly || first ? null : (
+          <IconButton label={`Remove level ${index}`} tone="danger" onClick={onRemove}>
             <Trash2 size={16} />
           </IconButton>
         )}
       </div>
 
-      <div className={s.topRow}>
-        <Field label="Name" error={issue("name")} className={s.grow}>
-          {(id) => (
-            <TextInput
-              id={id}
-              value={level.name}
-              maxLength={limits.name}
-              autoFocus={autoFocus}
-              placeholder={level.isDefault ? "Warning" : "Final warning"}
-              invalid={Boolean(issue("name"))}
-              onChange={(e) => onChange({ name: e.currentTarget.value })}
-            />
-          )}
-        </Field>
-        {level.isDefault ? null : (
-          <Field label="Starts at case" error={issue("trigger")}>
+      {first && level.from === 1 ? (
+        <p className={s.hint}>
+          Starts at a case count of 1: a member's first counted case under this rule.
+        </p>
+      ) : (
+        <div className={s.topRow}>
+          <Field
+            label="Starts at case count"
+            error={issue("from")}
+            hint="The number of counted cases, including the new one."
+          >
             {(id) => (
               <NumberInput
                 id={id}
-                min={1}
-                value={level.trigger}
-                invalid={Boolean(issue("trigger"))}
-                onChange={(trigger) => onChange({ trigger })}
+                min={first ? 1 : 2}
+                max={limits.caseCount}
+                value={level.from}
+                autoFocus={autoFocus}
+                invalid={Boolean(issue("from"))}
+                onChange={(from) => onChange({ from })}
                 onBlur={onSettle}
               />
             )}
           </Field>
-        )}
-      </div>
-      {level.isDefault ? (
-        <p className={s.hint}>Applies from a member's first case until a higher level starts.</p>
-      ) : null}
+        </div>
+      )}
 
       <div className={s.switchRow}>
         <div>
           <p className={s.switchTitle}>DM the member</p>
-          <p className={s.hint}>One message with the reason, the outcome, and how to appeal.</p>
+          <p className={s.hint}>
+            One DM with the case number, the reason, the action, and how to appeal.
+          </p>
         </div>
         <Switch
           label="DM the member"
-          checked={level.notify}
+          checked={level.sendDm}
           disabled={readOnly}
-          onChange={(notify) => onChange({ notify })}
+          onChange={(sendDm) => onChange({ sendDm })}
         />
       </div>
 
@@ -183,26 +186,17 @@ function LevelCard({
             label="Action"
             value={level.action}
             options={actions}
-            onChange={(action) =>
-              onChange(
-                level.action === "none" && action !== "none"
-                  ? {
-                      action,
-                      retries: Number.isFinite(level.retries) ? level.retries : defaultRetries,
-                    }
-                  : { action },
-              )
-            }
+            onChange={(action) => onChange({ action })}
           />
         </div>
         {level.action === "none" ? (
           <p className={s.hint}>
-            The case itself is the warning. It still counts toward later levels.
+            The case itself is the warning. It still counts toward the case count.
           </p>
         ) : null}
       </div>
 
-      {level.action === "timeout_user" ? (
+      {level.action === "timeout" ? (
         <Field
           label="Timeout length"
           error={issue("timeout")}
@@ -220,7 +214,7 @@ function LevelCard({
         </Field>
       ) : null}
 
-      {level.action === "ban_user" ? (
+      {level.action === "ban" ? (
         <Field label="Delete message history" error={issue("delete")} className={s.appear}>
           {(id) => (
             <Select
@@ -235,26 +229,6 @@ function LevelCard({
                 </option>
               ))}
             </Select>
-          )}
-        </Field>
-      ) : null}
-
-      {level.action !== "none" ? (
-        <Field
-          label="Automatic retries"
-          error={issue("retries")}
-          hint={`Quack only retries failures it knows are safe to repeat. Up to ${limits.retries}.`}
-          className={s.appear}
-        >
-          {(id) => (
-            <NumberInput
-              id={id}
-              min={0}
-              max={limits.retries}
-              value={level.retries}
-              invalid={Boolean(issue("retries"))}
-              onChange={(retries) => onChange({ retries })}
-            />
           )}
         </Field>
       ) : null}

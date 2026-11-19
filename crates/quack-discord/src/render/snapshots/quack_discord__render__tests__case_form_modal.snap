@@ -1,0 +1,46 @@
+---
+source: crates/quack-discord/src/render/tests.rs
+expression: "(&form.custom_id, &form.title, &wire)"
+---
+[
+  "1:cd:AAAAAAAAAAAAAAAAAAAABA:AAAAAAAAAAAAAAAAAAAABQ:3:1",
+  "Spam (1/2)",
+  [
+    {
+      "component": {
+        "custom_id": "f:what",
+        "max_length": 4000,
+        "min_length": 1,
+        "required": true,
+        "style": 2,
+        "type": 4
+      },
+      "label": "What happened?",
+      "type": 18
+    },
+    {
+      "component": {
+        "custom_id": "f:repeat",
+        "max_values": 1,
+        "min_values": 0,
+        "options": [
+          {
+            "default": true,
+            "label": "Yes",
+            "value": "yes"
+          },
+          {
+            "default": false,
+            "label": "No",
+            "value": "no"
+          }
+        ],
+        "placeholder": "Choose Yes or No",
+        "required": false,
+        "type": 3
+      },
+      "label": "Did it happen before?",
+      "type": 18
+    }
+  ]
+]

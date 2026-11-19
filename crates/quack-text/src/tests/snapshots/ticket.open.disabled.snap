@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Tickets are turned off in this server.
+plain:   Tickets are turned off in this server.
+model:   [Fixed("Tickets are turned off in this server.")]

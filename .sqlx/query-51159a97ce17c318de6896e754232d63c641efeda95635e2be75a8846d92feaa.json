@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM oauth_states WHERE state_hash = $1 AND nonce_hash = $2 AND expires_at > now()\n             RETURNING code_verifier, redirect_to",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code_verifier",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oauth_states",
+            "name": "code_verifier"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "redirect_to",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "oauth_states",
+            "name": "redirect_to"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "51159a97ce17c318de6896e754232d63c641efeda95635e2be75a8846d92feaa"
+}

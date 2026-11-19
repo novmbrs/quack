@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The appeal changed while you were writing. Reload it and read the latest question before replying.
+plain:   The appeal changed while you were writing. Reload it and read the latest question before replying.
+model:   [Fixed("The appeal changed while you were writing. Reload it and read the latest question before replying.")]

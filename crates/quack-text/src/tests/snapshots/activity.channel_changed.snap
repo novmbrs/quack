@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+Settings changed for <#444>.
+--- plain ---
+Settings changed for #general.
+--- model ---
+Text [Fixed("Settings changed for "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(".")]

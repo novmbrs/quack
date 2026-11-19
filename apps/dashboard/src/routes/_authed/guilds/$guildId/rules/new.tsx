@@ -3,10 +3,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { BookOpen } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import { keys, templateQuery } from "~/api/queries";
+import { keys, ruleQuery } from "~/api/queries";
 import { createRule } from "~/api/rules";
-import type { Template } from "~/api/types";
-import { emptyDraft, toInput } from "~/features/rules/draft";
+import type { Rule } from "~/api/types";
+import { emptyDraft, toDefinition } from "~/features/rules/draft";
 import { RuleEditor } from "~/features/rules/RuleEditor";
 import { useCan } from "~/lib/permissions";
 import { ButtonLink } from "~/ui/Button";
@@ -26,10 +26,10 @@ function NewRule() {
   const [initial] = useState(emptyDraft);
 
   const onSaved = useCallback(
-    (rule: Template) => {
-      queryClient.setQueryData(templateQuery(guildId, rule.id).queryKey, rule);
-      void queryClient.invalidateQueries({ queryKey: keys.templates(guildId) });
-      toast.success(`${rule.name} is live. Moderators can apply it now.`);
+    (rule: Rule) => {
+      queryClient.setQueryData(ruleQuery(guildId, rule.id).queryKey, rule);
+      void queryClient.invalidateQueries({ queryKey: keys.rules(guildId) });
+      toast.success(`${rule.definition.name} is saved. Moderators can apply it now.`);
       void navigate({
         to: "/guilds/$guildId/rules/$ruleId",
         params: { guildId, ruleId: rule.id },
@@ -43,12 +43,12 @@ function NewRule() {
     <Page
       icon={<BookOpen size={22} />}
       title="New rule"
-      topic="Name it after the problem, like Spam or Harassment, not the punishment."
+      topic="Name it after the problem, like Spam or Harassment, not the action."
     >
-      {can("case_template.write") ? (
+      {can("manage_rules") ? (
         <RuleEditor
           initial={initial}
-          onSave={(draft) => createRule(guildId, toInput(draft))}
+          onSave={(draft) => createRule(guildId, toDefinition(draft))}
           onSaved={onSaved}
         />
       ) : (
@@ -61,7 +61,8 @@ function NewRule() {
             </ButtonLink>
           }
         >
-          Creating and editing rules needs Manage Server or a rules manager role.
+          To manage rules, you need Manage Server in Discord or a rules manager role in Quack. Ask
+          an administrator to check your roles.
         </Empty>
       )}
     </Page>

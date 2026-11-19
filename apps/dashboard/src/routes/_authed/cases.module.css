@@ -1,0 +1,96 @@
+.main {
+  display: flex;
+  flex-grow: 1;
+  min-width: 0;
+  background: var(--bg);
+}
+
+.server {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    background-color var(--fast) var(--ease),
+    border-color var(--fast) var(--ease);
+  animation: rise-in var(--slow) var(--ease-out);
+}
+
+.row:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  overflow: hidden;
+  font-weight: 650;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.sub {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badges:empty {
+  display: none;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}

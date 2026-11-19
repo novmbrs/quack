@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT source_fingerprint FROM import_guilds WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source_fingerprint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "import_guilds",
+            "name": "source_fingerprint"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "444a9f5107f4c368a6a443fad7df0e7b3a1b5fb8aaeedc660d6cbbff4cd665e0"
+}

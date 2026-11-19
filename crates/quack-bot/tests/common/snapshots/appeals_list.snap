@@ -1,0 +1,8 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Appeals waiting for a decision
+Case #1 · a member (ID 40) · Spam · submitted on [date]
+[Open appeal for #1]

@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { CommandTable, Doc, Section } from "~/features/docs/Doc";
+import { CommandTable, Doc, Note, Section } from "~/features/docs/Doc";
 
 export const Route = createFileRoute("/docs/commands")({
   component: Commands,
@@ -15,52 +15,51 @@ function Commands() {
       <Section id="cases" title="Cases">
         <CommandTable
           rows={[
-            ["/case add", "Add a case for a member under a rule."],
-            ["Apps → Add case", "Right-click a message to add a case with it as evidence."],
-            ["Apps → Add case for member", "Right-click a member to add a case."],
-            ["/case evidence", "Show a case's evidence, or add a file or message link to it."],
-            ["/case view", "Show one case."],
-            ["/case list", "Show recent cases."],
-            ["/case user", "Show a member's case history."],
-            ["/case void", "Cancel a case that was a mistake."],
-            ["/case failures", "Show punishments that didn't go through."],
-            ["/case retry", "Try a failed punishment again."],
-            ["/case dismiss", "Clear a failure from the list. It stays in history."],
-            ["/case reverse", "Remove a timeout or ban from a case."],
+            ["/case add", "Add a case by applying a rule to a member."],
+            [
+              "Apps → Add case (on a message)",
+              "Add a case about the message's author. Quack saves the message as evidence.",
+            ],
+            ["Apps → Add case (on a member)", "Add a case about that member."],
+            ["/case view", "Open a case by number and see its action and DM outcomes."],
+            ["/case list", "List recent cases, optionally about one member or under one rule."],
+            ["/case history", "Show a member's case history."],
+            ["/case void", "Keep a case in the history and stop it from counting."],
           ]}
         />
-      </Section>
-
-      <Section id="rules" title="Rules">
-        <CommandTable
-          rows={[
-            ["/template create", "Make a rule."],
-            ["/template view", "Show a rule and its levels."],
-            ["/template edit", "Change a rule's name, reason, appeals, or counting window."],
-            ["/template level", "Add or change a level."],
-            ["/template remove-level", "Remove a level."],
-            ["/template archive", "Stop a rule being used. Its cases are kept."],
-            ["/template restore", "Bring back an archived rule."],
-          ]}
-        />
+        <p>
+          The case card from <b>/case view</b> has buttons to retry or dismiss a failed action,
+          remove a timeout, unban, edit the case context, add evidence, and void the case.
+        </p>
       </Section>
 
       <Section id="appeals" title="Appeals">
-        <CommandTable rows={[["/appeals", "Show appeals waiting for a decision."]]} />
+        <CommandTable rows={[["/appeals", "Review appeals waiting for a decision."]]} />
       </Section>
 
-      <Section id="setup" title="Setup">
+      <Section id="rules" title="Rules">
+        <CommandTable rows={[["/rules", "List active rules and open them on the dashboard."]]} />
+        <p>
+          Rules are edited on the <Link to="/guilds">dashboard</Link>. See{" "}
+          <Link to="/docs/rules">Rules</Link>.
+        </p>
+      </Section>
+
+      <Section id="setup" title="Setup and help">
         <CommandTable
           rows={[
-            ["/setup appeals", "Pick where appeals go, and an invite for unbanned members."],
-            ["/setup audit", "Post Quack's moderation activity in a channel."],
-            ["/setup evidence", "Keep copies of evidence files in a staff channel."],
-            ["/setup tickets", "Let members open private support threads."],
-            ["/setup logging", "Log deleted messages and other server changes."],
-            ["/setup honeypot", "Set a trap channel for spam bots."],
-            ["/help", "A quick guide, right in Discord."],
+            [
+              "/setup",
+              "Set up Quack for this server: the log channel, appeals, evidence copies, tickets, the honeypot, and the server activity log. Needs Manage Server.",
+            ],
+            ["/help", "Learn how Quack works, with topics for cases, rules, appeals, and setup."],
           ]}
         />
+        <Note>
+          Quack's replies to staff are private: only you see them. The one exception is the case
+          receipt from <b>/case add</b>, which Quack posts in the channel unless you set{" "}
+          <b>private</b> to True.
+        </Note>
       </Section>
     </Doc>
   );

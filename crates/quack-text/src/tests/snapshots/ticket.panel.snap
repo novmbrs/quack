@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## on
+tone: Neutral
+--- discord ---
+### Need help?
+Open a ticket to talk privately with the moderators.
+buttons: [Open a ticket · Primary] OpenTicket
+--- plain ---
+Need help?
+Open a ticket to talk privately with the moderators.
+--- model ---
+Heading [Fixed("Need help?")]
+Text [Fixed("Open a ticket to talk privately with the moderators.")]
+
+## off
+tone: Neutral
+--- discord ---
+### Need help?
+Tickets are turned off right now.
+--- plain ---
+Need help?
+Tickets are turned off right now.
+--- model ---
+Heading [Fixed("Need help?")]
+Text [Fixed("Tickets are turned off right now.")]

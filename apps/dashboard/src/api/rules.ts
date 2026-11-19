@@ -1,94 +1,110 @@
-import { api, unwrap } from "./client";
-import type { Template, TemplateInput, TemplatePolicy } from "./types";
+import { api, unwrap, write } from "./client";
+import type { Rule, RuleDefinition, RuleFile, Settings } from "./types";
 
-// Writes for rules (moderation templates). Reads live in queries.ts
-// (templatesQuery, templateQuery, settingsQuery); callers invalidate
-// keys.templates(guildId) after any of these succeed.
+// Writes for rules. Reads live in queries.ts (rulesQuery, ruleQuery,
+// ruleVersionQuery); callers invalidate keys.rules(guildId) after any of
+// these succeed.
 
-const templatePath = (guildId: string, templateId: string) => ({
-  path: { discordGuildID: guildId, templateID: templateId },
+const rulePath = (guildId: string, ruleId: string) => ({
+  path: { guild_id: guildId, rule_id: ruleId },
 });
 
-/** createRule saves a new rule. It is live as soon as it exists. */
-export function createRule(guildId: string, body: TemplateInput): Promise<Template> {
-  return unwrap(
-    api.POST("/guilds/{discordGuildID}/templates", {
-      params: { path: { discordGuildID: guildId } },
-      body,
+/** createRule saves a new rule. It can be applied as soon as it exists. */
+export function createRule(guildId: string, definition: RuleDefinition): Promise<Rule> {
+  return write((init) =>
+    api.POST("/api/guilds/{guild_id}/rules", {
+      params: { path: { guild_id: guildId } },
+      body: definition,
+      ...init,
     }),
-  ).then((r) => r.template);
+  );
 }
 
 /**
- * updateRule saves a new version. With expected_version set it fails with a
- * 409 conflict when someone else saved first.
+ * updateRule saves a new version. It fails with 409 rule_changed when
+ * someone else saved a version after expectedVersion.
  */
 export function updateRule(
   guildId: string,
-  templateId: string,
-  body: TemplateInput,
-): Promise<Template> {
-  return unwrap(
-    api.PATCH("/guilds/{discordGuildID}/templates/{templateID}", {
-      params: templatePath(guildId, templateId),
-      body,
+  ruleId: string,
+  expectedVersion: number,
+  definition: RuleDefinition,
+): Promise<Rule> {
+  return write((init) =>
+    api.PUT("/api/guilds/{guild_id}/rules/{rule_id}", {
+      params: rulePath(guildId, ruleId),
+      body: { expected_version: expectedVersion, definition },
+      ...init,
     }),
-  ).then((r) => r.template);
+  );
 }
 
-/** archiveRule stops a rule from being applied. Its cases stay. */
-export function archiveRule(guildId: string, templateId: string): Promise<Template> {
-  return unwrap(
-    api.DELETE("/guilds/{discordGuildID}/templates/{templateID}", {
-      params: templatePath(guildId, templateId),
+/** archiveRule stops a rule from being applied. Its cases stay and keep counting. */
+export function archiveRule(guildId: string, ruleId: string): Promise<Rule> {
+  return write((init) =>
+    api.POST("/api/guilds/{guild_id}/rules/{rule_id}/archive", {
+      params: rulePath(guildId, ruleId),
+      ...init,
     }),
-  ).then((r) => r.template);
+  );
 }
 
 /** restoreRule makes an archived rule available again. */
-export function restoreRule(guildId: string, templateId: string): Promise<Template> {
-  return unwrap(
-    api.POST("/guilds/{discordGuildID}/templates/{templateID}/restore", {
-      params: templatePath(guildId, templateId),
+export function restoreRule(guildId: string, ruleId: string): Promise<Rule> {
+  return write((init) =>
+    api.POST("/api/guilds/{guild_id}/rules/{rule_id}/restore", {
+      params: rulePath(guildId, ruleId),
+      ...init,
     }),
-  ).then((r) => r.template);
+  );
 }
 
-/** exportRule fetches a rule's shareable policy, without anything guild-specific. */
-export function exportRule(guildId: string, templateId: string): Promise<TemplatePolicy> {
+/** exportRule fetches a rule as a rule file, without anything server-specific. */
+export function exportRule(guildId: string, ruleId: string): Promise<RuleFile> {
   return unwrap(
-    api.GET("/guilds/{discordGuildID}/templates/{templateID}/export", {
-      params: templatePath(guildId, templateId),
-    }),
-  ).then((r) => r.policy);
+    api.GET("/api/guilds/{guild_id}/rules/{rule_id}/export", { params: rulePath(guildId, ruleId) }),
+  );
 }
 
-/** importRule creates a new rule from an exported policy. */
-export function importRule(guildId: string, policy: TemplatePolicy): Promise<Template> {
-  return unwrap(
-    api.POST("/guilds/{discordGuildID}/templates/import", {
-      params: { path: { discordGuildID: guildId } },
-      body: { confirm: true, policy },
+/** importRule creates a new rule from a rule file, optionally under another name. */
+export function importRule(guildId: string, file: RuleFile, name?: string): Promise<Rule> {
+  return write((init) =>
+    api.POST("/api/guilds/{guild_id}/rules/import", {
+      params: { path: { guild_id: guildId } },
+      body: { confirm: true, file, name: name || undefined },
+      ...init,
     }),
-  ).then((r) => r.template);
+  );
 }
 
-/** acknowledgeStarterNotice dismisses the one-time "review your starter rule" notice. */
-export function acknowledgeStarterNotice(guildId: string) {
-  return unwrap(
-    api.POST("/guilds/{discordGuildID}/settings/starter-policy-notice/acknowledge", {
-      params: { path: { discordGuildID: guildId } },
+/** acknowledgeStarterNotice dismisses the one-time "review your starter rule" reminder. */
+export function acknowledgeStarterNotice(guildId: string): Promise<Settings> {
+  return write((init) =>
+    api.POST("/api/guilds/{guild_id}/settings/starter-notice/acknowledge", {
+      params: { path: { guild_id: guildId } },
+      ...init,
     }),
-  ).then((r) => r.settings);
+  );
 }
 
-/** downloadPolicy saves a policy as "<slug>.quack-rule.json". */
-export function downloadPolicy(policy: TemplatePolicy) {
-  const blob = new Blob([`${JSON.stringify(policy, null, 2)}\n`], { type: "application/json" });
+/** fileName is the download name for a rule: "spam.quack-rule.json". */
+export function fileName(ruleName: string): string {
+  const base = ruleName
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+  return `${base || "rule"}.quack-rule.json`;
+}
+
+/** downloadRuleFile saves a rule file as "<name>.quack-rule.json". */
+export function downloadRuleFile(file: RuleFile) {
+  const blob = new Blob([`${JSON.stringify(file, null, 2)}\n`], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${policy.slug || "rule"}.quack-rule.json`;
+  a.download = fileName(file.rule.name);
   document.body.append(a);
   a.click();
   a.remove();

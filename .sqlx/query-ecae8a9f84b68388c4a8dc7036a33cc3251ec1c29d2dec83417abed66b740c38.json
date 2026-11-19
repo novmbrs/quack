@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at\n             FROM guilds WHERE guild_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "icon_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "icon_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "owner_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "mfa_required",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "mfa_required"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "installed",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "installed"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "first_joined_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "first_joined_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "left_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "left_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "ecae8a9f84b68388c4a8dc7036a33cc3251ec1c29d2dec83417abed66b740c38"
+}

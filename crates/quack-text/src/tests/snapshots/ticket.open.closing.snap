@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Your previous ticket is still closing. Select Open a ticket again after it closes.
+plain:   Your previous ticket is still closing. Select Open a ticket again after it closes.
+model:   [Fixed("Your previous ticket is still closing. Select Open a ticket again after it closes.")]

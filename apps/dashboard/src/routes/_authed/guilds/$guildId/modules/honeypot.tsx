@@ -3,21 +3,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Radar } from "lucide-react";
 import { useState } from "react";
 
-import { ApiError, api, unwrap } from "~/api/client";
-import { guildMeQuery, honeypotSettingsQuery, keys, templatesQuery } from "~/api/queries";
-import type { HoneypotSettingsResponse, Template } from "~/api/types";
+import { ApiError, api, write } from "~/api/client";
+import { guildMeQuery, healthQuery, honeypotModuleQuery, keys } from "~/api/queries";
+import type { HoneypotModule } from "~/api/types";
 import { ChannelPicker } from "~/features/channels/ChannelPicker";
 import { MessageMarkdown, QuackMessage } from "~/features/discord/QuackMessage";
-import { honeypotRuleProblem, honeypotWarning, incidentsCaught } from "~/features/modules/honeypot";
-import {
-  Callout,
-  Command,
-  ModuleHeader,
-  StatTiles,
-  useModuleSwitch,
-} from "~/features/modules/ModuleParts";
+import { errorText } from "~/features/modules/enable";
+import { honeypotCount, honeypotWarning, honeypotWarningOff } from "~/features/modules/honeypot";
+import { ModuleHeader, StatTiles, useModuleSwitch } from "~/features/modules/ModuleParts";
 import { useCan } from "~/lib/permissions";
-import { Button } from "~/ui/Button";
 import { Field, Select, TextArea } from "~/ui/Field";
 import { Heading, Page, Section } from "~/ui/Page";
 import { SaveBar } from "~/ui/SaveBar";
@@ -29,11 +23,8 @@ import s from "./honeypot.module.css";
 export const Route = createFileRoute("/_authed/guilds/$guildId/modules/honeypot")({
   loader: async ({ context, params }) => {
     const me = await context.queryClient.ensureQueryData(guildMeQuery(params.guildId));
-    if (me.permissions["guild_settings.write"]) {
-      await Promise.all([
-        context.queryClient.prefetchQuery(honeypotSettingsQuery(params.guildId)),
-        context.queryClient.prefetchQuery(templatesQuery(params.guildId)),
-      ]);
+    if (me.capabilities.manage_settings) {
+      await context.queryClient.prefetchQuery(honeypotModuleQuery(params.guildId));
     }
   },
   component: HoneypotPage,
@@ -49,11 +40,12 @@ function HoneypotPage() {
       topic="A trap channel for spam accounts."
       width="narrow"
     >
-      {can("guild_settings.write") ? (
+      {can("manage_settings") ? (
         <Honeypot guildId={guildId} />
       ) : (
         <Empty icon="lock" title="The honeypot needs Manage Server">
-          Ask someone with Manage Server to set up or change the honeypot.
+          To change Quack's settings, you need Manage Server in Discord. Ask an administrator to
+          check your roles in Server Settings → Roles.
         </Empty>
       )}
     </Page>
@@ -61,27 +53,24 @@ function HoneypotPage() {
 }
 
 function Honeypot({ guildId }: { guildId: string }) {
-  const honeypot = useQuery(honeypotSettingsQuery(guildId));
-  const toggle = useModuleSwitch(guildId, "honeypot", "Honeypot");
+  const honeypot = useQuery(honeypotModuleQuery(guildId));
+  const toggle = useModuleSwitch(guildId, "honeypot");
   const [dirty, setDirty] = useState(false);
 
   return (
     <>
       <ModuleHeader
+        module="honeypot"
         icon="shield"
-        title="Honeypot"
-        enabled={honeypot.data?.status.enabled}
+        state={honeypot.data}
         onToggle={toggle.toggle}
         pending={toggle.pending}
         canManage
-        locked={
-          dirty ? "Save or reset your changes before switching the honeypot on or off." : null
-        }
+        locked={dirty ? "Save or reset your changes before turning the honeypot on or off." : null}
         problem={toggle.problem}
-        setupCommand="/setup honeypot"
       >
-        Pick a channel no real member would post in. When someone does, Quack applies a rule to them
-        and deletes the message. Staff, Quack, and webhooks are never caught.
+        Choose a channel no real member would post in. When a member posts there, Quack adds a case
+        under the honeypot's rule and deletes the message. Quack ignores posts from staff and bots.
       </ModuleHeader>
 
       {honeypot.isPending ? (
@@ -90,7 +79,7 @@ function Honeypot({ guildId }: { guildId: string }) {
         <ErrorState error={honeypot.error} retry={() => void honeypot.refetch()} />
       ) : (
         <>
-          <Status guildId={guildId} data={honeypot.data} />
+          <Status data={honeypot.data} />
           <HoneypotForm guildId={guildId} data={honeypot.data} onDirtyChange={setDirty} />
         </>
       )}
@@ -98,79 +87,27 @@ function Honeypot({ guildId }: { guildId: string }) {
   );
 }
 
-const disabledReasons: Record<string, string> = {
-  "configured honeypot channel was deleted":
-    "The trap channel was deleted. Pick a new channel below and save, then turn it back on.",
-  "selected template is archived, missing, or incompatible":
-    "Its rule was archived, deleted, or changed so it can't run on its own. Pick or fix the rule below, then turn it back on.",
-};
-
-function Status({ guildId, data }: { guildId: string; data: HoneypotSettingsResponse }) {
-  const queryClient = useQueryClient();
-  const [repairError, setRepairError] = useState<string | null>(null);
-  const reason = data.status.disabled_reason || data.settings.disabled_reason;
-  const repair = useMutation({
-    mutationFn: () =>
-      unwrap(
-        api.POST("/guilds/{discordGuildID}/modules/honeypot/repair", {
-          params: { path: { discordGuildID: guildId } },
-        }),
-      ),
-    onMutate: () => setRepairError(null),
-    onSuccess: (result) => {
-      queryClient.setQueryData(honeypotSettingsQuery(guildId).queryKey, result);
-      void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
-      void queryClient.invalidateQueries({ queryKey: keys.settings(guildId) });
-      toast.success("The honeypot is back on.");
-    },
-    onError: (e) =>
-      setRepairError(
-        e instanceof ApiError && e.status === 503
-          ? "Quack still can't use the trap channel or rule. Fix them below, then try again."
-          : e instanceof ApiError
-            ? e.message
-            : "Couldn't turn the honeypot back on.",
-      ),
-  });
-  const stats = data.status.statistics;
-
+function Status({ data }: { data: HoneypotModule }) {
   return (
     <Section title="Activity">
-      {reason && !data.status.enabled ? (
-        <Callout
-          tone="danger"
-          icon="error"
-          title="Quack turned the honeypot off"
-          action={
-            <Button
-              size="sm"
-              variant="secondary"
-              pending={repair.isPending}
-              onClick={() => repair.mutate()}
-            >
-              Turn back on
-            </Button>
-          }
-        >
-          {disabledReasons[reason] ?? `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.`}
-          {repairError ? <span className={s.error}> {repairError}</span> : null}
-        </Callout>
-      ) : null}
       <StatTiles
         items={[
           {
-            label: "Caught",
-            value: stats.total,
-            hint: "Every message posted in the trap channel.",
+            label: "Cases added",
+            value: data.cases_created,
+            hint: "Cases Quack added from posts in the honeypot channel.",
           },
-          { label: "Cases opened", value: stats.created },
           {
-            label: "Skipped",
-            value: stats.exempt,
-            hint: "Staff, Quack, and webhooks posting in the channel. They're never punished.",
+            label: "In progress",
+            value: data.pending_hits,
+            hint: "Posts Quack is still adding a case for.",
           },
-          { label: "Failed", value: stats.failed, tone: stats.failed > 0 ? "danger" : undefined },
-          { label: "In progress", value: stats.pending },
+          {
+            label: "Failed",
+            value: data.failed_hits,
+            tone: data.failed_hits > 0 ? "danger" : undefined,
+            hint: "Posts Quack couldn't add a case for. The moderation log says why.",
+          },
         ]}
       />
     </Section>
@@ -179,9 +116,9 @@ function Status({ guildId, data }: { guildId: string; data: HoneypotSettingsResp
 
 type Draft = { channel: string; rule: string; warning: string };
 
-const draftFrom = (data: HoneypotSettingsResponse): Draft => ({
-  channel: data.settings.channel_discord_id ?? "",
-  rule: data.settings.template_id ?? "",
+const draftFrom = (data: HoneypotModule): Draft => ({
+  channel: data.settings.channel_id ?? "",
+  rule: data.settings.rule_id ?? "",
   warning: data.settings.warning_text ?? "",
 });
 
@@ -194,17 +131,22 @@ function HoneypotForm({
   onDirtyChange,
 }: {
   guildId: string;
-  data: HoneypotSettingsResponse;
+  data: HoneypotModule;
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const queryClient = useQueryClient();
-  const templates = useQuery(templatesQuery(guildId));
+  const can = useCan(guildId);
   const [edits, setEdits] = useState<Draft | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<unknown>(null);
   const base = draftFrom(data);
   const form = edits ?? base;
   const dirty = differs(form, base);
-  const enabled = data.status.enabled;
+  const enabled = data.enabled;
+
+  // The preview words the warning from the chosen rule's levels, which
+  // the honeypot page carries for every eligible rule; only the link to the
+  // rule needs a rule reader.
+  const canReadRules = can("moderate") || can("manage_rules");
 
   const set = (patch: Partial<Draft>) => {
     const next = { ...form, ...patch };
@@ -218,69 +160,63 @@ function HoneypotForm({
     onDirtyChange(false);
   };
 
-  const rules = (templates.data ?? []).filter((t) => !t.archived_at || t.id === form.rule);
-  const rule: Template | undefined = rules.find((t) => t.id === form.rule);
-  const ruleProblem = rule ? honeypotRuleProblem(rule) : null;
+  const eligible = data.eligible_rules;
+  const ruleUsable = !form.rule || eligible.some((r) => r.id === form.rule);
+  const apiField = (path: string) =>
+    saveError instanceof ApiError ? saveError.field(path) : undefined;
   const channelError =
-    enabled && !form.channel ? "The honeypot needs a channel while it's on" : null;
+    apiField("channel_id") ??
+    (enabled && !form.channel ? "The honeypot needs a channel while it's on" : null);
   const ruleError =
-    enabled && !form.rule
+    apiField("rule_id") ??
+    (enabled && !form.rule
       ? "The honeypot needs a rule while it's on"
-      : form.rule && templates.data && !rule
-        ? "This rule no longer exists"
-        : null;
-  const blocked = Boolean(channelError || ruleError || (enabled && ruleProblem));
+      : ruleUsable
+        ? null
+        : "The honeypot can't use this rule. It may be archived or have required case context.");
+  const blocked = Boolean(
+    (enabled && !form.channel) || (enabled && !form.rule) || (enabled && !ruleUsable),
+  );
 
   const save = useMutation({
     mutationFn: () =>
-      unwrap(
-        api.PUT("/guilds/{discordGuildID}/modules/honeypot/settings", {
-          params: { path: { discordGuildID: guildId } },
+      write((init) =>
+        api.PUT("/api/guilds/{guild_id}/modules/honeypot/settings", {
+          params: { path: { guild_id: guildId } },
           body: {
-            enabled,
-            settings: {
-              ...data.settings,
-              channel_discord_id: form.channel,
-              template_id: form.rule,
-              warning_text: form.warning.trim(),
-              // A new channel needs a new warning post, as /setup does.
-              warning_message_id:
-                form.channel === base.channel ? data.settings.warning_message_id : "",
-            },
+            expected_version: data.version,
+            channel_id: form.channel || null,
+            rule_id: form.rule || null,
+            warning_text: form.warning.trim() || null,
           },
+          ...init,
         }),
       ),
     onSuccess: (result) => {
-      queryClient.setQueryData(honeypotSettingsQuery(guildId).queryKey, result);
+      queryClient.setQueryData(honeypotModuleQuery(guildId).queryKey, result);
       void queryClient.invalidateQueries({ queryKey: keys.modules(guildId) });
+      void queryClient.invalidateQueries({ queryKey: healthQuery(guildId).queryKey });
       reset();
       toast.success("Honeypot settings saved.");
     },
-    onError: (e) =>
-      setSaveError(
-        e instanceof ApiError && e.status === 503
-          ? "Quack can't use that channel or rule. It needs to view, send, read history, and manage messages in the channel."
-          : e instanceof ApiError && e.status === 400
-            ? "Quack couldn't save these settings. Check the channel and rule."
-            : e instanceof ApiError
-              ? e.message
-              : "Couldn't save honeypot settings.",
-      ),
+    onError: setSaveError,
   });
 
-  const warning = honeypotWarning(form.warning, rule);
+  const ruleDefinition = data.eligible_rules.find((r) => r.id === form.rule);
+  const warning = enabled ? honeypotWarning(form.warning, ruleDefinition) : honeypotWarningOff;
+  const currentName = eligible.find((r) => r.id === form.rule)?.name;
 
   return (
     <>
       <Section
-        title="Trap"
-        description="Where the trap is and what happens to anyone caught in it."
+        title="Honeypot channel and rule"
+        description="Where the honeypot is and which rule its cases use."
       >
         <div className={s.fields}>
           <Field
-            label="Trap channel"
+            label="Honeypot channel"
             error={channelError}
-            hint="A text channel no real member should post in. Quack needs to see, send, read history, and manage messages there."
+            hint="A text channel no real member should post in. Quack needs View Channel, Send Messages, Read Message History, and Manage Messages there."
           >
             {(id) => (
               <ChannelPicker
@@ -296,22 +232,22 @@ function HoneypotForm({
             )}
           </Field>
           <Field
-            label="Rule to apply"
-            error={ruleError ?? (ruleProblem ? "Can't run on its own" : null)}
+            label="Rule"
+            error={ruleError}
             hint={
-              ruleProblem ? (
+              form.rule && canReadRules ? (
                 <>
-                  {ruleProblem}{" "}
+                  Cases follow this rule's levels, DM, and appeal settings, like any other case.{" "}
                   <Link
                     to="/guilds/$guildId/rules/$ruleId"
                     params={{ guildId, ruleId: form.rule }}
                     className={s.link}
                   >
-                    Edit the rule
+                    Open the rule
                   </Link>
                 </>
               ) : (
-                "The case follows this rule's escalation, DM, and appeal settings, like any other case."
+                "Cases follow this rule's levels, DM, and appeal settings, like any other case. Only active rules without required case context can be used."
               )
             }
           >
@@ -319,24 +255,18 @@ function HoneypotForm({
               <Select
                 id={id}
                 value={form.rule}
-                invalid={Boolean(ruleError || ruleProblem)}
-                disabled={templates.isPending}
+                invalid={Boolean(ruleError)}
                 onChange={(e) => set({ rule: e.currentTarget.value })}
               >
                 <option value="" disabled={enabled}>
-                  {templates.isPending ? "Loading rules…" : "Choose a rule"}
+                  {enabled ? "Choose a rule" : "No rule"}
                 </option>
-                {form.rule && templates.data && !rule ? (
-                  <option value={form.rule}>Missing rule</option>
+                {form.rule && !currentName ? (
+                  <option value={form.rule}>The current rule (can't be used)</option>
                 ) : null}
-                {rules.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                    {t.archived_at
-                      ? " (archived)"
-                      : honeypotRuleProblem(t)
-                        ? " (can't run on its own)"
-                        : ""}
+                {eligible.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
                   </option>
                 ))}
               </Select>
@@ -349,38 +279,37 @@ function HoneypotForm({
 
       <Section
         title="Warning post"
-        description="Quack posts this in the trap channel so real members know to stay out."
+        description="Quack posts this in the honeypot channel so real members know to stay out."
       >
         <Field
           label="Warning"
-          hint={
-            <>
-              Leave it empty and Quack words it from the rule's punishments. The post updates the
-              next time someone is caught; run <Command>/setup honeypot</Command> to repost it now.
-            </>
-          }
+          hint="Leave it empty and Quack words it from the rule's levels. Quack adds the number of honeypot cases below it, and updates the post when you save."
         >
           {(id) => (
             <TextArea
               id={id}
               rows={4}
               value={form.warning}
-              maxLength={2000}
-              placeholder={honeypotWarning("", rule) ?? "# Do not post here"}
+              maxLength={1500}
+              placeholder={honeypotWarning("", ruleDefinition) ?? "### Don't post here"}
               onChange={(e) => set({ warning: e.currentTarget.value })}
             />
           )}
         </Field>
         <div className={s.preview}>
-          <Heading>Preview</Heading>
+          <Heading>{enabled ? "Preview" : "Preview (while the honeypot is off)"}</Heading>
           {warning ? (
             <QuackMessage label="Preview of the warning post">
               <MessageMarkdown
-                text={`${warning}\n\n-# ${incidentsCaught(data.status.statistics.created)}`}
+                text={enabled ? `${warning}\n-# ${honeypotCount(data.cases_created)}` : warning}
               />
             </QuackMessage>
           ) : (
-            <p className={s.muted}>Pick a rule to see the warning Quack will post.</p>
+            <p className={s.muted}>
+              {form.rule
+                ? "Quack words the warning from the rule's levels."
+                : "Choose a rule to see the warning Quack will post."}
+            </p>
           )}
         </div>
       </Section>
@@ -390,7 +319,7 @@ function HoneypotForm({
         onReset={reset}
         onSave={() => save.mutate()}
         pending={save.isPending}
-        error={saveError}
+        error={errorText(saveError)}
         saveDisabled={blocked}
       />
     </>

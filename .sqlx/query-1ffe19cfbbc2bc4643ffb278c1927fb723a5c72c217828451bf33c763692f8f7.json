@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO mod_log (id, guild_id, kind, result, actor_id, source, case_id, member_id, appeal_id,\n                                  action_id, rule_id, ticket_id, detail, trace_id)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        {
+          "Custom": {
+            "name": "mod_log_kind",
+            "kind": {
+              "Enum": [
+                "case_created",
+                "case_create_refused",
+                "case_voided",
+                "case_context_edited",
+                "evidence_added",
+                "action_done",
+                "action_failed",
+                "action_retry_requested",
+                "action_dismissed",
+                "action_undo_requested",
+                "action_undo_skipped",
+                "dm_sent",
+                "dm_failed",
+                "appeal_submitted",
+                "appeal_information_requested",
+                "appeal_information_provided",
+                "appeal_accepted",
+                "appeal_rejected",
+                "appeal_closed",
+                "appeal_reopened",
+                "rule_created",
+                "rule_edited",
+                "rule_archived",
+                "rule_restored",
+                "rule_imported",
+                "settings_changed",
+                "module_enabled",
+                "module_disabled",
+                "module_settings_changed",
+                "quack_joined",
+                "quack_left",
+                "channel_setting_cleared",
+                "log_channel_failed",
+                "ticket_opened",
+                "ticket_closed",
+                "honeypot_case_failed",
+                "legacy"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "mod_log_result",
+            "kind": {
+              "Enum": [
+                "ok",
+                "failed",
+                "refused"
+              ]
+            }
+          }
+        },
+        "Int8",
+        {
+          "Custom": {
+            "name": "mod_log_source",
+            "kind": {
+              "Enum": [
+                "discord",
+                "dashboard",
+                "quack",
+                "imported"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1ffe19cfbbc2bc4643ffb278c1927fb723a5c72c217828451bf33c763692f8f7"
+}

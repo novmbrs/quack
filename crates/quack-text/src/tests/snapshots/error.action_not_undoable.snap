@@ -1,0 +1,27 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## timeout
+discord: This timeout can't be undone from the case now. Open the case to see its current outcome.
+plain:   This timeout can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This timeout can't be undone from the case now. Open the case to see its current outcome.")]
+
+## kick
+discord: A kick can't be undone. Open the case to see what happened.
+plain:   A kick can't be undone. Open the case to see what happened.
+model:   [Fixed("A kick can't be undone. Open the case to see what happened.")]
+
+## ban
+discord: This ban can't be undone from the case now. Open the case to see its current outcome.
+plain:   This ban can't be undone from the case now. Open the case to see its current outcome.
+model:   [Fixed("This ban can't be undone from the case now. Open the case to see its current outcome.")]
+
+## remove timeout
+discord: This action can't be undone from the case. Open the case to see its current outcome.
+plain:   This action can't be undone from the case. Open the case to see its current outcome.
+model:   [Fixed("This action can't be undone from the case. Open the case to see its current outcome.")]
+
+## unban
+discord: This action can't be undone from the case. Open the case to see its current outcome.
+plain:   This action can't be undone from the case. Open the case to see its current outcome.
+model:   [Fixed("This action can't be undone from the case. Open the case to see its current outcome.")]

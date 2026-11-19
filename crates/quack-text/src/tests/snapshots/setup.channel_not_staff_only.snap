@@ -1,0 +1,14 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack didn't save <#444>:
+Choose a text channel in this server.
+Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.
+<@&666> can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+<@222> can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.
+plain:   Quack didn't save #staff:
+Choose a text channel in this server.
+Everyone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.
+@Helpers can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.
+Sam can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.
+model:   [Fixed("Quack didn't save "), Channel(ChannelRef { id: ChannelId(444), name: Some("staff") }), Fixed(":\nChoose a text channel in this server.\nEveryone can view this channel. In Edit Channel → Permissions, turn off View Channel for the @everyone role.\n"), Role(RoleRef { id: RoleId(666), name: Some("Helpers") }), Fixed(" can view this channel. In Edit Channel → Permissions, remove its View Channel access or choose another channel.\n"), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can view this channel. Remove their access in Edit Channel → Permissions or choose another channel.")]

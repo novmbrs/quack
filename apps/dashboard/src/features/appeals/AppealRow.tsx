@@ -1,14 +1,14 @@
 import { Link } from "@tanstack/react-router";
 
 import { useUser } from "~/api/directory";
-import type { Appeal } from "~/api/types";
+import type { AppealSummary } from "~/api/types";
 import { ago, appealMeta, fullDate } from "~/lib/format";
 import { Avatar } from "~/ui/Avatar";
 import { Badge } from "~/ui/Badge";
 import { Skeleton } from "~/ui/States";
 
 import s from "./AppealRow.module.css";
-import type { StatusFilter } from "./decisions";
+import type { StateFilter } from "./decisions";
 
 /**
  * AppealRow is one appeal in the review queue, styled like a Discord
@@ -24,18 +24,18 @@ export function AppealRow({
 }: {
   id: string;
   guildId: string;
-  appeal: Appeal;
-  search: { status?: StatusFilter; offset?: number };
+  appeal: AppealSummary;
+  search: { state?: StateFilter };
   selected: boolean;
-  /** Shows the status badge, for lists that mix statuses. */
+  /** Shows the state badge, for lists that mix states. */
   showStatus: boolean;
 }) {
-  const { data: user, isPending } = useUser(guildId, a.target_discord_user_id);
-  const name = user?.display_name ?? "Unknown user";
-  const meta = appealMeta[a.status];
+  const { data: user, isPending } = useUser(guildId, a.member_id);
+  const name = user?.display_name ?? `A member (ID ${a.member_id})`;
+  const meta = appealMeta[a.state];
   // A member's reply puts the appeal back in the queue, so the latest
   // activity is what tells a reviewer how long it has waited.
-  const last = a.events?.at(-1)?.created_at ?? a.created_at;
+  const last = a.updated_at;
 
   return (
     <li>
@@ -62,9 +62,9 @@ export function AppealRow({
           <span className={s.line}>
             <span className={s.sub}>
               <span className={s.number}>#{a.case_number}</span>
-              {a.template_name ? ` · ${a.template_name}` : ""}
+              {` · ${a.rule_name}`}
             </span>
-            {showStatus || a.status === "needs_information" ? (
+            {showStatus || a.state === "needs_information" ? (
               <Badge tone={meta.tone}>{meta.label}</Badge>
             ) : null}
           </span>

@@ -4,18 +4,15 @@
  */
 
 export interface paths {
-    "/auth/discord/callback": {
+    "/api/auth/callback": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Finish Discord sign-in
-         * @description Sets the session and CSRF cookies, then redirects to the dashboard, or returns the session if sign-in started with mode=json.
-         */
-        get: operations["finishDiscordLogin"];
+        /** Discord's redirect back after sign-in. */
+        get: operations["callback"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24,18 +21,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/discord/login": {
+    "/api/auth/login": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Start Discord sign-in
-         * @description Sets the OAuth state cookie, then redirects to Discord, or with mode=json returns the authorization URL.
-         */
-        get: operations["startDiscordLogin"];
+        /** Starts Discord sign-in. */
+        get: operations["login"];
         put?: never;
         post?: never;
         delete?: never;
@@ -44,7 +38,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/logout": {
+    "/api/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -53,7 +47,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** End the current session */
+        /** Signs out: deletes the session and clears its cookie. */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -61,32 +55,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/logout-all": {
+    "/api/auth/me": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Revoke every session of the signed-in user */
-        post: operations["logoutAll"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The signed-in user and the CSRF token to echo on writes */
-        get: operations["getAuthMe"];
+        /** The signed-in account and the CSRF token. */
+        get: operations["me"];
         put?: never;
         post?: never;
         delete?: never;
@@ -95,214 +72,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The caller's Discord guilds where they can use Quack */
-        get: operations["listGuilds"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/action-failures": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The queue of failed case actions */
-        get: operations["listFailedActions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/action-failures/{executionID}/dismiss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Remove a failure from the queue; its history stays */
-        post: operations["dismissFailedAction"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/action-failures/{executionID}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Requeue a failed action */
-        post: operations["retryFailedAction"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The guild's appeals */
-        get: operations["listAppeals"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** One appeal */
-        get: operations["getAppeal"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Accept an appeal; reversing its actions is a separate request */
-        post: operations["acceptAppeal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}/close": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Close an appeal */
-        post: operations["closeAppeal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reject an appeal */
-        post: operations["rejectAppeal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}/reopen": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reopen a decided appeal */
-        post: operations["reopenAppeal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}/request-information": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Ask the member for more information */
-        post: operations["requestAppealInformation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/appeals/{appealID}/reversals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Queue a reversal of an action on an accepted appeal's case
-         * @description The body must set confirm.
-         */
-        post: operations["reverseAppealAction"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/audit-log": {
+    "/api/guilds": {
         parameters: {
             query?: never;
             header?: never;
@@ -310,10 +80,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Search the guild's audit log
-         * @description Newest first.
+         * The account's Discord servers, with Quack's install state and the
+         *     account's capabilities in each installed one.
          */
-        get: operations["listAuditLog"];
+        get: operations["list_guilds"];
         put?: never;
         post?: never;
         delete?: never;
@@ -322,42 +92,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/cases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Search the guild's cases */
-        get: operations["listCases"];
-        put?: never;
-        /** Open a case from a template */
-        post: operations["createCase"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/cases/{caseRef}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** One case, by ID or case number */
-        get: operations["getCase"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/cases/{caseRef}/evidence/files/{attachmentID}": {
+    "/api/guilds/{guild_id}/actions": {
         parameters: {
             query?: never;
             header?: never;
@@ -365,10 +100,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Open an evidence file
-         * @description Redirects to a freshly signed link to Quack's copy of the file, or to the original upload when there is no copy.
+         * The server's actions in a state, newest first (failed and undismissed
+         *     by default).
          */
-        get: operations["getEvidenceFile"];
+        get: operations["list_actions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -377,7 +112,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/cases/{caseRef}/reversals": {
+    "/api/guilds/{guild_id}/actions/{action_id}/dismiss": {
         parameters: {
             query?: never;
             header?: never;
@@ -386,18 +121,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Queue a timeout removal or unban
-         * @description The body must set confirm.
-         */
-        post: operations["reverseCaseAction"];
+        /** Dismisses a failed action: it leaves the failed-actions list. */
+        post: operations["dismiss"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/cases/{caseRef}/void": {
+    "/api/guilds/{guild_id}/actions/{action_id}/retry": {
         parameters: {
             query?: never;
             header?: never;
@@ -406,115 +138,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Mark a case invalid
-         * @description replacement_case_id is rejected; open the replacement afterwards with replaces_case_id.
-         */
-        post: operations["voidCase"];
+        /** Retries a failed action. */
+        post: operations["retry"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/directory/channels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * The guild's channels, for channel pickers
-         * @description Already in Discord's sidebar order. Threads are left out.
-         */
-        get: operations["listChannels"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/directory/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Search the guild's current members by name
-         * @description Matches the start of a username or nickname. limit defaults to 10 and is capped at 25.
-         */
-        get: operations["searchMembers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/directory/roles": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * The guild's roles, for staff role pickers
-         * @description Highest first. @everyone is left out.
-         */
-        get: operations["listRoles"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/directory/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Display names and avatars for Discord user IDs
-         * @description Users come back in the order asked, as guild members when they are one. Unknown users are left out.
-         */
-        get: operations["lookupUsers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The guild and the caller's live staff permissions in it */
-        get: operations["getGuildMe"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/modules/general-logging/repair-channel/{channelID}": {
+    "/api/guilds/{guild_id}/actions/{action_id}/undo": {
         parameters: {
             query?: never;
             header?: never;
@@ -523,41 +155,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Remove every route to a deleted channel; needs Manage Guild */
-        post: operations["repairLoggingChannel"];
+        /** Undoes a done timeout or ban; answers the new undo action. */
+        post: operations["undo"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/general-logging/settings": {
+    "/api/guilds/{guild_id}/appeals": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** General logging settings and health */
-        get: operations["getLoggingSettings"];
-        /** Replace general logging settings; needs Manage Guild */
-        put: operations["updateLoggingSettings"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/modules/general-logging/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** General logging health */
-        get: operations["getLoggingStatus"];
+        /** The server's appeals, newest first. */
+        get: operations["list_appeals"];
         put?: never;
         post?: never;
         delete?: never;
@@ -566,7 +180,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/honeypot/repair": {
+    "/api/guilds/{guild_id}/appeals/{appeal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One appeal with its timeline. */
+        get: operations["get_appeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/appeals/{appeal_id}/decision": {
         parameters: {
             query?: never;
             header?: never;
@@ -575,41 +206,41 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Turn the honeypot back on with its kept settings, checked live; needs Manage Guild */
-        post: operations["repairHoneypot"];
+        /** Decides on an appeal. */
+        post: operations["decide"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/honeypot/settings": {
+    "/api/guilds/{guild_id}/cases": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Honeypot settings and health; needs Manage Guild */
-        get: operations["getHoneypotSettings"];
-        /** Replace honeypot settings; needs Manage Guild */
-        put: operations["updateHoneypotSettings"];
-        post?: never;
+        /** The server's cases, newest first. */
+        get: operations["list_cases"];
+        put?: never;
+        /** Adds a case: applies the rule's level for the member now. */
+        post: operations["add_case"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/honeypot/status": {
+    "/api/guilds/{guild_id}/cases/preview": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Honeypot health; needs Manage Guild */
-        get: operations["getHoneypotStatus"];
+        /** What adding a case would choose for the member now. */
+        get: operations["preview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -618,15 +249,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/{ticketID}": {
+    "/api/guilds/{guild_id}/cases/{case_ref}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** One ticket and its events */
-        get: operations["getTicket"];
+        /** A case of the server, by number, UUID, or legacy ULID. */
+        get: operations["get_case"];
         put?: never;
         post?: never;
         delete?: never;
@@ -635,7 +266,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/{ticketID}/cancel": {
+    "/api/guilds/{guild_id}/cases/{case_ref}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replaces a case's context. */
+        put: operations["edit_context"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence": {
         parameters: {
             query?: never;
             header?: never;
@@ -644,18 +292,273 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Saves more messages as a case's evidence. */
+        post: operations["add_evidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A file of a case's evidence. */
+        get: operations["staff_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/cases/{case_ref}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voids a case: it stops counting and its timeout or ban is undone. */
+        post: operations["void_case"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/directory/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's channels (not threads). */
+        get: operations["channels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/directory/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Searches the server's members, or looks accounts up by ID. */
+        get: operations["members"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/directory/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's roles, highest first, without @everyone. */
+        get: operations["roles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's health. */
+        get: operations["guild_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The reader's capabilities in the server, and staff counts. */
+        get: operations["guild_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/members/{member_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A member's cases, counted per rule. */
+        get: operations["member_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/mod-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's moderation log, newest first. */
+        get: operations["mod_log"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/activity-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /**
-         * Close a ticket (older name)
-         * @description Captures and publishes the transcript, notifies the member, and deletes the thread. Any request body is ignored.
+         * The server activity log module. Its counters are in-process and reset
+         *     when Quack restarts.
          */
-        post: operations["cancelTicket"];
+        get: operations["activity_log_module"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/{ticketID}/close": {
+    "/api/guilds/{guild_id}/modules/activity-log/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes server activity log settings. */
+        put: operations["update_activity_log_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/honeypot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The honeypot module. */
+        get: operations["honeypot_module"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/honeypot/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes honeypot settings. */
+        put: operations["update_honeypot_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tickets module. */
+        get: operations["tickets_module"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/tickets/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes ticket settings. */
+        put: operations["update_ticket_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/{module}/disable": {
         parameters: {
             query?: never;
             header?: never;
@@ -664,18 +567,174 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** Turns a module off. */
+        post: operations["disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/modules/{module}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turns a module on (`409 module_not_ready` lists what to fix). */
+        post: operations["enable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's rules, by name. */
+        get: operations["list_rules"];
+        put?: never;
+        /** Creates a rule. */
+        post: operations["create_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Imports a rule file as a new rule. */
+        post: operations["import_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules/{rule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A rule with its history. */
+        get: operations["get_rule"];
+        /** Saves a new version of a rule. */
+        put: operations["edit_rule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules/{rule_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archives a rule: it stays, but can't be applied. */
+        post: operations["archive_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules/{rule_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The rule's export file. */
+        get: operations["export_rule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules/{rule_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restores an archived rule. */
+        post: operations["restore_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/rules/{rule_id}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One version of a rule, with its definition. */
+        get: operations["rule_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's settings. */
+        get: operations["get_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         /**
-         * Close a ticket
-         * @description Captures and publishes the transcript, notifies the member, and deletes the thread. Any request body is ignored.
+         * Changes settings; every field is validated and nothing is saved when
+         *     one has a problem.
          */
-        post: operations["closeTicket"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
+        patch: operations["patch_settings"];
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/{ticketID}/reopen": {
+    "/api/guilds/{guild_id}/settings/starter-notice/acknowledge": {
         parameters: {
             query?: never;
             header?: never;
@@ -684,15 +743,66 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Always refused: closed tickets cannot be reopened */
-        post: operations["reopenTicket"];
+        /** Hides the starter-rule notice for everyone in the server. */
+        post: operations["acknowledge_starter_notice"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/{ticketID}/resolve": {
+    "/api/guilds/{guild_id}/statistics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's statistics. */
+        get: operations["statistics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The server's tickets, newest first. */
+        get: operations["list_tickets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One ticket: its member or staff. */
+        get: operations["get_ticket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/tickets/{ticket_id}/close": {
         parameters: {
             query?: never;
             header?: never;
@@ -701,26 +811,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Close a ticket (older name)
-         * @description Captures and publishes the transcript, notifies the member, and deletes the thread. Any request body is ignored.
-         */
-        post: operations["resolveTicket"];
+        /** Closes an open ticket: its member or staff with `moderate`. */
+        post: operations["close_ticket"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/{ticketID}/transcript": {
+    "/api/guilds/{guild_id}/tickets/{ticket_id}/transcript": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** A ticket's transcript */
-        get: operations["getTicketTranscript"];
+        /** A ticket's transcript until it expires (`404 file_unavailable` after). */
+        get: operations["ticket_transcript"];
         put?: never;
         post?: never;
         delete?: never;
@@ -729,15 +836,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/queue": {
+    "/api/me/cases": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** The ticket queue */
-        get: operations["listTickets"];
+        /** The signed-in member's own cases, newest first. */
+        get: operations["my_cases"];
         put?: never;
         post?: never;
         delete?: never;
@@ -746,33 +853,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/modules/tickets/settings": {
+    "/api/me/cases/{case_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Ticket settings */
-        get: operations["getTicketSettings"];
-        /** Replace ticket settings; needs Manage Guild */
-        put: operations["updateTicketSettings"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/modules/tickets/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Ticket module health */
-        get: operations["getTicketStatus"];
+        /** One of the member's own cases. */
+        get: operations["my_case"];
         put?: never;
         post?: never;
         delete?: never;
@@ -781,45 +870,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/ops/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * One guild's operational health
-         * @description Operators use the ops key; anyone else must be a guild administrator.
-         */
-        get: operations["getGuildOpsStatus"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The guild's settings */
-        get: operations["getSettings"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Change some of the guild's settings */
-        patch: operations["updateSettings"];
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/settings/starter-policy-notice/acknowledge": {
+    "/api/me/cases/{case_id}/appeal": {
         parameters: {
             query?: never;
             header?: never;
@@ -828,89 +879,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Dismiss the one-time starter template notice */
-        post: operations["acknowledgeStarterPolicyNotice"];
+        /** Appeals one of the member's own cases. */
+        post: operations["submit_appeal"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/statistics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Moderation counts over [from, to) */
-        get: operations["getStatistics"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The guild's case templates */
-        get: operations["listTemplates"];
-        put?: never;
-        /** Create a case template */
-        post: operations["createTemplate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/templates/{templateID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** One case template */
-        get: operations["getTemplate"];
-        put?: never;
-        post?: never;
-        /**
-         * Archive a case template
-         * @description Restore undoes it.
-         */
-        delete: operations["archiveTemplate"];
-        options?: never;
-        head?: never;
-        /** Replace a case template */
-        patch: operations["updateTemplate"];
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/templates/{templateID}/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** A template's policy without guild-specific IDs, for import elsewhere */
-        get: operations["exportTemplate"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/templates/{templateID}/restore": {
+    "/api/me/cases/{case_id}/appeal/information": {
         parameters: {
             query?: never;
             header?: never;
@@ -919,40 +896,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Restore an archived case template */
-        post: operations["restoreTemplate"];
+        /** Replies to staff's request for more information. */
+        post: operations["add_information"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/guilds/{discordGuildID}/templates/import": {
+    "/api/me/cases/{case_id}/evidence/{file_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Create a template from an exported policy */
-        post: operations["importTemplate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/guilds/{discordGuildID}/users/{targetDiscordUserID}/cases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** A member's case history in the guild */
-        get: operations["listUserCases"];
+        /** A file of the member's own case. */
+        get: operations["member_file"];
         put?: never;
         post?: never;
         delete?: never;
@@ -968,147 +928,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Report that the process is serving */
-        get: operations["getLiveness"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/members/me/appeals/{appealID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** One of the member's appeals */
-        get: operations["getMemberAppeal"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/members/me/appeals/{appealID}/information": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Answer staff's request for more information */
-        post: operations["submitAppealInformation"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/members/me/cases/{caseID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The member-facing view of one of the member's cases */
-        get: operations["getMemberCase"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/members/me/cases/{caseID}/appeal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** File the member's one appeal for a case */
-        post: operations["submitAppeal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/members/me/cases/{caseID}/evidence/files/{attachmentID}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Open an evidence file from one of the member's cases
-         * @description Redirects to a freshly signed link to Quack's copy of the file.
-         */
-        get: operations["getMemberEvidenceFile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/members/me/guilds/{guildID}/cases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** The member's cases in a guild, by internal guild ID */
-        get: operations["listMemberCases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/metrics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Aggregate counters in the Prometheus text format */
-        get: operations["getMetrics"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ops/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Queue and action health across all guilds */
-        get: operations["getOpsStatus"];
+        /** 200 while the process serves HTTP; never checks dependencies. */
+        get: operations["livez"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1124,28 +945,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Report whether the bot can take moderation work */
-        get: operations["getReadiness"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Report Discord, Redis, and database connectivity
-         * @description Always 200; /readyz is the probe that fails.
-         */
-        get: operations["getStatus"];
+        /** 200 when every check passes, else 503. */
+        get: operations["readyz"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1158,976 +959,1346 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        ApiActionEnvelope: {
-            action: components["schemas"]["QuackCaseActionResponse"];
-        };
-        ApiAppealEnvelope: {
-            appeal: components["schemas"]["QuackAppealResponse"];
-        };
-        ApiAppealReversalRequest: {
-            action_type?: components["schemas"]["QuackActionType"];
-            confirm?: boolean;
-            original_execution_id?: string;
-        };
-        ApiAuthMeResponse: {
-            csrf_token: string;
-            session: components["schemas"]["ApiSessionTimes"];
-            user: components["schemas"]["ApiSessionUserResponse"];
-        };
-        ApiCaseCreateRequest: {
-            context_channel_discord_id?: string;
-            context_message_discord_id?: string;
-            context_url?: string;
-            context_values?: components["schemas"]["QuackCaseContextValueInput"][] | null;
-            evidence_links?: string[] | null;
-            metadata?: unknown;
-            replaces_case_id?: string;
-            target_discord_user_id?: string;
-            template_id?: string;
-        };
-        ApiCaseDetailEnvelope: {
-            case: components["schemas"]["QuackCaseDetailResponse"];
-        };
-        ApiCaseEnvelope: {
-            case: components["schemas"]["QuackCaseResponse"];
-        };
-        ApiChannelListResponse: {
-            channels: components["schemas"]["ApiDirectoryChannel"][];
-        };
-        /** @enum {string} */
-        ApiChannelType: "text" | "announcement" | "forum" | "voice" | "stage" | "category";
-        ApiConnectionStatus: {
-            connected: boolean;
-            /** Format: int64 */
-            latency?: number;
-            username?: string;
-        };
-        ApiDirectoryChannel: {
-            id: string;
-            name: string;
-            parent_id: string;
-            position: number;
-            type: components["schemas"]["ApiChannelType"];
-        };
-        ApiDirectoryRole: {
-            color: number;
-            id: string;
-            managed: boolean;
-            name: string;
-            position: number;
-        };
-        ApiDirectoryUser: {
-            avatar_url: string;
-            bot: boolean;
-            display_name: string;
-            global_name: string;
-            id: string;
-            in_guild: boolean;
-            nick: string;
-            username: string;
-        };
-        /** @enum {string} */
-        ApiErrorCode: "validation_failed" | "authentication_required" | "reauthentication_required" | "authorization_denied" | "mfa_required" | "not_found" | "conflict" | "rate_limited" | "csrf_rejected" | "origin_rejected" | "body_too_large" | "dependency_unavailable" | "internal_error";
-        ApiErrorDetail: {
-            code: components["schemas"]["ApiErrorCode"];
-            correlation_id: string;
-            message: string;
-            request_id: string;
-        };
-        ApiErrorResponse: {
-            error: components["schemas"]["ApiErrorDetail"];
-        };
-        ApiFailedActionEnvelope: {
-            action: components["schemas"]["ApiFailedActionResponse"];
-        };
-        ApiFailedActionListResponse: {
-            executions: components["schemas"]["ApiFailedActionResponse"][];
-            /** Format: int64 */
-            total: number;
-        };
-        ApiFailedActionResponse: {
-            action_type: components["schemas"]["QuackActionType"];
-            attempt_count: number;
+        /** @description An action as staff see it. */
+        Action: {
+            attempt_log: components["schemas"]["Attempt"][];
+            /** Format: int32 */
+            attempts: number;
+            can_dismiss: boolean;
+            can_retry: boolean;
+            can_undo: boolean;
+            /** Format: uuid */
             case_id: string;
+            /** Format: int64 */
             case_number: number;
             /** Format: date-time */
             created_at: string;
-            id: string;
-            last_error?: string;
-            last_error_code?: string;
-            max_retries: number;
-            safe_for_retry: boolean;
-            status: components["schemas"]["QuackActionExecutionStatus"];
-            target_discord_user_id: string;
+            /** Format: int32 */
+            delete_message_seconds?: number | null;
+            /** Format: int32 */
+            discord_code?: number | null;
             /** Format: date-time */
-            updated_at: string;
-        };
-        ApiGuildListResponse: {
-            guilds: components["schemas"]["QuackUserGuildListItem"][] | null;
-        };
-        ApiGuildMeResponse: {
-            guild: components["schemas"]["ApiGuildSummary"];
-            permissions: {
-                [key: string]: boolean;
-            };
-            staff: components["schemas"]["ApiStaffSummary"];
-        };
-        ApiGuildOpsResponse: {
-            guild_health: components["schemas"]["QuackGuildOperationalHealth"];
-            operations: components["schemas"]["QuackOpsStatusResponse"];
-        };
-        ApiGuildSummary: {
-            discord_guild_id: string;
-            icon_url: string;
+            dismissed_at?: string | null;
+            dismissed_by?: components["schemas"]["Snowflake"] | null;
+            /** Format: date-time */
+            done_at?: string | null;
+            failure_reason?: components["schemas"]["ActionFailure"] | null;
+            /** Format: int32 */
+            http_status?: number | null;
+            /** Format: uuid */
             id: string;
-            name: string;
-            owner_discord_user_id: string;
-        };
-        ApiLivenessResponse: {
-            live: boolean;
-        };
-        ApiLoginResponse: {
-            auth_url: string;
-            state: string;
-        };
-        ApiMemberCaseEnvelope: {
-            case: components["schemas"]["QuackMemberCaseDetail"];
-        };
-        ApiMemberSearchResponse: {
-            members: components["schemas"]["ApiDirectoryUser"][];
-        };
-        ApiReadinessCheck: {
-            detail?: string;
+            kind: components["schemas"]["ActionKind"];
+            /** Format: date-time */
+            next_attempt_at?: string | null;
+            /** @description Where it stands, in words. */
+            outcome_text: string;
+            purpose: components["schemas"]["Purpose"];
+            requested_by?: components["schemas"]["Snowflake"] | null;
+            skip_reason?: components["schemas"]["ActionSkipReason"] | null;
             /** Format: int64 */
-            latency_ms?: number;
-            ready: boolean;
-        };
-        ApiReadinessResponse: {
-            checks: {
-                [key: string]: components["schemas"]["ApiReadinessCheck"];
-            };
-            ready: boolean;
-        };
-        ApiReverseActionRequest: {
-            action_type?: components["schemas"]["QuackActionType"];
-            appeal_id?: null | string;
-            confirm?: boolean;
-            original_execution_id?: string;
-        };
-        ApiRoleListResponse: {
-            roles: components["schemas"]["ApiDirectoryRole"][];
-        };
-        ApiSessionTimes: {
+            skipped_because_case_number?: number | null;
+            state: components["schemas"]["ActionState"];
             /** Format: date-time */
-            expires_at: string;
-            /** Format: date-time */
-            last_seen: string;
+            timeout_ends_at?: string | null;
+            /** Format: uuid */
+            undo_of_action_id?: string | null;
         };
-        ApiSessionUserResponse: {
-            avatar: string;
-            avatar_url: string;
-            global_name: string;
-            id: string;
-            username: string;
+        /** @description A case's original action, in brief. */
+        ActionBrief: {
+            kind: components["schemas"]["ActionKind"];
+            /** @description The outcome in a word ("Done", "Failed", …). */
+            outcome_text: string;
+            state: components["schemas"]["ActionState"];
         };
-        ApiSettingsEnvelope: {
-            settings: components["schemas"]["QuackGuildSettingsResponse"];
+        /** @enum {string} */
+        ActionFailure: "quack_not_in_server" | "quack_missing_permission" | "quack_role_too_low" | "member_is_owner" | "member_not_in_server" | "member_is_administrator" | "timeout_window_passed" | "discord_refused" | "retries_exhausted" | "unconfirmed" | "original_unconfirmed";
+        /** @enum {string} */
+        ActionKind: "timeout" | "kick" | "ban" | "remove_timeout" | "unban";
+        /** @description One row of the failed-actions page. */
+        ActionListItem: components["schemas"]["Action"] & {
+            member_id: components["schemas"]["Snowflake"];
+            rule_name: string;
         };
-        ApiSignInResponse: {
-            csrf_token: string;
-            /** Format: date-time */
-            expires_at: string;
-            user: components["schemas"]["ApiSessionUserResponse"];
+        /** @description Route 28's body. */
+        ActionPage: {
+            actions: components["schemas"]["ActionListItem"][];
+            next_cursor?: string | null;
         };
-        ApiStaffSummary: {
-            discord_user_id: string;
-            display_name: string;
-            id: string;
-            is_admin: boolean;
-            is_moderator: boolean;
-            /** Format: date-time */
-            last_active_at: null | string;
-            last_seen_permissions: string;
-            permission_bits: string;
+        /** @enum {string} */
+        ActionSkipReason: "other_case_applies" | "changed_outside_case";
+        /** @enum {string} */
+        ActionState: "pending" | "running" | "done" | "failed" | "cancelled" | "skipped";
+        /**
+         * @description The server activity log module (route 43). Counters are in-process
+         *     and reset when Quack restarts.
+         */
+        ActivityLogModule: components["schemas"]["ModuleState"] & {
+            /**
+             * Format: int64
+             * @description Events dropped since Quack started.
+             */
+            dropped_since_start: number;
+            /**
+             * Format: int64
+             * @description Events posted since Quack started.
+             */
+            posted_since_start: number;
+            settings: components["schemas"]["ActivityLogSettings"];
+            /**
+             * Format: int64
+             * @description The settings' version: send it back as `expected_version`.
+             */
+            version: number;
         };
-        ApiStatusResponse: {
-            database: components["schemas"]["ApiConnectionStatus"];
-            discord: components["schemas"]["ApiConnectionStatus"];
-            redis: components["schemas"]["ApiConnectionStatus"];
-        };
-        ApiTemplateEnvelope: {
-            template: components["schemas"]["QuackTemplateResponse"];
-        };
-        ApiTemplateListResponse: {
-            templates: components["schemas"]["QuackTemplateResponse"][] | null;
-        };
-        ApiTemplatePolicyEnvelope: {
-            policy: components["schemas"]["QuackTemplatePolicy"];
-        };
-        ApiUserLookupResponse: {
-            users: components["schemas"]["ApiDirectoryUser"][];
-        };
-        ApiVoidCaseRequest: {
-            reason?: string;
-            /** @deprecated */
-            replacement_case_id?: null | string;
-        };
-        HoneypotSettings: {
-            channel_discord_id: string;
-            disabled_reason?: string;
-            template_id: string;
-            warning_message_id?: string;
-            warning_text?: string;
-        };
-        HoneypotSettingsRequest: {
-            enabled?: boolean;
-            settings?: components["schemas"]["HoneypotSettings"];
-        };
-        HoneypotSettingsResponse: {
-            settings: components["schemas"]["HoneypotSettings"];
-            status: components["schemas"]["HoneypotStatus"];
-        };
-        HoneypotStatistics: {
-            created: number;
-            exempt: number;
-            failed: number;
-            pending: number;
-            total: number;
-        };
-        HoneypotStatus: {
-            channel_discord_id?: string;
-            configured: boolean;
-            disabled_reason?: string;
-            enabled: boolean;
-            statistics: components["schemas"]["HoneypotStatistics"];
-            template_id?: string;
-        };
-        HoneypotStatusResponse: {
-            status: components["schemas"]["HoneypotStatus"];
-        };
-        LoggingSettings: {
-            cache_entries_per_guild: number;
-            channels: {
-                [key: string]: string;
-            } | null;
-            include_attachment_metadata: boolean;
-            include_embed_metadata: boolean;
+        /** @description Server activity log settings (part of route 43). */
+        ActivityLogSettings: {
+            /** @description Include embed types. */
+            include_embed_types: boolean;
+            /** @description Include file names. */
+            include_file_names: boolean;
+            /** @description Include message text. */
             include_message_content: boolean;
-            max_delivery_attempts: number;
+            /** @description The channel each event type posts to (absent: not logged). */
+            routes: {
+                [key: string]: components["schemas"]["Snowflake"];
+            };
         };
-        LoggingSettingsPayload: {
-            enabled: boolean;
-            settings: components["schemas"]["LoggingSettings"];
+        /** @description Route 44's body: the settings and the version they were read at. */
+        ActivityLogSettingsUpdate: {
+            /**
+             * Format: int64
+             * @description The `version` the page was read at; a newer one is refused with
+             *     `settings_changed`.
+             */
+            expected_version: number;
+            /** @description Include embed types. */
+            include_embed_types: boolean;
+            /** @description Include file names. */
+            include_file_names: boolean;
+            /** @description Include message text. */
+            include_message_content: boolean;
+            /** @description The channel each event type posts to (absent: not logged). */
+            routes: {
+                [key: string]: components["schemas"]["Snowflake"];
+            };
         };
-        LoggingSettingsResponse: {
-            enabled: boolean;
-            settings: components["schemas"]["LoggingSettings"];
-            status: components["schemas"]["LoggingStatus"];
+        /** @description Route 21's body. */
+        AddCase: {
+            /** @description Field key → answer. Numbers may be JSON numbers or strings. */
+            context?: {
+                [key: string]: components["schemas"]["ContextInput"];
+            };
+            /** @description Message links to save as evidence. */
+            evidence_links?: string[];
+            /** @description The member the case is about. */
+            member_id: components["schemas"]["Snowflake"];
+            /**
+             * Format: int64
+             * @description The voided case this one replaces.
+             */
+            replaces_case_number?: number | null;
+            /** Format: uuid */
+            rule_id: string;
+            /**
+             * Format: int32
+             * @description The version the preview showed; another is `409 rule_changed`.
+             */
+            rule_version?: number | null;
         };
-        LoggingStatus: {
-            cached_messages: number;
-            delivered: number;
-            failed: number;
-            last_error?: string;
+        /** @description Route 25's body. */
+        AddEvidence: {
+            /** @description 1–10 message links in this server. */
+            links: string[];
+        };
+        /** @description Route 55's body. */
+        AddInformation: {
+            /**
+             * Format: int32
+             * @description The appeal's `version` the member saw.
+             */
+            expected_version: number;
+            /** @description The reply staff asked for (1–4,000 characters). */
+            text: string;
+        };
+        /** @description An appeal with its timeline and case. */
+        Appeal: components["schemas"]["AppealSummary"] & {
+            case: components["schemas"]["CaseSummary"];
             /** Format: date-time */
-            last_failure_at?: null | string;
+            decided_at?: string | null;
+            decided_by?: components["schemas"]["Snowflake"] | null;
+            decision_reason?: string | null;
+            events: components["schemas"]["AppealEvent"][];
+            statement: string;
         };
-        LoggingStatusResponse: {
-            enabled: boolean;
-            status: components["schemas"]["LoggingStatus"];
-        };
-        /** @enum {string} */
-        QuackActionAttemptStatus: "running" | "succeeded" | "failed";
-        /** @enum {string} */
-        QuackActionExecutionStatus: "pending" | "running" | "succeeded" | "failed" | "retrying" | "cancelled";
-        /** @enum {string} */
-        QuackActionType: "send_dm" | "timeout_user" | "kick_user" | "ban_user" | "remove_timeout" | "unban_user";
-        QuackAppealDecisionInput: {
-            reason?: string;
-        };
-        QuackAppealEventResponse: {
-            actor_discord_user_id?: string;
-            actor_type: string;
-            body: string;
+        /** @description One event on an appeal's timeline. */
+        AppealEvent: {
+            actor_id?: components["schemas"]["Snowflake"] | null;
+            /** @description Quack closed it because the case was voided. */
+            closed_by_void: boolean;
             /** Format: date-time */
             created_at: string;
+            /** Format: uuid */
             id: string;
-            type: components["schemas"]["QuackAppealEventType"];
+            kind: components["schemas"]["AppealEventKind"];
+            /** @description The statement, reply, or reason. */
+            text: string;
         };
         /** @enum {string} */
-        QuackAppealEventType: "submitted" | "information_requested" | "information_submitted" | "reopened" | "accepted" | "rejected" | "closed";
-        QuackAppealInformationInput: {
-            body?: string;
+        AppealEventKind: "submitted" | "information_requested" | "information_provided" | "accepted" | "rejected" | "closed" | "reopened";
+        /** @description Route 32's body. */
+        AppealPage: {
+            appeals: components["schemas"]["AppealSummary"][];
+            next_cursor?: string | null;
         };
-        QuackAppealListResponse: {
-            appeals?: components["schemas"]["QuackAppealResponse"][] | null;
-            limit?: number;
-            offset?: number;
-            review_reason_required?: boolean;
-            /** Format: int64 */
-            total?: number;
-        };
-        QuackAppealResponse: {
+        /** @enum {string} */
+        AppealState: "pending" | "needs_information" | "accepted" | "rejected" | "closed";
+        /** @description An appeal in a list. */
+        AppealSummary: {
+            /** Format: uuid */
             case_id: string;
+            /** Format: int64 */
             case_number: number;
             /** Format: date-time */
             created_at: string;
-            decision_reason?: string;
-            events: components["schemas"]["QuackAppealEventResponse"][] | null;
-            guild_id: string;
+            /** Format: uuid */
             id: string;
-            reversal_offers?: components["schemas"]["QuackAppealReversalOffer"][];
-            review_reason_required?: boolean;
-            reviewed_by_discord_user_id?: string;
-            statement: string;
-            status: components["schemas"]["QuackAppealStatus"];
-            target_discord_user_id: string;
-            template_name: string;
+            member_id: components["schemas"]["Snowflake"];
+            rule_name: string;
+            state: components["schemas"]["AppealState"];
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: int32
+             * @description Send back as `expected_version` with a decision.
+             */
+            version: number;
         };
-        QuackAppealReversalOffer: {
-            action_type: components["schemas"]["QuackActionType"];
-            original_execution_id: string;
-        };
-        /** @enum {string} */
-        QuackAppealStatus: "pending" | "needs_information" | "accepted" | "rejected" | "closed";
-        QuackAppealSubmissionInput: {
-            statement?: string;
-        };
-        QuackAuditEntryResponse: {
-            action: string;
-            actor_discord_user_id?: string;
-            actor_permission_bits: string;
-            correlation_id?: string;
+        /** @description One attempt at an action. */
+        Attempt: {
+            /** Format: int32 */
+            discord_code?: number | null;
             /** Format: date-time */
-            created_at: string;
-            failure_reason?: string;
-            guild_id: string;
-            id: string;
-            metadata: unknown;
-            request_id?: string;
-            resource_id: string;
-            resource_type: string;
-            result: components["schemas"]["QuackAuditResult"];
-            source: components["schemas"]["QuackAuditSource"];
-            /** Format: date-time */
-            updated_at: string;
-        };
-        QuackAuditListResponse: {
-            entries?: components["schemas"]["QuackAuditEntryResponse"][] | null;
-            limit?: number;
-            next_cursor?: string;
-            offset?: number;
-            /** Format: int64 */
-            total?: number;
-        };
-        /** @enum {string} */
-        QuackAuditResult: "success" | "failure" | "denied";
-        /** @enum {string} */
-        QuackAuditSource: "api" | "web" | "discord" | "system" | "import" | "honeypot";
-        QuackCaseActionAttemptResponse: {
-            attempt_number: number;
-            /** Format: int64 */
-            duration_ms: number;
-            error_code?: string;
-            error_message?: string;
-            execution_id: string;
-            /** Format: date-time */
-            finished_at?: null | string;
-            id: string;
-            request_payload: unknown;
-            response_payload: unknown;
+            finished_at?: string | null;
+            /** Format: int32 */
+            http_status?: number | null;
+            /** Format: int32 */
+            number: number;
+            outcome?: components["schemas"]["AttemptOutcome"] | null;
             /** Format: date-time */
             started_at: string;
-            status: components["schemas"]["QuackActionAttemptStatus"];
-            worker_id?: string;
-        };
-        QuackCaseActionDetailResponse: {
-            action_type: components["schemas"]["QuackActionType"];
-            attempt_count: number;
-            attempts: components["schemas"]["QuackCaseActionAttemptResponse"][] | null;
-            config_snapshot: unknown;
-            /** Format: date-time */
-            finished_at?: null | string;
-            id: string;
-            idempotency_key: string;
-            irreversible: boolean;
-            last_error?: string;
-            last_error_code?: string;
-            max_retries: number;
-            /** Format: date-time */
-            next_retry_at?: null | string;
-            notification_type?: string;
-            notify_user: boolean;
-            position: number;
-            retry_backoff_ms: number;
-            safe_for_retry: boolean;
-            /** Format: date-time */
-            started_at?: null | string;
-            status: components["schemas"]["QuackActionExecutionStatus"];
-            template_action_id: null | string;
-            /** Format: date-time */
-            timeout_until?: null | string;
-        };
-        QuackCaseActionResponse: {
-            action_type: components["schemas"]["QuackActionType"];
-            id: string;
-            idempotency_key: string;
-            irreversible: boolean;
-            max_retries: number;
-            notification_type?: string;
-            notify_user: boolean;
-            position: number;
-            retry_backoff_ms: number;
-            safe_for_retry: boolean;
-            status: components["schemas"]["QuackActionExecutionStatus"];
-            template_action_id: null | string;
-            /** Format: date-time */
-            timeout_until?: null | string;
-        };
-        QuackCaseContextValueInput: {
-            key?: string;
-            value?: unknown;
-        };
-        QuackCaseContextValueResponse: {
-            key: string;
-            label: string;
-            required: boolean;
-            type: components["schemas"]["QuackContextFieldType"];
-            value: unknown;
-        };
-        QuackCaseDetailResponse: {
-            actions?: components["schemas"]["QuackCaseActionDetailResponse"][] | null;
-            case_number?: number;
-            context_channel_discord_id?: string;
-            context_message_discord_id?: string;
-            context_url?: string;
-            context_values?: components["schemas"]["QuackCaseContextValueResponse"][] | null;
-            /** Format: date-time */
-            created_at?: string;
-            events?: components["schemas"]["QuackCaseEventResponse"][] | null;
-            evidence?: components["schemas"]["QuackCaseEvidenceResponse"][] | null;
-            evidence_incomplete?: boolean;
-            guild_id?: string;
-            id?: string;
-            metadata?: unknown;
-            moderator_discord_user_id?: string;
-            notification?: components["schemas"]["QuackCaseNotificationResponse"];
-            reason?: string;
-            replacement_case_id?: null | string;
-            replaces_case_id?: null | string;
-            rule_name?: string;
-            selected_level?: components["schemas"]["QuackCaseSelectedLevel"];
-            source?: components["schemas"]["QuackCaseSource"];
-            target_discord_user_id?: string;
-            template_id?: null | string;
-            template_snapshot?: components["schemas"]["QuackCaseTemplateSnapshotResponse"];
-            template_version?: number;
-            /** Format: date-time */
-            updated_at?: string;
-            validity?: components["schemas"]["QuackCaseValidity"];
-            /** Format: date-time */
-            voided_at?: null | string;
-            voided_reason?: string;
-        };
-        QuackCaseEventResponse: {
-            actor_discord_user_id?: string;
-            actor_type: string;
-            body: string;
-            /** Format: date-time */
-            created_at: string;
-            event_type: components["schemas"]["QuackCaseEventType"];
-            id: string;
-            metadata: unknown;
-            /** Format: date-time */
-            updated_at: string;
-            visibility: components["schemas"]["QuackEventVisibility"];
         };
         /** @enum {string} */
-        QuackCaseEventType: "case_created" | "action_queued" | "action_succeeded" | "action_failed" | "case_voided" | "case_replaced" | "action_retry_requested" | "action_failure_dismissed" | "action_reversal_queued" | "notification_sent" | "notification_failed" | "appeal_created" | "context_updated" | "evidence_added";
-        QuackCaseEvidenceAttachmentResponse: {
-            content_type: string;
-            copy_outcome: string;
-            filename: string;
+        AttemptOutcome: "done" | "no_change" | "refused" | "not_sent" | "unknown" | "interrupted";
+        /** @description One count. */
+        Bucket: {
+            /**
+             * Format: int64
+             * @description How many.
+             */
+            count: number;
+            /** @description The bucket's stable key (a date, rule ID, or enum value). */
+            key: string;
+            /** @description Its name for people. */
+            label: string;
+        };
+        /** @description Effective capabilities (after the 2FA rule). */
+        Capabilities: {
+            manage_rules: boolean;
+            manage_settings: boolean;
+            manage_staff_roles: boolean;
+            moderate: boolean;
+        };
+        /** @description A case as staff see it. */
+        Case: components["schemas"]["CaseSummary"] & {
+            actions: components["schemas"]["Action"][];
+            appeal?: components["schemas"]["CaseAppeal"] | null;
+            appealable: boolean;
+            /** Format: int32 */
+            case_count?: number | null;
+            context: {
+                [key: string]: components["schemas"]["ContextValue"];
+            };
+            /** Format: int32 */
+            context_revision: number;
+            dm?: components["schemas"]["Dm"] | null;
+            evidence: components["schemas"]["Evidence"][];
+            fields: components["schemas"]["Field"][];
+            imported?: components["schemas"]["ImportedCase"] | null;
+            /** Format: int32 */
+            level_from_case_count?: number | null;
+            member_timeline: components["schemas"]["TimelineText"][];
+            reason: string;
+            /** Format: int64 */
+            replaced_by_case_number?: number | null;
+            /** Format: int64 */
+            replaces_case_number?: number | null;
+            /** @description Moderation log entries about the case, oldest first. */
+            timeline: components["schemas"]["CaseLogEntry"][];
+            timeline_truncated: boolean;
+            void?: components["schemas"]["VoidInfo"] | null;
+        };
+        /** @description The case's appeal, in brief. */
+        CaseAppeal: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
             id: string;
-            original_url: string;
-            preserved_url?: string;
+            state: components["schemas"]["AppealState"];
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description The server a member's case is in. */
+        CaseGuild: {
+            guild_id: components["schemas"]["Snowflake"];
+            icon_url?: string | null;
+            name: string;
+        };
+        /** @description One moderation log entry about the case. */
+        CaseLogEntry: {
+            actor_id?: components["schemas"]["Snowflake"] | null;
+            /** Format: date-time */
+            created_at: string;
+            kind: components["schemas"]["ModLogKind"];
+            result: components["schemas"]["ModLogResult"];
+            text: string;
+        };
+        /** @description Route 20's body. */
+        CasePage: {
+            cases: components["schemas"]["CaseSummary"][];
+            next_cursor?: string | null;
+        };
+        /** @description What applying a rule would choose now (route 58). */
+        CasePreview: {
+            /** Format: date-time */
+            at: string;
+            /** Format: int32 */
+            case_count: number;
+            /** Format: int32 */
+            counted_cases: number;
+            /** Format: int32 */
+            counting_window_days?: number | null;
+            level: components["schemas"]["Level"];
+            /**
+             * Format: int32
+             * @description The level (1-based).
+             */
+            level_index: number;
+            /**
+             * Format: int32
+             * @description Send back as `rule_version` when adding the case.
+             */
+            rule_version: number;
+        };
+        /** @enum {string} */
+        CaseSource: "discord" | "dashboard" | "honeypot" | "imported";
+        /** @description One case in a list. */
+        CaseSummary: {
+            action?: components["schemas"]["ActionBrief"] | null;
+            appeal_state?: components["schemas"]["AppealState"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The case DM's state; `not_needed` when the level sends none. */
+            dm_state: components["schemas"]["DmState"];
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            level_index?: number | null;
+            member_id: components["schemas"]["Snowflake"];
+            moderator_id?: components["schemas"]["Snowflake"] | null;
+            /** Format: int64 */
+            number: number;
+            /** Format: uuid */
+            rule_id?: string | null;
+            /** @description The rule's name in the case's version ("Imported" without one). */
+            rule_name: string;
+            /** Format: int32 */
+            rule_version?: number | null;
+            source: components["schemas"]["CaseSource"];
+            /** Format: date-time */
+            voided_at?: string | null;
+        };
+        /**
+         * @description Route 23's answer: the voided case and what the void did, in the
+         *     sentence the bot answers with (`case.void_done`).
+         */
+        CaseVoided: {
+            /** @description The case after the void. */
+            case: components["schemas"]["Case"];
+            /** @description What the void did, as a sentence. */
+            message: string;
+        };
+        /** @description One configured staff channel's problems. */
+        ChannelHealth: {
+            channel_id: components["schemas"]["Snowflake"];
+            /** @description Each problem's code and how to fix it. */
+            problems: components["schemas"]["ChannelProblem"][];
+            /**
+             * @description The setting's API name: `log_channel_id`, `appeal_channel_id`,
+             *     `evidence_channel_id`, or a module's (`tickets.queue_channel_id`,
+             *     `tickets.entry_channel_id`, `activity_log.routes`,
+             *     `honeypot.channel_id`).
+             */
+            setting: string;
+            /**
+             * @description Whether it must be staff-only; the ticket entry and honeypot
+             *     channels are for members, so only Quack's access is checked.
+             */
+            staff_only: boolean;
+        };
+        /**
+         * @description A channel kind the dashboard shows.
+         * @enum {string}
+         */
+        ChannelKind: "text" | "announcement" | "forum" | "voice" | "stage" | "category";
+        /** @description One reason a channel isn't a usable staff channel. */
+        ChannelProblem: {
+            /**
+             * @description `not_text`, `everyone_can_view`, `role_can_view`,
+             *     `member_can_view`, `quack_missing`, `inaccessible`, or `missing`.
+             */
+            code: string;
+            /** @description What to fix. */
+            message: string;
+        };
+        /**
+         * @description One readiness check's result.
+         * @enum {string}
+         */
+        Check: "ok" | "failing";
+        /** @description Each readiness check. */
+        Checks: {
+            /** @description PostgreSQL answers within 1 s. */
+            database: components["schemas"]["Check"];
+            /** @description This process holds the singleton lock. */
+            fence: components["schemas"]["Check"];
+            /** @description The gateway session is ready. */
+            gateway: components["schemas"]["Check"];
+            /** @description The applied migrations equal the binary's. */
+            migrations: components["schemas"]["Check"];
+            /** @description Not shutting down. */
+            shutdown: components["schemas"]["Check"];
+            /** @description Every job dispatcher ran a pass in the last 15 s. */
+            workers: components["schemas"]["Check"];
+        };
+        ContextInput: string | boolean | number | null;
+        /** @description One answered context field. */
+        ContextLine: {
+            kind: components["schemas"]["FieldKind"];
+            label: string;
+            /** @description The answer as text; message links show as a placeholder. */
+            value: string;
+        };
+        ContextValue: string | boolean;
+        /** @description Route 34's body. */
+        Decide: {
+            decision: components["schemas"]["Decision"];
+            /**
+             * Format: int32
+             * @description The version the reader saw; another is `409 appeal_changed`.
+             */
+            expected_version: number;
+            /** @description Why (1–2,000 characters); the member reads it. */
+            reason: string;
+        };
+        /**
+         * @description A staff decision.
+         * @enum {string}
+         */
+        Decision: "request_information" | "accept" | "reject" | "close" | "reopen";
+        /** @description One channel. */
+        DirectoryChannel: {
+            id: components["schemas"]["Snowflake"];
+            kind: components["schemas"]["ChannelKind"];
+            name: string;
+            parent_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int32
+             * @description The channel's place in Discord's list.
+             */
+            position: number;
+        };
+        /** @description Route 10's body. */
+        DirectoryChannels: {
+            channels: components["schemas"]["DirectoryChannel"][];
+        };
+        /** @description A member or account, for display. */
+        DirectoryMember: {
+            avatar_url: string;
+            bot: boolean;
+            /** @description Nickname, else global name, else username. */
+            display_name: string;
+            global_name?: string | null;
+            id: components["schemas"]["Snowflake"];
+            /** @description Whether they are in the server now. */
+            in_server: boolean;
+            nick?: string | null;
+            username: string;
+        };
+        /** @description Route 9's body. */
+        DirectoryMembers: {
+            members: components["schemas"]["DirectoryMember"][];
+        };
+        /** @description One role. */
+        DirectoryRole: {
+            /**
+             * Format: int32
+             * @description The role's color (0 when Quack doesn't know it).
+             */
+            color: number;
+            id: components["schemas"]["Snowflake"];
+            /** @description An integration manages it. */
+            managed: boolean;
+            name: string;
+            /** Format: int32 */
+            position: number;
+        };
+        /** @description Route 11's body. */
+        DirectoryRoles: {
+            roles: components["schemas"]["DirectoryRole"][];
+        };
+        /** @description The case DM; null on the case when the level sends none. */
+        Dm: {
+            failure?: components["schemas"]["DmFailure"] | null;
+            outcome_text: string;
+            /** Format: date-time */
+            settled_at?: string | null;
+            state: components["schemas"]["DmState"];
+        };
+        /** @enum {string} */
+        DmFailure: "dms_closed" | "not_in_shared_server" | "discord_unavailable" | "discord_refused";
+        /** @enum {string} */
+        DmState: "pending" | "sending" | "sent" | "failed" | "unknown" | "not_needed";
+        /** @description Route 24's body. */
+        EditContext: {
+            context: {
+                [key: string]: components["schemas"]["ContextInput"];
+            };
+            /**
+             * Format: int32
+             * @description The revision the editor loaded; another is `409 context_changed`.
+             */
+            expected_context_revision: number;
+        };
+        /** @description Route 15's body. */
+        EditRule: {
+            definition: components["schemas"]["RuleDefinition"];
+            /**
+             * Format: int32
+             * @description The version the editor loaded; another is `409 rule_changed`.
+             */
+            expected_version: number;
+        };
+        /** @description A rule the honeypot may use. */
+        EligibleRule: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description Its levels, for the warning's default wording (anyone who can read
+             *     the honeypot settings sees them, without reading rules).
+             */
+            levels: components["schemas"]["Level"][];
+            name: string;
+        };
+        /** @description An embed of a saved message. */
+        Embed: {
+            description?: string | null;
+            title?: string | null;
+            type: string;
+            url?: string | null;
+        };
+        /** @description Dashboard paths for an entry's typed links. */
+        EntryLinks: {
+            appeal?: string | null;
+            case?: string | null;
+            member?: string | null;
+            rule?: string | null;
+            ticket?: string | null;
+        };
+        /** @description The body of an error response. */
+        ErrorBody: {
+            /** @description The machine code (§14.6). */
+            code: string;
+            /** @description Field problems (`validation_failed`, `member_refused`). */
+            fields?: components["schemas"]["FieldError"][];
+            /** @description What happened and what to do, from `quack-text`. */
+            message: string;
+            /** @description Module problems (`module_not_ready`). */
+            problems?: components["schemas"]["Problem"][];
+            /**
+             * Format: int64
+             * @description Seconds to wait (`rate_limited`).
+             */
+            retry_after_seconds?: number | null;
+            /** @description The request's 32-hex trace ID, or null when it has no trace. */
+            trace_id?: string | null;
+        };
+        /** @description `{ "error": ErrorBody }`: every error response. */
+        ErrorEnvelope: {
+            /** @description The error. */
+            error: components["schemas"]["ErrorBody"];
+        };
+        /** @description One saved message, as staff see it. */
+        Evidence: {
+            added_by?: components["schemas"]["Snowflake"] | null;
+            author_id?: components["schemas"]["Snowflake"] | null;
+            channel_id: components["schemas"]["Snowflake"];
+            content?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            embeds: components["schemas"]["Embed"][];
+            failure?: components["schemas"]["EvidenceFailure"] | null;
+            files: components["schemas"]["EvidenceFile"][];
+            /** Format: int32 */
+            files_not_saved: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            message_created_at?: string | null;
+            /** Format: date-time */
+            message_edited_at?: string | null;
+            message_id: components["schemas"]["Snowflake"];
+            state: components["schemas"]["EvidenceState"];
+            state_text: string;
+            url: string;
+        };
+        /**
+         * @description Route 25's answer: the case and what adding the links did, in the
+         *     sentence the bot answers with (`evidence.added`).
+         */
+        EvidenceAdded: {
+            /**
+             * Format: int32
+             * @description Messages that were already saved (or being saved) for the case.
+             */
+            already_saved: number;
+            /** @description The case after the links were added. */
+            case: components["schemas"]["Case"];
+            /** @description What adding the links did, as a sentence. */
+            message: string;
+            /**
+             * Format: int32
+             * @description New messages Quack is saving.
+             */
+            new: number;
+            /**
+             * Format: int32
+             * @description Messages whose earlier save failed, being saved again.
+             */
+            retrying: number;
+        };
+        /** @enum {string} */
+        EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error";
+        /** @description One file of a saved message. */
+        EvidenceFile: {
+            content_type?: string | null;
+            copy_state: components["schemas"]["FileCopyState"];
+            filename: string;
+            /** Format: uuid */
+            id: string;
             /** Format: int64 */
             size_bytes: number;
-            warning?: string;
-        };
-        QuackCaseEvidenceResponse: {
-            attachments: components["schemas"]["QuackCaseEvidenceAttachmentResponse"][] | null;
-            author_discord_user_id: string;
-            capture_outcome: string;
-            capture_warning?: string;
-            content: string;
-            embeds: unknown;
-            id: string;
-            /** Format: date-time */
-            message_created_at: string;
-            /** Format: date-time */
-            message_edited_at?: null | string;
-            message_url: string;
-        };
-        QuackCaseListResponse: {
-            cases?: components["schemas"]["QuackCaseResponse"][] | null;
-            limit?: number;
-            offset?: number;
-            /** Format: int64 */
-            total?: number;
-        };
-        QuackCaseNotificationResponse: {
-            attempt_count?: number;
-            last_error?: string;
-            last_error_code?: string;
-            /** Format: date-time */
-            sent_at?: null | string;
-            status?: components["schemas"]["QuackNotificationStatus"];
-        };
-        QuackCaseProfileResponse: {
-            cases?: components["schemas"]["QuackCaseResponse"][] | null;
-            limit?: number;
-            offset?: number;
-            summary?: components["schemas"]["QuackCaseProfileSummary"];
-            /** Format: int64 */
-            total?: number;
-        };
-        QuackCaseProfileSummary: {
-            by_template: {
-                [key: string]: number;
-            } | null;
-            by_validity: {
-                [key: string]: number;
-            } | null;
-            /** Format: int64 */
-            total: number;
-        };
-        QuackCaseResponse: {
-            actions: components["schemas"]["QuackCaseActionResponse"][] | null;
-            case_number: number;
-            context_channel_discord_id?: string;
-            context_message_discord_id?: string;
-            context_url?: string;
-            context_values: components["schemas"]["QuackCaseContextValueResponse"][] | null;
-            /** Format: date-time */
-            created_at: string;
-            evidence_incomplete: boolean;
-            guild_id: string;
-            id: string;
-            metadata: unknown;
-            moderator_discord_user_id: string;
-            reason: string;
-            replacement_case_id?: null | string;
-            replaces_case_id?: null | string;
-            rule_name?: string;
-            selected_level?: components["schemas"]["QuackCaseSelectedLevel"];
-            source: components["schemas"]["QuackCaseSource"];
-            target_discord_user_id: string;
-            template_id: null | string;
-            template_version: number;
-            /** Format: date-time */
-            updated_at: string;
-            validity: components["schemas"]["QuackCaseValidity"];
-            /** Format: date-time */
-            voided_at?: null | string;
-            voided_reason?: string;
-        };
-        QuackCaseSelectedLevel: {
-            id?: string;
-            is_default?: boolean;
-            /** Format: int64 */
-            matched_case_count?: number;
-            name?: string;
-            notify_user?: boolean;
-            position?: number;
-            trigger_case_count?: number;
+            state_text: string;
         };
         /** @enum {string} */
-        QuackCaseSource: "dashboard" | "discord" | "honeypot" | "v4_import";
-        QuackCaseTemplateSnapshotResponse: {
-            actions?: components["schemas"]["QuackTemplateActionResponse"][] | null;
-            context_fields?: components["schemas"]["QuackTemplateContextFieldResponse"][] | null;
-            context_values?: components["schemas"]["QuackCaseContextValueResponse"][] | null;
-            selected_level?: components["schemas"]["QuackCaseSelectedLevel"];
-            template?: components["schemas"]["QuackTemplateSnapshotTemplate"];
-        };
-        /** @enum {string} */
-        QuackCaseValidity: "valid" | "voided";
-        /** @enum {string} */
-        QuackContextFieldType: "short_text" | "long_text" | "boolean" | "number" | "discord_message_link";
-        /** @enum {string} */
-        QuackEventVisibility: "internal" | "staff" | "public";
-        QuackGuildOperationalHealth: {
-            bot_permissions: {
-                [key: string]: boolean;
-            } | null;
-            degraded: boolean;
-            managed_channels: {
-                [key: string]: boolean;
-            } | null;
-            reasons: string[] | null;
-        };
-        QuackGuildSettingsInput: {
-            appeal_queue_channel_discord_id?: null | string;
-            appeal_rejoin_url?: null | string;
-            appeal_review_reason_required?: null | boolean;
-            audit_mirror_channel_discord_id?: null | string;
-            general_logging_enabled?: null | boolean;
-            honeypot_enabled?: null | boolean;
-            managed_evidence_channel_discord_id?: null | string;
-            moderator_role_ids?: null | string[];
-            notification_footer?: null | string;
-            notification_introduction?: null | string;
-            rules_manager_role_ids?: null | string[];
-            tickets_enabled?: null | boolean;
-        };
-        QuackGuildSettingsResponse: {
-            appeal_queue_channel_discord_id?: string;
-            appeal_rejoin_url?: string;
-            appeal_review_reason_required?: boolean;
-            audit_mirror_channel_discord_id?: string;
-            general_logging_enabled?: boolean;
-            guild_id?: string;
-            honeypot_enabled?: boolean;
-            id?: string;
-            managed_evidence_channel_discord_id?: string;
-            moderator_role_ids: string[];
-            notification_footer?: string;
-            notification_introduction?: string;
-            rules_manager_role_ids: string[];
-            /** Format: date-time */
-            starter_policy_notice_acknowledged_at?: null | string;
-            starter_policy_review_required?: boolean;
-            starter_policy_template_id?: string;
-            tickets_enabled?: boolean;
-        };
-        QuackMemberCaseDetail: {
-            appeal_id?: string;
-            appeal_status?: components["schemas"]["QuackAppealStatus"];
-            appealable?: boolean;
-            case_number?: number;
-            context?: components["schemas"]["QuackCaseContextValueResponse"][] | null;
-            /** Format: date-time */
-            created_at?: string;
-            enforcement?: components["schemas"]["QuackMemberEnforcementOutcome"];
-            evidence?: components["schemas"]["QuackCaseEvidenceResponse"][] | null;
-            guild_icon_url?: string;
-            guild_id?: string;
-            guild_name?: string;
-            history?: components["schemas"]["QuackCaseEventResponse"][] | null;
-            id?: string;
-            notification?: components["schemas"]["QuackCaseNotificationResponse"];
-            official_reason?: string;
-            replacement_case_id?: null | string;
-            rule_name?: string;
-            selected_outcome?: null | components["schemas"]["QuackCaseSelectedLevel"];
-            template_id?: null | string;
-            validity?: components["schemas"]["QuackCaseValidity"];
-            voided_reason?: string;
-        };
-        QuackMemberCaseListResponse: {
-            cases?: components["schemas"]["QuackMemberCaseSummary"][] | null;
-            limit?: number;
-            offset?: number;
-            /** Format: int64 */
-            total?: number;
-        };
-        QuackMemberCaseSummary: {
-            appeal_id?: string;
-            appeal_status?: components["schemas"]["QuackAppealStatus"];
-            appealable: boolean;
-            case_number: number;
-            /** Format: date-time */
-            created_at: string;
-            guild_icon_url: string;
-            guild_id: string;
-            guild_name: string;
-            id: string;
-            official_reason: string;
-            rule_name: string;
-            selected_outcome?: components["schemas"]["QuackCaseSelectedLevel"];
-            validity: components["schemas"]["QuackCaseValidity"];
-        };
-        QuackMemberEnforcementOutcome: {
-            action_type?: components["schemas"]["QuackActionType"];
-            status?: components["schemas"]["QuackActionExecutionStatus"];
-        };
-        /** @enum {string} */
-        QuackNotificationStatus: "pending" | "prepared" | "claimed" | "sending" | "sent" | "failed";
-        QuackOldestActionExecution: {
-            action_type?: components["schemas"]["QuackActionType"];
-            case_id?: string;
-            case_number?: number;
-            /** Format: date-time */
-            created_at?: string;
-            id?: string;
-            /** Format: date-time */
-            next_retry_at?: null | string;
-            status?: components["schemas"]["QuackActionExecutionStatus"];
-        };
-        QuackOpsActionCapability: {
-            action_type: components["schemas"]["QuackActionType"];
-            executable: boolean;
-            status: string;
-        };
-        QuackOpsActionStatus: {
-            capabilities: components["schemas"]["QuackOpsActionCapability"][] | null;
-            oldest_pending_or_retry?: components["schemas"]["QuackOldestActionExecution"];
-            recent_failures: components["schemas"]["QuackRecentActionFailure"][] | null;
-            status_counts: {
-                [key: string]: number;
-            } | null;
-        };
-        QuackOpsStatusResponse: {
-            actions?: components["schemas"]["QuackOpsActionStatus"];
-            /** Format: date-time */
-            generated_at?: string;
-            guild_id?: string;
-            queue?: components["schemas"]["QuackQueueStats"];
-            scope?: string;
-        };
-        QuackQueueStats: {
-            active: boolean;
-            buffer_size: number;
-            dropped_total: number;
-            enqueued_total: number;
-            failed_total: number;
-            last_processed_id?: string;
-            last_processed_type?: string;
-            panicked_total: number;
-            processed_total: number;
-            queue_size: number;
-            workers: number;
-        };
-        QuackRecentActionFailure: {
-            action_type: components["schemas"]["QuackActionType"];
-            case_id: string;
-            case_number: number;
-            id: string;
-            last_error?: string;
-            last_error_code?: string;
-            status: components["schemas"]["QuackActionExecutionStatus"];
-            /** Format: date-time */
-            updated_at: string;
-        };
-        QuackStaffStatistics: {
-            /** Format: int64 */
-            action_total?: number;
-            actions_by_day?: components["schemas"]["QuackStatisticBucket"][] | null;
-            actions_by_result?: components["schemas"]["QuackStatisticBucket"][] | null;
-            actions_by_type?: components["schemas"]["QuackStatisticBucket"][] | null;
-            /** Format: int64 */
-            appeal_total?: number;
-            appeals_by_day?: components["schemas"]["QuackStatisticBucket"][] | null;
-            appeals_by_status?: components["schemas"]["QuackStatisticBucket"][] | null;
-            /** Format: int64 */
-            audit_total?: number;
-            audits_by_action?: components["schemas"]["QuackStatisticBucket"][] | null;
-            audits_by_day?: components["schemas"]["QuackStatisticBucket"][] | null;
-            audits_by_result?: components["schemas"]["QuackStatisticBucket"][] | null;
-            audits_by_source?: components["schemas"]["QuackStatisticBucket"][] | null;
-            /** Format: int64 */
-            case_total?: number;
-            cases_by_day?: components["schemas"]["QuackStatisticBucket"][] | null;
-            cases_by_source?: components["schemas"]["QuackStatisticBucket"][] | null;
-            cases_by_template?: components["schemas"]["QuackStatisticBucket"][] | null;
-            cases_by_validity?: components["schemas"]["QuackStatisticBucket"][] | null;
-            /** Format: date-time */
-            from?: string;
-            /** Format: date-time */
-            to?: string;
-        };
-        QuackStatisticBucket: {
-            /** Format: int64 */
-            count: number;
+        EvidenceState: "saving" | "saved" | "failed";
+        /** @description One case context field. */
+        Field: {
+            /** @description Stable machine key, `^[a-z0-9][a-z0-9_-]{1,63}$`. */
             key: string;
-        };
-        QuackTemplateActionInput: {
-            action_type: components["schemas"]["QuackActionType"];
-            delete_message_seconds?: number;
-            max_retries: number;
-            timeout_duration_seconds?: number;
-        };
-        QuackTemplateActionResponse: {
-            action_type: components["schemas"]["QuackActionType"];
-            delete_message_seconds?: number;
-            id: string;
-            max_retries: number;
-            timeout_duration_seconds?: number;
-        };
-        QuackTemplateContextFieldInput: {
-            key: string;
+            /** @description What kind of answer it takes. */
+            kind: components["schemas"]["FieldKind"];
+            /** @description The question and the member's label, 1–100 characters. */
             label: string;
-            position: number;
+            /** @description Whether it must be answered. */
             required: boolean;
-            type: components["schemas"]["QuackContextFieldType"];
         };
-        QuackTemplateContextFieldResponse: {
-            id: string;
-            key: string;
-            label: string;
-            position: number;
-            required: boolean;
-            type: components["schemas"]["QuackContextFieldType"];
+        /** @description One field problem of a `validation_failed` (or `member_refused`) error. */
+        FieldError: {
+            /** @description The problem's machine code (§3.3, §4.6, §13.1, or a refusal). */
+            code: string;
+            /** @description The JSON path of the field, such as `levels[1].from_case_count`. */
+            field: string;
+            /** @description What to fix, in the reader's words. */
+            message: string;
         };
-        QuackTemplateImportInput: {
-            confirm?: boolean;
-            policy?: components["schemas"]["QuackTemplatePolicy"];
+        /** @enum {string} */
+        FieldKind: "short_text" | "long_text" | "boolean" | "number" | "message_link";
+        /** @enum {string} */
+        FileCopyState: "pending" | "copied" | "link_only" | "too_large" | "unsupported_type" | "copy_failed";
+        /** @description Exact counts for the staff layout. */
+        GuildCounts: {
+            /**
+             * Format: int64
+             * @description Failed actions not dismissed.
+             */
+            failed_actions: number;
+            /**
+             * Format: int64
+             * @description Appeals waiting for staff.
+             */
+            pending_appeals: number;
         };
-        QuackTemplateInput: {
-            appealable?: boolean;
-            case_decay_days?: number;
-            context_fields?: components["schemas"]["QuackTemplateContextFieldInput"][] | null;
-            description?: string;
-            expected_version?: number;
-            levels?: components["schemas"]["QuackTemplateLevelInput"][] | null;
-            name?: string;
-            reason_template?: string;
-            slug?: string;
-        };
-        QuackTemplateLevelInput: {
-            actions: components["schemas"]["QuackTemplateActionInput"][] | null;
-            is_default: boolean;
+        /** @description The server in brief. */
+        GuildInfo: {
+            guild_id: components["schemas"]["Snowflake"];
+            icon_url?: string | null;
             name: string;
-            notify_user: boolean;
-            position: number;
-            trigger_case_count: number;
+            owner_id: components["schemas"]["Snowflake"];
         };
-        QuackTemplateLevelResponse: {
-            actions: components["schemas"]["QuackTemplateActionResponse"][] | null;
-            id: string;
-            is_default: boolean;
-            name: string;
-            notify_user: boolean;
-            position: number;
-            trigger_case_count: number;
+        /** @description Route 5's body. */
+        GuildList: {
+            guilds: components["schemas"]["GuildSummary"][];
         };
-        QuackTemplatePolicy: {
-            appealable: boolean;
-            case_decay_days: number;
-            context_fields: components["schemas"]["QuackTemplateContextFieldInput"][] | null;
-            description: string;
-            levels: components["schemas"]["QuackTemplateLevelInput"][] | null;
-            name: string;
-            official_reason: string;
-            schema_version: number;
-            slug: string;
-        };
-        QuackTemplateResponse: {
-            appealable: boolean;
-            /** Format: date-time */
-            archived_at: null | string;
-            case_decay_days: number;
-            context_fields: components["schemas"]["QuackTemplateContextFieldResponse"][] | null;
-            created_by_discord_user_id: string;
-            description: string;
-            guild_id: string;
-            id: string;
-            levels: components["schemas"]["QuackTemplateLevelResponse"][] | null;
-            name: string;
-            reason_template: string;
-            slug: string;
-            updated_by_discord_user_id: string;
-            version: number;
-        };
-        QuackTemplateSnapshotTemplate: {
-            appealable: boolean;
-            case_decay_days: number;
-            id: string;
-            name: string;
-            reason_template: string;
-            slug: string;
-            version: number;
-        };
-        QuackUserGuildListItem: {
-            can_manage_guild: boolean;
-            can_manage_rules: boolean;
-            can_moderate: boolean;
-            discord_guild_id: string;
-            icon_url: string;
-            is_administrator: boolean;
+        /** @description The reader in one server (route 6). */
+        GuildMe: {
+            capabilities: components["schemas"]["Capabilities"];
+            counts?: components["schemas"]["GuildCounts"] | null;
+            guild: components["schemas"]["GuildInfo"];
             is_owner: boolean;
+            mfa_blocked: boolean;
+            mfa_required: boolean;
+        };
+        /** @description One of the account's servers. */
+        GuildSummary: {
+            /** @description Not installed, and the account has Manage Server there. */
+            can_install: boolean;
+            capabilities: components["schemas"]["Capabilities"];
+            guild_id: components["schemas"]["Snowflake"];
+            icon_url?: string | null;
+            /** @description Quack is installed there. */
+            installed: boolean;
+            /**
+             * @description The account would have a staff capability but Quack has no record
+             *     of its 2FA.
+             */
+            mfa_blocked: boolean;
+            /** @description The server requires 2FA for moderation. */
             mfa_required: boolean;
             name: string;
-            permission_bits: string;
-            quack_guild_name?: string;
-            quack_in_guild: boolean;
         };
-        TicketsDetailResponse: {
-            events: components["schemas"]["TicketsEvent"][] | null;
-            ticket: components["schemas"]["TicketsTicket"];
+        /** @description What a server is missing (route 7). */
+        Health: {
+            /**
+             * @description Each configured channel: the core staff channels, then the channels
+             *     of the modules that are on.
+             */
+            channels: components["schemas"]["ChannelHealth"][];
+            /** @description Server permissions Quack needs and lacks. */
+            missing_permissions: components["schemas"]["Permission"][];
+            /** @description Each module's state. */
+            modules: components["schemas"]["ModulesState"];
+            /** @description Quack is in the server. */
+            quack_in_server: boolean;
         };
-        TicketsEvent: {
-            actor_discord_user_id: string;
-            body: string;
-            /** Format: date-time */
-            created_at: string;
-            guild_id: string;
-            id: string;
-            metadata_json: string;
-            ticket_id: string;
-            type: components["schemas"]["TicketsEventType"];
-        };
-        /** @enum {string} */
-        TicketsEventType: "opened" | "replied" | "resolved" | "cancelled" | "reopened" | "channel_missing" | "permissions_repaired";
-        TicketsModuleStatus: {
-            enabled: boolean;
-            entry_configured: boolean;
+        /** @description The honeypot module (route 45). */
+        HoneypotModule: components["schemas"]["ModuleState"] & {
             /** Format: int64 */
-            open_tickets: number;
+            cases_created: number;
+            /** @description Active rules without required fields. */
+            eligible_rules: components["schemas"]["EligibleRule"][];
+            /** Format: int64 */
+            failed_hits: number;
+            /** Format: int64 */
+            pending_hits: number;
+            settings: components["schemas"]["HoneypotSettings"];
+            /**
+             * Format: int64
+             * @description The settings' version: send it back as `expected_version`.
+             */
+            version: number;
         };
-        TicketsQueueResponse: {
-            tickets: components["schemas"]["TicketsTicket"][] | null;
+        /** @description Honeypot settings (part of route 45). */
+        HoneypotSettings: {
+            channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: uuid
+             * @description The rule applied to members who post there.
+             */
+            rule_id?: string | null;
+            /** @description The warning posted in the channel (up to 1,500 characters). */
+            warning_text?: string | null;
         };
-        TicketsSettings: {
-            entry_channel_discord_id: string;
-            entry_panel_channel_id?: string;
-            entry_panel_message_id?: string;
-            queue_channel_discord_id: string;
-            transcript_retention_days: number;
+        /** @description Route 46's body: the settings and the version they were read at. */
+        HoneypotSettingsUpdate: {
+            channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int64
+             * @description The `version` the page was read at; a newer one is refused with
+             *     `settings_changed`.
+             */
+            expected_version: number;
+            /**
+             * Format: uuid
+             * @description The rule applied to members who post there.
+             */
+            rule_id?: string | null;
+            /** @description The warning posted in the channel (up to 1,500 characters). */
+            warning_text?: string | null;
         };
-        TicketsSettingsPayload: {
-            enabled: boolean;
-            settings: components["schemas"]["TicketsSettings"];
+        /** @description Route 19's body. */
+        ImportRule: {
+            /** @description Must be `true`: the reader confirmed the import. */
+            confirm: boolean;
+            file: components["schemas"]["RuleFile"];
+            /** @description A different name for the imported rule. */
+            name?: string | null;
         };
-        /** @enum {string} */
-        TicketsStatus: "open" | "resolved" | "cancelled";
-        TicketsStatusResponse: {
-            status: components["schemas"]["TicketsModuleStatus"];
+        /** @description What Quack v4 recorded about an imported case (`cases.imported`). */
+        ImportedCase: {
+            /** @description v4's action type. */
+            v4_action?: string | null;
+            /** @description The v4 moderator's display name. */
+            v4_moderator?: string | null;
+            /** @description v4's reason text. */
+            v4_reason?: string | null;
+            /** @description v4's id for the case. */
+            v4_source_id?: string | null;
         };
-        TicketsTicket: {
+        /** @description One rung of a rule. */
+        Level: {
+            action?: components["schemas"]["LevelAction"] | null;
+            /**
+             * Format: int32
+             * @description The case count at which this level starts.
+             */
+            from_case_count: number;
+            /** @description Whether the member gets a case DM. */
+            send_dm: boolean;
+        };
+        /** @description The action a level takes. */
+        LevelAction: {
+            /**
+             * Format: int32
+             * @description 1–2,419,200 seconds.
+             */
+            duration_seconds: number;
+            /** @enum {string} */
+            kind: "timeout";
+        } | {
+            /** @enum {string} */
+            kind: "kick";
+        } | {
+            /**
+             * Format: int32
+             * @description Seconds of recent messages Discord deletes (0–604,800).
+             */
+            delete_message_seconds: number;
+            /** @enum {string} */
+            kind: "ban";
+        };
+        /** @description `/livez`'s body. */
+        Live: {
+            /** @description Always `ok`. */
+            status: string;
+        };
+        /** @description The signed-in account (route 3). */
+        Me: {
+            /** @description Who is signed in. */
+            account: components["schemas"]["MeAccount"];
+            /** @description Send as `X-CSRF-Token` on every change. */
+            csrf_token: string;
+            /** @description The session. */
+            session: components["schemas"]["MeSession"];
+        };
+        /** @description The signed-in Discord account. */
+        MeAccount: {
+            avatar_url: string;
+            global_name?: string | null;
+            id: components["schemas"]["Snowflake"];
+            username: string;
+        };
+        /** @description The session's lifetime. */
+        MeSession: {
+            /**
+             * Format: date-time
+             * @description When it ends; sign in again after.
+             */
+            expires_at: string;
+        };
+        /** @description The member's appeal. */
+        MemberAppeal: {
+            /** @description Whether the member may reply now. */
+            can_reply: boolean;
             /** Format: date-time */
             created_at: string;
-            guild_id: string;
+            events: components["schemas"]["MemberAppealEvent"][];
+            /** Format: uuid */
             id: string;
-            log_channel_discord_id?: string;
-            log_message_discord_id?: string;
-            owner_discord_user_id: string;
+            state: components["schemas"]["AppealState"];
+            statement: string;
+            /**
+             * Format: int32
+             * @description Send back as `expected_version` with a reply.
+             */
+            version: number;
+        };
+        /** @description One appeal event, never naming staff. */
+        MemberAppealEvent: {
             /** Format: date-time */
-            resolved_at?: null | string;
-            resolved_by_discord_user_id?: string;
-            status: components["schemas"]["TicketsStatus"];
-            thread_discord_channel_id: string;
-            transcript_url?: string;
+            at: string;
+            /** @description The member wrote it. */
+            by_you: boolean;
+            /** @description Quack closed the appeal because its case was voided. */
+            closed_by_void: boolean;
+            kind: components["schemas"]["AppealEventKind"];
+            text: string;
+        };
+        /** @description The member's own case. */
+        MemberCase: components["schemas"]["MemberCaseSummary"] & {
+            appeal?: components["schemas"]["MemberAppeal"] | null;
+            context: components["schemas"]["ContextLine"][];
+            dm_text: string;
+            evidence: components["schemas"]["MemberEvidence"][];
+            /** Format: int64 */
+            replaced_by_case_number?: number | null;
+            /**
+             * Format: int64
+             * @description Only when both cases are about this member.
+             */
+            replaces_case_number?: number | null;
+            timeline: components["schemas"]["TimelineText"][];
+            timeline_truncated: boolean;
+            /** Format: date-time */
+            timeout_ends_at?: string | null;
+            undo_text?: string | null;
+            void_reason?: string | null;
+        };
+        /** @description Route 51's body. */
+        MemberCasePage: {
+            cases: components["schemas"]["MemberCaseSummary"][];
+            next_cursor?: string | null;
+        };
+        /** @description One of the member's own cases. */
+        MemberCaseSummary: {
+            /** @description What happened, in the member's words. */
+            action_text: string;
+            appeal_state?: components["schemas"]["AppealState"] | null;
+            /** @description Whether the member may appeal now. */
+            can_appeal: boolean;
+            /** Format: date-time */
+            created_at: string;
+            guild: components["schemas"]["CaseGuild"];
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            number: number;
+            /** @description The official reason. */
+            reason: string;
+            rule_name: string;
+            /** Format: date-time */
+            voided_at?: string | null;
+        };
+        /** @description An embed's type and title. */
+        MemberEmbed: {
+            title?: string | null;
+            type: string;
+        };
+        /** @description One saved message: text, embed types and titles, file names. */
+        MemberEvidence: {
+            content?: string | null;
+            embeds: components["schemas"]["MemberEmbed"][];
+            files: components["schemas"]["MemberFile"][];
+            /** Format: uuid */
+            id: string;
+        };
+        /** @description One file, served by the member file route. */
+        MemberFile: {
+            content_type?: string | null;
+            filename: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            size_bytes: number;
+        };
+        /** @description A member's cases in the server, counted. */
+        MemberSummary: {
+            by_rule: components["schemas"]["RuleCount"][];
+            member_id: components["schemas"]["Snowflake"];
+            /** Format: int64 */
+            total: number;
+            /** Format: int64 */
+            valid: number;
+            /** Format: int64 */
+            voided: number;
+        };
+        /** @description One moderation log entry. */
+        ModLogEntry: {
+            /** Format: uuid */
+            action_id?: string | null;
+            actor_id?: components["schemas"]["Snowflake"] | null;
+            /** Format: uuid */
+            appeal_id?: string | null;
+            /** Format: uuid */
+            case_id?: string | null;
+            /** Format: int64 */
+            case_number?: number | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The entry's typed detail. */
+            detail: Record<string, never>;
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ModLogKind"];
+            links: components["schemas"]["EntryLinks"];
+            member_id?: components["schemas"]["Snowflake"] | null;
+            result: components["schemas"]["ModLogResult"];
+            /** Format: uuid */
+            rule_id?: string | null;
+            source: components["schemas"]["ModLogSource"];
+            /** @description The sentence (§12.10). */
+            text: string;
+            /** Format: uuid */
+            ticket_id?: string | null;
+        };
+        /** @enum {string} */
+        ModLogKind: "case_created" | "case_create_refused" | "case_voided" | "case_context_edited" | "evidence_added" | "action_done" | "action_failed" | "action_retry_requested" | "action_dismissed" | "action_undo_requested" | "action_undo_skipped" | "dm_sent" | "dm_failed" | "appeal_submitted" | "appeal_information_requested" | "appeal_information_provided" | "appeal_accepted" | "appeal_rejected" | "appeal_closed" | "appeal_reopened" | "rule_created" | "rule_edited" | "rule_archived" | "rule_restored" | "rule_imported" | "settings_changed" | "module_enabled" | "module_disabled" | "module_settings_changed" | "quack_joined" | "quack_left" | "channel_setting_cleared" | "log_channel_failed" | "ticket_opened" | "ticket_closed" | "honeypot_case_failed" | "legacy";
+        /** @description Route 35's body. */
+        ModLogPage: {
+            entries: components["schemas"]["ModLogEntry"][];
+            next_cursor?: string | null;
+        };
+        /** @enum {string} */
+        ModLogResult: "ok" | "failed" | "refused";
+        /** @enum {string} */
+        ModLogSource: "discord" | "dashboard" | "quack" | "imported";
+        /** @enum {string} */
+        ModuleDisabledReason: "channel_deleted" | "quack_left";
+        /** @description Whether a module is on, why Quack turned it off, and what blocks it. */
+        ModuleState: {
+            disabled_reason?: components["schemas"]["ModuleDisabledReason"] | null;
+            /** @description It is on. */
+            enabled: boolean;
+            /** @description What blocks turning it on (empty when nothing is known to). */
+            problems: components["schemas"]["Problem"][];
+        };
+        /** @description Each module's state, by JSON module name. */
+        ModulesState: {
+            /** @description The server activity log. */
+            activity_log: components["schemas"]["ModuleState"];
+            /** @description The honeypot. */
+            honeypot: components["schemas"]["ModuleState"];
+            /** @description Tickets. */
+            tickets: components["schemas"]["ModuleState"];
+        };
+        /** @enum {string} */
+        Permission: "kick_members" | "ban_members" | "administrator" | "manage_channels" | "manage_guild" | "view_audit_log" | "view_channel" | "send_messages" | "manage_messages" | "embed_links" | "attach_files" | "read_message_history" | "manage_threads" | "create_public_threads" | "create_private_threads" | "send_messages_in_threads" | "moderate_members";
+        /** @description One reason a module can't be turned on (`module_not_ready`). */
+        Problem: {
+            /** @description The problem's machine code (`module.problem.<code>`). */
+            code: string;
+            /** @description What to fix. */
+            message: string;
+        };
+        /**
+         * @description Whether an action is a case's original or the undo of one.
+         * @enum {string}
+         */
+        Purpose: "original" | "undo";
+        /** @description `/readyz`'s body. */
+        Readiness: {
+            /** @description Each check. */
+            checks: components["schemas"]["Checks"];
+            /** @description Every check passes. */
+            ready: boolean;
+        };
+        /** @description A rule with its current definition and history. */
+        Rule: {
+            /** Format: date-time */
+            archived_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            created_by?: components["schemas"]["Snowflake"] | null;
+            /** Format: int32 */
+            current_version: number;
+            definition: components["schemas"]["RuleDefinition"];
+            /** Format: uuid */
+            id: string;
             /** Format: date-time */
             updated_at: string;
+            updated_by?: components["schemas"]["Snowflake"] | null;
+            /** @description Every version, oldest first. */
+            versions: components["schemas"]["VersionEntry"][];
         };
-        TicketsTicketEnvelope: {
-            ticket: components["schemas"]["TicketsTicket"];
+        /** @description A member's cases under one rule. */
+        RuleCount: {
+            /**
+             * Format: uuid
+             * @description Null for imported cases without a rule.
+             */
+            rule_id?: string | null;
+            rule_name: string;
+            /** Format: int64 */
+            valid: number;
+            /** Format: int64 */
+            voided: number;
         };
-        TicketsTranscript: {
+        /** @description One rule version's full definition. */
+        RuleDefinition: {
+            /** @description Whether cases under this version can be appealed. */
+            appealable: boolean;
+            /**
+             * Format: int32
+             * @description Count only cases from the last N days (1–36,500); null counts all.
+             */
+            counting_window_days?: number | null;
+            /** @description Staff-facing explanation, up to 500 characters. */
+            description: string;
+            /** @description Case context fields, in display order (at most 10). */
+            fields: components["schemas"]["Field"][];
+            /** @description Escalation levels, ascending by `from_case_count` (1–10). */
+            levels: components["schemas"]["Level"][];
+            /** @description 1–100 characters; unique among the server's active rules. */
+            name: string;
+            /** @description The official reason shown to the member, 1–1,000 characters. */
+            reason: string;
+        };
+        /** @description An exported rule (§3.6). */
+        RuleFile: {
+            /** @description When it was exported. */
+            exported_at: string;
+            /** @description Always `quack-rule`. */
+            format: string;
+            /**
+             * Format: int32
+             * @description Always 1.
+             */
+            format_version: number;
+            /** @description The rule's definition. */
+            rule: components["schemas"]["RuleDefinition"];
+        };
+        /** @description Route 12's body. */
+        RuleList: {
+            rules: components["schemas"]["RuleSummary"][];
+        };
+        /** @description A rule in a list. */
+        RuleSummary: {
+            /** @description Members may appeal its cases. */
+            appealable: boolean;
             /** Format: date-time */
-            captured_at?: string;
-            content?: string;
-            /** Format: date-time */
-            expires_at?: string;
-            guild_id?: string;
-            ticket_id?: string;
+            archived_at?: string | null;
+            /**
+             * Format: int32
+             * @description Only cases from the last this many days count (null: all).
+             */
+            counting_window_days?: number | null;
+            /** Format: int32 */
+            current_version: number;
+            description: string;
+            field_count: number;
+            /** Format: uuid */
+            id: string;
+            is_starter: boolean;
+            /** @description Its levels, ascending by `from_case_count`. */
+            levels: components["schemas"]["Level"][];
+            /** @description The levels in words. */
+            levels_text: string;
+            name: string;
+            used_by_honeypot: boolean;
         };
-        TicketsTranscriptResponse: {
-            transcript: components["schemas"]["TicketsTranscript"];
+        /** @description One version of a rule (route 59). */
+        RuleVersion: {
+            /** Format: date-time */
+            created_at: string;
+            created_by?: components["schemas"]["Snowflake"] | null;
+            definition?: components["schemas"]["RuleDefinition"] | null;
+            reconstructed: boolean;
+            /** Format: uuid */
+            rule_id: string;
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description The server's settings. */
+        Settings: {
+            appeal_channel_id?: components["schemas"]["Snowflake"] | null;
+            appeal_invite_url?: string | null;
+            dm_footer?: string | null;
+            dm_intro?: string | null;
+            evidence_channel_id?: components["schemas"]["Snowflake"] | null;
+            log_channel_id?: components["schemas"]["Snowflake"] | null;
+            moderator_role_ids: components["schemas"]["Snowflake"][];
+            modules: components["schemas"]["ModulesState"];
+            rules_manager_role_ids: components["schemas"]["Snowflake"][];
+            /** Format: date-time */
+            starter_notice_acknowledged_at?: string | null;
+            /** Format: uuid */
+            starter_rule_id?: string | null;
+            /**
+             * Format: int64
+             * @description Send back as `expected_version` when changing role lists.
+             */
+            version: number;
+        };
+        /**
+         * @description Route 37's body: only the fields sent change. A channel sent as null
+         *     is cleared; text sent empty is cleared.
+         */
+        SettingsChange: {
+            appeal_channel_id?: components["schemas"]["Snowflake"] | null;
+            appeal_invite_url?: string | null;
+            dm_footer?: string | null;
+            dm_intro?: string | null;
+            evidence_channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int64
+             * @description Required with a role list: the `version` the editor loaded.
+             */
+            expected_version?: number | null;
+            log_channel_id?: components["schemas"]["Snowflake"] | null;
+            /** @description Needs `manage_staff_roles` when it changes. */
+            moderator_role_ids?: components["schemas"]["Snowflake"][] | null;
+            rules_manager_role_ids?: components["schemas"]["Snowflake"][] | null;
+        };
+        /** @example 1100000000000000001 */
+        Snowflake: string;
+        /** @description Route 8's body. */
+        Statistics: {
+            actions_by_kind: components["schemas"]["Bucket"][];
+            actions_by_state: components["schemas"]["Bucket"][];
+            appeals_by_state: components["schemas"]["Bucket"][];
+            cases_by_day: components["schemas"]["Bucket"][];
+            cases_by_rule: components["schemas"]["Bucket"][];
+            cases_by_source: components["schemas"]["Bucket"][];
+            cases_by_state: components["schemas"]["Bucket"][];
+            /** Format: int64 */
+            cases_total: number;
+            /** Format: date-time */
+            from: string;
+            mod_log_by_kind: components["schemas"]["Bucket"][];
+            /** Format: date-time */
+            to: string;
+        };
+        /** @description Route 54's body. */
+        SubmitAppeal: {
+            /** @description Why the case should be reconsidered (1–4,000 characters). */
+            statement: string;
+        };
+        /**
+         * @description A ticket. The ticket's member gets it without `closed_by` and with
+         *     `closed_by_you` instead.
+         */
+        Ticket: {
+            close_reason?: components["schemas"]["TicketCloseReason"] | null;
+            /** Format: date-time */
+            close_requested_at?: string | null;
+            /** Format: date-time */
+            closed_at?: string | null;
+            closed_by?: components["schemas"]["Snowflake"] | null;
+            /** @description Member projection only. */
+            closed_by_you?: boolean | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            member_id: components["schemas"]["Snowflake"];
+            /**
+             * Format: int64
+             * @description Its number in the server, from 1; its thread is `ticket-0042`.
+             */
+            number: number;
+            /** Format: date-time */
+            opened_at?: string | null;
+            state: components["schemas"]["TicketState"];
+            thread_delete_failed: boolean;
+            thread_id?: components["schemas"]["Snowflake"] | null;
+            transcript?: components["schemas"]["TicketTranscriptInfo"] | null;
+        };
+        /** @enum {string} */
+        TicketCloseReason: "open_failed";
+        /** @description A page of tickets (route 47). */
+        TicketPage: {
+            next_cursor?: string | null;
+            tickets: components["schemas"]["Ticket"][];
+        };
+        /** @description Ticket settings (part of route 41). */
+        TicketSettings: {
+            entry_channel_id?: components["schemas"]["Snowflake"] | null;
+            queue_channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int32
+             * @description Days transcripts are kept (1–365).
+             */
+            transcript_retention_days: number;
+        };
+        /** @description Route 42's body: the settings and the version they were read at. */
+        TicketSettingsUpdate: {
+            entry_channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int64
+             * @description The `version` the page was read at; a newer one is refused with
+             *     `settings_changed`.
+             */
+            expected_version: number;
+            queue_channel_id?: components["schemas"]["Snowflake"] | null;
+            /**
+             * Format: int32
+             * @description Days transcripts are kept (1–365).
+             */
+            transcript_retention_days: number;
+        };
+        /** @enum {string} */
+        TicketState: "opening" | "open" | "closing" | "closed";
+        /** @description A ticket's transcript, in brief. */
+        TicketTranscriptInfo: {
+            complete: boolean;
+            /** Format: date-time */
+            expires_at: string;
+            partial_cause?: components["schemas"]["TranscriptPartial"] | null;
+            /** @description `available` or `expired`. */
+            state: string;
+        };
+        /** @description The tickets module (route 41). */
+        TicketsModule: components["schemas"]["ModuleState"] & {
+            /**
+             * Format: int64
+             * @description Tickets open now.
+             */
+            open_tickets: number;
+            settings: components["schemas"]["TicketSettings"];
+            /**
+             * Format: int64
+             * @description The settings' version: send it back as `expected_version`.
+             */
+            version: number;
+        };
+        /** @description One item of the member timeline. */
+        TimelineText: {
+            /** Format: date-time */
+            at: string;
+            text: string;
+        };
+        /** @description A ticket's transcript (route 49). */
+        Transcript: {
+            complete: boolean;
+            content: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
+        /** @enum {string} */
+        TranscriptPartial: "history" | "trimmed";
+        /** @description One version in a rule's history. */
+        VersionEntry: {
+            /** Format: date-time */
+            created_at: string;
+            created_by?: components["schemas"]["Snowflake"] | null;
+            /** @description Rebuilt by the importer from old cases. */
+            reconstructed: boolean;
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description Route 23's body. */
+        VoidCase: {
+            /** @description Why (1–1,000 characters). */
+            reason: string;
+        };
+        /** @enum {string} */
+        VoidCause: "staff" | "appeal_accepted";
+        /** @description How a case was voided. */
+        VoidInfo: {
+            /** Format: date-time */
+            at: string;
+            by?: components["schemas"]["Snowflake"] | null;
+            cause: components["schemas"]["VoidCause"];
+            reason: string;
         };
     };
     responses: never;
@@ -2138,11 +2309,14 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    finishDiscordLogin: {
+    callback: {
         parameters: {
             query?: {
+                /** @description The authorization code. */
                 code?: string;
+                /** @description The sign-in's state. */
                 state?: string;
+                /** @description Set when the person cancelled. */
                 error?: string;
             };
             header?: never;
@@ -2151,73 +2325,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Sign-in started with mode=json */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiSignInResponse"];
-                };
-            };
-            /** @description Found */
+            /** @description To the landing page, or `/login?error=failed|denied` */
             302: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
         };
     };
-    startDiscordLogin: {
+    login: {
         parameters: {
             query?: {
-                mode?: "redirect" | "json";
+                /**
+                 * @description Where to land after signing in: a path on this dashboard (anything
+                 *     else lands on `/guilds`).
+                 */
                 redirect_to?: string;
             };
             header?: never;
@@ -2226,47 +2349,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description mode=json */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiLoginResponse"];
-                };
-            };
-            /** @description Found */
+            /** @description To Discord's authorize page */
             302: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Too Many Requests */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
@@ -2274,118 +2369,38 @@ export interface operations {
     logout: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description No Content */
+            /** @description Signed out */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    logoutAll: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getAuthMe: {
+    me: {
         parameters: {
             query?: never;
             header?: never;
@@ -2394,45 +2409,25 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiAuthMeResponse"];
+                    "application/json": components["schemas"]["Me"];
                 };
             };
-            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    listGuilds: {
+    list_guilds: {
         parameters: {
             query?: never;
             header?: never;
@@ -2441,5989 +2436,1855 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiGuildListResponse"];
+                    "application/json": components["schemas"]["GuildList"];
                 };
             };
-            /** @description Unauthorized */
             401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
             502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    listFailedActions: {
+    list_actions: {
         parameters: {
             query?: {
+                /** @description The state to list (default `failed`). */
+                state?: string;
+                /** @description For `failed`: dismissed ones instead (default false). */
+                dismissed?: boolean;
+                /** @description 1–100, default 50. */
                 limit?: number;
-                offset?: number;
+                /** @description From the previous page's `next_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path: {
-                discordGuildID: string;
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiFailedActionListResponse"];
+                    "application/json": components["schemas"]["ActionPage"];
                 };
             };
-            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    dismissFailedAction: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                executionID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiFailedActionEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    retryFailedAction: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                executionID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiFailedActionEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    listAppeals: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["QuackAppealStatus"];
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuackAppealListResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getAppeal: {
+    dismiss: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
-                appealID: string;
+                guild_id: string;
+                action_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
+                    "application/json": components["schemas"]["Action"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    acceptAppeal: {
+    retry: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackAppealDecisionInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    closeAppeal: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackAppealDecisionInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    rejectAppeal: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackAppealDecisionInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    reopenAppeal: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackAppealDecisionInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    requestAppealInformation: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackAppealDecisionInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    reverseAppealAction: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ApiAppealReversalRequest"];
-            };
-        };
-        responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiActionEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    listAuditLog: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                actor_discord_user_id?: string;
-                source?: components["schemas"]["QuackAuditSource"];
-                action?: string;
-                resource_type?: string;
-                resource_id?: string;
-                result?: components["schemas"]["QuackAuditResult"];
-                case_id?: string;
-                member_discord_user_id?: string;
-                created_after?: string;
-                created_before?: string;
-                before_id?: string;
-            };
             header?: never;
             path: {
-                discordGuildID: string;
+                guild_id: string;
+                action_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QuackAuditListResponse"];
+                    "application/json": components["schemas"]["Action"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Too Many Requests */
-            429: {
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    listCases: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                target_discord_user_id?: string;
-                moderator_discord_user_id?: string;
-                template_id?: string;
-                validity?: components["schemas"]["QuackCaseValidity"];
-                case_number?: number;
-                action_result?: components["schemas"]["QuackActionExecutionStatus"];
-                appeal_status?: components["schemas"]["QuackAppealStatus"];
-                created_after?: string;
-                created_before?: string;
-            };
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuackCaseListResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    createCase: {
+    undo: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
-                discordGuildID: string;
+                guild_id: string;
+                action_id: string;
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ApiCaseCreateRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiCaseEnvelope"];
+                    "application/json": components["schemas"]["Action"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getCase: {
+    list_appeals: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Only appeals in this state. */
+                state?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+                /** @description From the previous page's `next_cursor`. */
+                cursor?: string;
+            };
             header?: never;
             path: {
-                discordGuildID: string;
-                caseRef: string;
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiCaseDetailEnvelope"];
+                    "application/json": components["schemas"]["AppealPage"];
                 };
             };
-            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getEvidenceFile: {
+    get_appeal: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
-                caseRef: string;
-                attachmentID: string;
+                guild_id: string;
+                appeal_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                appeal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Decide"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appeal"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_cases: {
+        parameters: {
+            query?: {
+                /** @description Cases about this member. */
+                member_id?: string;
+                /** @description Cases by this moderator. */
+                moderator_id?: string;
+                /** @description Cases under this rule. */
+                rule_id?: string;
+                /** @description `valid` or `voided`. */
+                state?: string;
+                /** @description The original action's state. */
+                action_state?: string;
+                /** @description The appeal's state. */
+                appeal_state?: string;
+                /** @description The case with this number. */
+                number?: number;
+                /** @description Created at or after (RFC 3339). */
+                created_after?: string;
+                /** @description Created before (RFC 3339). */
+                created_before?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+                /** @description From the previous page's `next_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CasePage"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    add_case: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCase"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    preview: {
+        parameters: {
+            query: {
+                /** @description The member. */
+                member_id: string;
+                /** @description The rule. */
+                rule_id: string;
+            };
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CasePreview"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_case: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    edit_context: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditContext"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Case"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    add_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddEvidence"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceAdded"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    staff_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To the file on Discord's CDN */
             302: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Too Many Requests */
-            429: {
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    reverseCaseAction: {
+    void_case: {
         parameters: {
             query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
+            header?: never;
             path: {
-                discordGuildID: string;
-                caseRef: string;
+                guild_id: string;
+                case_ref: string;
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["ApiReverseActionRequest"];
+                "application/json": components["schemas"]["VoidCase"];
             };
         };
         responses: {
-            /** @description Accepted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiActionEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    voidCase: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                caseRef: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ApiVoidCaseRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiCaseEnvelope"];
+                    "application/json": components["schemas"]["CaseVoided"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    listChannels: {
+    channels: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
+                /** @description The server */
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiChannelListResponse"];
+                    "application/json": components["schemas"]["DirectoryChannels"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
             502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    searchMembers: {
-        parameters: {
-            query: {
-                query: string;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiMemberSearchResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    listRoles: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiRoleListResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    lookupUsers: {
-        parameters: {
-            query: {
-                ids: string;
-            };
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiUserLookupResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getGuildMe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiGuildMeResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    repairLoggingChannel: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                channelID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LoggingSettingsPayload"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getLoggingSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LoggingSettingsResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    updateLoggingSettings: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["LoggingSettingsPayload"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LoggingSettingsPayload"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getLoggingStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LoggingStatusResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    repairHoneypot: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HoneypotSettingsResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getHoneypotSettings: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HoneypotSettingsResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    updateHoneypotSettings: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["HoneypotSettingsRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HoneypotSettingsResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getHoneypotStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HoneypotStatusResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getTicket: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-                ticketID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TicketsDetailResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    cancelTicket: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                ticketID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TicketsTicketEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    closeTicket: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                ticketID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TicketsTicketEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    reopenTicket: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                ticketID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    resolveTicket: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                ticketID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TicketsTicketEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getTicketTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-                ticketID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TicketsTranscriptResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    listTickets: {
+    members: {
         parameters: {
             query?: {
-                status?: components["schemas"]["TicketsStatus"];
+                /** @description Names starting with this (1–100 characters). */
+                query?: string;
+                /** @description 1–25, default 10 (search only). */
                 limit?: number;
+                /** @description Comma-separated account IDs (at most 100). */
+                ids?: string;
             };
             header?: never;
             path: {
-                discordGuildID: string;
+                /** @description The server */
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TicketsQueueResponse"];
+                    "application/json": components["schemas"]["DirectoryMembers"];
                 };
             };
-            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getTicketSettings: {
+    roles: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
+                /** @description The server */
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TicketsSettingsPayload"];
+                    "application/json": components["schemas"]["DirectoryRoles"];
                 };
             };
-            /** @description Bad Request */
-            400: {
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    updateTicketSettings: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["TicketsSettingsPayload"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TicketsSettingsPayload"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getTicketStatus: {
+    guild_health: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
+                /** @description The server */
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TicketsStatusResponse"];
+                    "application/json": components["schemas"]["Health"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getGuildOpsStatus: {
+    guild_me: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
+                /** @description The server */
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiGuildOpsResponse"];
+                    "application/json": components["schemas"]["GuildMe"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getSettings: {
+    member_summary: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                discordGuildID: string;
+                guild_id: string;
+                member_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiSettingsEnvelope"];
+                    "application/json": components["schemas"]["MemberSummary"];
                 };
             };
-            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    updateSettings: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackGuildSettingsInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiSettingsEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    acknowledgeStarterPolicyNotice: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiSettingsEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getStatistics: {
+    mod_log: {
         parameters: {
             query?: {
+                /** @description Entry kinds (repeatable). */
+                kind?: string[];
+                /** @description `ok`, `failed`, or `refused` (one result). */
+                result?: string;
+                actor_id?: string;
+                member_id?: string;
+                case_number?: number;
+                rule_id?: string;
+                appeal_id?: string;
+                /** @description Inclusive (RFC 3339). */
+                created_after?: string;
+                /** @description Exclusive (RFC 3339). */
+                created_before?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModLogPage"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    activity_log_module: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityLogModule"];
+                };
+            };
+        };
+    };
+    update_activity_log_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityLogSettingsUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityLogModule"];
+                };
+            };
+        };
+    };
+    honeypot_module: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HoneypotModule"];
+                };
+            };
+        };
+    };
+    update_honeypot_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoneypotSettingsUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HoneypotModule"];
+                };
+            };
+        };
+    };
+    tickets_module: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketsModule"];
+                };
+            };
+        };
+    };
+    update_ticket_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketSettingsUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketsModule"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                module: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleState"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    enable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                /** @description `tickets`, `activity-log`, or `honeypot` */
+                module: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleState"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_rules: {
+        parameters: {
+            query?: {
+                /** @description Archived rules instead of active ones. */
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleList"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleDefinition"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    import_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRule"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    edit_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditRule"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    archive_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    export_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleFile"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    restore_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                rule_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Rule"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rule_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                rule_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleVersion"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Settings"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsChange"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Settings"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    acknowledge_starter_notice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Settings"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    statistics: {
+        parameters: {
+            query?: {
+                /** @description Start (RFC 3339, inclusive); default one calendar month before `to`. */
                 from?: string;
+                /** @description End (RFC 3339, exclusive); default now. 1 s to 366 days after `from`. */
                 to?: string;
             };
             header?: never;
             path: {
-                discordGuildID: string;
+                /** @description The server */
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QuackStaffStatistics"];
+                    "application/json": components["schemas"]["Statistics"];
                 };
             };
-            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    listTemplates: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateListResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    createTemplate: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackTemplateInput"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-                templateID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    archiveTemplate: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                templateID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    updateTemplate: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                templateID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackTemplateInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    exportTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                discordGuildID: string;
-                templateID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplatePolicyEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    restoreTemplate: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-                templateID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    importTemplate: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                discordGuildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackTemplateImportInput"];
-            };
-        };
-        responses: {
-            /** @description Created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiTemplateEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    listUserCases: {
+    list_tickets: {
         parameters: {
             query?: {
+                /**
+                 * @description Only tickets in these states, comma-separated (`opening,open,closing`);
+                 *     absent: every state.
+                 */
+                state?: string;
+                /** @description 1–100, default 50. */
                 limit?: number;
-                offset?: number;
-                target_discord_user_id?: string;
-                moderator_discord_user_id?: string;
-                template_id?: string;
-                validity?: components["schemas"]["QuackCaseValidity"];
-                case_number?: number;
-                action_result?: components["schemas"]["QuackActionExecutionStatus"];
-                appeal_status?: components["schemas"]["QuackAppealStatus"];
-                created_after?: string;
-                created_before?: string;
+                /** @description From the previous page's `next_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path: {
-                discordGuildID: string;
-                targetDiscordUserID: string;
+                guild_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QuackCaseProfileResponse"];
+                    "application/json": components["schemas"]["TicketPage"];
                 };
             };
-            /** @description Bad Request */
-            400: {
+        };
+    };
+    get_ticket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["Ticket"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getLiveness: {
+    close_ticket: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ticket"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    ticket_transcript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Transcript"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    my_cases: {
+        parameters: {
+            query?: {
+                /** @description Only cases in this server. */
+                guild_id?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+                /** @description From the previous page's `next_cursor`. */
+                cursor?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiLivenessResponse"];
+                    "application/json": components["schemas"]["MemberCasePage"];
                 };
             };
-            /** @description Any other error, such as a 500 */
-            default: {
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getMemberAppeal: {
+    my_case: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                appealID: string;
+                /** @description The case's UUID or legacy ULID */
+                case_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
+                    "application/json": components["schemas"]["MemberCase"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    submitAppealInformation: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                appealID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["QuackAppealInformationInput"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getMemberCase: {
+    submit_appeal: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                caseID: string;
+                case_id: string;
             };
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiMemberCaseEnvelope"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    submitAppeal: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Makes the write safe to retry; reuse the key only for the identical request. */
-                "Idempotency-Key": string;
-                /** @description The CSRF cookie's value. Required with the session cookie; not with a bearer token. */
-                "X-CSRF-Token"?: string;
-            };
-            path: {
-                caseID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["QuackAppealSubmissionInput"];
+                "application/json": components["schemas"]["SubmitAppeal"];
             };
         };
         responses: {
-            /** @description Created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiAppealEnvelope"];
+                    "application/json": components["schemas"]["MemberCase"];
                 };
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Conflict */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Too Many Requests */
-            429: {
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    getMemberEvidenceFile: {
+    add_information: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                caseID: string;
-                attachmentID: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddInformation"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberCase"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    member_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+                file_id: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Found */
+            /** @description To the file on Discord's CDN */
             302: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description Too Many Requests */
-            429: {
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
         };
     };
-    listMemberCases: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-                target_discord_user_id?: string;
-                moderator_discord_user_id?: string;
-                template_id?: string;
-                validity?: components["schemas"]["QuackCaseValidity"];
-                case_number?: number;
-                action_result?: components["schemas"]["QuackActionExecutionStatus"];
-                appeal_status?: components["schemas"]["QuackAppealStatus"];
-                created_after?: string;
-                created_before?: string;
-            };
-            header?: never;
-            path: {
-                guildID: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuackMemberCaseListResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getMetrics: {
+    livez: {
         parameters: {
             query?: never;
             header?: never;
@@ -8432,163 +4293,39 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": string;
+                    "application/json": components["schemas"]["Live"];
                 };
             };
-            /** @description Forbidden */
-            403: {
+        };
+    };
+    readyz: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["Readiness"];
                 };
             };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Service Unavailable */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getOpsStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuackOpsStatusResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getReadiness: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiReadinessResponse"];
-                };
-            };
-            /** @description A check failed; the report names which */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiReadinessResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
-                };
-            };
-        };
-    };
-    getStatus: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiStatusResponse"];
-                };
-            };
-            /** @description Any other error, such as a 500 */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
+                    "application/json": components["schemas"]["Readiness"];
                 };
             };
         };

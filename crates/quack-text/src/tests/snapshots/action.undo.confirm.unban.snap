@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Unban <@222> for case #12?
+plain:   Unban Sam for case #12?
+model:   [Fixed("Unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" for case #12?")]

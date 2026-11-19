@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE messages SET state = 'gone', create_started_at = NULL, updated_at = now()\n             WHERE id = $1 AND generation = $2 AND guild_id = $3 AND state = 'active'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "26a3f245069be6eb5ef6b7d03929bb5c130b9db81dd738c934a5ead8513c50a7"
+}

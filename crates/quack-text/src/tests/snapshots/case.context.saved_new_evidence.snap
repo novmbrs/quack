@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one
+discord: Case context saved for case #12. Quack is saving 1 new message as evidence.
+plain:   Case context saved for case #12. Quack is saving 1 new message as evidence.
+model:   [Fixed("Case context saved for case #12. Quack is saving 1 new message as evidence.")]
+
+## other
+discord: Case context saved for case #12. Quack is saving 3 new messages as evidence.
+plain:   Case context saved for case #12. Quack is saving 3 new messages as evidence.
+model:   [Fixed("Case context saved for case #12. Quack is saving 3 new messages as evidence.")]

@@ -1,0 +1,17 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## removed 0
+discord: <@222> can open the ticket thread.
+plain:   Sam can open the ticket thread.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can open the ticket thread.")]
+
+## removed 1
+discord: <@222> can open the ticket thread. Quack removed 1 person who didn't have permission to read this ticket.
+plain:   Sam can open the ticket thread. Quack removed 1 person who didn't have permission to read this ticket.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can open the ticket thread. Quack removed 1 person who didn't have permission to read this ticket.")]
+
+## removed 3
+discord: <@222> can open the ticket thread. Quack removed 3 people who didn't have permission to read this ticket.
+plain:   Sam can open the ticket thread. Quack removed 3 people who didn't have permission to read this ticket.
+model:   [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can open the ticket thread. Quack removed 3 people who didn't have permission to read this ticket.")]

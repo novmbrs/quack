@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Appeal rejected. Case #1 still counts. Quack will try to send a member (ID 40) a DM.

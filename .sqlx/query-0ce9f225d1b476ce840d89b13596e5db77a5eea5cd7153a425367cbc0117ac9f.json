@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO jobs (id, kind, key, guild_id, payload, run_at, max_attempts, trace_context)\n                   SELECT id, kind, key, guild_id, payload, COALESCE(at, now() + make_interval(secs => delay)),\n                          max_attempts, $9\n                   FROM unnest($1::uuid[], $2::job_kind[], $3::text[], $4::bigint[], $5::jsonb[],\n                               $6::timestamptz[], $7::float8[], $8::int[])\n                        AS j(id, kind, key, guild_id, payload, at, delay, max_attempts)\n                   ON CONFLICT (key) DO UPDATE SET\n                     run_at     = CASE WHEN jobs.locked_until IS NULL\n                                       THEN LEAST(jobs.run_at, EXCLUDED.run_at) ELSE jobs.run_at END,\n                     rerun_at   = CASE WHEN jobs.locked_until IS NOT NULL\n                                       THEN LEAST(COALESCE(jobs.rerun_at, EXCLUDED.run_at), EXCLUDED.run_at)\n                                       ELSE jobs.rerun_at END,\n                     attempts   = CASE WHEN jobs.dead_at IS NOT NULL THEN 0 ELSE jobs.attempts END,\n                     dead_at    = NULL,\n                     updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        {
+          "Custom": {
+            "name": "job_kind[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "job_kind",
+                  "kind": {
+                    "Enum": [
+                      "run_action",
+                      "send_dm",
+                      "sync_message",
+                      "post_mod_log",
+                      "capture_evidence",
+                      "honeypot_case",
+                      "honeypot_cleanup",
+                      "open_ticket",
+                      "close_ticket",
+                      "housekeeping"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "TextArray",
+        "Int8Array",
+        "JsonbArray",
+        "TimestamptzArray",
+        "Float8Array",
+        "Int4Array",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0ce9f225d1b476ce840d89b13596e5db77a5eea5cd7153a425367cbc0117ac9f"
+}
