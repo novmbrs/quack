@@ -35,7 +35,7 @@ pub(crate) enum Made {
 
 /// The overwrites a created channel gets (§13.1.4): Quack's member
 /// overwrite, the @everyone overwrite, and what staff roles are allowed
-/// (`None` for the channels members use).
+/// (`None` for no staff overwrite).
 struct Shape {
     quack: Permissions,
     everyone_allow: Permissions,
@@ -55,7 +55,14 @@ fn shape(kind: ChannelKind) -> Shape {
                 | Permission::ReadMessageHistory
                 | Permission::SendMessagesInThreads,
             everyone_deny: Permission::SendMessages.into(),
-            staff: None,
+            // Manage Threads lets staff see and join every private
+            // ticket thread without being added to it.
+            staff: Some(
+                Permission::ViewChannel
+                    | Permission::ReadMessageHistory
+                    | Permission::SendMessagesInThreads
+                    | Permission::ManageThreads,
+            ),
         },
         ChannelKind::Honeypot => Shape {
             quack: read | Permission::ManageMessages,
@@ -235,5 +242,16 @@ pub(crate) async fn introduce(engine: &Engine, kind: ChannelKind, channel: Chann
                 "couldn't post a new channel's first message"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn staff_can_see_ticket_threads() {
+        let staff = shape(ChannelKind::TicketEntry).staff.unwrap_or_default();
+        assert!(staff.contains(Permission::ViewChannel | Permission::ManageThreads));
     }
 }

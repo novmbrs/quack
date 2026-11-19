@@ -1698,7 +1698,7 @@ time per server under that server's lock):
 | Kind | @everyone | Quack (member overwrite) | Staff roles* |
 | --- | --- | --- | --- |
 | Staff destination | deny View Channel | allow View Channel, Send Messages, Read Message History, Attach Files, Embed Links | allow View Channel, Send Messages, Read Message History |
-| Ticket entry | allow View Channel, Read Message History, Send Messages in Threads; deny Send Messages | allow View Channel, Send Messages, Read Message History, Create Private Threads, Manage Threads, Send Messages in Threads | — |
+| Ticket entry | allow View Channel, Read Message History, Send Messages in Threads; deny Send Messages | allow View Channel, Send Messages, Read Message History, Create Private Threads, Manage Threads, Send Messages in Threads | allow View Channel, Read Message History, Send Messages in Threads, Manage Threads |
 | Honeypot | allow View Channel, Send Messages, Read Message History | allow View Channel, Send Messages, Read Message History, Manage Messages | — |
 
 \* Moderator roles that still exist, else every role with Administrator or
@@ -3112,7 +3112,7 @@ Numbers are stable (code cites them); merged items keep the lower number.
 | 1 | One gateway shard (about 2,500 servers; `serve` refuses more) and one acting instance. |
 | 2 | 2FA is only as fresh as the last dashboard sign-in; staff channel overwrites are not re-synced when staff roles change. |
 | 4 | Posts already in a channel stay visible to whoever can see it later. |
-| 5 | Opening a private ticket thread from the staff post needs Manage Threads. |
+| 5 | Opening a private ticket thread from the staff post needs Manage Threads in the entry channel; only a channel `/setup` creates gets that overwrite for staff roles. |
 | 6 | The activity log is best effort (in memory; drops counted). |
 | 7 | A create whose answer was lost and retried after the 60-second nonce window posts twice (staff post, log post, evidence copy, public receipt, ticket welcome); never a DM. |
 | 8 | Kick and ban DMs go before the action, which may then fail. |
