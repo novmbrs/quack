@@ -37,55 +37,9 @@
   gap: 10px;
 }
 
-.warn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--warning);
-  animation: rise-in var(--base) var(--ease-out);
-}
-
 .note {
   font-size: 13px;
   color: var(--text-muted);
-}
-
-.starter {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-  animation: rise-in var(--slow) var(--ease-out);
-}
-
-.starterText {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.starterTitle {
-  font-size: 15px;
-  font-weight: 650;
-  color: var(--text-strong);
-}
-
-.starterBody {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text);
-}
-
-.starterActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
 }
 
 .checklist {

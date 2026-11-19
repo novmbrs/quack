@@ -29,12 +29,6 @@
   white-space: pre-wrap;
 }
 
-.subtext {
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--dc-muted);
-}
-
 .heading {
   font-size: 17px;
   font-weight: 700;

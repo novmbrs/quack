@@ -16,10 +16,6 @@
   width: 240px;
 }
 
-.source {
-  width: 160px;
-}
-
 .person {
   width: 230px;
 }
@@ -43,11 +39,6 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.count {
-  font-size: 13px;
-  color: var(--text-faint);
 }
 
 .list {

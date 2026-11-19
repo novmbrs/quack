@@ -61,18 +61,6 @@
   color: var(--text-muted);
 }
 
-.outcome {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.outcomeLabel {
-  font-weight: 500;
-  color: var(--text);
-}
-
 .reason {
   display: flex;
   gap: 14px;
@@ -119,16 +107,6 @@
 .bannerBody {
   font-size: 14px;
   color: var(--text-muted);
-}
-
-.link {
-  color: var(--link);
-  transition: color var(--fast) var(--ease);
-}
-
-.link:hover {
-  color: var(--text-strong);
-  text-decoration: underline;
 }
 
 .pre {

@@ -21,25 +21,6 @@
   gap: 20px;
 }
 
-.pair {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.grow {
-  flex: 1 1 260px;
-}
-
-.slug {
-  flex: 0 1 220px;
-}
-
-.mono {
-  font-family: var(--mono);
-  font-size: 13px;
-}
-
 /* The appeal switch sits between dividers so it reads as its own setting. */
 .divided {
   margin-block: -4px;
@@ -134,11 +115,5 @@
   .preview {
     position: static;
     order: -1;
-  }
-}
-
-@media (max-width: 640px) {
-  .slug {
-    flex-grow: 1;
   }
 }

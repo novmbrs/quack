@@ -124,18 +124,6 @@
   animation: rise-in var(--base) var(--ease-out);
 }
 
-.failure {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
 .grid {
   display: grid;
   grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
