@@ -599,7 +599,7 @@ cache) and acts only if the change is still needed.
 
 | `action_kind` | Reads | Then | Permission |
 | --- | --- | --- | --- |
-| `timeout` | member | Absent → `member_not_in_server`; Administrator → `member_is_administrator` (both `failed`). A timeout ending at or after `timeout_ends_at` → `done` (`no_change`; never shortened). Else PATCH `communication_disabled_until`. | Moderate Members |
+| `timeout` | member | Absent → `member_not_in_server`; Administrator → `member_is_administrator` (both `failed`). A timeout ending (to the nearest second, §5.6) at or after `timeout_ends_at` → `done` (`no_change`; never shortened). Else PATCH `communication_disabled_until`. | Moderate Members |
 | `kick` | member | Absent, or `joined_at` after `cases.member_joined_at` (imported: `created_at`) → `done` (`no_change`). Else DELETE; Unknown Member → `no_change`. | Kick Members |
 | `ban` | ban | This case's marker → `done`; another ban → `done` (`no_change`). Else PUT. | Ban Members |
 | `remove_timeout`, `unban` | guard, then member / ban | §5.6 | as original |
@@ -715,13 +715,14 @@ status and code), `retries_exhausted` (nothing may have applied),
    no timeout while the case's end is in the future) is `not_sent` and
    reads again on the backoff; a spent round is `original_unconfirmed`. An
    absent effect never finishes an undo while the original may still land.
-3. **Provenance**:
-   - `remove_timeout`: none or ended (Discord's end cut to whole
-     seconds) → `no_change`; an end a second or more from the case's →
-     `skipped` (`changed_outside_case`); within a second either way →
-     PATCH to null. Quack keeps the whole-second end it sent, not the one
-     Discord echoes; the second of slack covers Discord keeping it at
-     another precision.
+3. **Provenance** (Discord's end rounded to the nearest whole second):
+   - `remove_timeout`: none or ended → `no_change`; another end →
+     `skipped` (`changed_outside_case`); equal → PATCH to null. Quack
+     keeps the whole-second end it sent, not the one Discord echoes;
+     rounding covers Discord keeping it at another precision, and two
+     whole-second ends never round to the same one. Two timeouts of one
+     member made in the same second share an end and can't be told
+     apart (§20.4 #9).
    - `unban`: no ban → `no_change`. Marker of this undo's case → remove
      (covers a manual undo of a valid case). Marker of another case →
      remove only if it is a **voided** case of this member with a ban

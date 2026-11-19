@@ -357,23 +357,29 @@ fn remove_timeout_compares_whole_seconds_at_expiry() {
         timeout_until: Some(until),
         ..member()
     };
-    // Discord reports 13:00:00.750 at 13:00:00.500: in whole seconds the
-    // timeout already ended, so there is nothing to remove.
+    // Discord reports 13:00:00.300 at 13:00:00.500: to the nearest second
+    // the timeout already ended, so there is nothing to remove.
     let now = end + Duration::milliseconds(500);
     assert_eq!(
-        plan_from_member(&target, Some(&with(end + Duration::milliseconds(750))), now),
+        plan_from_member(&target, Some(&with(end + Duration::milliseconds(300))), now),
         Ok(Plan::Finish(AttemptResult::NoChange))
     );
-    // A live timeout whose whole-second end differs is someone else's.
+    // A live timeout whose end rounds to another second is someone else's.
     let earlier = end - Duration::minutes(1);
-    assert_eq!(
-        plan_from_member(&target, Some(&with(end + Duration::seconds(5))), earlier),
-        Ok(Plan::Finish(AttemptResult::ChangedOutsideCase))
-    );
+    for other in [
+        end + Duration::seconds(5),
+        end + Duration::milliseconds(900),
+    ] {
+        assert_eq!(
+            plan_from_member(&target, Some(&with(other)), earlier),
+            Ok(Plan::Finish(AttemptResult::ChangedOutsideCase)),
+            "{other}"
+        );
+    }
     assert_eq!(
         plan_from_member(
             &target,
-            Some(&with(end + Duration::milliseconds(900))),
+            Some(&with(end + Duration::milliseconds(400))),
             earlier
         ),
         Ok(Plan::Call)
@@ -602,7 +608,13 @@ fn timeout_reads_first() {
     assert_eq!(plan(Some(&member())), Plan::Call);
     for (current, want) in [
         (end - Duration::seconds(1), Plan::Call),
+        (end - Duration::milliseconds(501), Plan::Call),
         (end, Plan::Finish(AttemptResult::NoChange)),
+        // This end, kept by Discord a hair under the whole second sent.
+        (
+            end - Duration::microseconds(1),
+            Plan::Finish(AttemptResult::NoChange),
+        ),
         (
             end + Duration::milliseconds(500),
             Plan::Finish(AttemptResult::NoChange),
@@ -670,15 +682,25 @@ fn remove_timeout_checks_provenance() {
     );
     assert_eq!(plan(Some(&with(Some(end)))), Plan::Call);
     // Discord may keep the end at another precision than the whole
-    // seconds Quack sent: within a second either way is this case's.
+    // seconds Quack sent: read to the nearest second, it is this case's.
     for near in [
         end + Duration::milliseconds(300),
+        end + Duration::milliseconds(499),
         end - Duration::microseconds(1),
-        end - Duration::milliseconds(999),
+        end - Duration::milliseconds(500),
     ] {
         assert_eq!(plan(Some(&with(Some(near)))), Plan::Call, "{near}");
     }
-    for other in [end + Duration::seconds(1), end - Duration::seconds(1)] {
+    // A neighbouring whole second is another end, even kept a hair off:
+    // a timeout ending a second later must never read as this case's.
+    for other in [
+        end + Duration::seconds(1),
+        end - Duration::seconds(1),
+        end + Duration::seconds(1) - Duration::microseconds(1),
+        end - Duration::seconds(1) + Duration::microseconds(1),
+        end + Duration::milliseconds(500),
+        end - Duration::milliseconds(501),
+    ] {
         assert_eq!(
             plan(Some(&with(Some(other)))),
             Plan::Finish(AttemptResult::ChangedOutsideCase),

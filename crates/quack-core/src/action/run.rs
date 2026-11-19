@@ -306,18 +306,20 @@ fn wrong_read(kind: ActionKind, event: &'static str) -> InvalidTransition {
 /// Plans a timeout, kick, or remove timeout from the member read
 /// (`None` is 404 Unknown Member).
 ///
+/// Discord's timeout end is read rounded to the nearest whole second
+/// (§5.2): Quack only sends whole seconds, so this absorbs Discord keeping
+/// the end at another precision while two different whole-second ends
+/// can never read as the same one.
+///
 /// - Timeout: absent → `member_not_in_server`; Administrator →
 ///   `member_is_administrator`; a timeout already ending at or after this
 ///   case's end → `no_change` (Quack never shortens a timeout).
 /// - Kick: absent, or joined after the case's membership (they left and
 ///   rejoined) → `no_change`.
-/// - Remove timeout: Discord's end is first cut to whole seconds (§5.2),
-///   then: no timeout, or one that has ended → `no_change` (or
+/// - Remove timeout: no timeout, or one that has ended → `no_change` (or
 ///   [`AttemptResult::OriginalUnresolved`] while the original's change may
-///   still land and its end is in the future); one whose end is a second
-///   or more from this case's → `changed_outside_case`; within a second
-///   (Discord's precision differs from the whole seconds Quack sent) →
-///   remove it.
+///   still land and its end is in the future); one whose end differs from
+///   this case's → `changed_outside_case`; equal → remove it.
 pub fn plan_from_member(
     target: &ActionTarget,
     member: Option<&MemberFacts>,
@@ -334,7 +336,7 @@ pub fn plan_from_member(
                 None,
             )),
             Some(m) => match (m.timeout_until, target.timeout_ends_at) {
-                (Some(current), Some(end)) if whole_seconds(current) >= whole_seconds(end) => {
+                (Some(current), Some(end)) if nearest_second(current) >= end => {
                     Plan::Finish(AttemptResult::NoChange)
                 }
                 _ => Plan::Call,
@@ -349,9 +351,10 @@ pub fn plan_from_member(
                 _ => Plan::Finish(AttemptResult::NoChange),
             }
         }
-        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until) {
-            Some(current) if seconds_only(current) > now => match target.timeout_ends_at {
-                Some(end) if (current - end).abs() < Duration::SECOND => Plan::Call,
+        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until).map(nearest_second)
+        {
+            Some(current) if current > now => match target.timeout_ends_at {
+                Some(end) if current == end => Plan::Call,
                 _ => Plan::Finish(AttemptResult::ChangedOutsideCase),
             },
             _ if target.original_unresolved
@@ -558,10 +561,8 @@ pub fn settle(
     })
 }
 
-fn whole_seconds(at: OffsetDateTime) -> i64 {
-    at.unix_timestamp()
-}
-
-fn seconds_only(at: OffsetDateTime) -> OffsetDateTime {
-    at.replace_nanosecond(0).unwrap_or(at)
+/// `at` rounded to the nearest whole second (half a second rounds up).
+fn nearest_second(at: OffsetDateTime) -> OffsetDateTime {
+    let up = at.checked_add(Duration::milliseconds(500)).unwrap_or(at);
+    up.replace_nanosecond(0).unwrap_or(up)
 }
