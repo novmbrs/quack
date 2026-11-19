@@ -11,7 +11,7 @@ use quack_core::permissions::Capability;
 use quack_db::modlog::{ModLogFilter, StoredEntry};
 use quack_db::{DbError, PgConnection, TimeCursor, actions, cases, rules, tickets};
 use quack_text::ChannelRef;
-use quack_text::log::LogFacts;
+use quack_text::log::{LogFacts, LogLink, LogPage};
 use quack_text::render::plain;
 use serde::Serialize;
 use time::OffsetDateTime;
@@ -201,7 +201,7 @@ pub(crate) async fn facts(
             .map(|id| ChannelRef { id, name: None });
     }
     if post {
-        f.dashboard_url = Some(dashboard_url(engine, entry, f.case_number));
+        f.dashboard = Some(dashboard_link(engine, entry, f.case_number));
     }
     Ok(f)
 }
@@ -222,24 +222,25 @@ async fn case_rule_name(
         .map(|v| v.definition.name))
 }
 
-/// The dashboard page an entry links to (§14.11).
-fn dashboard_url(engine: &Engine, entry: &StoredEntry, case_number: Option<u64>) -> String {
+/// The dashboard page an entry links to (§14.11), named for the post.
+fn dashboard_link(engine: &Engine, entry: &StoredEntry, case_number: Option<u64>) -> LogLink {
     let links = engine.links();
     let guild = entry.guild;
-    if let Some(appeal) = entry.links.appeal_id {
-        return links.appeal(guild, appeal);
-    }
-    if matches!(entry.entry, ModLogEntry::ActionFailed(_)) {
-        return links.failures(guild);
-    }
-    if let Some(number) = case_number {
-        return links.case(guild, number);
-    }
-    if let Some(rule) = entry.links.rule_id {
-        return links.rule(guild, rule);
-    }
-    match entry.kind {
-        ModLogKind::SettingsChanged | ModLogKind::ChannelSettingCleared => links.settings(guild),
-        _ => links.mod_log(guild),
-    }
+    let (page, url) = if let Some(appeal) = entry.links.appeal_id {
+        (LogPage::Appeal, links.appeal(guild, appeal))
+    } else if matches!(entry.entry, ModLogEntry::ActionFailed(_)) {
+        (LogPage::FailedActions, links.failures(guild))
+    } else if let Some(number) = case_number {
+        (LogPage::Case, links.case(guild, number))
+    } else if let Some(rule) = entry.links.rule_id {
+        (LogPage::Rule, links.rule(guild, rule))
+    } else if matches!(
+        entry.kind,
+        ModLogKind::SettingsChanged | ModLogKind::ChannelSettingCleared
+    ) {
+        (LogPage::Settings, links.settings(guild))
+    } else {
+        (LogPage::ModerationLog, links.mod_log(guild))
+    };
+    LogLink { page, url }
 }

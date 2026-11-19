@@ -5,13 +5,13 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 <@333> dismissed the timeout failure for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
 --- plain ---
 Ana dismissed the timeout failure for case #12.
-17 Nov 2026 at 14:05 UTC · Open moderation log
+17 Nov 2026 at 14:05 UTC · Open case
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the timeout failure for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
 
 ## Timeout · dashboard text
 discord: <@333> dismissed the timeout failure for case #12.
@@ -22,13 +22,13 @@ model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dism
 tone: Neutral
 --- discord ---
 <@333> dismissed the kick failure for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
 --- plain ---
 Ana dismissed the kick failure for case #12.
-17 Nov 2026 at 14:05 UTC · Open moderation log
+17 Nov 2026 at 14:05 UTC · Open case
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the kick failure for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
 
 ## Kick · dashboard text
 discord: <@333> dismissed the kick failure for case #12.
@@ -39,13 +39,13 @@ model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dism
 tone: Neutral
 --- discord ---
 <@333> dismissed the ban failure for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
 --- plain ---
 Ana dismissed the ban failure for case #12.
-17 Nov 2026 at 14:05 UTC · Open moderation log
+17 Nov 2026 at 14:05 UTC · Open case
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the ban failure for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
 
 ## Ban · dashboard text
 discord: <@333> dismissed the ban failure for case #12.
@@ -56,13 +56,13 @@ model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dism
 tone: Neutral
 --- discord ---
 <@333> dismissed the failed attempt to remove the timeout for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
 --- plain ---
 Ana dismissed the failed attempt to remove the timeout for case #12.
-17 Nov 2026 at 14:05 UTC · Open moderation log
+17 Nov 2026 at 14:05 UTC · Open case
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed attempt to remove the timeout for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
 
 ## RemoveTimeout · dashboard text
 discord: <@333> dismissed the failed attempt to remove the timeout for case #12.
@@ -73,13 +73,13 @@ model:   [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dism
 tone: Neutral
 --- discord ---
 <@333> dismissed the failed attempt to unban the member for **[case #12](<https://quack.example/guilds/111/cases/12>)**.
--# <t:1794924309:f> · [Open moderation log](<https://quack.example/guilds/111/mod-log>)
+-# <t:1794924309:f> · [Open case](<https://quack.example/guilds/111/cases/12>)
 --- plain ---
 Ana dismissed the failed attempt to unban the member for case #12.
-17 Nov 2026 at 14:05 UTC · Open moderation log
+17 Nov 2026 at 14:05 UTC · Open case
 --- model ---
 Text [Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" dismissed the failed attempt to unban the member for "), Bold([Link { text: [Fixed("case #12")], url: "https://quack.example/guilds/111/cases/12" }]), Fixed(".")]
-Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open moderation log")], url: "https://quack.example/guilds/111/mod-log" }]
+Subtext [Time(2026-11-17 14:05:09.0 +00:00:00, Full), Fixed(" · "), Link { text: [Fixed("Open case")], url: "https://quack.example/guilds/111/cases/12" }]
 
 ## Unban · dashboard text
 discord: <@333> dismissed the failed attempt to unban the member for case #12.

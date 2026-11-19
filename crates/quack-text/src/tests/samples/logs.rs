@@ -5,7 +5,7 @@ use quack_core::action::ActionKind;
 use quack_core::modlog::{ActionDoneDetail, ModLogEntry, TicketClosedDetail};
 
 use super::{Out, Sample, covering, sample};
-use crate::log::{self, LogFacts};
+use crate::log::{self, LogFacts, LogLink, LogPage};
 use crate::model::Actor;
 use crate::tests::fixtures::*;
 
@@ -18,9 +18,43 @@ pub fn facts() -> LogFacts {
         void_reason: Some("Wrong member.".to_owned()),
         timeout_ends_at: Some(later()),
         thread: Some(thread()),
-        dashboard_url: Some("https://quack.example/guilds/111/mod-log".to_owned()),
+        dashboard: Some(LogLink {
+            page: LogPage::ModerationLog,
+            url: "https://quack.example/guilds/111/mod-log".to_owned(),
+        }),
         retry_action: None,
         ..LogFacts::new(t0(), ana())
+    }
+}
+
+/// The page the engine links an entry of this id to, as it chooses it
+/// (`quack_engine::modlog::read`): the post names the link for it.
+fn link_for(id: &str) -> LogLink {
+    let (page, path) =
+        if id.starts_with("log.appeal") || id.starts_with("log.dm_") && id.contains(".appeal") {
+            (
+                LogPage::Appeal,
+                "appeals/0190a7a8-0000-7000-8000-000000000001",
+            )
+        } else if id == "log.action_failed" {
+            (LogPage::FailedActions, "failures")
+        } else if id.contains(".ticket") {
+            (LogPage::ModerationLog, "mod-log")
+        } else if ["log.case", "log.action", "log.dm", "log.evidence"]
+            .iter()
+            .any(|p| id.starts_with(p))
+        {
+            (LogPage::Case, "cases/12")
+        } else if id.starts_with("log.rule") {
+            (LogPage::Rule, "rules/0190a7a8-0000-7000-8000-000000000002")
+        } else if id == "log.settings_changed" || id == "log.channel_setting_cleared" {
+            (LogPage::Settings, "settings")
+        } else {
+            (LogPage::ModerationLog, "mod-log")
+        };
+    LogLink {
+        page,
+        url: format!("https://quack.example/guilds/111/{path}"),
     }
 }
 
@@ -90,6 +124,7 @@ pub fn samples() -> Vec<Sample> {
             &[]
         };
         let mut f = facts();
+        f.dashboard = Some(link_for(id));
         if let ModLogEntry::ActionFailed(_) = e {
             f.retry_action = Some(action_id());
         }

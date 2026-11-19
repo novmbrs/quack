@@ -39,6 +39,43 @@ async fn posted_entries_reach_the_log_channel_once() -> Result<()> {
 }
 
 #[tokio::test]
+async fn a_post_names_its_link_for_the_page_it_opens() -> Result<()> {
+    let h = Harness::new().await?;
+    let log = set_log_channel(&h, true).await?;
+    let rule = h.rule(levels("Spam", &[None], false)).await?;
+    let case = h.apply(MEMBER, rule).await?.case;
+    h.settle().await?;
+    let markdown = h.fake.world(|w| {
+        w.sent_to(log)
+            .iter()
+            .filter_map(|m| m.msg.as_ref())
+            .flat_map(|m| m.blocks.iter())
+            .filter_map(|b| match b {
+                quack_text::Block::Subtext(t) => Some(quack_text::render::markdown(
+                    t,
+                    &quack_text::CommandIds::EMPTY,
+                )),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    });
+    let to_case = format!("/guilds/{GUILD}/cases/{}>", case.number);
+    assert!(
+        markdown
+            .iter()
+            .any(|m| m.contains("[Open case](") && m.contains(&to_case)),
+        "the case's entry links its case as \"Open case\": {markdown:?}"
+    );
+    assert!(
+        !markdown
+            .iter()
+            .any(|m| m.contains("Open moderation log") && m.contains("/cases/")),
+        "a case link is never labelled as the log: {markdown:?}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
 async fn a_log_channel_open_to_everyone_gets_nothing() -> Result<()> {
     let h = Harness::new().await?;
     let log = set_log_channel(&h, false).await?;

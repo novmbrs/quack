@@ -43,8 +43,9 @@ pub struct LogFacts {
     pub timeout_ends_at: Option<OffsetDateTime>,
     /// The ticket's thread.
     pub thread: Option<ChannelRef>,
-    /// The entry's page on the dashboard.
-    pub dashboard_url: Option<String>,
+    /// The entry's page on the dashboard, which the post links to under
+    /// that page's name.
+    pub dashboard: Option<LogLink>,
     /// For a retryable failed action: the action the Retry button retries.
     pub retry_action: Option<ActionId>,
     /// The level's action, for refusals that name it (a missing permission
@@ -65,7 +66,7 @@ impl LogFacts {
             void_reason: None,
             timeout_ends_at: None,
             thread: None,
-            dashboard_url: None,
+            dashboard: None,
             retry_action: None,
             action: None,
         }
@@ -100,6 +101,46 @@ impl LogFacts {
     }
 }
 
+/// A dashboard page a log post links to (§14.11).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LogPage {
+    /// The entry's case.
+    Case,
+    /// The entry's appeal.
+    Appeal,
+    /// The failed actions list.
+    FailedActions,
+    /// The entry's rule.
+    Rule,
+    /// The server's settings.
+    Settings,
+    /// The moderation log itself.
+    ModerationLog,
+}
+
+impl LogPage {
+    /// The link's label: where it goes.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Case => "Open case",
+            Self::Appeal => "Open appeal",
+            Self::FailedActions => "Open failed actions",
+            Self::Rule => "Open rule",
+            Self::Settings => "Open settings",
+            Self::ModerationLog => "Open moderation log",
+        }
+    }
+}
+
+/// A log post's dashboard link: the page it goes to, and its URL.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LogLink {
+    /// Which page.
+    pub page: LogPage,
+    /// Its URL.
+    pub url: String,
+}
+
 /// The entry as one paragraph of text (the dashboard's `text`): the lead
 /// sentence, and its quote on a new line.
 pub fn text(entry: &ModLogEntry, f: &LogFacts) -> Text {
@@ -111,8 +152,9 @@ pub fn text(entry: &ModLogEntry, f: &LogFacts) -> Text {
 }
 
 /// The log channel post: the lead sentence, an optional quote, and
-/// `-# {time} · [Open moderation log](<link>)`; a **Retry** button on a
-/// retryable failed action.
+/// `-# {time} · [Open case](<link>)`, the link named for the page it opens
+/// (case, appeal, failed actions, rule, settings, or moderation log); a
+/// **Retry** button on a retryable failed action.
 pub fn post(entry: &ModLogEntry, f: &LogFacts) -> Msg {
     let tone = match entry.result() {
         Some(ModLogResult::Ok) | None => Tone::Neutral,
@@ -123,8 +165,8 @@ pub fn post(entry: &ModLogEntry, f: &LogFacts) -> Msg {
         msg = msg.block(Block::Quote(q));
     }
     let mut sub = Text::new().time(f.at, TimeStyle::Full);
-    if let Some(url) = &f.dashboard_url {
-        sub = sub.s(" · ").link("Open moderation log", url);
+    if let Some(link) = &f.dashboard {
+        sub = sub.s(" · ").link(link.page.label(), &link.url);
     }
     msg = msg.block(Block::Subtext(sub));
     if let (ModLogEntry::ActionFailed(d), Some(id)) = (entry, f.retry_action) {

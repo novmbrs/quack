@@ -1564,7 +1564,11 @@ see a staff name).
 ### 12.10 Log channel entries
 
 A post is a lead sentence, an optional quote (a staff void's reason), and
-`-# {datetime} · Open moderation log`; failed and refused entries are red.
+`-# {datetime} · {link}`, the link named for the dashboard page it opens:
+the entry's appeal ("Open appeal"), failed actions for a failed action
+("Open failed actions"), its case ("Open case"), its rule ("Open rule"),
+settings for a settings change ("Open settings"), else the log ("Open
+moderation log"); failed and refused entries are red.
 Example: "Ana added case #12 for Sam under Spam (level 2, case count 4).
 Action for this case: timeout for 1 hour." `log.*`: one per §9.2 kind;
 `log.action_failed` opens with "Quack couldn't confirm whether Discord …"
