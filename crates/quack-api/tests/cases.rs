@@ -489,3 +489,34 @@ async fn read_void_edit_context_and_add_evidence() {
             .contains("#1")
     );
 }
+
+#[tokio::test]
+async fn a_case_carries_its_outcome_word_as_the_list_does() {
+    let app = App::new().await;
+    let rule_id = rule(
+        &app,
+        rules_for_tests::one(
+            "Spam",
+            quack_core::rule::LevelAction::Timeout {
+                duration_seconds: 600,
+            },
+            false,
+        ),
+    )
+    .await;
+    let moderator = app.login(MODERATOR, true).await;
+    let created = app
+        .send(
+            app.post(&g("/cases"))
+                .by(&moderator)
+                .json(add(MEMBER, &rule_id, json!({}))),
+        )
+        .await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.json);
+    let case = app.send(app.get(&g("/cases/1")).by(&moderator)).await;
+    let list = app.send(app.get(&g("/cases")).by(&moderator)).await;
+    let word = &case.json["action"]["outcome_text"];
+    // The badge shows this word; the full sentence belongs to `actions`.
+    assert_eq!(word, &list.json["cases"][0]["action"]["outcome_text"]);
+    assert!(word.as_str().unwrap().len() < 30, "{word}");
+}

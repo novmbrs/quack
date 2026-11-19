@@ -109,11 +109,9 @@ impl CaseSummary {
             moderator_id: v.moderator_id,
             created_at: v.created_at,
             voided_at: v.void.as_ref().map(|x| x.at),
-            action: original.map(|a| ActionBrief {
-                kind: a.kind,
-                state: a.state,
-                outcome_text: a.outcome_text.clone(),
-            }),
+            // The view's own outcome_text is the full sentence; a summary
+            // carries the outcome word, as the case list does.
+            action: original.map(|a| ActionBrief::new(a.kind, a.state, v.number)),
             dm_state: v.dm.as_ref().map_or(DmState::NotNeeded, |d| d.state),
             appeal_state: v.appeal.as_ref().map(|a| a.state),
         }
