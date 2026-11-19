@@ -413,8 +413,10 @@ label_enum! {
         Identify => "identify",
         /// A session was resumed.
         Resume => "resume",
-        /// The connection dropped and is reconnecting.
+        /// A live connection dropped and is reconnecting (once per drop).
         Reconnect => "reconnect",
+        /// An attempt to bring a dropped connection back failed.
+        ConnectFailed => "connect_failed",
         /// Discord invalidated the session.
         InvalidSession => "invalid_session",
     }

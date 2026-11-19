@@ -62,7 +62,7 @@ spec!(GATEWAY_HEARTBEAT_LATENCY: Histogram "quack.gateway.heartbeat.latency", un
     buckets buckets::WAIT);
 spec!(GATEWAY_CONNECTION_EVENTS: Counter "quack.gateway.connection.events", unit "{event}",
     [GatewayConnectionEvent::KEY],
-    "Gateway identifies, resumes, reconnects, and invalid sessions.");
+    "Gateway identifies, resumes, drops, failed reconnect attempts, and invalid sessions.");
 spec!(GATEWAY_CONNECTED: Gauge "quack.gateway.connected", unit "{connection}",
     [],
     "1 while the gateway session is connected, else 0.");

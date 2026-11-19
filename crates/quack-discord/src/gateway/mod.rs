@@ -3,10 +3,13 @@
 //! loop, and bounded dispatch of typed [`Event`]s to a handler.
 //!
 //! The shard loop never waits on a handler. Connection state and heartbeat
-//! latency are exposed through [`GatewayStatus`] for readiness and metrics.
+//! latency are exposed through [`GatewayStatus`] for readiness and metrics;
+//! drops, failed reconnect attempts, and the session coming back are logged
+//! once each (see the `link` module).
 
 mod dispatch;
 mod event;
+mod link;
 
 #[cfg(test)]
 mod tests;
@@ -14,7 +17,7 @@ mod tests;
 use std::future::Future;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use quack_telemetry::labels::GatewayConnectionEvent;
 use quack_telemetry::metrics;
@@ -27,6 +30,7 @@ use twilight_gateway::error::ReceiveMessageErrorType;
 
 use crate::cache::{GuildCache, MemberCache, feed_members};
 use crate::rest::{DiscordClient, Outcome};
+use link::{Change, Link};
 
 pub use dispatch::{
     EVENT_QUEUE_LEN, EVENT_QUEUES, INTERACTION_QUEUE_LEN, MAX_INTERACTION_HANDLERS,
@@ -44,6 +48,9 @@ pub const INTENTS: Intents = Intents::GUILDS
 /// Discord's close code for intents the application may not use.
 pub const DISALLOWED_INTENTS: u16 = 4014;
 
+/// Discord's close code for a token it doesn't accept.
+pub const AUTHENTICATION_FAILED: u16 = 4004;
+
 /// How long shutdown waits for Discord to confirm the close.
 const CLOSE_WAIT: Duration = Duration::from_secs(5);
 
@@ -51,6 +58,7 @@ const CLOSE_WAIT: Duration = Duration::from_secs(5);
 pub(crate) fn wanted() -> EventTypeFlags {
     EventTypeFlags::READY
         | EventTypeFlags::RESUMED
+        | EventTypeFlags::GATEWAY_HELLO
         | EventTypeFlags::GATEWAY_HEARTBEAT_ACK
         | EventTypeFlags::GATEWAY_INVALIDATE_SESSION
         | EventTypeFlags::GATEWAY_RECONNECT
@@ -137,9 +145,15 @@ pub enum GatewayError {
          application in 100 or more servers also needs Discord's approval for them"
     )]
     DisallowedIntents,
+    /// Close code 4004: Discord doesn't accept the bot token.
+    #[error(
+        "Discord rejected the bot token (close code 4004). Set QUACK_DISCORD_TOKEN to the \
+         application's current bot token from the Discord developer portal"
+    )]
+    AuthenticationFailed,
     /// Another close code Twilight does not reconnect after (for example
-    /// 4004, authentication failed).
-    #[error("Discord closed the gateway and Quack can't reconnect (close code {0:?})")]
+    /// 4013, invalid intents).
+    #[error("Discord closed the gateway and Quack can't reconnect ({})", close_code(*.0))]
     Closed(Option<u16>),
     /// Discord recommends more than one shard (about 2,500 servers); Quack
     /// runs one (§11.9, §20.4).
@@ -151,6 +165,98 @@ pub enum GatewayError {
     /// `GET /gateway/bot` failed, so the shard count is unknown.
     #[error("couldn't read the gateway settings from Discord ({0})")]
     ShardCheck(String),
+}
+
+/// A close code for a log line or an error message.
+fn close_code(code: Option<u16>) -> String {
+    code.map_or_else(|| "no close code".to_owned(), |c| format!("close code {c}"))
+}
+
+/// Logs and counts one connection change; returns how long the shard loop
+/// waits before reading again. `why` says what happened, in plain words.
+fn report(change: Change, why: &str) -> Duration {
+    let gateway = &metrics().gateway;
+    match change {
+        Change::Connected => tracing::info!("connected to the gateway"),
+        Change::Back {
+            resumed,
+            down,
+            failures,
+        } => {
+            let down_ms = u64::try_from(down.as_millis()).unwrap_or(u64::MAX);
+            if resumed {
+                tracing::info!(down_ms, failures, "resumed the gateway session");
+            } else {
+                tracing::info!(
+                    down_ms,
+                    failures,
+                    "reconnected to the gateway with a new session"
+                );
+            }
+        }
+        Change::Dropped => {
+            gateway.connection(GatewayConnectionEvent::Reconnect);
+            tracing::info!(why, "the gateway connection dropped; reconnecting");
+        }
+        Change::Failed { failures, wait } => {
+            gateway.connection(GatewayConnectionEvent::ConnectFailed);
+            let wait_ms = u64::try_from(wait.as_millis()).unwrap_or(u64::MAX);
+            if failures >= link::WARN_AFTER {
+                tracing::warn!(
+                    failures,
+                    why,
+                    wait_ms,
+                    "still can't reconnect to the gateway"
+                );
+            } else {
+                tracing::info!(
+                    failures,
+                    why,
+                    wait_ms,
+                    "couldn't reconnect to the gateway; trying again"
+                );
+            }
+            return wait;
+        }
+        Change::Nothing => {}
+    }
+    Duration::ZERO
+}
+
+/// Waits `wait` (nothing when zero); false when shutdown came first.
+async fn pause(wait: Duration, shutdown: &CancellationToken) -> bool {
+    if wait.is_zero() {
+        return true;
+    }
+    tokio::select! {
+        biased;
+        () = shutdown.cancelled() => false,
+        () = tokio::time::sleep(wait) => true,
+    }
+}
+
+/// What a frame means for the connection, and why, for [`report`].
+fn connection_change(link: &mut Link, raw: &Raw, now: Instant) -> (Change, String) {
+    match raw {
+        Raw::Ready(_) => (link.session(false, now), String::new()),
+        Raw::Resumed => (link.session(true, now), String::new()),
+        Raw::GatewayHello(_) => (
+            link.opened(now),
+            "the connection ended without a close frame".to_owned(),
+        ),
+        Raw::GatewayReconnect => (
+            link.closed(now),
+            "Discord asked Quack to reconnect".to_owned(),
+        ),
+        Raw::GatewayInvalidateSession(_) => {
+            (link.closed(now), "Discord ended the session".to_owned())
+        }
+        Raw::GatewayClose(frame) => (
+            link.closed(now),
+            format!("closed ({})", close_code(frame.as_ref().map(|f| f.code))),
+        ),
+        _ => (Change::Nothing, String::new()),
+    }
 }
 
 /// Checks `GET /gateway/bot` before connecting: more than one recommended
@@ -253,6 +359,7 @@ impl Gateway {
             .observe_guilds(move || guilds.upgrade().map_or(0, |g| g.guild_count() as u64));
         let mut sessions = 0_u32;
         let mut close_code = None;
+        let mut link = Link::new(Instant::now());
         let result = loop {
             let item = tokio::select! {
                 biased;
@@ -263,18 +370,19 @@ impl Gateway {
                 None => {
                     break Err(match close_code {
                         Some(DISALLOWED_INTENTS) => GatewayError::DisallowedIntents,
+                        Some(AUTHENTICATION_FAILED) => GatewayError::AuthenticationFailed,
                         code => GatewayError::Closed(code),
                     });
                 }
                 Some(Err(error)) => {
-                    if let Some(event) = recover(&error) {
+                    let wait = if let Some(event) = recover(&error) {
                         hand_off(&dispatcher, event, &on_dropped);
+                        Duration::ZERO
                     } else {
-                        // Never the error itself: Twilight's message holds
-                        // the whole frame (interaction tokens, message text).
-                        let (kind, event) = describe(error.kind());
-                        tracing::warn!(kind, event, "couldn't read a gateway event");
-                        self.lost(kind, event.as_deref());
+                        self.unreadable(&error, &mut link)
+                    };
+                    if !pause(wait, &shutdown).await {
+                        break Ok(());
                     }
                     continue;
                 }
@@ -284,6 +392,10 @@ impl Gateway {
                 close_code = frame.as_ref().map(|f| f.code);
             }
             self.track(&raw);
+            let (change, why) = connection_change(&mut link, &raw, Instant::now());
+            if !pause(report(change, &why), &shutdown).await {
+                break Ok(());
+            }
             if let Some(event) = event::map(&raw, sessions) {
                 if matches!(event, Event::Ready { .. }) {
                     sessions += 1;
@@ -298,6 +410,34 @@ impl Gateway {
         self.guilds.untrust(false);
         dispatcher.stop().await;
         result
+    }
+
+    /// A receive error that isn't a recoverable interaction: logs it, marks
+    /// what it broke, and returns the wait before the next read.
+    fn unreadable(
+        &self,
+        error: &twilight_gateway::error::ReceiveMessageError,
+        link: &mut Link,
+    ) -> Duration {
+        let (kind, event) = describe(error.kind());
+        self.lost(kind, event.as_deref());
+        let now = Instant::now();
+        if let ReceiveMessageErrorType::Reconnect = error.kind() {
+            // A failed connection attempt: its cause is a network or TLS
+            // error and holds no frame, so it is safe to log.
+            let cause = std::error::Error::source(error)
+                .map_or_else(|| "unknown".to_owned(), ToString::to_string);
+            return report(link.connect_failed(now), &cause);
+        }
+        // Never the error itself: Twilight's message holds the whole frame
+        // (interaction tokens, message text).
+        tracing::warn!(kind, event, "couldn't read a gateway event");
+        if kind == "deserializing" {
+            Duration::ZERO
+        } else {
+            // A compressed frame Twilight couldn't read closes the connection.
+            report(link.closed(now), "an unreadable compressed frame")
+        }
     }
 
     /// A frame Twilight couldn't read. An unreadable event other than a
@@ -332,10 +472,8 @@ impl Gateway {
                 self.status.set_connected(true);
                 gateway.connection(GatewayConnectionEvent::Resume);
             }
-            Raw::GatewayReconnect | Raw::GatewayClose(_) => {
-                self.status.set_connected(false);
-                gateway.connection(GatewayConnectionEvent::Reconnect);
-            }
+            // Drops are counted once each by `report`.
+            Raw::GatewayReconnect | Raw::GatewayClose(_) => self.status.set_connected(false),
             Raw::GatewayInvalidateSession(_) => {
                 self.status.set_connected(false);
                 gateway.connection(GatewayConnectionEvent::InvalidSession);

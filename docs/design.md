@@ -1345,7 +1345,8 @@ Selects offer text channels only; a staff destination must pass §13.1.3.
 Intents, fixed: `GUILDS`, `GUILD_MEMBERS` and `MESSAGE_CONTENT`
 (privileged: enabled in the developer portal; approval needed at 100+
 servers), `GUILD_MODERATION`, `GUILD_MESSAGES`. Close code 4014
-(disallowed intents) stops `serve` with a log line naming them. One shard
+(disallowed intents) stops `serve` with a log line naming them; 4004
+(bad token) stops it with a line naming `QUACK_DISCORD_TOKEN`. One shard
 (`ShardId::ONE`); when `GET /gateway/bot` recommends more, `serve` stops
 (§20.4). `quack_discord::Gateway::run` yields Quack's typed `Event`s and
 updates the guild and member caches in the shard loop.
@@ -1388,6 +1389,19 @@ been a cache update a resume won't replay, so the guild cache is untrusted
 until the next `READY` (facts come from REST meanwhile). A compression or
 reconnect failure, or the shard stopping, marks the session disconnected
 until it resumes.
+
+**Reconnects.** Twilight reconnects and resumes by itself and waits
+between failed connection attempts (1 s, doubling, up to about 4 minutes).
+A connection that opens and closes again before `READY`/`RESUMED` gets
+Quack's own wait (1 s, doubling, at most 1 minute), so the shard loop never
+spins. Each drop logs one line at `info` ("the gateway connection dropped;
+reconnecting", with why) and counts `quack.gateway.connection.event =
+reconnect`; each failed attempt logs at `info` with its cause and counts
+`connect_failed`, and from the fifth in a row logs at `warn` ("still can't
+reconnect to the gateway"). The session coming back logs one line
+("resumed the gateway session" or "reconnected to the gateway with a new
+session", with how long it was down and how many attempts failed); the
+first session logs "connected to the gateway".
 
 ### 11.10 Caches
 
@@ -3025,7 +3039,7 @@ OTLP `4318`, Grafana `3001`). Commands: `quack migrate`, `quack serve
 | Discord down or rate limiting | Afterwards review failed actions; check `unconfirmed` ones in Discord first. |
 | Dead jobs (`quack.jobs.dead`) | Fix the cause; `UPDATE jobs SET dead_at = NULL, attempts = 0, run_at = now() WHERE id = …` is the only sanctioned edit. |
 | Stuck "in progress" | Impossible past §16.5's budgets; check `quack.jobs.oldest_ready.age` and `quack.job.lease_expired`. |
-| Fence lost or terminal gateway close (4014) | Exits 1 (§17.5); fix intents or token, let the supervisor restart. A second instance waits on the fence. |
+| Fence lost or terminal gateway close (4004, 4014) | Exits 1 (§17.5); fix intents or token, let the supervisor restart. A second instance waits on the fence. |
 | Leaked token, client secret, or session secret | Rotate; for the session secret also `DELETE FROM sessions`. |
 | Bad migration | Never edit an applied one; write a new one. |
 

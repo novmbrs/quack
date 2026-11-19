@@ -510,3 +510,71 @@ fn an_unreadable_frame_is_described_without_its_content() {
     assert_eq!(event_name(r#"{"t":"secret token here"}"#), None);
     assert_eq!(event_name("not json sentinel"), None);
 }
+
+/// A routine reconnect (Discord's request, its close, a new connection,
+/// `RESUMED`) is one drop and one resume; a connection that keeps closing
+/// before a session starts is waited on.
+#[test]
+fn connection_frames_drive_the_link() {
+    use twilight_model::gateway::payload::incoming::Hello;
+    let t = Instant::now();
+    let mut link = Link::new(t);
+    let ready = fixtures::dispatch("READY", &fixtures::ready(50, &[1]));
+    let hello = Raw::GatewayHello(Hello {
+        heartbeat_interval: 41_250,
+    });
+    let close = |code| Raw::GatewayClose(Some(twilight_model::gateway::CloseFrame::new(code, "")));
+    assert_eq!(connection_change(&mut link, &hello, t).0, Change::Nothing);
+    assert_eq!(connection_change(&mut link, &ready, t).0, Change::Connected);
+
+    let (change, why) = connection_change(&mut link, &Raw::GatewayReconnect, t);
+    assert_eq!(
+        (change, why.as_str()),
+        (Change::Dropped, "Discord asked Quack to reconnect")
+    );
+    assert_eq!(
+        connection_change(&mut link, &close(4000), t).0,
+        Change::Nothing
+    );
+    connection_change(&mut link, &hello, t);
+    let later = t + Duration::from_secs(3);
+    assert_eq!(
+        connection_change(&mut link, &Raw::Resumed, later).0,
+        Change::Back {
+            resumed: true,
+            down: Duration::from_secs(3),
+            failures: 0
+        }
+    );
+
+    connection_change(&mut link, &close(4000), later);
+    connection_change(&mut link, &hello, later);
+    let (change, why) = connection_change(&mut link, &close(4000), later);
+    assert_eq!(why, "closed (close code 4000)");
+    assert_eq!(
+        change,
+        Change::Failed {
+            failures: 1,
+            wait: Duration::from_secs(1)
+        }
+    );
+}
+
+/// Fatal close codes name their fix.
+#[test]
+fn fatal_closes_say_what_to_fix() {
+    assert!(
+        GatewayError::AuthenticationFailed
+            .to_string()
+            .contains("QUACK_DISCORD_TOKEN")
+    );
+    assert!(GatewayError::DisallowedIntents.to_string().contains("4014"));
+    assert_eq!(
+        GatewayError::Closed(Some(4013)).to_string(),
+        "Discord closed the gateway and Quack can't reconnect (close code 4013)"
+    );
+    assert_eq!(
+        GatewayError::Closed(None).to_string(),
+        "Discord closed the gateway and Quack can't reconnect (no close code)"
+    );
+}

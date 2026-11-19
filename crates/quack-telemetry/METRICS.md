@@ -52,7 +52,7 @@ times (requests, job runs, interactions handled).
 | `quack.discord.rate_limit.wait` | histogram | `s` | `url.template`, `quack.discord.rate_limit.scope` | Time spent waiting for a Discord rate limit before a call. |
 | `quack.gateway.event.duration` | histogram | `s` | `quack.gateway.event` | Time handling one gateway event; its count is events handled by type. |
 | `quack.gateway.heartbeat.latency` | histogram | `s` | — | Time between a gateway heartbeat and Discord's acknowledgement. |
-| `quack.gateway.connection.events` | counter | `{event}` | `quack.gateway.connection.event` | Gateway identifies, resumes, reconnects, and invalid sessions. |
+| `quack.gateway.connection.events` | counter | `{event}` | `quack.gateway.connection.event` | Gateway identifies, resumes, drops, failed reconnect attempts, and invalid sessions. |
 | `quack.gateway.connected` | gauge (observed) | `{connection}` | — | 1 while the gateway session is connected, else 0. |
 | `quack.gateway.guilds` | gauge (observed) | `{guild}` | — | Servers Quack is in. |
 | `http.server.request.duration` | histogram | `s` | `http.request.method`, `http.route`, `http.response.status_code` | API requests (semconv); its count is requests by route, method, and status. |
@@ -145,7 +145,7 @@ times (requests, job runs, interactions handled).
 | `quack.discord.outcome` | `done`, `refused`, `unknown`, `rate_limited`, `not_sent` | Outcome class of a Discord REST call. |
 | `quack.discord.rate_limit.scope` | `route`, `global`, `shared` | Which Discord rate limit applied. |
 | `quack.gateway.event` | static names chosen in code | Gateway event type. |
-| `quack.gateway.connection.event` | `identify`, `resume`, `reconnect`, `invalid_session` | Gateway connection change. |
+| `quack.gateway.connection.event` | `identify`, `resume`, `reconnect`, `connect_failed`, `invalid_session` | Gateway connection change. |
 | `quack.sign_in.outcome` | `done`, `cancelled`, `refused`, `failed` | How a sign-in ended. |
 | `quack.rate_limit.class` | static names chosen in code | API rate-limit class. |
 | `db.system.name` | `postgresql` | Database system (semconv). |
