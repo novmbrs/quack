@@ -29,6 +29,10 @@ allow = [
     "Zlib",
 ]
 
+# Our own crates are unpublished and use the project license (FSL-1.1-MIT).
+[licenses.private]
+ignore = true
+
 [bans]
 # Duplicate versions are worth knowing about but are often transitive and
 # out of our hands.

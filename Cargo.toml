@@ -6,7 +6,7 @@ members = ["crates/*"]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.100"
-license = "MIT"
+license = "FSL-1.1-MIT"
 repository = "https://github.com/novmbrs/quack"
 publish = false
 

@@ -107,4 +107,8 @@ document and the dashboard's client, snapshots, the importer's tests).
 
 ## License
 
-[MIT](LICENSE)
+Quack is source-available under the [Functional Source License 1.1, MIT
+future license](LICENSE) (FSL-1.1-MIT). You may self-host it for your own
+servers and change it however you like, including turning premium features
+on. You may not offer it to others as a hosted bot or service that competes
+with Quack. Each version becomes MIT two years after its release.
