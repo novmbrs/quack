@@ -37,7 +37,11 @@ async fn a_member_opens_a_ticket_in_a_private_thread() -> Result<()> {
         let welcome = world.sent_to(thread).len();
         (name, members, welcome)
     });
-    assert_eq!(name, format!("ticket-{}", ticket.to_u22()));
+    assert_eq!(t.number, 1);
+    assert_eq!(
+        name, "ticket-0001",
+        "a readable name, by the server's number"
+    );
     assert_eq!(members, vec![sf(M)]);
     assert_eq!(welcome, 1, "one welcome message");
     let posts = w.h.fake.world(|world| world.sent_to(w.queue).len());
@@ -238,5 +242,32 @@ async fn another_members_ticket_is_separate() -> Result<()> {
     assert_ne!(a.id, b.id);
     assert_ne!(a.thread, b.thread);
     assert_eq!(w.threads(), 2);
+    assert_eq!((a.number, b.number), (1, 2), "numbered per server");
+    let names = w.h.fake.world(|world| {
+        [a.thread, b.thread].map(|t| {
+            t.and_then(|t| world.guilds[&w.h.guild].channels.get(&t))
+                .map(|c| c.name.clone())
+        })
+    });
+    assert_eq!(
+        names,
+        [
+            Some("ticket-0001".to_owned()),
+            Some("ticket-0002".to_owned())
+        ]
+    );
+    // Another server counts its own tickets from 1.
+    let (other, _) = common::second_guild(&w.h).await?;
+    let mut tx = w.h.engine.db().begin().await?;
+    let first = quack_db::tickets::insert(
+        &mut tx,
+        quack_core::ids::TicketId::from_uuid(uuid::Uuid::now_v7()),
+        other,
+        sf(M),
+        w.entry,
+    )
+    .await?;
+    tx.commit().await?;
+    assert_eq!(first, 1);
     Ok(())
 }

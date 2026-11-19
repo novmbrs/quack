@@ -45,6 +45,7 @@ fn wire(t: &TicketView, staff: bool, viewer: quack_core::ids::AccountId) -> Tick
     let now = OffsetDateTime::now_utc();
     Ticket {
         id: t.id,
+        number: t.number,
         member_id: t.member_id,
         state: t.state,
         thread_id: t.thread_id,

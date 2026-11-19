@@ -5,7 +5,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::ids::{ChannelId, RuleId, TicketId};
+use crate::ids::{ChannelId, RuleId};
 use crate::permissions::{MemberRefusalCode, Permission};
 use crate::{InvalidTransition, UnknownValue};
 
@@ -231,16 +231,22 @@ impl TicketState {
     }
 }
 
-/// A ticket thread's name, `ticket-<ticket u22>`: the full id, so names
-/// never collide and a lost create can be found again (§13.2.3).
-pub fn ticket_thread_name(id: TicketId) -> String {
-    format!("ticket-{}", id.to_u22())
+/// A ticket's readable name, `ticket-0042`: its number in the server,
+/// at least four digits. Numbers are never reused in a server, so names
+/// never collide there and a lost create can be found again (§13.2.3).
+pub fn ticket_name(number: u64) -> String {
+    format!("ticket-{number:04}")
 }
 
-/// A ticket transcript's file name, the same in the member's DM and the
-/// staff post (§13.2.4).
-pub fn ticket_transcript_name(id: TicketId) -> String {
-    format!("transcript-{}.txt", id.to_u22())
+/// A ticket thread's name: [`ticket_name`].
+pub fn ticket_thread_name(number: u64) -> String {
+    ticket_name(number)
+}
+
+/// A ticket transcript's file name, `ticket-0042-transcript.txt`, the same
+/// in the member's DM and the staff post (§13.2.4).
+pub fn ticket_transcript_name(number: u64) -> String {
+    format!("{}-transcript.txt", ticket_name(number))
 }
 
 str_enum! {
@@ -533,8 +539,6 @@ fn bare_token_end(text: &str, i: usize) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
-    use uuid::Uuid;
-
     use super::*;
 
     #[test]
@@ -722,9 +726,9 @@ mod tests {
 
     #[test]
     fn thread_name_and_codes() {
-        let id = TicketId::from_uuid(Uuid::from_u128(u128::MAX));
-        assert_eq!(ticket_thread_name(id), format!("ticket-{}", id.to_u22()));
-        assert_eq!(ticket_thread_name(id).len(), 29);
+        assert_eq!(ticket_thread_name(42), "ticket-0042");
+        assert_eq!(ticket_thread_name(12_345), "ticket-12345");
+        assert_eq!(ticket_transcript_name(7), "ticket-0007-transcript.txt");
         assert_eq!(
             ModuleProblem::ChannelNotStaffOnly(ChannelId::new(1).unwrap()).code(),
             "channel_not_staff_only"

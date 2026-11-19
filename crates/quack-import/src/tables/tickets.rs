@@ -2,7 +2,7 @@
 //! DMs), `ticket_message_journal` → `ticket_messages`, `ticket_transcripts`
 //! → `ticket_transcripts` (§19.4, §19.9).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 use time::OffsetDateTime;
@@ -68,6 +68,7 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
             cx.f.in_flight("ticket_queue_send_unconfirmed_dropped", key);
         }
     }
+    let numbers = numbers(cx).await?;
     let mut pages = Pages::new(
         "SELECT * FROM tickets WHERE guild_id = ? AND id > ? ORDER BY id",
         "tickets",
@@ -77,11 +78,30 @@ pub(crate) async fn import(cx: &mut Ctx<'_>) -> Result<(), ImportError> {
         for row in &rows {
             let c = Cols::new(row, "tickets", "id");
             let extra = extra_live.contains(c.key());
-            ticket(cx, &c, extra).await?;
+            let number = numbers.get(c.key()).copied();
+            ticket(cx, &c, extra, number).await?;
         }
     }
     journal(cx).await?;
     transcripts(cx).await
+}
+
+/// Each Go ticket's number in its server: 1, 2, … in creation order
+/// (`created_at`, then id), §19.4. A skipped ticket leaves a gap.
+async fn numbers(cx: &mut Ctx<'_>) -> Result<HashMap<String, i64>, ImportError> {
+    let g = cx.g.ulid.clone();
+    let rows = cx
+        .src
+        .rows(
+            "SELECT id FROM tickets WHERE guild_id = ? ORDER BY created_at IS NULL, created_at, id",
+            &[&g],
+        )
+        .await?;
+    let mut out = HashMap::new();
+    for (n, row) in (1_i64..).zip(&rows) {
+        out.insert(Cols::new(row, "tickets", "id").key().to_owned(), n);
+    }
+    Ok(out)
 }
 
 /// Open tickets beyond the newest per member.
@@ -112,7 +132,12 @@ async fn duplicate_live(cx: &mut Ctx<'_>) -> Result<HashSet<String>, ImportError
     clippy::too_many_lines,
     reason = "one ticket's mapping reads best top to bottom"
 )]
-async fn ticket(cx: &mut Ctx<'_>, c: &Cols<'_>, extra_live: bool) -> Result<(), ImportError> {
+async fn ticket(
+    cx: &mut Ctx<'_>,
+    c: &Cols<'_>,
+    extra_live: bool,
+    number: Option<i64>,
+) -> Result<(), ImportError> {
     let key = cx.key(c.key());
     let Some(id) = c.uuid("id")? else {
         cx.f.skip("tickets", "invalid_id", &key);
@@ -164,8 +189,8 @@ async fn ticket(cx: &mut Ctx<'_>, c: &Cols<'_>, extra_live: bool) -> Result<(), 
     let q = sqlx::query(
         "INSERT INTO tickets (id, guild_id, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,
                               closed_at, closed_by, welcome_posted_at, frozen_at, transcript_saved_at, thread_deleted_at,
-                              created_at, updated_at)
-         VALUES ($1, $2, $3, $4::ticket_state, $5, $6, $7, $8, $8, $9, $7, $8, $8, $8, $10, $11)",
+                              created_at, updated_at, number)
+         VALUES ($1, $2, $3, $4::ticket_state, $5, $6, $7, $8, $8, $9, $7, $8, $8, $8, $10, $11, $12)",
     )
     .bind(id)
     .bind(cx.g.id)
@@ -177,7 +202,9 @@ async fn ticket(cx: &mut Ctx<'_>, c: &Cols<'_>, extra_live: bool) -> Result<(), 
     .bind(closed)
     .bind(closed.and(c.snowflake("resolved_by_discord_user_id")?.id()))
     .bind(created_at)
-    .bind(updated_at);
+    .bind(updated_at)
+    // The trigger moves the server's ticket counter past it (§15.5).
+    .bind(number);
     if !guarded(&mut cx.tx, &mut cx.f, "tickets", &key, q).await? {
         return Ok(());
     }

@@ -56,7 +56,7 @@ fn long_ago() -> time::OffsetDateTime {
 #[tokio::test]
 async fn find_threads_returns_only_quacks_own_private_threads() {
     let server = MockServer::start_async().await;
-    let name = "ticket-AAAAAAAAAAAAAAAAAAAAAQ";
+    let name = "ticket-0001";
     let at = "2026-11-17T12:00:00+00:00";
     server
         .mock_async(|when, then| {
@@ -164,7 +164,7 @@ async fn an_incomplete_archived_search_is_unknown() {
 #[tokio::test]
 async fn find_threads_reads_active_and_every_archived_page() {
     let server = MockServer::start_async().await;
-    let name = "ticket-AAAAAAAAAAAAAAAAAAAAAQ";
+    let name = "ticket-0001";
     server
         .mock_async(|when, then| {
             when.method("GET").path("/api/v10/guilds/1/threads/active");

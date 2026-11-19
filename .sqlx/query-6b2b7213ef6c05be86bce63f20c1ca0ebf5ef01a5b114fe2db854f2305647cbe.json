@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,\n                             closed_at, closed_by, close_reason, journal_gaps, welcome_started_at, welcome_posted_at,\n                             frozen_at, transcript_saved_at, thread_deleted_at, thread_delete_failed, created_at\n                      FROM tickets WHERE guild_id = $1 AND (cardinality($2::text[]) = 0 OR state::text = ANY($2))\n               AND ($3::timestamptz IS NULL OR (created_at, id) < ($3, $4))\n             ORDER BY created_at DESC, id DESC LIMIT $5",
+  "query": "SELECT id, guild_id, number, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,\n                             closed_at, closed_by, close_reason, journal_gaps, welcome_started_at, welcome_posted_at,\n                             frozen_at, transcript_saved_at, thread_deleted_at, thread_delete_failed, created_at\n                      FROM tickets WHERE guild_id = $1 AND id = $2",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,17 @@
       },
       {
         "ordinal": 2,
+        "name": "number",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tickets",
+            "name": "number"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
         "name": "member_id",
         "type_info": "Int8",
         "origin": {
@@ -37,7 +48,7 @@
         }
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "state",
         "type_info": {
           "Custom": {
@@ -60,7 +71,7 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "entry_channel_id",
         "type_info": "Int8",
         "origin": {
@@ -71,7 +82,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "thread_id",
         "type_info": "Int8",
         "origin": {
@@ -82,7 +93,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "opened_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -93,7 +104,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "close_requested_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -104,7 +115,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "closed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -115,7 +126,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "closed_by",
         "type_info": "Int8",
         "origin": {
@@ -126,7 +137,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "close_reason",
         "type_info": {
           "Custom": {
@@ -146,7 +157,7 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "journal_gaps",
         "type_info": "Bool",
         "origin": {
@@ -157,7 +168,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "welcome_started_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -168,7 +179,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "welcome_posted_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -179,7 +190,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "frozen_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -190,7 +201,7 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "transcript_saved_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -201,7 +212,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "thread_deleted_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -212,7 +223,7 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "thread_delete_failed",
         "type_info": "Bool",
         "origin": {
@@ -223,7 +234,7 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -237,13 +248,11 @@
     "parameters": {
       "Left": [
         "Int8",
-        "TextArray",
-        "Timestamptz",
-        "Uuid",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -265,5 +274,5 @@
       false
     ]
   },
-  "hash": "9f099db67aeaf1be09159979d45bb17cd6d0dd06c6c2b5bd785d95d727f41d6e"
+  "hash": "6b2b7213ef6c05be86bce63f20c1ca0ebf5ef01a5b114fe2db854f2305647cbe"
 }

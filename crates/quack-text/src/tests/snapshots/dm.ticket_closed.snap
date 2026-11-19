@@ -8,8 +8,8 @@ The attached file is a copy of the conversation.
 --- plain ---
 Your ticket in Duck Pond is closed
 The attached file is a copy of the conversation.
-[file: transcript.txt]
+[file: ticket-0042-transcript.txt]
 --- model ---
 Heading [Fixed("Your ticket in "), Bold([User("Duck Pond")]), Fixed(" is closed")]
 Text [Fixed("The attached file is a copy of the conversation.")]
-File "transcript.txt"
+File "ticket-0042-transcript.txt"

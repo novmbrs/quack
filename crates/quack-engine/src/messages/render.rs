@@ -163,7 +163,7 @@ async fn ticket_post(
     };
     let transcript = tickets::transcript(conn, guild, ticket).await?;
     let mut attach = None;
-    let name = quack_core::modules::ticket_transcript_name(ticket);
+    let name = quack_core::modules::ticket_transcript_name(t.number);
     // A kept attachment belongs to the posted message; a post being made
     // again (no message yet) uploads its own. Either way the post names
     // the file in a File component, or Discord drops it (Components V2).

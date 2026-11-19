@@ -269,8 +269,9 @@ async fn a_member_has_one_live_ticket(_: PgPoolOptions, options: PgConnectOption
         second.err().and_then(|e| e.conflict()),
         Some(Conflict::LiveTicketExists)
     );
-    // Another member is fine; closing frees the slot.
-    tickets::insert(
+    // Another member is fine; closing frees the slot. Numbers count on
+    // per server; the refused insert took none.
+    let other = tickets::insert(
         &mut conn,
         TicketId::from_uuid(Uuid::now_v7()),
         g,
@@ -278,11 +279,20 @@ async fn a_member_has_one_live_ticket(_: PgPoolOptions, options: PgConnectOption
         entry,
     )
     .await?;
+    assert_eq!(other, 2);
     assert_eq!(
         tickets::fail_open(&mut conn, g, first).await?,
         Some(quack_core::modules::TicketState::Closed)
     );
-    tickets::insert(
+    // An explicit number (the importer's) moves the counter past it.
+    sqlx::query(
+        "INSERT INTO tickets (guild_id, member_id, state, entry_channel_id, closed_at, number)
+         VALUES ($1, 9, 'closed', 50, now(), 10)",
+    )
+    .bind(i64::from(g))
+    .execute(&mut *conn)
+    .await?;
+    let next = tickets::insert(
         &mut conn,
         TicketId::from_uuid(Uuid::now_v7()),
         g,
@@ -290,6 +300,17 @@ async fn a_member_has_one_live_ticket(_: PgPoolOptions, options: PgConnectOption
         entry,
     )
     .await?;
+    assert_eq!(next, 11);
+    let elsewhere = guild(&db, 2).await?;
+    let first_there = tickets::insert(
+        &mut conn,
+        TicketId::from_uuid(Uuid::now_v7()),
+        elsewhere,
+        member_id(7),
+        entry,
+    )
+    .await?;
+    assert_eq!(first_there, 1, "each server counts its own");
     Ok(())
 }
 

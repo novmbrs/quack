@@ -18,6 +18,8 @@ use quack_engine::span;
 pub struct TicketView {
     /// The ticket.
     pub id: TicketId,
+    /// Its number in the server (`ticket-0042`).
+    pub number: u64,
     /// Its member.
     pub member_id: MemberId,
     /// Its state.
@@ -62,6 +64,7 @@ impl From<Ticket> for TicketView {
     fn from(t: Ticket) -> Self {
         Self {
             id: t.id,
+            number: t.number,
             member_id: t.member,
             state: t.state,
             thread_id: t.thread,

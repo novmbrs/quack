@@ -7401,6 +7401,7 @@
         "description": "A ticket. The ticket's member gets it without `closed_by` and with\n`closed_by_you` instead.",
         "required": [
           "id",
+          "number",
           "member_id",
           "state",
           "created_at",
@@ -7459,6 +7460,12 @@
           },
           "member_id": {
             "$ref": "#/components/schemas/Snowflake"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Its number in the server, from 1; its thread is `ticket-0042`.",
+            "minimum": 0
           },
           "opened_at": {
             "type": [

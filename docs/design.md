@@ -1758,15 +1758,21 @@ a bad queue. A new entry channel moves the panel (§10.3).
 #### 13.2.3 Opening
 
 Component `to` defers ephemerally; tickets off → `ticket.open.disabled`.
-One transaction inserts the ticket and its `open_ticket` job; a
-`tickets_one_live` violation answers with the live ticket
+One transaction inserts the ticket and its `open_ticket` job; the insert
+takes the server's next ticket **number** (`ticket_counters`, whose row
+lock serializes ticket creation per server, like case numbers). The
+number is the ticket's readable name, `ticket-0042` (at least four
+digits): its thread's name and its transcript file's,
+`ticket-0042-transcript.txt`. Numbers are never reused in a server, so
+the name is unique there. A `tickets_one_live` violation answers with the
+live ticket
 (`ticket.open.exists` / `.closing` / `.opening`); else `ticket.open.opening`.
 
 `open_ticket` (budget 4, backoff 2 s, 10 s, 30 s; writes compare-and-set on
 `opening`):
 
 1. Not `opening` → `Done`.
-2. **Thread.** Look up `ticket-<ticket u22>`: only **private** threads
+2. **Thread.** Look up `ticket-<number>`: only **private** threads
    (type 12) under the entry channel with that exact name **created by
    Quack** (`owner_id`), active then archived newest first, until no more
    or threads archived before the ticket; the 10-page cap or a cursorless
@@ -2052,7 +2058,8 @@ Discord control logic (§5.8); `MemberCase` replaces message-link values
 with `member.context.link_saved`; `Health.channels` covers core settings
 and enabled modules' channels (entry and honeypot checked only for
 Quack's access); module pages carry `version` and empty `problems`;
-`Ticket.transcript` is null after housekeeping.
+`Ticket.number` is the ticket's number in its server (its thread is
+`ticket-0042`, §13.2.3); `Ticket.transcript` is null after housekeeping.
 
 **Statistics** (route 8): `[from, to)`, default the last calendar month,
 1 s–366 days (else `api.range_invalid`); counted by current state per UTC
@@ -2313,8 +2320,12 @@ lines against the `quack-core` enums.
 
 ### 15.5 Tickets
 
-- `tickets`: state, thread, one timestamp per open and close step,
-  `journal_gaps`; one live ticket per member per server.
+- `tickets`: `number` (per server, unique, from `ticket_counters`), state,
+  thread, one timestamp per open and close step, `journal_gaps`; one live
+  ticket per member per server.
+- `ticket_counters`: per-server ticket number; its row lock serializes
+  ticket creation. A `BEFORE INSERT` trigger fills a missing `number` from
+  it, and moves it past an explicit one (the importer's).
 - `ticket_messages`, `ticket_transcripts`: the journal; the saved
   transcript (≤ 8 MiB).
 
@@ -2359,6 +2370,10 @@ Each hot-path read has an index declared with its table (escalation:
   channel (except while `opening`).
 - `0004`: `action_failure` value `original_unconfirmed` (§5.6).
 - `0005`: `evidence_files.copy_attempts` (§7.3).
+- `0006`: `tickets.number` and `ticket_counters` (§13.2.3); existing
+  tickets numbered per server in creation order. A ticket still `opening`
+  at the upgrade with a thread created under the old `ticket-<u22>` name
+  but not yet saved gets a second, numbered thread.
 
 
 ## 16. Job queue
@@ -2822,7 +2837,7 @@ and keeps only its `import_runs` row. Otherwise one transaction per server
 | `module_configurations` (`tickets`) | `ticket_settings`, `messages` (`ticket_panel`) | `enabled`, channels, `transcript_retention_days`; the panel becomes a tracked message `2`/`1`. Enabled but missing a channel → disabled, reported. |
 | `module_configurations` (`general_logging`) | `activity_log_settings`, `activity_log_routes` | Routes: `message_edit` → `message_edited`, `message_delete` → `message_deleted`, `message_bulk_delete` → `messages_bulk_deleted`, `member_join` → `member_joined`, `member_leave` → `member_left`, `discord_ban` → `member_banned`, `discord_unban` → `member_unbanned`, `guild_change` → `server_changed`, `channel_change` → `channel_changed` (invalid channel drops the route). `include_message_content`, `include_attachment_metadata` → `include_file_names`, `include_embed_metadata` → `include_embed_types`. Enabled with no route → disabled. |
 | `module_configurations` (`honeypots`) | `honeypot_settings`, `messages` (`honeypot_warning`) | `channel_discord_id`, `template_id` → `rule_id`, `warning_text` (legacy default → NULL); a non-empty `disabled_reason` → off (`channel_deleted` when it says so). The warning keeps Go's warning channel and message, `2`/`1`. |
-| `tickets` | `tickets` | `open` → `open`; `resolved`, `cancelled` → `closed`; owner → `member_id`; thread → `thread_id`; resolver → `closed_by`; `entry_channel_id` from the ticket settings, unknown without them (`ticket_entry_channel_unknown`). Two live tickets for a member: newest stays open. The log post → `ticket_post` `1`/`1`. A close notice showing a DM was attempted → a `ticket_closed` DM row in its mapped state. |
+| `tickets` | `tickets` | `number` 1, 2, … per server in Go's creation order (`created_at`, then id; a skipped ticket leaves a gap; the counter follows); `open` → `open`; `resolved`, `cancelled` → `closed`; owner → `member_id`; thread → `thread_id`; resolver → `closed_by`; `entry_channel_id` from the ticket settings, unknown without them (`ticket_entry_channel_unknown`). Two live tickets for a member: newest stays open. The log post → `ticket_post` `1`/`1`. A close notice showing a DM was attempted → a `ticket_closed` DM row in its mapped state. |
 | `staff_members`, `ticket_events`, `ticket_member_states`, `honeypot_warning_refreshes`, `v4_import_batches`, `v4_import_sources` | — | Not imported (counts reported; v4 cases keep their source ID in `cases.imported`). |
 | `ticket_message_journal` | `ticket_messages` | IDs and `body` → `text`; `author_name` NULL → "unknown"; thread must match. |
 | `ticket_transcripts` | `ticket_transcripts` | As stored; `complete` from Go's flag, else `false`/`history`; rows expired at `evaluated_at` skipped. |

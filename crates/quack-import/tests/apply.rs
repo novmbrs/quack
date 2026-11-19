@@ -16,7 +16,8 @@ async fn apply_maps_every_table_and_a_rerun_is_a_no_op() -> Result<()> {
     assert_eq!(report.guilds[B], GuildOutcome::Imported);
     // The report counts what PostgreSQL holds.
     for (table, rows) in s.counts().await? {
-        if table == "discord_accounts" || table == "import_guilds" {
+        // `ticket_counters` is written by the tickets trigger, not counted.
+        if table == "discord_accounts" || table == "import_guilds" || table == "ticket_counters" {
             continue;
         }
         assert_eq!(
@@ -544,6 +545,23 @@ async fn modules(s: &Scratch) -> Result<()> {
     );
     assert_eq!(s.text(&ticket(3)).await?.as_deref(), Some("open|-"));
     assert_eq!(s.text(&ticket(4)).await?.as_deref(), Some("closed|-"));
+    // Numbered in Go's creation order; the one without `created_at` last.
+    assert_eq!(
+        s.text(&format!(
+            "SELECT string_agg(number::text, ',' ORDER BY id) FROM tickets WHERE guild_id = {A}"
+        ))
+        .await?
+        .as_deref(),
+        Some("1,2,3,4,6,5")
+    );
+    assert_eq!(
+        s.count(&format!(
+            "SELECT last_number FROM ticket_counters WHERE guild_id = {A}"
+        ))
+        .await?,
+        6,
+        "a new ticket continues after the imported ones"
+    );
     assert_eq!(
         s.text("SELECT string_agg(state::text || coalesce(':' || failure::text, ''), ',' ORDER BY state) FROM dms WHERE kind = 'ticket_closed'")
             .await?

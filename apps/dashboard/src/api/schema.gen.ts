@@ -2190,6 +2190,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             member_id: components["schemas"]["Snowflake"];
+            /**
+             * Format: int64
+             * @description Its number in the server, from 1; its thread is `ticket-0042`.
+             */
+            number: number;
             /** Format: date-time */
             opened_at?: string | null;
             state: components["schemas"]["TicketState"];

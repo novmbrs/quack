@@ -116,7 +116,7 @@ async fn steps(engine: &Engine, job: &ClaimedJob, t: &Ticket) -> Result<Step<()>
 /// saves it at once.
 async fn thread(engine: &Engine, job: &ClaimedJob, t: &Ticket) -> Result<Step<ChannelId>, DbError> {
     let discord = engine.discord();
-    let name = ticket_thread_name(t.id);
+    let name = ticket_thread_name(t.number);
     // The schema keeps an opening ticket's entry channel; only imported
     // tickets may lack one, and none of those is opening.
     let Some(entry) = t.entry_channel else {

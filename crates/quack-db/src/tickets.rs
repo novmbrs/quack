@@ -163,6 +163,9 @@ pub struct Ticket {
     pub id: TicketId,
     /// Its server.
     pub guild: GuildId,
+    /// Its number in the server, from 1: the readable name of its thread
+    /// and transcript (`ticket-0042`).
+    pub number: u64,
     /// Its member.
     pub member: MemberId,
     /// Its state.
@@ -204,6 +207,7 @@ pub struct Ticket {
 struct TicketRow {
     id: uuid::Uuid,
     guild_id: i64,
+    number: i64,
     member_id: i64,
     state: Pg<TicketState>,
     entry_channel_id: Option<i64>,
@@ -230,6 +234,7 @@ impl TryFrom<TicketRow> for Ticket {
         Ok(Self {
             id: TicketId::from_uuid(r.id),
             guild: id(r.guild_id)?,
+            number: count(r.number)?,
             member: id(r.member_id)?,
             state: r.state.0,
             entry_channel: opt_id(r.entry_channel_id)?,
@@ -255,7 +260,7 @@ macro_rules! query_ticket {
     ($tail:literal $(, $arg:expr)* $(,)?) => {
         ::sqlx::sqlx_macros::expand_query!(
             record = TicketRow,
-            source = "SELECT id, guild_id, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,
+            source = "SELECT id, guild_id, number, member_id, state, entry_channel_id, thread_id, opened_at, close_requested_at,
                              closed_at, closed_by, close_reason, journal_gaps, welcome_started_at, welcome_posted_at,
                              frozen_at, transcript_saved_at, thread_deleted_at, thread_delete_failed, created_at
                       FROM tickets " + $tail,
@@ -264,7 +269,9 @@ macro_rules! query_ticket {
     };
 }
 
-/// Opens a ticket (`opening`). A member with a live ticket is
+/// Opens a ticket (`opening`) and returns its number: the server's next,
+/// taken in this transaction (`ticket_counters`, migration `0006`). A
+/// member with a live ticket is
 /// [`Conflict::LiveTicketExists`](crate::Conflict::LiveTicketExists).
 pub async fn insert(
     conn: &mut PgConnection,
@@ -272,21 +279,22 @@ pub async fn insert(
     guild: GuildId,
     member: MemberId,
     entry_channel: ChannelId,
-) -> Result<(), DbError> {
-    obs::run(
+) -> Result<u64, DbError> {
+    let number = obs::run(
         Insert,
         "tickets",
-        sqlx::query!(
-            "INSERT INTO tickets (id, guild_id, member_id, entry_channel_id) VALUES ($1, $2, $3, $4)",
+        sqlx::query_scalar!(
+            "INSERT INTO tickets (id, guild_id, member_id, entry_channel_id) VALUES ($1, $2, $3, $4)
+             RETURNING number",
             ticket.get(),
             i64::from(guild),
             i64::from(member),
             i64::from(entry_channel),
         )
-        .execute(conn),
+        .fetch_one(conn),
     )
     .await?;
-    Ok(())
+    count(number)
 }
 
 /// A ticket of this server.

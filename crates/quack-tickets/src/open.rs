@@ -72,7 +72,7 @@ pub async fn open(
         let ticket = TicketId::from_uuid(uuid::Uuid::now_v7());
         let mut tx = engine.db().begin().await?;
         match tickets::insert(&mut tx, ticket, guild, member, entry).await {
-            Ok(()) => {}
+            Ok(_) => {}
             Err(e) if e.conflict() == Some(Conflict::LiveTicketExists) => {
                 tx.rollback().await?;
                 return live_answer(engine, guild, member).await;

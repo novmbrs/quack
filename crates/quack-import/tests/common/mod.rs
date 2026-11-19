@@ -212,6 +212,7 @@ pub const TABLES: &[&str] = &[
     "appeals",
     "appeal_events",
     "tickets",
+    "ticket_counters",
     "ticket_messages",
     "ticket_transcripts",
     "dms",

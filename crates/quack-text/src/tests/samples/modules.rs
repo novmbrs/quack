@@ -121,7 +121,7 @@ fn tickets() -> Vec<Sample> {
             TicketPost {
                 state: TicketState::Closed,
                 closed: closed.clone(),
-                transcript: TranscriptPlace::Attached("transcript.txt".to_owned()),
+                transcript: TranscriptPlace::Attached("ticket-0042-transcript.txt".to_owned()),
                 ..ticket_post()
             },
         ),
@@ -177,11 +177,11 @@ fn tickets() -> Vec<Sample> {
         "dm.ticket_closed",
         &["dm.ticket_closed.heading", "dm.ticket_closed.text"],
         "",
-        Out::Msg(ticket::closed_dm("Duck Pond", "transcript.txt")),
+        Out::Msg(ticket::closed_dm("Duck Pond", "ticket-0042-transcript.txt")),
     ));
     v.push(label(
         "ticket.thread_name",
-        ticket::thread_name(ticket_id()),
+        ticket::thread_name(42),
         crate::budget::CHANNEL_NAME,
     ));
     v.push(label(

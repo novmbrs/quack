@@ -294,9 +294,9 @@ pub fn closed_dm(server: &str, transcript_file: &str) -> Msg {
         .block(Block::File(transcript_file.to_owned()))
 }
 
-/// `ticket.thread_name`.
-pub fn thread_name(ticket: TicketId) -> String {
-    ticket_thread_name(ticket)
+/// `ticket.thread_name`: `ticket-0042`, from the ticket's number.
+pub fn thread_name(number: u64) -> String {
+    ticket_thread_name(number)
 }
 
 /// `ticket.transcript.header`.

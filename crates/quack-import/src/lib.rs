@@ -40,7 +40,7 @@ pub use error::ImportError;
 pub use report::{GuildOutcome, Report};
 
 /// Bumped whenever a mapping changes; part of the fingerprint (§19.11).
-pub const TRANSFORM_VERSION: i32 = 1;
+pub const TRANSFORM_VERSION: i32 = 2;
 
 /// What `quack import-mysql` was asked to do.
 #[derive(Clone)]

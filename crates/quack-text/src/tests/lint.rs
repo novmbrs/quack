@@ -228,8 +228,9 @@ fn looks_like_identifier(word: &str) -> bool {
     snake || camel
 }
 
-/// Samples that show a machine key or id as sent: the ticket thread name.
-const SHOWS_KEYS: &[&str] = &["ticket.thread_name"];
+/// Samples that show a machine key or id as sent. None: even the ticket
+/// thread name is readable (`ticket-0042`), and this lint keeps it so.
+const SHOWS_KEYS: &[&str] = &[];
 
 fn hostile(s: &Sample) -> bool {
     s.variant.contains("hostile")

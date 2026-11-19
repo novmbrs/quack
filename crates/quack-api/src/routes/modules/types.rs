@@ -219,6 +219,8 @@ pub(crate) struct TicketTranscriptInfo {
 pub(crate) struct Ticket {
     #[schema(value_type = uuid::Uuid)]
     pub id: TicketId,
+    /// Its number in the server, from 1; its thread is `ticket-0042`.
+    pub number: u64,
     #[schema(value_type = schema::Snowflake)]
     pub member_id: MemberId,
     #[schema(value_type = schema::TicketState)]
