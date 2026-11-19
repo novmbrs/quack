@@ -1922,10 +1922,13 @@ Enabling from `/setup` without a rule creates "Honeypot"
    `failure` is a `HoneypotFailure`: `Refused(HoneypotRefusal)` (the logged
    values), `exempt`, or `imported_pending` (§19.9).
 4. `honeypot_cleanup` (keyed per message; budget 10, backoff 1–64 s)
-   deletes the post only once its evidence is `saved` (burst posts without
-   evidence directly). `saving` → `Defer` 5 s for up to 10 minutes; a
-   failed or still-saving capture, or a non-404 refusal, records
-   `cleanup_failed_at` and keeps the post. 404 counts as deleted.
+   deletes the post once its evidence has settled (burst posts without
+   evidence directly): `saving` → `Defer` 5 s for up to 10 minutes, so the
+   snapshot is normally taken first. A `saved` or `failed` capture, or one
+   still `saving` after the wait, deletes the post: a spam post never
+   stays up because its evidence couldn't be saved, and the case stands
+   without the snapshot. A non-404 refusal records `cleanup_failed_at`
+   and keeps the post for staff to delete; 404 counts as deleted.
 
 #### 13.4.3 The warning
 

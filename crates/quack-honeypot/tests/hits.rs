@@ -193,7 +193,7 @@ async fn the_post_is_kept_until_the_case_saved_it() -> Result<()> {
 }
 
 #[tokio::test]
-async fn a_post_whose_capture_failed_is_kept() -> Result<()> {
+async fn a_post_whose_capture_failed_is_still_deleted() -> Result<()> {
     let w = world().await?;
     let (message, _) = w.post(MEMBER).await?;
     w.h.run_one(JobKind::HoneypotCase)
@@ -209,16 +209,39 @@ async fn a_post_whose_capture_failed_is_kept() -> Result<()> {
         .execute("DELETE FROM jobs WHERE kind = 'capture_evidence'")
         .await?;
     w.h.settle().await?;
-    assert!(w.exists(message), "the only copy stays");
-    assert_eq!(w.h.fake.count(Call::DeleteMessage), 0);
-    let failed = w
+    assert!(
+        !w.exists(message),
+        "spam doesn't stay up because its evidence couldn't be saved"
+    );
+    let cleaned = w
         .h
         .db
         .count(&format!(
-            "SELECT count(*) FROM honeypot_hits WHERE message_id = {message} AND cleanup_failed_at IS NOT NULL"
+            "SELECT count(*) FROM honeypot_hits WHERE message_id = {message} AND cleaned_up_at IS NOT NULL"
         ))
         .await?;
-    assert_eq!(failed, 1, "recorded for staff");
+    assert_eq!(cleaned, 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_post_still_saving_after_the_wait_is_deleted() -> Result<()> {
+    let w = world().await?;
+    let (message, _) = w.post(MEMBER).await?;
+    w.h.run_one(JobKind::HoneypotCase)
+        .await?
+        .context("the case job ran")?;
+    // The capture is stuck; the cleanup has waited its ten minutes.
+    w.h.db
+        .execute("DELETE FROM jobs WHERE kind = 'capture_evidence'")
+        .await?;
+    w.h.db
+        .execute("UPDATE jobs SET created_at = now() - interval '11 minutes' WHERE kind = 'honeypot_cleanup'")
+        .await?;
+    w.h.run_one(JobKind::HoneypotCleanup)
+        .await?
+        .context("the cleanup ran")?;
+    assert!(!w.exists(message));
     Ok(())
 }
 
