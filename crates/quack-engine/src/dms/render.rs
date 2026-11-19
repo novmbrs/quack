@@ -34,7 +34,7 @@ pub(super) async fn render(engine: &Engine, dm: &Dm) -> Result<Option<Rendered>,
         let Some(transcript) = tickets::transcript(&mut conn, dm.guild, ticket).await? else {
             return Ok(None);
         };
-        let name = format!("transcript-{}.txt", ticket.to_u22());
+        let name = quack_core::modules::ticket_transcript_name(ticket);
         return Ok(Some(Rendered {
             msg: quack_text::ticket::closed_dm(&server, &name),
             files: vec![OutgoingFile {

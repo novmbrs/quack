@@ -237,6 +237,12 @@ pub fn ticket_thread_name(id: TicketId) -> String {
     format!("ticket-{}", id.to_u22())
 }
 
+/// A ticket transcript's file name, the same in the member's DM and the
+/// staff post (§13.2.4).
+pub fn ticket_transcript_name(id: TicketId) -> String {
+    format!("transcript-{}.txt", id.to_u22())
+}
+
 str_enum! {
     /// A honeypot hit's state (`honeypot_hit_state`).
     pub enum HoneypotHitState {

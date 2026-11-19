@@ -161,6 +161,63 @@ async fn files_go_as_multipart_and_edits_keep_or_replace_them() {
     keep.assert_async().await;
 }
 
+/// A Components V2 message keeps only the files a File component names:
+/// an edit that uploads a file, and a later one that keeps it, both send
+/// the component with the file's `attachment://` name.
+#[tokio::test]
+async fn a_v2_edit_names_the_file_it_uploads_or_keeps() {
+    let server = MockServer::start_async().await;
+    let replace = server
+        .mock_async(|when, then| {
+            when.method("PATCH")
+                .path("/api/v10/channels/5/messages/10")
+                .header_prefix("content-type", "multipart/form-data; boundary=")
+                .body_includes(r#""attachments":[{"id":0,"filename":"transcript.txt"}]"#)
+                .body_includes(r#""url":"attachment://transcript.txt""#)
+                .body_includes(r#"name="files[0]"; filename="transcript.txt""#);
+            then.status(200).json_body(fixtures::message(10, 5));
+        })
+        .await;
+    let keep = server
+        .mock_async(|when, then| {
+            when.method("PATCH")
+                .path("/api/v10/channels/6/messages/11")
+                .json_body_includes(r#"{"attachments": [{"id": "77"}], "flags": 32768}"#)
+                .body_includes(r#""url":"attachment://transcript.txt""#);
+            then.status(200).json_body(fixtures::message(11, 6));
+        })
+        .await;
+    let client = client(&server.base_url());
+    let msg = Msg::text(Tone::Neutral, Text::fixed("The transcript is attached."))
+        .block(quack_text::Block::File("transcript.txt".into()));
+    let body = MessageBody::rendered(render(&msg, &quack_text::CommandIds::EMPTY));
+    let file = OutgoingFile {
+        name: "transcript.txt".into(),
+        content_type: Some("text/plain; charset=utf-8".into()),
+        bytes: b"Ticket transcript".to_vec(),
+    };
+    let replaced = client
+        .edit(
+            c(5),
+            MessageId::new(10).unwrap(),
+            &body,
+            &FileEdit::Replace(file),
+        )
+        .await;
+    assert!(replaced.is_done());
+    let kept = client
+        .edit(
+            c(6),
+            MessageId::new(11).unwrap(),
+            &body,
+            &FileEdit::Keep(AttachmentId::new(77).unwrap()),
+        )
+        .await;
+    assert!(kept.is_done());
+    replace.assert_async().await;
+    keep.assert_async().await;
+}
+
 #[tokio::test]
 async fn interaction_responses_use_the_token_and_no_bot_auth() {
     let server = MockServer::start_async().await;

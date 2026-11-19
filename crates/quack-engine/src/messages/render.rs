@@ -163,18 +163,20 @@ async fn ticket_post(
     };
     let transcript = tickets::transcript(conn, guild, ticket).await?;
     let mut attach = None;
+    let name = quack_core::modules::ticket_transcript_name(ticket);
     // A kept attachment belongs to the posted message; a post being made
-    // again (no message yet) uploads its own.
+    // again (no message yet) uploads its own. Either way the post names
+    // the file in a File component, or Discord drops it (Components V2).
     let kept = row.attachment_id.filter(|_| row.message.is_some());
     let place = match (&transcript, kept) {
-        (_, Some(_)) => TranscriptPlace::Attached,
+        (_, Some(_)) => TranscriptPlace::Attached(name),
         (Some(saved), None) => {
             attach = Some(OutgoingFile {
-                name: format!("transcript-{}.txt", ticket.to_u22()),
+                name: name.clone(),
                 content_type: Some("text/plain; charset=utf-8".to_owned()),
                 bytes: saved.content.clone().into_bytes(),
             });
-            TranscriptPlace::Attached
+            TranscriptPlace::Attached(name)
         }
         (None, None) => TranscriptPlace::NotYet,
     };

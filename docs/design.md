@@ -1042,7 +1042,7 @@ first, keyset pages (§14.1), items with `text` and `links`.
 | `wanted_revision`, `posted_revision`, `wanted_at` | Wanted vs on Discord; lag. |
 | `private`, `interaction_token`, `token_expires_at` | Private receipts are edited only via the token (15 min − 60 s). |
 | `state`, `stale` | `active`/`gone`; ≤ 5 old locations to clean up (oldest dropped). |
-| `create_started_at`, `attachment_id`, `last_error` | Create window (§10.4); transcript kept on edits; machine code of the last failure, never shown. |
+| `create_started_at`, `attachment_id`, `last_error` | Create window (§10.4); the transcript, kept on edits by id and named in a File component (§11.11); machine code of the last failure, never shown. |
 
 ### 10.2 Bumping
 
@@ -1451,6 +1451,14 @@ or text, then trailing fields, and appends the message's own note or
 mentions never ping except the ticket welcome's. Labels: buttons ≤ 80,
 select options ≤ 100, modal titles and labels ≤ 45. Channel message edits
 also send `"content": null` and `"embeds": []` (§17.3).
+
+A Components V2 message keeps only the files a File component names
+(`attachment://<name>`); an unnamed upload is dropped, and so is a kept
+attachment an edit doesn't name. So a message that carries a file names
+it in its `Msg` every time: the ticket post's first edit uploads the
+transcript with a File component, and every later edit lists it in
+`attachments` (`[{id}]`) and names it again. The post says "The
+transcript is attached." only with that File component.
 
 
 ## 12. Message catalog

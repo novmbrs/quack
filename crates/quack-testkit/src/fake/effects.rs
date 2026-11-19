@@ -48,6 +48,7 @@ pub(super) fn send(
     let id = MessageId::new(w.next_id()).unwrap_or_else(|| unreachable!());
     let attachments: Vec<FetchedAttachment> = files
         .iter()
+        .filter(|f| shows_file(msg, &f.name))
         .map(|f| {
             let aid = AttachmentId::new(w.next_id()).unwrap_or_else(|| unreachable!());
             FetchedAttachment {
@@ -106,16 +107,52 @@ pub(super) fn edit(
     }
     found.msg = Some(msg.clone());
     found.fetched.edited_at = Some(OffsetDateTime::now_utc());
-    let attachments = match files {
-        FileEdit::Replace(f) => vec![(f.name.clone(), first_attachment(message))],
-        FileEdit::Keep(a) => vec![(String::new(), *a)],
-        FileEdit::None => Vec::new(),
+    let kept: Vec<FetchedAttachment> = match files {
+        FileEdit::Replace(f) => {
+            let id = first_attachment(message);
+            vec![FetchedAttachment {
+                id,
+                filename: f.name.clone(),
+                content_type: f.content_type.clone(),
+                size_bytes: u64::try_from(f.bytes.len()).unwrap_or(u64::MAX),
+                url: format!("https://cdn.discordapp.com/attachments/{id}/{}", f.name),
+            }]
+        }
+        // Only an attachment the message still has can be kept.
+        FileEdit::Keep(a) => found
+            .fetched
+            .attachments
+            .iter()
+            .filter(|f| f.id == *a)
+            .cloned()
+            .collect(),
+        FileEdit::None => found.fetched.attachments.clone(),
     };
+    found.fetched.attachments = kept
+        .into_iter()
+        .filter(|f| shows_file(msg, &f.filename))
+        .collect();
     Outcome::Done(SentMessage {
         channel_id: channel,
         message_id: message,
-        attachments,
+        attachments: found
+            .fetched
+            .attachments
+            .iter()
+            .map(|a| (a.filename.clone(), a.id))
+            .collect(),
     })
+}
+
+/// Whether Discord keeps a file named `name` on this message: a Components
+/// V2 message (one with any text or controls) keeps only the files a File
+/// component names; a message of files alone keeps them all.
+fn shows_file(msg: &Msg, name: &str) -> bool {
+    (msg.blocks.is_empty() && msg.rows.is_empty())
+        || msg
+            .blocks
+            .iter()
+            .any(|b| matches!(b, quack_text::Block::File(n) if n == name))
 }
 
 fn first_attachment(message: MessageId) -> AttachmentId {

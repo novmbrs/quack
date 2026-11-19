@@ -49,6 +49,47 @@ async fn the_member_closes_and_gets_the_transcript() -> Result<()> {
     Ok(())
 }
 
+/// The staff post's transcript file and whether its message shows it in a
+/// File component (Discord drops an unnamed file from a V2 message).
+fn staff_post_file(w: &common::World) -> Vec<(String, bool)> {
+    w.h.fake.world(|world| {
+        world
+            .sent_to(w.queue)
+            .iter()
+            .flat_map(|m| {
+                m.fetched.attachments.iter().map(|a| {
+                    let shown = m.msg.as_ref().is_some_and(|msg| {
+                        msg.blocks
+                            .iter()
+                            .any(|b| matches!(b, quack_text::Block::File(n) if *n == a.filename))
+                    });
+                    (a.filename.clone(), shown)
+                })
+            })
+            .collect()
+    })
+}
+
+#[tokio::test]
+async fn the_staff_post_carries_the_transcript_across_edits() -> Result<()> {
+    let w = world().await?;
+    let t = w.opened(M).await?;
+    w.say(&t, M, "Hello").await?;
+    w.close_as(&t, M).await?;
+    w.h.settle().await?;
+    let first = staff_post_file(&w);
+    assert_eq!(first.len(), 1, "the transcript is on the post: {first:?}");
+    assert!(first[0].1, "a File component shows it");
+    // A later edit keeps the same file.
+    let mut tx = w.h.engine.db().begin().await?;
+    quack_db::messages::bump(&mut tx, w.h.guild, quack_db::messages::Owner::Ticket(t.id)).await?;
+    tx.commit().await?;
+    w.h.settle().await?;
+    assert_eq!(staff_post_file(&w), first, "kept across edits");
+    assert!(w.h.fake.count(Call::Edit) >= 2);
+    Ok(())
+}
+
 #[tokio::test]
 async fn who_may_close() -> Result<()> {
     let w = world().await?;

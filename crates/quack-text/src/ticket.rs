@@ -96,12 +96,14 @@ pub fn close_button(ticket: TicketId) -> Button {
 }
 
 /// How the staff post points at the transcript.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TranscriptPlace {
     /// Not saved yet.
     NotYet,
-    /// Attached to the post.
-    Attached,
+    /// Attached to the post as the file with this name: the post shows it
+    /// in a File component, which a Components V2 message needs to keep
+    /// the file at all.
+    Attached(String),
     /// On the dashboard until this time.
     Dashboard(OffsetDateTime),
     /// Kept until this time and deleted since.
@@ -182,24 +184,28 @@ pub fn post(p: &TicketPost) -> Msg {
     };
     msg = msg.para(state);
     if p.state == TicketState::Closed && !p.open_failed {
-        match p.transcript {
+        match &p.transcript {
             TranscriptPlace::NotYet => {
                 msg = msg.para(Text::fixed(
                     "Quack couldn't save a transcript for this ticket.",
                 ));
             }
-            TranscriptPlace::Attached => msg = msg.para(Text::fixed("The transcript is attached.")),
+            TranscriptPlace::Attached(file) => {
+                msg = msg
+                    .para(Text::fixed("The transcript is attached."))
+                    .block(Block::File(file.clone()));
+            }
             TranscriptPlace::Dashboard(until) => {
                 msg = msg.para(
                     Text::fixed("The transcript is available on the dashboard until ")
-                        .time(until, TimeStyle::Date)
+                        .time(*until, TimeStyle::Date)
                         .s("."),
                 );
             }
             TranscriptPlace::Expired(until) => {
                 msg = msg.para(
                     Text::fixed("The transcript expired on ")
-                        .time(until, TimeStyle::Date)
+                        .time(*until, TimeStyle::Date)
                         .s("."),
                 );
             }

@@ -121,7 +121,7 @@ fn tickets() -> Vec<Sample> {
             TicketPost {
                 state: TicketState::Closed,
                 closed: closed.clone(),
-                transcript: TranscriptPlace::Attached,
+                transcript: TranscriptPlace::Attached("transcript.txt".to_owned()),
                 ..ticket_post()
             },
         ),
