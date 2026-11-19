@@ -2595,7 +2595,8 @@ a grace period of at least 35 s):
    activity log's batches and queue.
 4. Abort the rest, close the Discord client (§16.7), close the pool and
    release the fence.
-5. Flush telemetry (≤ 5 s); exit 0 (1 after a lost fence or gateway).
+5. Flush telemetry (≤ 5 s; a failed or late flush logs a warning to
+   stderr); exit 0 (1 after a lost fence or gateway).
 
 ### 17.6 Caches and invalidation
 

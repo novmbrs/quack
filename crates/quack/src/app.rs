@@ -64,11 +64,15 @@ pub fn run(cli: Cli) -> ExitCode {
                 ExitCode::FAILURE
             }
         };
-        if let Err(error) =
-            tokio::task::spawn_blocking(move || telemetry.with_deadline(FLUSH_DEADLINE).shutdown())
-                .await
+        // Logs still reach stderr after the exporters stop.
+        match tokio::task::spawn_blocking(move || {
+            telemetry.with_deadline(FLUSH_DEADLINE).shutdown()
+        })
+        .await
         {
-            eprintln!("quack: couldn't flush telemetry: {error}");
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => tracing::warn!(%error, "couldn't flush telemetry"),
+            Err(error) => tracing::warn!(%error, "couldn't flush telemetry"),
         }
         code
     })
