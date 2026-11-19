@@ -129,6 +129,7 @@
 
 .components {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
 }
@@ -138,6 +139,7 @@
   align-items: center;
   height: 32px;
   padding-inline: 16px;
+  white-space: nowrap;
   border-radius: 8px;
   background: var(--dc-blurple);
   color: #fff;

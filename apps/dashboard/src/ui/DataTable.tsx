@@ -20,6 +20,8 @@ export type ColumnMeta = {
   align?: "start" | "end";
   /** Hidden below 860px wide, for secondary columns. */
   hideOnMobile?: boolean;
+  /** Hidden below 1280px wide, for columns that crowd a wide table. */
+  hideWhenNarrow?: boolean;
 };
 
 /**
@@ -44,24 +46,30 @@ export function DataTable<T extends RowData>({
   onRowClick,
   empty,
   dim,
+  minWidth,
 }: {
   table: ReactTable<Features, T>;
   onRowClick?: (row: T, newTab: boolean) => void;
   empty?: ReactNode;
   /** Fades rows while a new page loads over the old one. */
   dim?: boolean;
+  /** Narrowest the table gets before it scrolls sideways, in pixels. */
+  minWidth?: number;
 }) {
   const rows = table.getRowModel().rows;
   if (rows.length === 0 && empty) return <>{empty}</>;
 
   return (
     <div className={s.wrap}>
-      <table className={cx(s.table, dim && s.dim)}>
+      <table className={cx(s.table, dim && s.dim)} style={{ minWidth }}>
         <colgroup>
           {table.getAllLeafColumns().map((column) => (
             <col
               key={column.id}
-              className={cx(column.columnDef.meta?.hideOnMobile && s.mobileHidden)}
+              className={cx(
+                column.columnDef.meta?.hideOnMobile && s.mobileHidden,
+                column.columnDef.meta?.hideWhenNarrow && s.narrowHidden,
+              )}
               style={{ width: column.columnDef.meta?.width ?? "auto" }}
             />
           ))}
@@ -79,6 +87,7 @@ export function DataTable<T extends RowData>({
                       s.th,
                       meta?.align === "end" && s.end,
                       meta?.hideOnMobile && s.mobileHidden,
+                      meta?.hideWhenNarrow && s.narrowHidden,
                     )}
                   >
                     {header.isPlaceholder ? null : <table.FlexRender header={header} />}
@@ -113,6 +122,7 @@ export function DataTable<T extends RowData>({
                         s.td,
                         meta?.align === "end" && s.end,
                         meta?.hideOnMobile && s.mobileHidden,
+                        meta?.hideWhenNarrow && s.narrowHidden,
                       )}
                     >
                       <table.FlexRender cell={cell} />

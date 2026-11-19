@@ -37,7 +37,7 @@ export function caseColumns(guildId: string, { member = true }: { member?: boole
       ? [
           col.accessor("member_id", {
             header: "Member",
-            meta: { width: "24%" },
+            meta: { width: "20%" },
             cell: (c) => <UserChip guildId={guildId} userId={c.getValue()} />,
           }),
         ]
@@ -64,7 +64,7 @@ export function caseColumns(guildId: string, { member = true }: { member?: boole
     col.display({
       id: "outcome",
       header: "Outcome",
-      meta: { width: 190 },
+      meta: { width: 160 },
       cell: (c) =>
         c.row.original.voided_at ? (
           <Badge tone="neutral" dot>
@@ -76,12 +76,12 @@ export function caseColumns(guildId: string, { member = true }: { member?: boole
     }),
     col.accessor("moderator_id", {
       header: "Moderator",
-      meta: { width: "18%", hideOnMobile: true },
+      meta: { width: "18%", hideWhenNarrow: true },
       cell: (c) => <UserChip guildId={guildId} userId={c.getValue()} size={20} />,
     }),
     col.accessor("created_at", {
       header: "When",
-      meta: { width: 140, align: "end", hideOnMobile: true },
+      meta: { width: 120, align: "end", hideOnMobile: true },
       cell: (c) => (
         <time dateTime={c.getValue()} title={fullDate(c.getValue())} className={s.sub}>
           {ago(c.getValue())}

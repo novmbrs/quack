@@ -187,6 +187,7 @@ function Cases() {
           <DataTable
             table={table}
             dim={cases.isPlaceholderData}
+            minWidth={560}
             onRowClick={(row, newTab) => {
               if (newTab) {
                 window.open(`/guilds/${guildId}/cases/${row.number}`, "_blank");

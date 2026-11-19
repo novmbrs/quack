@@ -44,8 +44,8 @@ function filters(q: AppealSearch): AppealFilters {
 }
 
 const tabs: { value: FilterTab; label: string }[] = [
-  { value: "pending", label: "Waiting for a decision" },
-  { value: "needs_information", label: "Waiting for the member" },
+  { value: "pending", label: "To decide" },
+  { value: "needs_information", label: "Awaiting reply" },
   { value: "decided", label: "Decided" },
   { value: "all", label: "All" },
 ];

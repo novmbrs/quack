@@ -1,5 +1,8 @@
 .group {
   display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: 2px;
   padding: 3px;
   border: 1px solid var(--border);
@@ -11,8 +14,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
   height: 30px;
   padding-inline: 12px;
+  white-space: nowrap;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -40,6 +45,7 @@
 
 .count {
   min-width: 18px;
+  text-align: center;
   padding-inline: 5px;
   border-radius: var(--radius-full);
   background: var(--danger-strong);
