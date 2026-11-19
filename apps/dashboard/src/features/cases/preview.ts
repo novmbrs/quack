@@ -1,9 +1,9 @@
 import type { CasePreview } from "~/api/types";
-import { capitalize, last, levelName, levelOutcome } from "~/lib/format";
+import { capitalize, countedCase, last, levelName, levelOutcome } from "~/lib/format";
 
 /**
  * describePreview words the server's case preview (design §14.3 route 58):
- * what the level does, which level it is, and the case count it comes from.
+ * what the level does, which level it is, and which counted case this is.
  */
 export function describePreview(p: CasePreview): { title: string; level: string; detail: string } {
   const window = p.counting_window_days
@@ -13,6 +13,6 @@ export function describePreview(p: CasePreview): { title: string; level: string;
   return {
     title: capitalize(levelOutcome(p.level.action)),
     level: levelName(p.level_index, p.level.from_case_count),
-    detail: `Case count ${p.case_count.toLocaleString()} with this case${window}. ${dm}`,
+    detail: `This will be ${countedCase(p.case_count)}${window}. ${dm}`,
   };
 }

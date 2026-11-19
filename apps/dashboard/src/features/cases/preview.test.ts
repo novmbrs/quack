@@ -26,7 +26,7 @@ describe("describePreview", () => {
       title: "Timeout for 1 hour",
       level: "Level 2 (starts at 3 cases)",
       detail:
-        "Case count 3 with this case, counting cases from the last 30 days. The member gets a DM.",
+        "This will be their 3rd counted case under this rule, counting cases from the last 30 days. The member gets a DM.",
     });
   });
 
@@ -39,6 +39,8 @@ describe("describePreview", () => {
       level: { from_case_count: 1, send_dm: false, action: null },
     });
     expect(d.title).toBe("Warning");
-    expect(d.detail).toBe("Case count 1 with this case. This level doesn't send a DM.");
+    expect(d.detail).toBe(
+      "This will be their 1st counted case under this rule. This level doesn't send a DM.",
+    );
   });
 });

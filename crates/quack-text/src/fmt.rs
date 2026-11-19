@@ -157,9 +157,27 @@ pub fn case_ref(number: u64) -> String {
     format!("case #{number}")
 }
 
-/// "level 2 (from a case count of 3)": "case 3" would read as case #3.
-pub fn level(index: u16, from_case_count: u32) -> String {
-    format!("level {index} (from a case count of {from_case_count})")
+/// "1st", "2nd", "3rd", "4th", "11th", "21st".
+pub fn ordinal(n: u64) -> String {
+    let suffix = match (n % 10, n % 100) {
+        (_, 11..=13) => "th",
+        (1, _) => "st",
+        (2, _) => "nd",
+        (3, _) => "rd",
+        _ => "th",
+    };
+    format!("{n}{suffix}")
+}
+
+/// A case's level and case count, read at a glance: "level 1 · their 2nd
+/// counted case under this rule" (`case.level_and_count`). The case count
+/// reads as an ordinal, so it never sits beside the level's starting count
+/// as a second, different "case count".
+pub fn level_and_count(level_index: u16, case_count: u32, separator: &str) -> String {
+    format!(
+        "level {level_index}{separator}their {} counted case under this rule",
+        ordinal(u64::from(case_count))
+    )
 }
 
 /// Joins items as "a", "a and b", or "a, b, and c" (`last` is "and" or "or").
@@ -295,7 +313,18 @@ mod tests {
         assert_eq!(bytes(512), "512 bytes");
         assert_eq!(bytes(1_536), "1.5 KB");
         assert_eq!(bytes(8 * 1_024 * 1_024), "8 MB");
-        assert_eq!(level(2, 3), "level 2 (from a case count of 3)");
+        assert_eq!(
+            level_and_count(1, 2, " · "),
+            "level 1 · their 2nd counted case under this rule"
+        );
+        let ordinals = [1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111, 1_000].map(ordinal);
+        assert_eq!(
+            ordinals,
+            [
+                "1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st",
+                "111th", "1000th"
+            ]
+        );
     }
 
     #[test]

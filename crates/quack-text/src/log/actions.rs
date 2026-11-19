@@ -53,8 +53,8 @@ pub(super) fn case_created(d: &CaseCreatedDetail, f: &LogFacts) -> Text {
                 .s(" under "),
         )
         .s(format!(
-            " (level {}, case count {}).",
-            d.level_index, d.case_count
+            " ({}).",
+            crate::fmt::level_and_count(d.level_index, d.case_count, ", ")
         ))
     };
     let t = t.s(" ").s(outcome);

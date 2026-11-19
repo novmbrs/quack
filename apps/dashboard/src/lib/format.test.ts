@@ -7,6 +7,7 @@ import {
   humanize,
   isSnowflake,
   last,
+  countedCase,
   levelName,
   levelOutcome,
   levelSummary,
@@ -49,6 +50,10 @@ describe("levels", () => {
   it("names a level by position and start", () => {
     expect(levelName(2, 3)).toBe("Level 2 (starts at 3 cases)");
     expect(levelName(1, 1)).toBe("Level 1 (starts at 1 case)");
+  });
+  it("words a case count as an ordinal", () => {
+    expect(countedCase(2)).toBe("their 2nd counted case under this rule");
+    expect(countedCase(11)).toBe("their 11th counted case under this rule");
   });
   it("says what a level does", () => {
     expect(levelOutcome(null)).toBe("warning");

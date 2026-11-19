@@ -16,6 +16,8 @@ import { voidCase } from "~/features/cases/writes";
 import { UserChip } from "~/features/people/User";
 import {
   appealMeta,
+  capitalize,
+  countedCase,
   dmOutcome,
   fullDate,
   levelName,
@@ -315,11 +317,7 @@ function sideDetails(guildId: string, c: Case) {
     c.case_count
       ? {
           label: "Case count",
-          value: `${c.case_count.toLocaleString()}${
-            c.level_index && c.level_from_case_count
-              ? ` · ${levelName(c.level_index, c.level_from_case_count)}`
-              : ""
-          }`,
+          value: capitalize(countedCase(c.case_count)),
         }
       : null,
     c.source !== "imported"

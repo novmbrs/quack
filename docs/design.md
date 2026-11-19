@@ -1519,7 +1519,12 @@ surface).
 ### 12.4 Case card and receipt
 
 `case.card.*` (in order: what staff act on before context, so trimming
-drops context first; ends with `case.card.trimmed` when cut),
+drops context first; ends with `case.card.trimmed` when cut). The card's
+member line reads "@Sam · level 1 · their 2nd counted case under this
+rule": the level by its position, the case count as an ordinal, so the
+level's starting count never sits beside the case count as a second,
+different "case count" (the log line and the dashboard say it the same
+way; the dashboard's level label keeps "starts at N cases"),
 `case.receipt.*` (`case.receipt.action_lifted`: a voided case's action line
 once its unban or timeout removal is done), `case.button.*`,
 `case.saved_unconfirmed`.
@@ -1569,7 +1574,8 @@ the entry's appeal ("Open appeal"), failed actions for a failed action
 ("Open failed actions"), its case ("Open case"), its rule ("Open rule"),
 settings for a settings change ("Open settings"), else the log ("Open
 moderation log"); failed and refused entries are red.
-Example: "Ana added case #12 for Sam under Spam (level 2, case count 4).
+Example: "Ana added case #12 for Sam under Spam (level 2, their 4th
+counted case under this rule).
 Action for this case: timeout for 1 hour." `log.*`: one per §9.2 kind;
 `log.action_failed` opens with "Quack couldn't confirm whether Discord …"
 when its detail's `may_have_applied` is true (absent reads false).

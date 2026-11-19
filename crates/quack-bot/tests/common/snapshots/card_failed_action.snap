@@ -4,7 +4,7 @@ expression: text
 ---
 [danger]
 Case #1 · Timeouts
-A member (ID 40) · level 1 (from a case count of 1) · case count 1
+A member (ID 40) · level 1 · their 1st counted case under this rule
 > Please follow the server rules.
 Action: Quack couldn't time out a member (ID 40). Discord didn't allow it. Check Quack's role and permissions in Server Settings → Roles.
 To try again, select Retry timeout. To take it off the failed actions list, select Dismiss failed timeout.

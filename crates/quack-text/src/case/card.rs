@@ -86,7 +86,8 @@ pub struct CaseCard {
     pub source: CaseSource,
     /// The 1-based level.
     pub level_index: u16,
-    /// The level's starting case count.
+    /// The level's starting case count (the card names the level by its
+    /// position and the case count by its ordinal instead).
     pub level_from: u32,
     /// The case count including this case.
     pub case_count: u32,
@@ -312,9 +313,8 @@ pub fn card(c: &CaseCard) -> Msg {
         Text::new().person(&c.member).s(" · imported from Quack v4")
     } else {
         Text::new().person(&c.member).s(format!(
-            " · {} · case count {}",
-            fmt::level(c.level_index, c.level_from),
-            c.case_count
+            " · {}",
+            fmt::level_and_count(c.level_index, c.case_count, " · ")
         ))
     });
     msg = msg.block(Block::Quote(Text::new().user(&c.reason)));

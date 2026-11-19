@@ -4,7 +4,7 @@ expression: text
 ---
 [success]
 Case #1 · Timeouts
-A member (ID 40) · level 1 (from a case count of 1) · case count 1
+A member (ID 40) · level 1 · their 1st counted case under this rule
 > Please follow the server rules.
 Action: Quack set a member (ID 40)'s timeout to end [date].
 DM: Quack sent a member (ID 40) a DM about case #1.

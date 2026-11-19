@@ -5,7 +5,7 @@ source: crates/quack-text/src/tests/snapshots.rs
 tone: Neutral
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** This case is a warning.
 **DM:** Quack sent <@222> a DM about case #12.
@@ -13,14 +13,14 @@ tone: Neutral
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: This case is a warning.
 DM: Quack sent Sam a DM about case #12.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("This case is a warning.")]
 Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12.")]
@@ -30,7 +30,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Success
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 2 (from a case count of 3) · case count 3
+<@222> · level 2 · their 3rd counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack set <@222>'s timeout to end <t:1795014309:f> (<t:1795014309:R>).
 **DM:** Quack couldn't send <@222> a DM about case #12. Discord didn't allow the DM. <@222> can sign in to the Quack dashboard to see the case.
@@ -49,7 +49,7 @@ buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-
 buttons: [Remove timeout · Danger] UndoAction(ActionId(01930000-0000-7000-8000-000000000003)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 2 (from a case count of 3) · case count 3
+Sam · level 2 · their 3rd counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack set Sam's timeout to end 18 Nov 2026 at 15:05 UTC.
 DM: Quack couldn't send Sam a DM about case #12. Discord didn't allow the DM. Sam can sign in to the Quack dashboard to see the case.
@@ -64,7 +64,7 @@ Message link: https://discord.com/channels/1/2/3
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 2 (from a case count of 3) · case count 3")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 2 · their 3rd counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack set "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout to end "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
 Field "DM" [Fixed("Quack couldn't send "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12. Discord didn't allow the DM. "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" can sign in to the Quack dashboard to see the case.")]
@@ -82,7 +82,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Danger
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't ban <@222>. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
 To try again, select Retry ban. To take it off the failed actions list, select Dismiss failed ban.
@@ -94,7 +94,7 @@ buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000
 buttons: [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't ban Sam. Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.
 To try again, select Retry ban. To take it off the failed actions list, select Dismiss failed ban.
@@ -104,7 +104,7 @@ Evidence: Quack saved 2 evidence items. It couldn't save 1. Select View evidence
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't ban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Quack needs Ban Members. Ask an administrator to grant it to Quack's role in Server Settings → Roles.")]
 Text [Fixed("To try again, select Retry ban. To take it off the failed actions list, select Dismiss failed ban.")]
@@ -117,7 +117,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Neutral
 --- discord ---
 ### Case #12 · **Spam** · Voided
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack banned <@222>.
 **Undo:** Quack will try to unban <@222> again <t:1795014309:R>.
@@ -131,7 +131,7 @@ Replaces case #9.
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam · Voided
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack banned Sam.
 Undo: Quack will try to unban Sam again on 18 Nov 2026 at 15:05 UTC.
@@ -144,7 +144,7 @@ Evidence: Saving evidence…
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")]), Fixed(" · Voided")]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
 Field "Undo" [Fixed("Quack will try to unban "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" again "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
@@ -160,7 +160,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Success
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack removed <@222> from the server.
 **DM:** This level doesn't send a DM.
@@ -168,14 +168,14 @@ tone: Success
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack removed Sam from the server.
 DM: This level doesn't send a DM.
 Added by Quack on 17 Nov 2026 at 14:05 UTC after a post in the honeypot channel
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack removed "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" from the server.")]
 Field "DM" [Fixed("This level doesn't send a DM.")]
@@ -207,7 +207,7 @@ Subtext [Fixed("Imported "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fi
 tone: Neutral
 --- discord ---
 ### Case #12 · **Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*** · Voided
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
 **Action:** Quack set <@222>'s timeout to end <t:1795014309:f> (<t:1795014309:R>).
 **Undo:** Quack couldn't remove <@222>'s timeout. Quack stopped trying after 8 attempts. Discord didn't apply it.
@@ -230,7 +230,7 @@ buttons: [Retry removing timeout · Primary] RetryAction(ActionId(01930000-0000-
 buttons: [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with * · Voided
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me
 Action: Quack set Sam's timeout to end 18 Nov 2026 at 15:05 UTC.
 Undo: Quack couldn't remove Sam's timeout. Quack stopped trying after 8 attempts. Discord didn't apply it.
@@ -256,7 +256,7 @@ Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *")]), Fixed(" · Voided")]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> me")]
 Field "Action" [Fixed("Quack set "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout to end "), Time(2026-11-18 15:05:09.0 +00:00:00, FullRelative), Fixed(".")]
 Field "Undo" [Fixed("Quack couldn't remove "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed("'s timeout. Quack stopped trying after 8 attempts. Discord didn't apply it.")]
@@ -285,7 +285,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Neutral
 --- discord ---
 ### Case #12 · **\@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example \# Heading \> quote \- list 1\. one hidden**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > \@everyone \<\@1\> \<\@&2\> \<\#3\> \*\*bold\*\* \_it\_ \~\~x\~\~ \|\|spoil\|\| \`code\` \[click\]\(https\://evil.example\) https\://evil.example
 > \# Heading
 > \> quote
@@ -305,7 +305,7 @@ hidden
 buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-000000000001)) | [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Member's case history · Secondary] History { member: MemberId(222), page: 1 } | [Void case · Danger] VoidCase(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden
-@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden · level 1 (from a case count of 1) · case count 1
+@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example # Heading > quote - list 1. one hidden · level 1 · their 1st counted case under this rule
 > @everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example
 > # Heading
 > > quote
@@ -324,7 +324,7 @@ hidden
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")])]
-Text [Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}")]
 Field "Action" [Fixed("This case is a warning.")]
 Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("@everyone <@1> <@&2> <#3> **bold** _it_ ~~x~~ ||spoil|| `code` [click](https://evil.example) https://evil.example\n# Heading\n> quote\n- list\n1. one\n\u{200b}hid\u{202e}den\u{2066}") }), Fixed(" a DM about case #12.")]
@@ -336,7 +336,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Danger
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord.
 **DM:** Quack sent <@222> a DM about case #12.
@@ -345,14 +345,14 @@ buttons: [Edit context · Secondary] EditContext(CaseId(01930000-0000-7000-8000-
 buttons: [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't confirm whether Discord banned Sam. Check Server Settings → Bans in Discord.
 DM: Quack sent Sam a DM about case #12.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord.")]
 Field "DM" [Fixed("Quack sent "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" a DM about case #12.")]
@@ -362,7 +362,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Danger
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord.
 To try again, select Retry ban.
@@ -372,7 +372,7 @@ buttons: [Retry ban · Primary] RetryAction(ActionId(01930000-0000-7000-8000-000
 buttons: [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't confirm whether Discord banned Sam. Check Server Settings → Bans in Discord.
 To try again, select Retry ban.
@@ -380,7 +380,7 @@ DM: Quack sent Sam a DM about case #12.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord.")]
 Text [Fixed("To try again, select Retry ban.")]
@@ -391,7 +391,7 @@ Subtext [Fixed("Added by "), Person(Person { id: AccountId(333), name: Some("Ana
 tone: Danger
 --- discord ---
 ### Case #12 · **Spam**
-<@222> · level 1 (from a case count of 1) · case count 1
+<@222> · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 **Action:** Quack couldn't confirm whether Discord banned <@222>. Check Server Settings → Bans in Discord.
 To take this failure off the failed actions list, select Dismiss failed ban. The case keeps its history.
@@ -401,7 +401,7 @@ buttons: [Dismiss failed ban · Secondary] DismissAction(ActionId(01930000-0000-
 buttons: [View failed actions](https://quack.example/guilds/111/failures) | [Open case on dashboard](https://quack.example/guilds/111/cases/12)
 --- plain ---
 Case #12 · Spam
-Sam · level 1 (from a case count of 1) · case count 1
+Sam · level 1 · their 1st counted case under this rule
 > Posting spam or unsolicited advertising.
 Action: Quack couldn't confirm whether Discord banned Sam. Check Server Settings → Bans in Discord.
 To take this failure off the failed actions list, select Dismiss failed ban. The case keeps its history.
@@ -409,7 +409,7 @@ DM: Quack sent Sam a DM about case #12.
 Added by Ana on 17 Nov 2026 at 14:05 UTC
 --- model ---
 Heading [Fixed("Case #12 · "), Bold([User("Spam")])]
-Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 (from a case count of 1) · case count 1")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · level 1 · their 1st counted case under this rule")]
 Quote [User("Posting spam or unsolicited advertising.")]
 Field "Action" [Fixed("Quack couldn't confirm whether Discord banned "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(". Check Server Settings → Bans in Discord.")]
 Text [Fixed("To take this failure off the failed actions list, select Dismiss failed ban. The case keeps its history.")]

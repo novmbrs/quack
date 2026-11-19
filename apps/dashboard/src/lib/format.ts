@@ -156,6 +156,15 @@ export const modLogResultTone: Record<ModLogResult, Tone> = {
 };
 
 /**
+ * countedCase words a case count as an ordinal, so it never reads as a
+ * second number beside a level's start (design §12.4): "their 2nd counted
+ * case under this rule".
+ */
+export function countedCase(caseCount: number): string {
+  return `their ${ordinal(caseCount)} counted case under this rule`;
+}
+
+/**
  * levelName names a level by its position and where it starts, since levels
  * have no names: "Level 2 (starts at 3 cases)". index is 1-based.
  */
