@@ -669,14 +669,22 @@ fn remove_timeout_checks_provenance() {
         Plan::Finish(AttemptResult::NoChange)
     );
     assert_eq!(plan(Some(&with(Some(end)))), Plan::Call);
-    assert_eq!(
-        plan(Some(&with(Some(end + Duration::milliseconds(300))))),
-        Plan::Call
-    );
-    assert_eq!(
-        plan(Some(&with(Some(end + Duration::seconds(1))))),
-        Plan::Finish(AttemptResult::ChangedOutsideCase)
-    );
+    // Discord may keep the end at another precision than the whole
+    // seconds Quack sent: within a second either way is this case's.
+    for near in [
+        end + Duration::milliseconds(300),
+        end - Duration::microseconds(1),
+        end - Duration::milliseconds(999),
+    ] {
+        assert_eq!(plan(Some(&with(Some(near)))), Plan::Call, "{near}");
+    }
+    for other in [end + Duration::seconds(1), end - Duration::seconds(1)] {
+        assert_eq!(
+            plan(Some(&with(Some(other)))),
+            Plan::Finish(AttemptResult::ChangedOutsideCase),
+            "{other}"
+        );
+    }
 }
 
 #[test]

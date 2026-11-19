@@ -314,8 +314,10 @@ fn wrong_read(kind: ActionKind, event: &'static str) -> InvalidTransition {
 /// - Remove timeout: Discord's end is first cut to whole seconds (§5.2),
 ///   then: no timeout, or one that has ended → `no_change` (or
 ///   [`AttemptResult::OriginalUnresolved`] while the original's change may
-///   still land and its end is in the future); one whose end differs from
-///   this case's → `changed_outside_case`; equal → remove it.
+///   still land and its end is in the future); one whose end is a second
+///   or more from this case's → `changed_outside_case`; within a second
+///   (Discord's precision differs from the whole seconds Quack sent) →
+///   remove it.
 pub fn plan_from_member(
     target: &ActionTarget,
     member: Option<&MemberFacts>,
@@ -347,9 +349,9 @@ pub fn plan_from_member(
                 _ => Plan::Finish(AttemptResult::NoChange),
             }
         }
-        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until).map(seconds_only) {
-            Some(current) if current > now => match target.timeout_ends_at {
-                Some(end) if whole_seconds(current) == whole_seconds(end) => Plan::Call,
+        ActionKind::RemoveTimeout => match member.and_then(|m| m.timeout_until) {
+            Some(current) if seconds_only(current) > now => match target.timeout_ends_at {
+                Some(end) if (current - end).abs() < Duration::SECOND => Plan::Call,
                 _ => Plan::Finish(AttemptResult::ChangedOutsideCase),
             },
             _ if target.original_unresolved

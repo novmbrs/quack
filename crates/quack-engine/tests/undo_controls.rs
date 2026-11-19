@@ -86,6 +86,34 @@ async fn a_timeout_quack_placed_is_removed_on_void() -> Result<()> {
     Ok(())
 }
 
+/// Discord may report the end Quack sent at another precision (here a
+/// microsecond under it); the void still lifts the timeout.
+#[tokio::test]
+async fn a_timeout_discord_reports_at_another_precision_is_removed_on_void() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h.rule(one("Spam", TIMEOUT, false)).await?;
+    let created = h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+    let sent = h.fake.calls_of(Call::Timeout)[0].until.context("until")?;
+    assert_eq!(sent.nanosecond(), 0, "Quack sends whole seconds");
+    h.fake.world(|w| {
+        if let Some(m) = w.member_mut(h.guild, sf(MEMBER)) {
+            m.timeout_until = Some(sent - time::Duration::microseconds(1));
+        }
+    });
+    void(&h, created.case.id).await?;
+    h.settle().await?;
+    let undo = undo_of(&h, created.action.unwrap()).await?.unwrap();
+    assert_eq!(undo.state, ActionState::Done);
+    assert_eq!(h.fake.count(Call::RemoveTimeout), 1);
+    assert_eq!(
+        h.fake
+            .world(|w| w.member(h.guild, sf(MEMBER)).and_then(|m| m.timeout_until)),
+        None
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn a_ban_without_a_marker_is_left_in_place() -> Result<()> {
     let h = Harness::new().await?;

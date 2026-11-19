@@ -715,9 +715,13 @@ status and code), `retries_exhausted` (nothing may have applied),
    no timeout while the case's end is in the future) is `not_sent` and
    reads again on the backoff; a spent round is `original_unconfirmed`. An
    absent effect never finishes an undo while the original may still land.
-3. **Provenance** (Discord's end cut to whole seconds):
-   - `remove_timeout`: none or ended → `no_change`; another end →
-     `skipped` (`changed_outside_case`); equal → PATCH to null.
+3. **Provenance**:
+   - `remove_timeout`: none or ended (Discord's end cut to whole
+     seconds) → `no_change`; an end a second or more from the case's →
+     `skipped` (`changed_outside_case`); within a second either way →
+     PATCH to null. Quack keeps the whole-second end it sent, not the one
+     Discord echoes; the second of slack covers Discord keeping it at
+     another precision.
    - `unban`: no ban → `no_change`. Marker of this undo's case → remove
      (covers a manual undo of a valid case). Marker of another case →
      remove only if it is a **voided** case of this member with a ban
