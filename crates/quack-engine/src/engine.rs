@@ -7,6 +7,7 @@ use quack_db::Db;
 
 use crate::cache::RulesCache;
 use crate::config_cache::ConfigCache;
+use crate::names::NameCache;
 use crate::port::Discord;
 
 /// What the engine needs to know about its deployment.
@@ -20,7 +21,8 @@ pub struct EngineConfig {
     pub session_key_fingerprint: [u8; 8],
 }
 
-/// The database, the `Discord` port, the rules cache, and configuration.
+/// The database, the `Discord` port, the rules, config, and name caches,
+/// and configuration.
 /// Cheap to clone; every use case and job handler takes `&Engine`.
 #[derive(Clone)]
 pub struct Engine {
@@ -32,6 +34,7 @@ struct Inner {
     discord: Arc<dyn Discord>,
     rules: RulesCache,
     guild_config: ConfigCache,
+    names: NameCache,
     config: EngineConfig,
 }
 
@@ -54,6 +57,7 @@ impl Engine {
                 discord,
                 rules: RulesCache::new(),
                 guild_config: ConfigCache::new(),
+                names: NameCache::new(),
                 config,
             }),
         }
@@ -79,6 +83,11 @@ impl Engine {
     /// routing). Writes never rely on it.
     pub fn config_cache(&self) -> &ConfigCache {
         &self.inner.guild_config
+    }
+
+    /// Display names Discord gave recently, for dashboard sentences.
+    pub(crate) fn name_cache(&self) -> &NameCache {
+        &self.inner.names
     }
 
     /// The configuration.
