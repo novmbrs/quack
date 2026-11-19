@@ -47,7 +47,7 @@ jobs:
       deps: ${{ steps.pick.outputs.deps }}
       image: ${{ steps.pick.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         if: github.event_name != 'pull_request'
         with:
           filter: blob:none
@@ -111,7 +111,7 @@ jobs:
     runs-on: namespace-profile-nvmbr-md
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -170,7 +170,7 @@ jobs:
       QUACK_IMPORT_TEST_MYSQL_URL: mysql://root:root@127.0.0.1:3306
       QUACK_IMPORT_TEST_PG_URL: postgres://quack:quack@localhost:5432/quack
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -188,17 +188,19 @@ jobs:
     name: Dashboard
     needs: changes
     if: needs.changes.outputs.dashboard == 'true'
-    runs-on: namespace-profile-nvmbr-sm
+    # The linter reserves a large block of memory per thread before it
+    # starts and aborts on the 4 GB profile.
+    runs-on: namespace-profile-nvmbr-md
     timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/dashboard
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
           key: bun-${{ hashFiles('apps/dashboard/bun.lock') }}
@@ -223,7 +225,7 @@ jobs:
     runs-on: namespace-profile-nvmbr-sm
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
       - uses: taiki-e/install-action@v2
@@ -239,7 +241,7 @@ jobs:
     runs-on: namespace-profile-nvmbr-md
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           filter: blob:none
       - name: Build the image
