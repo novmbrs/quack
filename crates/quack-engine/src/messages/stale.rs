@@ -72,6 +72,9 @@ pub(super) async fn on_missing(
     if channel_failed && matches!(plan, MissingPlan::Repost(c) if Some(c) == row.channel) {
         return super::give_up(engine, job, row, "destination_unavailable").await;
     }
+    if plan == MissingPlan::BecomePrivate {
+        return become_private(engine, job, row).await;
+    }
     let mut tx = engine.db().begin().await?;
     let Some(locked) = messages::lock(&mut tx, row.guild, row.id).await? else {
         return finish(tx, job, JobResult::Done).await;
@@ -90,12 +93,8 @@ pub(super) async fn on_missing(
         MissingPlan::MarkGone => {
             messages::mark_gone(&mut tx, row.guild, row.id, row.generation).await?;
         }
-        MissingPlan::BecomePrivate => {
-            messages::make_private(&mut tx, row.guild, row.id, row.generation).await?;
-            fence(&mut tx, job).await?;
-            tx.commit().await?;
-            return become_private(engine, job, row).await;
-        }
+        // Handled above, before this transaction.
+        MissingPlan::BecomePrivate => return finish(tx, job, JobResult::Done).await,
     }
     let handled = finish(tx, job, JobResult::Done).await?;
     synced(row, Label::Skipped);
@@ -150,6 +149,11 @@ pub async fn message_deleted(
 
 /// The receipt Quack couldn't post becomes the moderator's private reply:
 /// the card with `case.receipt.post_failed` (§10.3).
+///
+/// The reply is edited first; only then are `private` and the posted
+/// revision recorded, together. So a retry after an edit whose result is
+/// unknown (or after a failed record) is still a public receipt and takes
+/// this path again, note included, instead of the plain private route.
 async fn become_private(
     engine: &Engine,
     job: &ClaimedJob,
@@ -159,10 +163,11 @@ async fn become_private(
         private: true,
         ..row.clone()
     };
-    let (Some((token, _)), Some(rendered)) =
-        (&row.interaction_token, render(engine, &private).await?)
-    else {
-        return Ok(Handled::Settle(JobResult::Done));
+    let Some((token, _)) = &row.interaction_token else {
+        return super::give_up(engine, job, row, "token_expired").await;
+    };
+    let Some(rendered) = render(engine, &private).await? else {
+        return super::give_up(engine, job, row, "owner_missing").await;
     };
     let number = match row.owner {
         quack_db::messages::Owner::Case(case) => {
@@ -185,19 +190,26 @@ async fn become_private(
         .await
     {
         Outcome::Done(()) => {}
-        Outcome::Refused(_) => return Ok(Handled::Settle(JobResult::Done)),
+        Outcome::Refused(r) => {
+            let code = quack_core::messages::sync_error_code(r.status, r.code);
+            return super::give_up(engine, job, row, &code).await;
+        }
         other => return Ok(Handled::Settle(retry(job, other.code()))),
     }
+    // Recorded only if the row is still this generation's public receipt;
+    // otherwise the newer generation's sync takes over.
     let mut tx = engine.db().begin().await?;
-    messages::record_posted(
-        &mut tx,
-        row.guild,
-        row.id,
-        row.generation,
-        row.wanted_revision,
-        None,
-    )
-    .await?;
+    if messages::make_private(&mut tx, row.guild, row.id, row.generation).await? {
+        messages::record_posted(
+            &mut tx,
+            row.guild,
+            row.id,
+            row.generation,
+            row.wanted_revision,
+            None,
+        )
+        .await?;
+    }
     let handled = finish(tx, job, JobResult::Done).await?;
     synced(row, Label::Done);
     Ok(handled)

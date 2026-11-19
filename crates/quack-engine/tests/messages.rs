@@ -239,6 +239,38 @@ async fn a_refused_public_receipt_becomes_private() -> Result<()> {
     Ok(())
 }
 
+/// Engine review: the private fallback records its progress only after
+/// the moderator's reply carries the note. When that edit's answer is lost,
+/// the retry takes the fallback again and the note is still there.
+#[tokio::test]
+async fn a_refused_public_receipt_keeps_its_note_when_the_edit_is_retried() -> Result<()> {
+    let h = Harness::new().await?;
+    let (id, channel, _) = public(&h).await?;
+    h.fake.script_n(
+        Call::Send,
+        2,
+        &Script::refuse(RefusalKind::MissingPermissions),
+    );
+    h.fake.script(Call::EditOriginal, Script::LoseResponse);
+    h.run_one(JobKind::SyncMessage).await?;
+    // The edit may have landed; nothing is recorded yet.
+    let r = row(&h, id).await?;
+    assert!(!r.private);
+    assert!(r.posted_revision < r.wanted_revision);
+    h.settle().await?;
+    let r = row(&h, id).await?;
+    assert!(r.private);
+    assert_eq!(r.posted_revision, r.wanted_revision);
+    assert_eq!(posted(&h, channel), 0);
+    let edits = h.fake.world(|w| w.interaction_edits.clone());
+    assert_eq!(edits.len(), 2);
+    for (_, msg) in &edits {
+        let plain = msg.plain();
+        assert!(plain.contains("couldn't post the receipt"), "{plain}");
+    }
+    Ok(())
+}
+
 #[tokio::test]
 async fn a_deleted_public_receipt_is_gone_and_the_case_stands() -> Result<()> {
     let h = Harness::new().await?;

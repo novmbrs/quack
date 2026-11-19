@@ -1085,7 +1085,7 @@ staff check finding the channel missing; `messages::on_missing`):
 
 | Kind | Action |
 | --- | --- |
-| `case_receipt` | Refused first create, token valid → private, with `case.receipt.post_failed`. Else `gone`. |
+| `case_receipt` | Refused first create, token valid → private, with `case.receipt.post_failed`: the reply is edited first, then `private` and the posted revision are recorded in one transaction, so a retry after an unknown edit takes the same path, note included (a refused edit → `last_error`). Else `gone`. |
 | `appeal_post` | Repost in the current appeal channel; none → channel-less. |
 | `ticket_panel`, `ticket_post`, `honeypot_warning` | Repost in the current entry, queue, or honeypot channel; none → `gone`. |
 
