@@ -75,6 +75,10 @@ built files. Its README has the frontend conventions.
 - Docs changes ship in the same commit as the code they describe.
 - Don't commit generated binaries or temporary files; preserve unrelated
   user changes. Stage only your own paths (`git add <path>`, never `-A`).
+- Turn the hooks on once per clone: `git config core.hooksPath .githooks`.
+  They check formatting and the commit message on commit, and run clippy
+  and the dashboard's `check` on push for what the push changes. Fix what
+  they report; don't pass `--no-verify`.
 
 ## Verification
 
@@ -118,6 +122,11 @@ cargo deny check
   application over PostgreSQL and the fake Discord); `quack serve
   --discord-offline <url>` starts it without a bot token or any call to
   Discord.
+
+CI (`.github/workflows/ci.yml`) runs the same commands in parallel jobs and
+skips the jobs a pull request doesn't touch; `ok` is the required check.
+When you add a top-level path that a job depends on, add it to that job's
+filter in the `changes` job.
 
 ## tmux and Docker
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Formatting only, so a commit stays instant. The slower checks run in
+# pre-push.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.rs$'; then
+    cargo fmt --all --check || {
+        echo "pre-commit: run 'cargo fmt --all' and stage the result" >&2
+        exit 1
+    }
+fi

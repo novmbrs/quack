@@ -1,0 +1,263 @@
+name: CI
+
+# One workflow, every job in parallel, and only the jobs a change touches.
+# `ok` is the single required check: it fails when a job it waits on failed
+# and when the "what changed" step itself broke, so a skipped job can never
+# read as a pass by accident. Pushes to main and the nightly run do
+# everything, which also seeds the build cache pull requests restore from.
+#
+# Runners are Namespace profiles, sized per job:
+#   nvmbr-sm 2 vCPU / 4 GB    nvmbr-md 4 vCPU / 8 GB    nvmbr-lg 8 vCPU / 16 GB
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Nightly: the full suite, and advisories published since the last push.
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Debug info roughly doubles build time and cache size, and CI never
+  # opens a debugger.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+  # sqlx checks queries against the committed `.sqlx` data, not a database.
+  SQLX_OFFLINE: "true"
+
+jobs:
+  changes:
+    name: What changed
+    runs-on: namespace-profile-nvmbr-sm
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.pick.outputs.rust }}
+      dashboard: ${{ steps.pick.outputs.dashboard }}
+      deps: ${{ steps.pick.outputs.deps }}
+      image: ${{ steps.pick.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name != 'pull_request'
+        with:
+          filter: blob:none
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - '.sqlx/**'
+              - 'contracts/**'
+              - 'docs/design.md'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'rustfmt.toml'
+              - 'clippy.toml'
+              - '.github/workflows/ci.yml'
+            dashboard:
+              - 'apps/dashboard/**'
+              - 'assets/**'
+              - 'contracts/**'
+              - '.github/workflows/ci.yml'
+            deps:
+              - 'Cargo.lock'
+              - 'Cargo.toml'
+              - 'crates/*/Cargo.toml'
+              - 'deny.toml'
+              - '.github/workflows/ci.yml'
+            image:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'apps/dashboard/package.json'
+              - 'apps/dashboard/bun.lock'
+              - '.github/workflows/ci.yml'
+      - name: Pick the jobs to run
+        id: pick
+        env:
+          FULL: ${{ github.event_name != 'pull_request' }}
+          RUST: ${{ steps.filter.outputs.rust }}
+          DASHBOARD: ${{ steps.filter.outputs.dashboard }}
+          DEPS: ${{ steps.filter.outputs.deps }}
+          IMAGE: ${{ steps.filter.outputs.image }}
+        run: |
+          pick() {
+            if [ "$FULL" = "true" ]; then echo "$1=true"; else echo "$1=${2:-false}"; fi >> "$GITHUB_OUTPUT"
+          }
+          pick rust "$RUST"
+          pick dashboard "$DASHBOARD"
+          pick deps "$DEPS"
+          pick image "$IMAGE"
+          cat "$GITHUB_OUTPUT"
+
+  lint:
+    name: Format, clippy, docs
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: namespace-profile-nvmbr-md
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # The toolchain comes from rust-toolchain.toml. Only main writes
+          # the cache; pull requests restore it.
+          rustflags: ""
+          cache-shared-key: lint
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Docs
+        run: cargo doc --workspace --no-deps --locked
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  test:
+    name: Tests
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: namespace-profile-nvmbr-lg
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: quack
+          POSTGRES_PASSWORD: quack
+          POSTGRES_DB: quack
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U quack -d quack"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      # The importer's end-to-end tests load the old schema into a scratch
+      # MySQL database.
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 60
+    env:
+      # Every database-backed test makes its own database on this server.
+      QUACK_TEST_DATABASE_URL: postgres://quack:quack@localhost:5432/quack
+      DATABASE_URL: postgres://quack:quack@localhost:5432/quack
+      QUACK_IMPORT_TEST_MYSQL_URL: mysql://root:root@127.0.0.1:3306
+      QUACK_IMPORT_TEST_PG_URL: postgres://quack:quack@localhost:5432/quack
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+          cache-shared-key: test
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build the tests
+        run: cargo test --workspace --locked --no-run
+      # Includes the check that contracts/http/openapi.json matches the API.
+      - name: Test
+        run: cargo test --workspace --locked
+
+  dashboard:
+    name: Dashboard
+    needs: changes
+    if: needs.changes.outputs.dashboard == 'true'
+    runs-on: namespace-profile-nvmbr-sm
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/dashboard
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('apps/dashboard/bun.lock') }}
+          restore-keys: bun-
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: The API client matches the OpenAPI document
+        run: |
+          bun run api
+          git diff --exit-code src/api/schema.gen.ts
+      - name: Format, lint, types
+        run: bun run check
+      - name: Test
+        run: bun run test
+      - name: Build
+        run: bun run build
+
+  deny:
+    name: Dependencies
+    needs: changes
+    if: needs.changes.outputs.deps == 'true'
+    runs-on: namespace-profile-nvmbr-sm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.21.0
+      - name: Advisories, licenses, bans, and sources
+        run: cargo deny --locked check
+
+  image:
+    name: Container image
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
+    runs-on: namespace-profile-nvmbr-md
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - name: Build the image
+        run: docker build -t quack:ci .
+
+  ok:
+    name: ok
+    if: always()
+    needs: [changes, lint, test, dashboard, deny, image]
+    runs-on: namespace-profile-nvmbr-sm
+    timeout-minutes: 2
+    steps:
+      - name: Every job that ran passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          # "What changed" must have succeeded: if it broke, everything
+          # after it was skipped, and skipped is not passed.
+          echo "$NEEDS" | jq -e '.changes.result == "success"' > /dev/null
+          echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null

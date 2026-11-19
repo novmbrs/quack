@@ -1,0 +1,21 @@
+#!/bin/sh
+# Commit messages here use a conventional prefix and carry no attribution
+# trailers (AGENTS.md, "Commits").
+set -eu
+
+subject=$(sed -n '1p' "$1")
+
+case "$subject" in
+    Merge\ * | Revert\ * | fixup!\ * | squash!\ *) ;;
+    feat:* | fix:* | test:* | docs:* | chore:* | refactor:* | build:* | ci:* | perf:*) ;;
+    feat\(*\):* | fix\(*\):* | test\(*\):* | docs\(*\):* | chore\(*\):* | refactor\(*\):* | build\(*\):* | ci\(*\):* | perf\(*\):*) ;;
+    *)
+        echo "commit-msg: start the subject with feat:, fix:, test:, docs:, chore:, refactor:, build:, ci:, or perf:" >&2
+        exit 1
+        ;;
+esac
+
+if grep -Eiq '^(co-authored-by|generated[- ]with|generated[- ]by):?' "$1"; then
+    echo "commit-msg: remove the attribution line (Co-Authored-By / Generated with)" >&2
+    exit 1
+fi

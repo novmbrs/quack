@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.100"
 license = "MIT"
-repository = "https://github.com/quackdiscord/bot"
+repository = "https://github.com/novmbrs/bot"
 publish = false
 
 # Exact pins verified in the stack audit. Members inherit only what they use

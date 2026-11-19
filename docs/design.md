@@ -2930,10 +2930,18 @@ naming both keys; counters use `GREATEST(last_number, …)`.
 
 ### 20.1 Testing
 
-CI (`.github/workflows/`): fmt; clippy and rustdoc with `-D warnings`;
-`cargo test --workspace --locked` against PostgreSQL 18 and MySQL 8.4
-services; OpenAPI and dashboard-client freshness; `docker build`; `cargo
-deny`; the dashboard's `check`, `test`, `build`. `TestDb` copies a migrated
+CI (`.github/workflows/ci.yml`, on Namespace runner profiles), jobs in
+parallel: fmt, clippy and rustdoc with `-D warnings`; `cargo test
+--workspace --locked` against PostgreSQL 18 and MySQL 8.4 services (this
+includes OpenAPI freshness); the dashboard's client freshness, `check`,
+`test`, `build`; `cargo deny`; `docker build`. A pull request runs only the
+jobs its files touch; pushes to `main` and a nightly run do all of them,
+and only `main` writes the build cache pull requests restore. `ok` is the
+one required check: it fails when any job failed or when change detection
+itself failed. The hooks in `.githooks/` (`git config core.hooksPath
+.githooks`) run fmt on commit, check the commit message, and run fmt,
+clippy, and the dashboard's `check` on push for the files the push changes.
+`TestDb` copies a migrated
 template database per test on the server named by `QUACK_TEST_DATABASE_URL`
 (required). Importer end-to-end tests need `QUACK_IMPORT_TEST_*` URLs, else
 print `SKIPPED` (and fail under `CI`).
