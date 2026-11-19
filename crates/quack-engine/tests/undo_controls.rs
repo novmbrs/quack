@@ -453,6 +453,64 @@ async fn a_timeout_that_lands_after_the_void_is_still_removed() -> Result<()> {
     Ok(())
 }
 
+/// Two timeouts of one member made in the same second end at the same
+/// second (§20.4 #9). The first one's request lands late, after both cases
+/// were voided and the second's timeout was cancelled unsent: the timeout
+/// in force is the first case's, staff see it on that case's failed undo,
+/// and a retry lifts it. The second case, which sent nothing, claims
+/// nothing. (The model test's seed `44257fa9…` found this interleaving.)
+#[tokio::test]
+async fn a_same_second_timeout_landing_late_is_reported_on_the_case_that_sent_it() -> Result<()> {
+    let h = Harness::new().await?;
+    let rule = h
+        .rule(levels("Spam", &[Some(TIMEOUT), Some(TIMEOUT)], false))
+        .await?;
+    let first = h.apply(MEMBER, rule).await?;
+    let second = h.apply(MEMBER, rule).await?;
+    let (first_action, second_action) = (
+        first.action.context("first action")?,
+        second.action.context("second action")?,
+    );
+    let end = action(&h, first_action)
+        .await?
+        .timeout_ends_at
+        .context("end")?;
+    // Made in the same second: both end at the same second.
+    h.db.execute(&format!(
+        "UPDATE actions SET timeout_ends_at = (SELECT timeout_ends_at FROM actions \
+         WHERE id = '{first_action}') WHERE id = '{second_action}'"
+    ))
+    .await?;
+    h.fake.script(Call::Timeout, Script::Late);
+    h.run_one(quack_db::jobs::JobKind::RunAction).await?;
+    void(&h, first.case.id).await?;
+    void(&h, second.case.id).await?;
+    h.settle().await?;
+    h.fake.land_late();
+    h.settle().await?;
+    let live = || {
+        h.fake
+            .world(|w| w.member(h.guild, sf(MEMBER)).and_then(|m| m.timeout_until))
+    };
+    assert_eq!(live(), Some(end));
+    let sent = action(&h, second_action).await?;
+    assert_eq!((sent.state, sent.attempts), (ActionState::Cancelled, 0));
+    assert!(undo_of(&h, second_action).await?.is_none());
+    let undo = undo_of(&h, first_action).await?.context("undo")?;
+    assert_eq!(
+        (undo.state, undo.failure.map(|f| f.reason)),
+        (
+            ActionState::Failed,
+            Some(quack_core::action::ActionFailure::OriginalUnconfirmed)
+        )
+    );
+    retry(&h.engine, &h.moderator(), undo.id, &h.key("ar")).await?;
+    h.settle().await?;
+    assert_eq!(action(&h, undo.id).await?.state, ActionState::Done);
+    assert_eq!(live(), None);
+    Ok(())
+}
+
 /// Engine review MINOR 31: the member's timeline dates a skipped undo
 /// when it was skipped, not when it was requested.
 #[tokio::test]

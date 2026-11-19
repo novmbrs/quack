@@ -7,7 +7,9 @@
 //!
 //! - no ban or timeout Quack placed stays in force for a voided case,
 //!   unless its undo is queued and ended where staff see it (`failed`
-//!   with a recorded reason, or `skipped`);
+//!   with a recorded reason, or `skipped`), or (a timeout) it is another
+//!   case's of the same member that ends at the same second and is
+//!   accounted for itself;
 //! - every case's case count matched the model's count when it was made;
 //! - every DM produced at most one message (counted by its nonce, so one
 //!   case's duplicate can't hide behind another's missing message); a
@@ -324,6 +326,15 @@ async fn expire_dm_window(h: &Harness) -> Result<()> {
     Ok(())
 }
 
+/// Whether a case's undo ended where staff see it: `failed` (Discord
+/// definitely refused, or the original stayed unconfirmed; retry from the
+/// failed-actions page) or `skipped` (left in place, reported).
+fn undo_reported(actions: &[quack_db::actions::Action]) -> bool {
+    actions.iter().any(|a| {
+        a.undo_of.is_some() && matches!(a.state, ActionState::Failed | ActionState::Skipped)
+    })
+}
+
 async fn check(h: &Harness, model: &[ModelCase]) -> Result<()> {
     let mut conn = h.db.db.conn().await?;
     let now = time::OffsetDateTime::now_utc();
@@ -368,12 +379,8 @@ async fn check(h: &Harness, model: &[ModelCase]) -> Result<()> {
         }
         let member = sf::<quack_core::ids::MemberId>(MEMBERS[c.member]);
         // Whatever is still in force for a voided case must have its undo
-        // queued, and that undo ended where staff see it: `failed` (Discord
-        // definitely refused; retry from the failed-actions page) or
-        // `skipped` (left in place, reported).
-        let reported = actions.iter().any(|a| {
-            a.undo_of.is_some() && matches!(a.state, ActionState::Failed | ActionState::Skipped)
-        });
+        // queued, and that undo ended where staff see it.
+        let reported = undo_reported(&actions);
         let marker = h.fake.world(|w| {
             w.ban(h.guild, member)
                 .and_then(quack_core::permissions::BanFacts::case_marker)
@@ -394,19 +401,30 @@ async fn check(h: &Harness, model: &[ModelCase]) -> Result<()> {
             && end == current
             && current > now
         {
-            // Two timeouts made in the same second end at the same second;
-            // the one in force may be a valid case's (§20.4 #9).
-            let mut owned_by_valid = false;
-            for other in model.iter().filter(|o| !o.voided && o.member == c.member) {
+            // Two timeouts made in the same second end at the same second
+            // (§20.4 #9), so the one in force may be another case's: a valid
+            // case's that Quack placed, or a voided case's that may have
+            // applied and whose undo staff see (it can land after this
+            // case's timeout was cancelled unsent).
+            let mut owned_elsewhere = false;
+            for other in model
+                .iter()
+                .filter(|o| o.member == c.member && o.id != c.id)
+            {
                 let theirs = quack_db::actions::for_case(&mut conn, h.guild, other.id).await?;
-                owned_by_valid |= theirs.iter().any(|a| {
+                let placed = theirs.iter().any(|a| {
                     a.kind == ActionKind::Timeout
-                        && a.state == ActionState::Done
                         && a.timeout_ends_at == Some(current)
+                        && if other.voided {
+                            a.attempts > 0
+                        } else {
+                            a.state == ActionState::Done
+                        }
                 });
+                owned_elsewhere |= placed && (!other.voided || undo_reported(&theirs));
             }
             ensure!(
-                reported || owned_by_valid,
+                reported || owned_elsewhere,
                 "a timeout for voided case {} is in force",
                 case.number
             );
