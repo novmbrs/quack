@@ -2377,8 +2377,9 @@ lines against the `quack-core` enums.
 - `jobs` (§16), `operation_keys` (§4.3; account 0 is Quack, guild 0 none),
   `case_drafts` (§11.6), `import_runs` and `import_guilds` (§19.11).
 - `ops_posts` and the one-row `ops_state` (§21.3): durable ops posts
-  waiting for their `post_ops` job, and the current run, the status
-  board's message, and the alert watermarks.
+  waiting for their `post_ops` job, and the current run and the status
+  board's message. `jobs.ops_alerted_at` and `actions.ops_alerted_at`
+  mark what the ops alerts reported (§21.5).
 
 ### 15.7 Honeypot hits
 
@@ -2415,8 +2416,9 @@ Each hot-path read has an index declared with its table (escalation:
   tickets numbered per server in creation order. A ticket still `opening`
   at the upgrade with a thread created under the old `ticket-<u22>` name
   but not yet saved gets a second, numbered thread.
-- `0007`: `job_kind` value `post_ops`, `ops_posts`, and `ops_state`
-  (§21.3).
+- `0007`: `job_kind` value `post_ops`, `ops_posts`, `ops_state` (§21.3),
+  and `ops_alerted_at` on `jobs` and `actions` (§21.5; rows dead or failed
+  at the upgrade count as reported).
 
 
 ## 16. Job queue
@@ -3312,7 +3314,8 @@ minutes), or whose channel isn't private, is dropped with a `warn`.
 `post_ops` runs one at a time, so posts arrive in order.
 
 The single `ops_state` row remembers the current run: version, started
-and last-seen times (a heartbeat every minute), and how it stopped. Each
+and last-seen times (a heartbeat every minute, from its own task so it
+runs even while the channels aren't ready), and how it stopped. Each
 start posts `ops.started` to `#ops-deploys` with the version (and the
 commit when the build set `QUACK_GIT_COMMIT`), the time to ready, the
 migrations applied, the servers Quack is in, and what happened to the run
@@ -3333,10 +3336,13 @@ Startup's `GUILD_CREATE` for servers already installed posts nothing.
 
 ### 21.5 Alerts
 
-Each minute Quack reads what changed since the watermarks in `ops_state`
-(so nothing is missed across restarts):
+Each minute Quack reports what no alert covered yet and marks it
+(`ops_alerted_at` on the job or action, set to the death or failure time
+it reported, in the same transaction as the posts). Nothing is missed
+across restarts, and a change still uncommitted during a poll is picked
+up by the next one:
 
-- **Dead jobs** (`dead_at` after the watermark, except `post_ops`): one
+- **Dead jobs** (dead, not yet alerted for this death, except `post_ops`): one
   `ops.dead_job` post each (kind, key, server, attempts, last error code,
   when), with **Requeue** and **Dismiss**; more than 5 in a minute post 5
   and `ops.dead_jobs_more`. Requeue is the sanctioned edit of §20.3
@@ -3344,8 +3350,8 @@ Each minute Quack reads what changed since the watermarks in `ops_state`
   Dismiss deletes the dead row now, as housekeeping would after 7 days.
   Either edits the post to say who did it; a job already gone says
   `ops.job_gone`.
-- **Failed actions** (`state = 'failed'`, not dismissed, changed after the
-  watermark): one `ops.failed_actions` post per minute that had any, by
+- **Failed actions** (`state = 'failed'`, not dismissed, not yet alerted
+  since their last change): one `ops.failed_actions` post per minute that had any, by
   kind and failure reason, with the servers (up to 10). Staff retry or
   dismiss them in their own server; this post has no buttons.
 

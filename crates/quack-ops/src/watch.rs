@@ -1,6 +1,6 @@
-//! The periodic work (§21.2–21.7): channel setup until it succeeds, then a
-//! one-minute tick (heartbeat, alerts, error feed) and, every tenth tick,
-//! the status board and the gateway summary.
+//! The periodic work (§21.2–21.7): a one-minute heartbeat of its own;
+//! channel setup until it succeeds, then a one-minute tick (alerts, error
+//! feed) and, every tenth tick, the status board and the gateway summary.
 
 use std::time::Duration;
 
@@ -23,15 +23,42 @@ const DEAD_JOBS_POSTED: u32 = 5;
 /// Failed-action groups saved in one post (it shows fewer).
 const FAILED_GROUPS_SAVED: usize = 50;
 
-/// Starts the one task that does all of it.
+/// Starts the heartbeat (on its own, so it beats while channel setup
+/// keeps failing) and the task that does the rest.
 pub(crate) fn spawn(ops: &Ops, stop: &CancellationToken) -> Vec<JoinHandle<()>> {
+    let (beat_ops, beat_stop) = (ops.clone(), stop.clone());
     let (ops, stop) = (ops.clone(), stop.clone());
-    vec![tokio::spawn(async move {
-        tokio::select! {
-            () = stop.cancelled() => {}
-            () = run(ops) => {}
+    vec![
+        tokio::spawn(async move {
+            tokio::select! {
+                () = beat_stop.cancelled() => {}
+                () = heartbeat(beat_ops) => {}
+            }
+        }),
+        tokio::spawn(async move {
+            tokio::select! {
+                () = stop.cancelled() => {}
+                () = run(ops) => {}
+            }
+        }),
+    ]
+}
+
+/// Records every minute that this run is alive (§21.3).
+async fn heartbeat(ops: Ops) {
+    let mut interval = tokio::time::interval(TICK);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    interval.tick().await;
+    loop {
+        interval.tick().await;
+        let beat = async {
+            let mut conn = ops.engine().db().conn().await?;
+            db::heartbeat(&mut conn).await
+        };
+        if let Err(error) = beat.await {
+            tracing::warn!(%error, "couldn't record the ops heartbeat");
         }
-    })]
+    }
 }
 
 async fn run(ops: Ops) {
@@ -77,15 +104,8 @@ async fn setup(ops: &Ops) {
     }
 }
 
-/// One minute: heartbeat, alerts, and the error feed.
+/// One minute: alerts and the error feed.
 async fn tick(ops: &Ops) {
-    let heartbeat = async {
-        let mut conn = ops.engine().db().conn().await?;
-        db::heartbeat(&mut conn).await
-    };
-    if let Err(error) = heartbeat.await {
-        tracing::warn!(%error, "couldn't record the ops heartbeat");
-    }
     if let Err(error) = alerts(ops).await {
         tracing::warn!(%error, "couldn't read the ops alerts");
     }
@@ -93,7 +113,7 @@ async fn tick(ops: &Ops) {
 }
 
 /// Saves a post for each new dead job and one for new failed actions, and
-/// moves the watermarks, in one transaction (§21.5).
+/// marks them reported, in one transaction (§21.5).
 pub(crate) async fn alerts(ops: &Ops) -> Result<(), DbError> {
     let mut tx = ops.engine().db().begin().await?;
     let (dead, more) = db::take_new_dead_jobs(&mut tx, DEAD_JOBS_POSTED).await?;

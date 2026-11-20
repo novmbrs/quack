@@ -298,31 +298,26 @@ impl TryFrom<DeadRow> for DeadJob {
     }
 }
 
-/// Jobs that died since the watermark (except `post_ops`), oldest first,
-/// at most `limit`, and how many more there were. Moves the watermark past
-/// all of them, in `tx`, so each is reported once.
+/// Jobs that died and haven't been alerted for that death yet (except
+/// `post_ops`), oldest first, at most `limit`, and how many more there
+/// were. Each is marked alerted (`ops_alerted_at = dead_at`) in `tx`, so it
+/// is reported once per death. A death still uncommitted is simply not
+/// seen yet: the next poll gets it (§21.5).
 pub async fn take_new_dead_jobs(tx: &mut Tx, limit: u32) -> Result<(Vec<DeadJob>, u64), DbError> {
-    let until = lock_watermarks(tx).await?;
-    let rows = obs::run(
-        Select,
+    let mut rows = obs::run(
+        Update,
         "jobs",
         sqlx::query_as!(
             DeadRow,
-            r#"SELECT j.id, j.kind, j.key, j.guild_id, j.attempts, j.last_error, j.dead_at
-               FROM jobs j, ops_state s
-               WHERE j.dead_at > s.dead_jobs_seen_until AND j.dead_at <= $1 AND j.kind <> 'post_ops'
-               ORDER BY j.dead_at, j.id"#,
-            until
+            r#"UPDATE jobs SET ops_alerted_at = dead_at
+               WHERE dead_at IS NOT NULL AND kind <> 'post_ops'
+                 AND (ops_alerted_at IS NULL OR ops_alerted_at < dead_at)
+               RETURNING id, kind, key, guild_id, attempts, last_error, dead_at"#
         )
         .fetch_all(&mut **tx),
     )
     .await?;
-    obs::run(
-        Update,
-        "ops_state",
-        sqlx::query!("UPDATE ops_state SET dead_jobs_seen_until = $1", until).execute(&mut **tx),
-    )
-    .await?;
+    rows.sort_by_key(|r| (r.dead_at, r.id));
     let total = rows.len();
     let jobs = rows
         .into_iter()
@@ -331,18 +326,6 @@ pub async fn take_new_dead_jobs(tx: &mut Tx, limit: u32) -> Result<(Vec<DeadJob>
         .collect::<Result<Vec<_>, _>>()?;
     let more = u64::try_from(total - jobs.len()).unwrap_or(u64::MAX);
     Ok((jobs, more))
-}
-
-/// Locks `ops_state` and returns now (PostgreSQL's clock), the new
-/// watermark.
-async fn lock_watermarks(tx: &mut Tx) -> Result<OffsetDateTime, DbError> {
-    obs::run(
-        Select,
-        "ops_state",
-        sqlx::query_scalar!(r#"SELECT now() AS "now!" FROM ops_state FOR UPDATE"#)
-            .fetch_one(&mut **tx),
-    )
-    .await
 }
 
 /// Failed actions, grouped: how many of one kind and reason in one server.
@@ -358,30 +341,26 @@ pub struct FailedGroup {
     pub count: u64,
 }
 
-/// Undismissed failed actions changed since the watermark, grouped by
-/// server, kind, and reason (largest first). Moves the watermark, in `tx`.
+/// Undismissed failed actions not yet alerted for their current failure,
+/// grouped by server, kind, and reason (largest first). Each is marked
+/// alerted (`ops_alerted_at = updated_at`) in `tx`; a later retry that
+/// fails again moves `updated_at` and alerts again.
 pub async fn take_new_failed_actions(tx: &mut Tx) -> Result<Vec<FailedGroup>, DbError> {
-    let until = lock_watermarks(tx).await?;
     let rows = obs::run(
-        Select,
+        Update,
         "actions",
         sqlx::query!(
-            r#"SELECT a.guild_id, a.kind, a.failure_reason AS "reason!", count(*) AS "n!"
-               FROM actions a, ops_state s
-               WHERE a.state = 'failed' AND a.dismissed_at IS NULL
-                 AND a.updated_at > s.failed_actions_seen_until AND a.updated_at <= $1
-               GROUP BY a.guild_id, a.kind, a.failure_reason
-               ORDER BY count(*) DESC, a.guild_id"#,
-            until
+            r#"WITH alerted AS (
+                 UPDATE actions SET ops_alerted_at = updated_at
+                 WHERE state = 'failed' AND dismissed_at IS NULL
+                   AND (ops_alerted_at IS NULL OR ops_alerted_at < updated_at)
+                 RETURNING guild_id, kind, failure_reason)
+               SELECT guild_id AS "guild_id!", kind AS "kind!", failure_reason AS "reason!", count(*) AS "n!"
+               FROM alerted
+               GROUP BY guild_id, kind, failure_reason
+               ORDER BY count(*) DESC, guild_id"#
         )
         .fetch_all(&mut **tx),
-    )
-    .await?;
-    obs::run(
-        Update,
-        "ops_state",
-        sqlx::query!("UPDATE ops_state SET failed_actions_seen_until = $1", until)
-            .execute(&mut **tx),
     )
     .await?;
     rows.into_iter()

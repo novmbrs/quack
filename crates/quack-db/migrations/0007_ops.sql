@@ -1,6 +1,6 @@
 -- Ops in Discord (design §21.3): durable posts to the ops server's
--- channels, and one row about the current run, the status board, and the
--- alert watermarks.
+-- channels, one row about the current run and the status board, and
+-- which dead jobs and failed actions the alerts already reported.
 
 ALTER TYPE job_kind ADD VALUE 'post_ops';
 
@@ -22,9 +22,15 @@ CREATE TABLE ops_state (
   stop_reason                text NULL CHECK (stop_reason IN ('signal', 'gateway_closed')),
   status_channel_id          bigint NULL,
   status_message_id          bigint NULL,
-  dead_jobs_seen_until       timestamptz NOT NULL DEFAULT now(),
-  failed_actions_seen_until  timestamptz NOT NULL DEFAULT now(),
   CHECK ((stopped_at IS NULL) = (stop_reason IS NULL))
 );
 
 INSERT INTO ops_state DEFAULT VALUES;
+
+-- Alerts (§21.5) mark each death or failure they reported, so a row whose
+-- change commits after a poll began is still reported by the next one.
+-- What was already dead or failed at the upgrade counts as reported.
+ALTER TABLE jobs ADD COLUMN ops_alerted_at timestamptz NULL;
+ALTER TABLE actions ADD COLUMN ops_alerted_at timestamptz NULL;
+UPDATE jobs SET ops_alerted_at = dead_at WHERE dead_at IS NOT NULL;
+UPDATE actions SET ops_alerted_at = updated_at WHERE state = 'failed';

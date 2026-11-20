@@ -324,3 +324,40 @@ async fn only_operators_in_the_ops_server_are_operators() -> Result<()> {
     assert!(!ops.is_operator(None, sf(OWNER)));
     Ok(())
 }
+
+#[tokio::test]
+async fn a_death_that_commits_after_a_poll_is_still_alerted() -> Result<()> {
+    let h = Harness::new().await?;
+    let ops = new_ops(&h);
+    let channels = ops.prepare_channels().await.unwrap();
+    ops.check_alerts().await?;
+    // A worker stamped `dead_at` before that poll but committed after it.
+    h.db.execute(&format!(
+        "INSERT INTO jobs (kind, key, guild_id, payload, max_attempts, attempts, dead_at, last_error)
+         VALUES ('send_dm', 'send_dm:late', {}, '{{}}', 3, 3, now() - interval '5 minutes', 'x')",
+        h.guild.get()
+    ))
+    .await?;
+    ops.check_alerts().await?;
+    h.settle().await?;
+    assert_eq!(sent_to(&h, channels.alerts).len(), 1);
+    Ok(())
+}
+
+#[tokio::test]
+async fn a_job_that_dies_again_after_a_requeue_is_alerted_again() -> Result<()> {
+    let h = Harness::new().await?;
+    let ops = new_ops(&h);
+    let channels = ops.prepare_channels().await.unwrap();
+    let job = dead_job(&h).await?;
+    ops.check_alerts().await?;
+    ops.requeue(job, sf(OWNER)).await?.unwrap();
+    h.db.execute(
+        "UPDATE jobs SET dead_at = now() + interval '1 second', attempts = 3 WHERE key = 'send_dm:test'",
+    )
+    .await?;
+    ops.check_alerts().await?;
+    h.run_jobs().await?;
+    assert_eq!(sent_to(&h, channels.alerts).len(), 2);
+    Ok(())
+}

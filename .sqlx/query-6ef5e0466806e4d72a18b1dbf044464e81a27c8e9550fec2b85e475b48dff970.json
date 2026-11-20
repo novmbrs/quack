@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT j.id, j.kind, j.key, j.guild_id, j.attempts, j.last_error, j.dead_at\n               FROM jobs j, ops_state s\n               WHERE j.dead_at > s.dead_jobs_seen_until AND j.dead_at <= $1 AND j.kind <> 'post_ops'\n               ORDER BY j.dead_at, j.id",
+  "query": "UPDATE jobs SET ops_alerted_at = dead_at\n               WHERE dead_at IS NOT NULL AND kind <> 'post_ops'\n                 AND (ops_alerted_at IS NULL OR ops_alerted_at < dead_at)\n               RETURNING id, kind, key, guild_id, attempts, last_error, dead_at",
   "describe": {
     "columns": [
       {
@@ -101,9 +101,7 @@
       }
     ],
     "parameters": {
-      "Left": [
-        "Timestamptz"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -115,5 +113,5 @@
       true
     ]
   },
-  "hash": "cda5f9ed16649ec4e2c364fa731e37d9c81c21e421b9656191d1f3fb5e27d5e2"
+  "hash": "6ef5e0466806e4d72a18b1dbf044464e81a27c8e9550fec2b85e475b48dff970"
 }
