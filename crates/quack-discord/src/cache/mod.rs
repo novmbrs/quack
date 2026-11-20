@@ -22,7 +22,7 @@ use crate::model::Member;
 
 pub use account::AccountCache;
 pub use guild::GuildCache;
-pub use member::MemberCache;
+pub use member::{MemberCache, Since};
 
 /// The member a `GUILD_MEMBER_UPDATE` describes.
 pub(crate) fn member_update(update: &MemberUpdate) -> Option<Member> {
@@ -89,7 +89,8 @@ fn accounts_of<'a>(
     accounts: &AccountCache,
     users: impl IntoIterator<Item = &'a twilight_model::user::User>,
 ) {
+    let now = std::time::Instant::now();
     for account in users.into_iter().filter_map(convert::user) {
-        accounts.put(account);
+        accounts.put(account, now);
     }
 }

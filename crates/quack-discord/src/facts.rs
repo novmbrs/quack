@@ -61,7 +61,7 @@ impl Facts {
 
     /// Accounts by id, in the order asked: the cached ones, and the rest
     /// with one [`DiscordClient::accounts`] read, whose answers refresh the
-    /// cache. Unknown users are left out; any other failure is returned.
+    /// cache unless a newer sighting arrived during the read. Unknown users are left out; any other failure is returned.
     /// At most [`ACCOUNTS_MAX`](crate::rest::ACCOUNTS_MAX) uncached ids are
     /// read.
     pub async fn accounts(&self, ids: &[AccountId]) -> Outcome<Vec<AccountFacts>> {
@@ -75,10 +75,11 @@ impl Facts {
             }
         }
         if !missing.is_empty() {
+            let started = std::time::Instant::now();
             match self.client.accounts(&missing).await.into_result() {
                 Ok(read) => {
                     for account in read {
-                        cache.put(account.clone());
+                        cache.put(account.clone(), started);
                         found.push(account);
                     }
                 }

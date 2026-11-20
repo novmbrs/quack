@@ -34,6 +34,14 @@ struct Entry {
     fed: Fed,
 }
 
+/// When a REST request started: the server's revision and the time, read
+/// together by [`MemberCache::revision`].
+#[derive(Clone, Copy, Debug)]
+pub struct Since {
+    revision: u64,
+    at: Instant,
+}
+
 /// The bounded member cache.
 #[derive(Debug)]
 pub struct MemberCache {
@@ -123,8 +131,8 @@ impl MemberCache {
         found
     }
 
-    fn insert(&self, entries: &mut Inner, guild: GuildId, member: Member, fed: Fed) {
-        self.accounts.put_member(&member);
+    fn insert(&self, entries: &mut Inner, guild: GuildId, member: Member, fed: Fed, seen: Instant) {
+        self.accounts.put_member(&member, seen);
         let evicted = entries
             .lru
             .insert((guild, member.id), Entry { member, fed });
@@ -135,23 +143,28 @@ impl MemberCache {
 
     /// The server's revision now: read it before a REST request and pass
     /// it to [`MemberCache::put_rest`] or [`MemberCache::remove_rest`].
-    pub fn revision(&self, guild: GuildId) -> u64 {
-        self.lock().revision(guild)
+    pub fn revision(&self, guild: GuildId) -> Since {
+        Since {
+            revision: self.lock().revision(guild),
+            at: Instant::now(),
+        }
     }
 
     /// Stores a member from a gateway event.
     pub fn put_event(&self, guild: GuildId, member: Member) {
         let mut entries = self.lock();
         entries.bump(guild);
-        self.insert(&mut entries, guild, member, Fed::Event);
+        self.insert(&mut entries, guild, member, Fed::Event, Instant::now());
     }
 
     /// Stores a member Quack read over REST, unless a gateway change for
-    /// the server came after `since` (the answer may be older than it).
-    pub fn put_rest(&self, guild: GuildId, member: Member, since: u64) {
+    /// the server came after `since` (the answer may be older than it). Its
+    /// account counts as seen when the request started.
+    pub fn put_rest(&self, guild: GuildId, member: Member, since: Since) {
         let mut entries = self.lock();
-        if entries.revision(guild) == since {
-            self.insert(&mut entries, guild, member, Fed::Rest(Instant::now()));
+        if entries.revision(guild) == since.revision {
+            let fed = Fed::Rest(Instant::now());
+            self.insert(&mut entries, guild, member, fed, since.at);
         }
     }
 
@@ -164,9 +177,9 @@ impl MemberCache {
 
     /// Forgets a member REST said is absent, unless a gateway change for
     /// the server (a rejoin, say) came after `since`.
-    pub fn remove_rest(&self, guild: GuildId, member: MemberId, since: u64) {
+    pub fn remove_rest(&self, guild: GuildId, member: MemberId, since: Since) {
         let mut entries = self.lock();
-        if entries.revision(guild) == since {
+        if entries.revision(guild) == since.revision {
             entries.lru.remove(&(guild, member));
         }
     }

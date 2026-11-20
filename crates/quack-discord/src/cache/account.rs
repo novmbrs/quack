@@ -64,23 +64,36 @@ impl AccountCache {
         found
     }
 
-    /// Stores an account Discord just described.
-    pub fn put(&self, account: AccountFacts) {
-        let evicted = self.lock().insert(account.id, (account, Instant::now()));
+    /// Stores an account as Discord described it at `seen` (for a REST
+    /// read, when the request started), unless the cache already holds a
+    /// later sighting: a slow read never overwrites a newer gateway update.
+    pub fn put(&self, account: AccountFacts, seen: Instant) {
+        let mut entries = self.lock();
+        if entries
+            .get(&account.id)
+            .is_some_and(|(_, held)| *held > seen)
+        {
+            return;
+        }
+        let evicted = entries.insert(account.id, (account, seen));
+        drop(entries);
         if evicted > 0 {
             metrics().caches.evicted(NAME, evicted as u64);
         }
     }
 
-    /// Stores a member's account.
-    pub fn put_member(&self, member: &Member) {
-        self.put(AccountFacts {
-            id: member.id.account(),
-            username: member.username.clone(),
-            global_name: member.global_name.clone(),
-            avatar_hash: member.avatar_hash.clone(),
-            bot: member.bot,
-        });
+    /// Stores a member's account as seen at `seen` (see [`Self::put`]).
+    pub fn put_member(&self, member: &Member, seen: Instant) {
+        self.put(
+            AccountFacts {
+                id: member.id.account(),
+                username: member.username.clone(),
+                global_name: member.global_name.clone(),
+                avatar_hash: member.avatar_hash.clone(),
+                bot: member.bot,
+            },
+            seen,
+        );
     }
 
     /// How many accounts are cached.
@@ -113,18 +126,30 @@ mod tests {
         let cache = AccountCache::new(10, Duration::from_millis(30));
         let id = AccountId::new(1).unwrap();
         assert_eq!(cache.get(id), None);
-        cache.put(account(1, "ana"));
-        cache.put(account(1, "ana2"));
+        cache.put(account(1, "ana"), Instant::now());
+        cache.put(account(1, "ana2"), Instant::now());
         assert_eq!(cache.get(id), Some(account(1, "ana2")));
         std::thread::sleep(Duration::from_millis(40));
         assert_eq!(cache.get(id), None);
     }
 
     #[test]
+    fn a_read_that_started_before_a_newer_sighting_does_not_replace_it() {
+        let cache = AccountCache::new(10, AccountCache::TTL);
+        let id = AccountId::new(1).unwrap();
+        let started = Instant::now();
+        cache.put(account(1, "renamed"), Instant::now());
+        cache.put(account(1, "old"), started);
+        assert_eq!(cache.get(id), Some(account(1, "renamed")));
+        cache.put(account(1, "newest"), Instant::now());
+        assert_eq!(cache.get(id), Some(account(1, "newest")));
+    }
+
+    #[test]
     fn bounded() {
         let cache = AccountCache::new(2, AccountCache::TTL);
         for id in 1..=3 {
-            cache.put(account(id, "x"));
+            cache.put(account(id, "x"), Instant::now());
         }
         assert_eq!(cache.len(), 2);
         assert_eq!(cache.get(AccountId::new(1).unwrap()), None);
