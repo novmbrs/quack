@@ -1,0 +1,56 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## requeued
+tone: Success
+--- discord ---
+### A `run_action` job died
+**Key:** `run_action:0193-1`
+**Server:** `1005778938108325970`
+**Runs:** 8
+**Last error:** `discord_unavailable`
+-# Died <t:1794924309:f> (<t:1794924309:R>).
+<@444> requeued it. It runs again now.
+--- plain ---
+A run_action job died
+Key: run_action:0193-1
+Server: 1005778938108325970
+Runs: 8
+Last error: discord_unavailable
+Died 17 Nov 2026 at 14:05 UTC.
+A member (ID 444) requeued it. It runs again now.
+--- model ---
+Heading [Fixed("A "), Code("run_action"), Fixed(" job died")]
+Field "Key" [Code("run_action:0193-1")]
+Field "Server" [Code("1005778938108325970")]
+Field "Runs" [Fixed("8")]
+Field "Last error" [Code("discord_unavailable")]
+Subtext [Fixed("Died "), Time(2026-11-17 14:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+Text [Person(Person { id: AccountId(444), name: None }), Fixed(" requeued it. It runs again now.")]
+
+## dismissed
+tone: Neutral
+--- discord ---
+### A `run_action` job died
+**Key:** `run_action:0193-1`
+**Server:** `1005778938108325970`
+**Runs:** 8
+**Last error:** `discord_unavailable`
+-# Died <t:1794924309:f> (<t:1794924309:R>).
+<@444> dismissed it. The job is deleted.
+--- plain ---
+A run_action job died
+Key: run_action:0193-1
+Server: 1005778938108325970
+Runs: 8
+Last error: discord_unavailable
+Died 17 Nov 2026 at 14:05 UTC.
+A member (ID 444) dismissed it. The job is deleted.
+--- model ---
+Heading [Fixed("A "), Code("run_action"), Fixed(" job died")]
+Field "Key" [Code("run_action:0193-1")]
+Field "Server" [Code("1005778938108325970")]
+Field "Runs" [Fixed("8")]
+Field "Last error" [Code("discord_unavailable")]
+Subtext [Fixed("Died "), Time(2026-11-17 14:05:09.0 +00:00:00, FullRelative), Fixed(".")]
+Text [Person(Person { id: AccountId(444), name: None }), Fixed(" dismissed it. The job is deleted.")]

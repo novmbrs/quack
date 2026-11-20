@@ -78,7 +78,7 @@ pub struct FetchedAttachment {
     pub url: String,
 }
 
-/// A channel to create (setup, §13.1.4).
+/// A channel to create (setup, §13.1.4; ops channels, §21.2).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChannelSpec {
     /// Its name.
@@ -87,4 +87,8 @@ pub struct ChannelSpec {
     pub topic: Option<String>,
     /// Its permission overwrites.
     pub overwrites: Vec<Overwrite>,
+    /// The category to put it in.
+    pub parent: Option<ChannelId>,
+    /// Whether it is a category rather than a text channel.
+    pub category: bool,
 }

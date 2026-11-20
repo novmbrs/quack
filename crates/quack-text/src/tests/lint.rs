@@ -111,7 +111,7 @@ fn every_message_fits_discord_limits() {
 
 #[test]
 fn command_texts_fit() {
-    for c in crate::command::ALL {
+    for c in crate::command::ALL.iter().chain(&crate::command::OPS_ALL) {
         assert!(
             c.description.chars().count() <= budget::COMMAND_DESCRIPTION,
             "{}",
@@ -228,9 +228,13 @@ fn looks_like_identifier(word: &str) -> bool {
     snake || camel
 }
 
-/// Samples that show a machine key or id as sent. None: even the ticket
-/// thread name is readable (`ticket-0042`), and this lint keeps it so.
-const SHOWS_KEYS: &[&str] = &[];
+/// Samples that show a machine key or id as sent: only the ops messages
+/// (§21), which Quack's operators read and which name job kinds, job keys,
+/// and failure codes as stored. Everything people in a server read stays
+/// readable (even the ticket thread name, `ticket-0042`).
+fn shows_keys(id: &str) -> bool {
+    id.starts_with("ops.")
+}
 
 fn hostile(s: &Sample) -> bool {
     s.variant.contains("hostile")
@@ -256,7 +260,7 @@ fn glossary_lint() {
                 .split_whitespace()
                 .filter(|w| !w.contains("://") && !w.starts_with('<'))
             {
-                if looks_like_identifier(w) && !SHOWS_KEYS.contains(&s.id) {
+                if looks_like_identifier(w) && !shows_keys(s.id) {
                     failures.push(format!(
                         "{} [{}]: machine name {w:?}: {text}",
                         s.id, s.variant

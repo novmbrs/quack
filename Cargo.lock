@@ -1730,6 +1730,7 @@ dependencies = [
  "quack-engine",
  "quack-honeypot",
  "quack-import",
+ "quack-ops",
  "quack-telemetry",
  "quack-testkit",
  "quack-text",
@@ -1813,6 +1814,7 @@ dependencies = [
  "quack-discord",
  "quack-engine",
  "quack-honeypot",
+ "quack-ops",
  "quack-telemetry",
  "quack-testkit",
  "quack-text",
@@ -1938,6 +1940,27 @@ dependencies = [
  "thiserror 2.0.21",
  "time",
  "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "quack-ops"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "quack-core",
+ "quack-db",
+ "quack-engine",
+ "quack-telemetry",
+ "quack-testkit",
+ "quack-text",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "time",
+ "tokio",
+ "tokio-util",
  "tracing",
  "uuid",
 ]

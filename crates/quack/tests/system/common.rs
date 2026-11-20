@@ -204,7 +204,7 @@ fn dashboard_dir() -> PathBuf {
     dir
 }
 
-fn config(test: &TestDb) -> Config {
+fn config(test: &TestDb, extra: &[(&str, String)]) -> Config {
     let name = test.db.connect_options().get_database().unwrap().to_owned();
     let vars = [
         ("database_url", format!("postgres://localhost/{name}")),
@@ -220,6 +220,7 @@ fn config(test: &TestDb) -> Config {
         ("listen_addr", "127.0.0.1:0".to_owned()),
     ]
     .into_iter()
+    .chain(extra.iter().cloned())
     .map(|(k, v)| (k.to_owned(), v))
     .collect();
     validate(Need::Serve, &vars).unwrap()
@@ -246,6 +247,12 @@ impl System {
     /// The standard server in the fake (not yet installed in Quack) and the
     /// composed application.
     pub async fn boot() -> Result<Self> {
+        Self::boot_with(&[]).await
+    }
+
+    /// [`System::boot`] with more configuration keys (lowercase, no
+    /// prefix).
+    pub async fn boot_with(extra: &[(&str, String)]) -> Result<Self> {
         // Before anything records a metric (see `capture`).
         let _ = crate::capture::capture();
         let db = TestDb::with_connections(24).await?;
@@ -285,7 +292,7 @@ impl System {
             );
             w.add_text_channel(guild, false)
         });
-        let config = config(&db);
+        let config = config(&db, extra);
         let recorder = Arc::new(Recorder::default());
         let ready = Arc::new(Readiness::default());
         let app = compose(&config, &db, &fake, &recorder, &ready)?;

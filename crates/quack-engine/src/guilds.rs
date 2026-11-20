@@ -112,12 +112,13 @@ async fn joined(
 
 /// Quack left the server (§17.5): it is marked left, every enabled module
 /// is turned off (`quack_left`, logged but not posted), and its caches are
-/// dropped. Settings and history are kept.
-pub async fn left(engine: &Engine, guild: GuildId) -> Result<(), DbError> {
+/// dropped. Settings and history are kept. Returns whether Quack was
+/// installed there (a repeat returns `false`).
+pub async fn left(engine: &Engine, guild: GuildId) -> Result<bool, DbError> {
     obs::use_case("leave_guild", Some(guild), async {
         let mut tx = engine.db().begin().await?;
         if !guilds::mark_left(&mut tx, guild).await? {
-            return Ok(());
+            return Ok(false);
         }
         for module in settings::disable_modules_on_leave(&mut tx, guild).await? {
             module_off(&mut tx, guild, module, ModuleDisabledReason::QuackLeft).await?;
@@ -134,7 +135,7 @@ pub async fn left(engine: &Engine, guild: GuildId) -> Result<(), DbError> {
         tx.commit().await?;
         engine.rules_cache().forget(guild);
         engine.config_cache().forget(guild);
-        Ok(())
+        Ok(true)
     })
     .await
 }

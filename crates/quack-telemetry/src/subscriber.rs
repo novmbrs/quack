@@ -2,6 +2,7 @@
 //!
 //! - stderr: every event the log filter allows, as text or JSON;
 //! - traces: spans at `info` and above, sent to the tracer provider;
+//! - the error feed's tap: every `error` event (§21.7);
 //! - logs: events the log filter allows, sent to the logger provider with
 //!   the active trace and span ids (the tracing layer activates each span's
 //!   OpenTelemetry context on entry, which is what correlates them).
@@ -52,8 +53,12 @@ pub(crate) fn build(
     config: &TelemetryConfig,
     export: Option<ExportTargets<'_>>,
 ) -> Result<impl Subscriber + Send + Sync + for<'a> LookupSpan<'a>, TelemetryError> {
-    let mut layers: Vec<BoxedLayer> =
-        vec![stderr_layer(config.log_format, filter(&config.log_filter)?)];
+    let mut layers: Vec<BoxedLayer> = vec![
+        stderr_layer(config.log_format, filter(&config.log_filter)?),
+        crate::errors::ErrorTap
+            .with_filter(LevelFilter::ERROR)
+            .boxed(),
+    ];
     if let Some(export) = export {
         let tracer = export
             .traces

@@ -213,7 +213,7 @@ impl DiscordClient {
     pub async fn create_channel(&self, guild: GuildId, spec: &ChannelSpec) -> Outcome<ChannelId> {
         let body = CreateChannel {
             name: &spec.name,
-            kind: 0,
+            kind: if spec.category { 4 } else { 0 },
             topic: spec.topic.as_deref(),
             parent_id: spec.parent_id.map(|p| p.to_string()),
             permission_overwrites: spec.overwrites.iter().map(OverwriteBody::from).collect(),

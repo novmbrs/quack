@@ -11,7 +11,8 @@ use twilight_model::id::Id;
 use twilight_model::id::marker::UserMarker;
 
 use super::{
-    AutocompleteFor, PayloadMember, Person, Request, RuleArg, TargetMessage, UnknownReason,
+    AutocompleteFor, OpsRequest, PayloadMember, Person, Request, RuleArg, TargetMessage,
+    UnknownReason,
 };
 use crate::convert;
 
@@ -134,6 +135,19 @@ fn case(data: &CommandData, autocomplete_request: bool) -> Request {
     request.unwrap_or(UNKNOWN)
 }
 
+fn ops(data: &CommandData) -> Option<Request> {
+    let (sub, options) = data.options.first().and_then(|o| match &o.value {
+        CommandOptionValue::SubCommand(options) => Some((o.name.as_str(), options.as_slice())),
+        _ => None,
+    })?;
+    Some(Request::Ops(match sub {
+        "status" => OpsRequest::Status,
+        "server" => OpsRequest::Server(string_option(options, "id")?),
+        "jobs" => OpsRequest::Jobs,
+        _ => return None,
+    }))
+}
+
 fn target_message(data: &CommandData) -> Option<Request> {
     let id = data.target_id?.cast();
     let message = data.resolved.as_ref()?.messages.get(&id)?;
@@ -159,6 +173,7 @@ pub(super) fn decode(data: &CommandData, autocomplete: bool) -> Request {
         (CommandType::ChatInput, "appeals") => Some(Request::Appeals),
         (CommandType::ChatInput, "rules") => Some(Request::Rules),
         (CommandType::ChatInput, "setup") => Some(Request::Setup),
+        (CommandType::ChatInput, "ops") => ops(data),
         (CommandType::ChatInput, "help") => Some(Request::Help {
             topic: string_option(&data.options, "topic").and_then(|t| topic(&t)),
         }),

@@ -50,7 +50,7 @@ pub async fn enqueue(tx: &mut Tx, job: &NewJob) -> Result<JobId, DbError> {
         .fetch_one(&mut **tx),
     )
     .await?;
-    notify_kind(tx, job.kind).await?;
+    notify(tx, job.kind).await?;
     tx.after_commit(AfterCommit::JobEnqueued(job.kind));
     Ok(JobId::from_uuid(id))
 }
@@ -112,7 +112,7 @@ pub async fn enqueue_many(tx: &mut Tx, jobs: &[NewJob]) -> Result<(), DbError> {
     kinds.sort_unstable();
     kinds.dedup();
     for kind in kinds {
-        notify_kind(tx, kind).await?;
+        notify(tx, kind).await?;
     }
     for job in jobs {
         tx.after_commit(AfterCommit::JobEnqueued(job.kind));
@@ -120,7 +120,8 @@ pub async fn enqueue_many(tx: &mut Tx, jobs: &[NewJob]) -> Result<(), DbError> {
     Ok(())
 }
 
-async fn notify_kind(conn: &mut PgConnection, kind: JobKind) -> Result<(), DbError> {
+/// Wakes the dispatcher of `kind` (`NOTIFY quack_jobs`).
+pub async fn notify(conn: &mut PgConnection, kind: JobKind) -> Result<(), DbError> {
     obs::run(
         obs::Notify,
         "quack_jobs",
@@ -437,7 +438,7 @@ pub async fn wake(conn: &mut PgConnection, job: &NewJob) -> Result<bool, DbError
     if done.rows_affected() == 0 {
         return Ok(false);
     }
-    notify_kind(conn, job.kind).await?;
+    notify(conn, job.kind).await?;
     Ok(true)
 }
 

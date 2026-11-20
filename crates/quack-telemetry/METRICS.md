@@ -136,7 +136,7 @@ times (requests, job runs, interactions handled).
 | `quack.modlog.kind` | static names chosen in code | Moderation-log entry kind. |
 | `quack.modlog.result` | `ok`, `failed`, `refused` | The result a moderation-log entry records. |
 | `quack.message.kind` | `case_receipt`, `appeal_post`, `ticket_panel`, `ticket_post`, `honeypot_warning` | Tracked Discord message kind. |
-| `quack.job.kind` | `run_action`, `send_dm`, `sync_message`, `post_mod_log`, `capture_evidence`, `honeypot_case`, `honeypot_cleanup`, `open_ticket`, `close_ticket`, `housekeeping` | Background job kind. |
+| `quack.job.kind` | `run_action`, `send_dm`, `sync_message`, `post_mod_log`, `capture_evidence`, `honeypot_case`, `honeypot_cleanup`, `open_ticket`, `close_ticket`, `post_ops`, `housekeeping` | Background job kind. |
 | `quack.job.outcome` | `done`, `retry`, `deferred`, `continued`, `rescheduled`, `finalized`, `dead`, `lost_lease`, `timed_out` | How one job run ended. |
 | `http.request.method` | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`, `_OTHER` | HTTP method (semconv). |
 | `http.route` | static names chosen in code | API route template (semconv). |

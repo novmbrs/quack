@@ -36,6 +36,7 @@ pub mod messages;
 pub mod modlog;
 pub mod notify;
 pub mod operation_keys;
+pub mod ops;
 pub mod rules;
 pub mod sessions;
 pub mod settings;

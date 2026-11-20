@@ -1,5 +1,5 @@
 use proptest::prelude::*;
-use quack_core::ids::{ActionId, AppealId, CaseId, MemberId, RuleId, TicketId};
+use quack_core::ids::{ActionId, AppealId, CaseId, JobId, MemberId, RuleId, TicketId};
 use quack_core::rule::FieldKey;
 use quack_text::actions::{
     ButtonAction, DraftPage, InputId, ModalAction, SelectAction, SelectValue,
@@ -82,6 +82,10 @@ fn custom_id() -> impl Strategy<Value = CustomId> {
         Just(CustomId::OpenTicket),
         ticket().prop_map(CustomId::CloseTicket),
         ticket().prop_map(CustomId::FixTicketAccess),
+        Just(CustomId::OpsRefresh),
+        uuid().prop_map(|j| CustomId::OpsRequeueJob(JobId::from_uuid(j))),
+        uuid().prop_map(|j| CustomId::OpsDismissJob(JobId::from_uuid(j))),
+        any::<u32>().prop_map(CustomId::OpsJobsPage),
     ]
 }
 

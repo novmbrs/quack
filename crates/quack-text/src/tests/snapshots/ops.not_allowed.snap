@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only Quack's operators can use this, and only in the ops server.
+plain:   Only Quack's operators can use this, and only in the ops server.
+model:   [Fixed("Only Quack's operators can use this, and only in the ops server.")]

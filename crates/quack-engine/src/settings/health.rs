@@ -46,7 +46,7 @@ pub struct ChannelHealth {
 }
 
 /// The permissions Quack's install asks for (§20.3).
-fn wanted() -> Permissions {
+pub fn wanted() -> Permissions {
     [
         Permission::ViewChannel,
         Permission::SendMessages,

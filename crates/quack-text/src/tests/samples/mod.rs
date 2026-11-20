@@ -17,6 +17,7 @@ mod lists;
 mod log_entries;
 mod logs;
 mod modules;
+mod ops;
 mod setup;
 mod words;
 
@@ -104,5 +105,6 @@ pub fn all() -> Vec<Sample> {
     v.extend(setup::samples());
     v.extend(modules::samples());
     v.extend(activity::samples());
+    v.extend(ops::samples());
     v
 }

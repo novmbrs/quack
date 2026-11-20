@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops_state SET seen_at = now(), stopped_at = now(), stop_reason = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "77580de89130cbd66c68e467a5be9199ecffe372f7d448afea98a74a389c9d9f"
+}

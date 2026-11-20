@@ -35,6 +35,10 @@ RUN cargo chef cook --release --locked --package quack --recipe-path recipe.json
 COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
 COPY .sqlx ./.sqlx
 COPY crates ./crates
+# The commit `ops.started` names (§21.3); optional:
+#   docker build --build-arg QUACK_GIT_COMMIT=$(git rev-parse HEAD) .
+ARG QUACK_GIT_COMMIT=""
+ENV QUACK_GIT_COMMIT=${QUACK_GIT_COMMIT}
 RUN cargo build --release --locked --package quack \
     && cp target/release/quack /quack
 

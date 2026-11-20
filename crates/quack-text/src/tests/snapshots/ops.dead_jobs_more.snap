@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Danger
+--- discord ---
+7 more died in the same minute. Use `/ops jobs` to see them all.
+--- plain ---
+7 more died in the same minute. Use /ops jobs to see them all.
+--- model ---
+Text [Fixed("7 more died in the same minute. Use "), Code("/ops jobs"), Fixed(" to see them all.")]

@@ -85,6 +85,7 @@ pub async fn run(
     ready: Arc<Readiness>,
     signal: impl Future<Output = ()> + Send,
 ) -> Result<(), ServeError> {
+    let began = Instant::now();
     let stop = CancellationToken::new();
     // A signal during startup (waiting for the fence, say) stops it too.
     let mut signal = std::pin::pin!(signal);
@@ -92,7 +93,8 @@ pub async fn run(
         config,
         options,
         Arc::clone(&ready),
-        stop.clone()
+        stop.clone(),
+        began,
     ));
     let (started, signalled) = tokio::select! {
         started = &mut starting => (started?, false),
@@ -121,6 +123,15 @@ pub async fn run(
         }
     };
     tracing::info!(ok = cause.is_ok(), "shutting down");
+    // A run that lost the fence writes nothing: another may own the row.
+    let stopped = match &cause {
+        Ok(()) => Some(quack_ops::StopReason::Signal),
+        Err(ServeError::GatewayStopped) => Some(quack_ops::StopReason::GatewayClosed),
+        Err(_) => None,
+    };
+    if let (Some(ops), Some(reason)) = (&started.ops, stopped) {
+        ops.record_stop(reason).await;
+    }
     shut_down(started, &ready, &stop).await;
     cause
 }
