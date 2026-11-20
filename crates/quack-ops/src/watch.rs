@@ -10,6 +10,8 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use crate::body::{Body, DeadJob, FailedGroup};
+use quack_text::ops::FAILED_GROUPS_SHOWN;
+
 use crate::{GatewaySnapshot, Ops, channels, errors, post, status};
 
 /// How often channel setup is tried again.
@@ -20,8 +22,6 @@ const TICK: Duration = Duration::from_mins(1);
 const BOARD_EVERY: u32 = 10;
 /// Dead jobs posted one by one per tick; the rest are counted.
 const DEAD_JOBS_POSTED: u32 = 5;
-/// Failed-action groups saved in one post (it shows fewer).
-const FAILED_GROUPS_SAVED: usize = 50;
 
 /// Starts the heartbeat (on its own, so it beats while channel setup
 /// keeps failing) and the task that does the rest.
@@ -131,9 +131,14 @@ pub(crate) async fn alerts(ops: &Ops) -> Result<(), DbError> {
     }
     let failed = db::take_new_failed_actions(&mut tx).await?;
     if !failed.is_empty() {
+        // Every failure is now marked reported, so the post keeps the
+        // whole count even though it names only the largest groups.
+        let total = failed.iter().map(|g| g.count).sum();
+        let hidden_groups =
+            u64::try_from(failed.len().saturating_sub(FAILED_GROUPS_SHOWN)).unwrap_or(0);
         let groups = failed
             .iter()
-            .take(FAILED_GROUPS_SAVED)
+            .take(FAILED_GROUPS_SHOWN)
             .map(|g| FailedGroup {
                 guild_id: g.guild,
                 action: g.kind,
@@ -141,7 +146,12 @@ pub(crate) async fn alerts(ops: &Ops) -> Result<(), DbError> {
                 count: g.count,
             })
             .collect();
-        post::insert(&mut tx, ops, Feed::Alerts, &Body::FailedActions { groups }).await?;
+        let body = Body::FailedActions {
+            groups,
+            total,
+            hidden_groups,
+        };
+        post::insert(&mut tx, ops, Feed::Alerts, &body).await?;
     }
     tx.commit().await
 }

@@ -129,15 +129,19 @@ pub async fn run(
         Err(ServeError::GatewayStopped) => Some(quack_ops::StopReason::GatewayClosed),
         Err(_) => None,
     };
-    if let (Some(ops), Some(reason)) = (&started.ops, stopped) {
-        ops.record_stop(reason).await;
-    }
-    shut_down(started, &ready, &stop).await;
+    shut_down(started, &ready, &stop, stopped).await;
     cause
 }
 
 /// Steps 1–4 of the shutdown.
-async fn shut_down(s: start::Started, ready: &Readiness, stop: &CancellationToken) {
+/// `stopped` is how the run stopped, recorded for ops (§21.3) alongside
+/// the drain, within the same deadline.
+async fn shut_down(
+    s: start::Started,
+    ready: &Readiness,
+    stop: &CancellationToken,
+    stopped: Option<quack_ops::StopReason>,
+) {
     let deadline = Instant::now() + SHUTDOWN_DEADLINE;
     let drain = deadline
         .saturating_duration_since(Instant::now())
@@ -151,15 +155,22 @@ async fn shut_down(s: start::Started, ready: &Readiness, stop: &CancellationToke
         }
     };
     let modules = s.modules.shutdown(drain);
+    let record = async {
+        if let (Some(ops), Some(reason)) = (&s.ops, stopped) {
+            ops.record_stop(reason).await;
+        }
+    };
     let mut tasks = s.tasks;
     let joined = async {
         for task in &mut tasks {
             let _ = task.await;
         }
     };
-    if tokio::time::timeout(drain, async { tokio::join!(runner, modules, joined) })
-        .await
-        .is_err()
+    if tokio::time::timeout(drain, async {
+        tokio::join!(runner, modules, record, joined)
+    })
+    .await
+    .is_err()
     {
         tracing::warn!("shutdown drain hit its deadline; dropping what is left");
     }

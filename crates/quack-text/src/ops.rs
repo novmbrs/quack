@@ -381,9 +381,10 @@ pub struct FailedGroup {
 /// The most groups `ops.failed_actions` lists.
 pub const FAILED_GROUPS_SHOWN: usize = 10;
 
-/// `ops.failed_actions`: actions failed in the last minute.
-pub fn failed_actions(groups: &[FailedGroup]) -> Msg {
-    let total: u64 = groups.iter().map(|g| g.count).sum();
+/// `ops.failed_actions`: actions failed in the last minute. `total`
+/// counts every failure, `hidden` the groups not in `groups` (which shows
+/// at most [`FAILED_GROUPS_SHOWN`]).
+pub fn failed_actions(groups: &[FailedGroup], total: u64, hidden: u64) -> Msg {
     let mut msg = Msg::new(Tone::Warning)
         .block(Block::Heading(Text::fixed(format!(
             "{} failed",
@@ -404,11 +405,12 @@ pub fn failed_actions(groups: &[FailedGroup]) -> Msg {
             .push(Inline::Code(g.reason.as_str().to_owned())),
         );
     }
-    let hidden = groups.len().saturating_sub(FAILED_GROUPS_SHOWN);
+    let hidden =
+        hidden + u64::try_from(groups.len().saturating_sub(FAILED_GROUPS_SHOWN)).unwrap_or(0);
     if hidden > 0 {
         msg = msg.block(Block::Subtext(Text::fixed(format!(
             "And {} more {}.",
-            fmt::count(u64::try_from(hidden).unwrap_or(0)),
+            fmt::count(hidden),
             if hidden == 1 { "group" } else { "groups" }
         ))));
     }

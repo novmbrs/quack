@@ -2670,11 +2670,11 @@ caches; data stays, modules stay off after a re-add.
 **Shutdown** (signal, lost fence, or ended gateway; one 30 s deadline, so
 a grace period of at least 35 s):
 
-1. Mark not ready; when ops is on, record how the run stopped in
-   `ops_state` (§21.3; never after a lost fence).
+1. Mark not ready.
 2. Stop claiming jobs, gateway intake, and new HTTP connections.
 3. Drain until 5 s before the deadline: interactions, requests, jobs, the
-   activity log's batches and queue.
+   activity log's batches and queue; alongside, when ops is on, record how
+   the run stopped in `ops_state` (§21.3; never after a lost fence).
 4. Abort the rest, close the Discord client (§16.7), close the pool and
    release the fence.
 5. Flush telemetry (≤ 5 s; a failed or late flush logs a warning to

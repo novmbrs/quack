@@ -46,8 +46,13 @@ pub(crate) enum Body {
     DeadJob(DeadJob),
     /// `ops.dead_jobs_more`.
     DeadJobsMore { more: u64 },
-    /// `ops.failed_actions`.
-    FailedActions { groups: Vec<FailedGroup> },
+    /// `ops.failed_actions`: the largest groups, with every failure and
+    /// group counted.
+    FailedActions {
+        groups: Vec<FailedGroup>,
+        total: u64,
+        hidden_groups: u64,
+    },
 }
 
 /// The run before, as saved.
@@ -197,7 +202,11 @@ impl Body {
             }),
             Self::DeadJob(job) => text::dead_job(&job.view()),
             Self::DeadJobsMore { more } => text::dead_jobs_more(*more),
-            Self::FailedActions { groups } => text::failed_actions(
+            Self::FailedActions {
+                groups,
+                total,
+                hidden_groups,
+            } => text::failed_actions(
                 &groups
                     .iter()
                     .map(|g| text::FailedGroup {
@@ -207,6 +216,8 @@ impl Body {
                         count: g.count,
                     })
                     .collect::<Vec<_>>(),
+                *total,
+                *hidden_groups,
             ),
         }
     }
@@ -236,6 +247,8 @@ mod tests {
                     reason: ActionFailure::QuackRoleTooLow,
                     count: 2,
                 }],
+                total: 2,
+                hidden_groups: 0,
             },
             Body::DeadJobsMore { more: 3 },
         ];
@@ -243,6 +256,23 @@ mod tests {
             let json = serde_json::to_value(&body).unwrap();
             assert_eq!(serde_json::from_value::<Body>(json).unwrap(), body);
         }
+    }
+
+    #[test]
+    fn failed_actions_keep_the_whole_count() {
+        let body = Body::FailedActions {
+            groups: vec![FailedGroup {
+                guild_id: GuildId::new(5).unwrap(),
+                action: ActionKind::Ban,
+                reason: ActionFailure::QuackRoleTooLow,
+                count: 2,
+            }],
+            total: 30,
+            hidden_groups: 15,
+        };
+        let text = body.render().plain();
+        assert!(text.contains("30 actions failed"), "{text}");
+        assert!(text.contains("And 15 more groups."), "{text}");
     }
 
     #[test]

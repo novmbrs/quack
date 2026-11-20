@@ -223,12 +223,12 @@ pub fn samples() -> Vec<Sample> {
     v.push(msg(
         "ops.failed_actions",
         "one",
-        ops::failed_actions(&failed[..1]),
+        ops::failed_actions(&failed[..1], 13, 0),
     ));
     v.push(msg(
         "ops.failed_actions",
         "more than shown",
-        ops::failed_actions(&failed),
+        ops::failed_actions(&failed[..10], 90 + 40, 2 + 38),
     ));
     let group = |n: u64, url: bool| ErrorGroup {
         target: "quack_engine::actions::run".to_owned(),
