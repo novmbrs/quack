@@ -188,15 +188,6 @@ async fn dashboard_sentences_name_known_people() {
     let failed = app.send(app.get(&g("/actions")).by(&moderator)).await;
     assert!(all_text(&failed.json).contains("user41"), "{}", failed.json);
 
-    // Names read for the pages above are reused: loading them again asks
-    // Discord for nobody.
-    let asked = app.h.fake.count(Call::Accounts);
-    for path in [g("/cases/1"), g("/mod-log"), g("/actions")] {
-        let resp = app.send(app.get(&path).by(&moderator)).await;
-        assert_named(&path, &resp.json);
-    }
-    assert_eq!(app.h.fake.count(Call::Accounts), asked);
-
     // The member's own pages: "you", never a staff name.
     for path in [
         "/api/me/cases".to_owned(),

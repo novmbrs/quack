@@ -1427,9 +1427,9 @@ first session logs "connected to the gateway".
 | --- | --- | --- | --- | --- |
 | Guild cache (`twilight-cache-inmemory`: `GUILD`, `CHANNEL`, `ROLE`, `USER_CURRENT`) | Owner, MFA level, name, icon, channels with overwrites and parents, roles | Servers on the shard | Gateway; trusted for a server only while connected, loaded, and not tainted (§11.9) | `guilds` |
 | Member cache (`quack-discord`) | (server, account) → roles, joined, timeout end, bot flag, names, avatar | 200,000, LRU | Gateway entries exact while trusted; REST entries 5 min; removed on leave; "not a member" never cached | `members` |
+| Account cache (`quack-discord`, owned by the member cache) | Account → username, global name, avatar, bot flag | 100,000, LRU | 24 h after the last sighting: gateway members and member updates, interaction and message authors, every member or user read over REST; "unknown user" never cached | `accounts` |
 | Rules cache (`quack-engine`) | Every rule's name, description, archived flag; current definition of active rules | Per server | Reloaded on `NOTIFY quack_rules` | `rules` |
 | Config cache (`quack-engine`) | `guild_settings` and module settings | Per installed server | Reloaded on `NOTIFY quack_settings` | `config` |
-| Name cache (`quack-engine`) | Account → display name for dashboard sentences (§12.0) | 10,000; full → expired dropped, else cleared | 5 min; only names Discord returned | `names` |
 | Activity message cache (`quack-activity-log`) | (server, channel, message) → author, redacted text, files, embed types | 50,000 and 64 MiB | 24 h, LRU | `activity_messages` |
 | Interaction dedupe (`quack-bot`) | Interaction ids | 100,000 | 15 min | `interactions` |
 | Account servers (`quack-api`) | Session → the account's Discord servers | 1,000 | 60 s | (no metrics) |
@@ -1500,10 +1500,10 @@ mention.
 
 Dashboard sentences (the staff case view, the actions page, the moderation
 log, the void message) name people by global name, else username:
-`quack_engine::names::Names` takes the names the name cache (§11.10) read
-in the last 5 minutes and reads the rest once per response through the
-port's `accounts`; when Discord can't answer, the "a member (ID {id})"
-wording stands. Member pages say "you" and never name staff.
+`quack_engine::names::Names` reads them once per response through the
+port's `accounts`, which answers from the account cache (§11.10) and reads
+only the rest from Discord; when Discord can't answer, the "a member (ID
+{id})" wording stands. Member pages say "you" and never name staff.
 
 ### 12.1 Commands
 

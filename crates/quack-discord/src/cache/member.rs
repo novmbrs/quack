@@ -4,6 +4,9 @@
 //! Event-fed entries are exact while the gateway is connected and the server
 //! loaded, so callers pass whether the server is trusted; REST-fed entries
 //! expire after 5 minutes. "Not a member" is never cached.
+//!
+//! It owns the account cache too, so every member it stores also refreshes
+//! that member's account.
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
@@ -12,6 +15,7 @@ use quack_core::ids::{GuildId, MemberId};
 use quack_telemetry::labels::CacheName;
 use quack_telemetry::metrics;
 
+use super::account::{self, AccountCache};
 use super::lru::Lru;
 use crate::model::Member;
 
@@ -35,6 +39,7 @@ struct Entry {
 pub struct MemberCache {
     entries: Mutex<Inner>,
     rest_ttl: Duration,
+    accounts: AccountCache,
 }
 
 /// The entries, and per server a revision every gateway change bumps, so a
@@ -75,19 +80,29 @@ impl MemberCache {
                 revisions: std::collections::HashMap::new(),
             }),
             rest_ttl,
+            accounts: AccountCache::default(),
         }
+    }
+
+    /// The account cache this cache feeds.
+    pub const fn accounts(&self) -> &AccountCache {
+        &self.accounts
     }
 
     fn lock(&self) -> MutexGuard<'_, Inner> {
         self.entries.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Reports the cache's size on `quack.cache.size`.
+    /// Reports its size and the account cache's on `quack.cache.size`.
     pub fn observe(self: &Arc<Self>) {
         let me = Arc::downgrade(self);
         metrics()
             .caches
             .observe_size(NAME, move || me.upgrade().map_or(0, |c| c.len() as u64));
+        let me = Arc::downgrade(self);
+        metrics().caches.observe_size(account::NAME, move || {
+            me.upgrade().map_or(0, |c| c.accounts.len() as u64)
+        });
     }
 
     /// A cached member. Event-fed entries count only when `trusted` (the
@@ -108,7 +123,8 @@ impl MemberCache {
         found
     }
 
-    fn insert(entries: &mut Inner, guild: GuildId, member: Member, fed: Fed) {
+    fn insert(&self, entries: &mut Inner, guild: GuildId, member: Member, fed: Fed) {
+        self.accounts.put_member(&member);
         let evicted = entries
             .lru
             .insert((guild, member.id), Entry { member, fed });
@@ -127,7 +143,7 @@ impl MemberCache {
     pub fn put_event(&self, guild: GuildId, member: Member) {
         let mut entries = self.lock();
         entries.bump(guild);
-        Self::insert(&mut entries, guild, member, Fed::Event);
+        self.insert(&mut entries, guild, member, Fed::Event);
     }
 
     /// Stores a member Quack read over REST, unless a gateway change for
@@ -135,7 +151,7 @@ impl MemberCache {
     pub fn put_rest(&self, guild: GuildId, member: Member, since: u64) {
         let mut entries = self.lock();
         if entries.revision(guild) == since {
-            Self::insert(&mut entries, guild, member, Fed::Rest(Instant::now()));
+            self.insert(&mut entries, guild, member, Fed::Rest(Instant::now()));
         }
     }
 

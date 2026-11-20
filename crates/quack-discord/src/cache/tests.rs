@@ -251,3 +251,28 @@ fn the_member_cache_follows_events() {
     feed(&cache, &members, &[guild_create(), ready()]);
     assert!(members.is_empty(), "READY starts from scratch");
 }
+
+#[test]
+fn members_interaction_authors_and_message_authors_refresh_accounts() {
+    let (_, members) = loaded();
+    let accounts = members.accounts();
+    let account = |id| accounts.get(quack_core::ids::AccountId::new(id).unwrap());
+    assert_eq!(account(7).map(|a| a.username).as_deref(), Some("member"));
+    let mut message = fixtures::message(1, 30);
+    message["guild_id"] = json!("1");
+    let mut webhook = fixtures::message(2, 30);
+    webhook["author"] = fixtures::user(11, "hook");
+    webhook["webhook_id"] = json!("11");
+    let interaction = fixtures::interaction(2, &json!({"id": "3", "name": "case", "type": 1}));
+    let events = [
+        fixtures::dispatch("MESSAGE_CREATE", &message),
+        fixtures::dispatch("MESSAGE_CREATE", &webhook),
+        fixtures::dispatch("INTERACTION_CREATE", &interaction),
+    ];
+    for event in &events {
+        feed_members(&members, event);
+    }
+    assert_eq!(account(9).map(|a| a.username).as_deref(), Some("author"));
+    assert_eq!(account(11), None, "a webhook's author isn't an account");
+    assert_eq!(account(7).map(|a| a.username).as_deref(), Some("moderator"));
+}
