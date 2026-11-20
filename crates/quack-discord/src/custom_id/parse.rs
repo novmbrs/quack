@@ -1,6 +1,6 @@
 //! Encoding and decoding current (`1:`) ids.
 
-use quack_core::ids::{ActionId, AppealId, CaseId, MemberId, RuleId, TicketId};
+use quack_core::ids::{ActionId, AppealId, CaseId, JobId, MemberId, RuleId, TicketId};
 use quack_text::actions::DraftPage;
 
 use super::CustomId;
@@ -93,6 +93,10 @@ pub(super) fn encode(id: &CustomId) -> String {
         C::OpenTicket => ("to", String::new()),
         C::CloseTicket(t) => ("tc", t.to_u22()),
         C::FixTicketAccess(t) => ("tf", t.to_u22()),
+        C::OpsRefresh => ("op", "st".to_owned()),
+        C::OpsRequeueJob(j) => ("op", format!("rq:{}", j.to_u22())),
+        C::OpsDismissJob(j) => ("op", format!("dm:{}", j.to_u22())),
+        C::OpsJobsPage(p) => ("op", format!("jp:{p}")),
     };
     if args.is_empty() {
         format!("1:{code}")
@@ -179,6 +183,10 @@ pub(super) fn decode(rest: &str) -> Option<CustomId> {
         ("to", []) => C::OpenTicket,
         ("tc", [t]) => C::CloseTicket(ticket(t)?),
         ("tf", [t]) => C::FixTicketAccess(ticket(t)?),
+        ("op", ["st"]) => C::OpsRefresh,
+        ("op", ["rq", j]) => C::OpsRequeueJob(JobId::from_u22(j).ok()?),
+        ("op", ["dm", j]) => C::OpsDismissJob(JobId::from_u22(j).ok()?),
+        ("op", ["jp", p]) => C::OpsJobsPage(number(p)?),
         _ => return None,
     })
 }

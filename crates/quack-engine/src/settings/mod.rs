@@ -18,7 +18,7 @@ use time::OffsetDateTime;
 use crate::opkey::KeyError;
 use crate::{Engine, Principal, obs};
 
-pub use health::{ChannelHealth, Health, health};
+pub use health::{ChannelHealth, Health, health, wanted};
 pub use modules::{
     EnableCheck, EnabledChanged, ModuleFacts, ModuleHooks, begin_module_write, finish_module_write,
     set_enabled,

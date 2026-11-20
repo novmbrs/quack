@@ -22,6 +22,7 @@ quack-db = { workspace = true }
 quack-tickets = { workspace = true }
 quack-honeypot = { workspace = true }
 quack-activity-log = { workspace = true }
+quack-ops = { workspace = true }
 quack-telemetry = { workspace = true }
 opentelemetry = { workspace = true }
 serde_json = { workspace = true }

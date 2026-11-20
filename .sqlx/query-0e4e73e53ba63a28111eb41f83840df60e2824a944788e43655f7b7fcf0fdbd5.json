@@ -147,7 +147,8 @@
                 "honeypot_cleanup",
                 "open_ticket",
                 "close_ticket",
-                "housekeeping"
+                "housekeeping",
+                "post_ops"
               ]
             }
           }

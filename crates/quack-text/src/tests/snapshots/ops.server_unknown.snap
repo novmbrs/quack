@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack has never been in a server with the ID `12345`.
+plain:   Quack has never been in a server with the ID 12345.
+model:   [Fixed("Quack has never been in a server with the ID "), Code("12345"), Fixed(".")]

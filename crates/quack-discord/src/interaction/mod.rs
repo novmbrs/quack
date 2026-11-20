@@ -84,6 +84,17 @@ pub enum AutocompleteFor {
     CaseList,
 }
 
+/// A `/ops` subcommand (§21.8).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum OpsRequest {
+    /// `/ops status`.
+    Status,
+    /// `/ops server id`: the typed id, unchecked.
+    Server(String),
+    /// `/ops jobs`.
+    Jobs,
+}
+
 /// One chosen value of a select, read with its select's custom id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SelectChoice {
@@ -180,6 +191,8 @@ pub enum Request {
         /// The topic.
         topic: Option<Topic>,
     },
+    /// `/ops …`, in the ops server.
+    Ops(OpsRequest),
     /// The "Add case" message command.
     AddCaseFromMessage {
         /// The message.
@@ -291,6 +304,9 @@ impl Interaction {
             Request::Rules => "rules",
             Request::Setup => "setup",
             Request::Help { .. } => "help",
+            Request::Ops(OpsRequest::Status) => "ops status",
+            Request::Ops(OpsRequest::Server(_)) => "ops server",
+            Request::Ops(OpsRequest::Jobs) => "ops jobs",
             Request::AddCaseFromMessage { .. } | Request::AddCaseForMember { .. } => "Add case",
             Request::Component { .. } => "component",
             Request::ModalSubmit { .. } => "modal",

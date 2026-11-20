@@ -35,6 +35,10 @@ impl From<&ButtonAction> for CustomId {
             B::OpenTicket => Self::OpenTicket,
             B::CloseTicket(t) => Self::CloseTicket(t),
             B::FixTicketAccess(t) => Self::FixTicketAccess(t),
+            B::OpsRefresh => Self::OpsRefresh,
+            B::OpsRequeueJob(j) => Self::OpsRequeueJob(j),
+            B::OpsDismissJob(j) => Self::OpsDismissJob(j),
+            B::OpsJobsPage(p) => Self::OpsJobsPage(p),
         }
     }
 }

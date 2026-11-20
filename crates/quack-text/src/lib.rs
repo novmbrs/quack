@@ -29,6 +29,7 @@ pub mod help;
 pub mod honeypot;
 pub mod log;
 pub mod model;
+pub mod ops;
 pub mod render;
 pub mod rules;
 pub mod setup;

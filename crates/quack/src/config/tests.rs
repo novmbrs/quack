@@ -187,3 +187,59 @@ fn a_malformed_file_never_echoes_its_content() {
     assert!(shown.contains("malformed.toml"), "{shown}");
     assert!(shown.contains("line 1"), "{shown}");
 }
+
+#[test]
+fn ops_is_off_without_its_server() {
+    let c = validate(Need::Serve, &serve_vars(&dashboard())).unwrap();
+    assert_eq!(c.ops, None);
+}
+
+#[test]
+fn ops_reads_the_server_operators_and_trace_link() {
+    let mut v = serve_vars(&dashboard());
+    v.insert("ops_guild_id".into(), "1005778938108325970".into());
+    v.insert("ops_user_ids".into(), " 111, 222 ,111".into());
+    v.insert(
+        "ops_trace_url".into(),
+        "https://grafana.example/explore?trace={trace_id}".into(),
+    );
+    let ops = validate(Need::Serve, &v).unwrap().ops.unwrap();
+    assert_eq!(ops.guild.get(), 1_005_778_938_108_325_970);
+    assert_eq!(
+        ops.operators.iter().map(|a| a.get()).collect::<Vec<_>>(),
+        [111, 222]
+    );
+    assert_eq!(
+        ops.trace_url.as_deref(),
+        Some("https://grafana.example/explore?trace={trace_id}")
+    );
+}
+
+#[test]
+fn ops_needs_operators_and_a_server() {
+    let mut v = serve_vars(&dashboard());
+    v.insert("ops_guild_id".into(), "1005778938108325970".into());
+    v.insert(
+        "ops_trace_url".into(),
+        "https://grafana.example/no-placeholder".into(),
+    );
+    let problems = validate(Need::Serve, &v).unwrap_err().0;
+    assert!(
+        problems.iter().any(|p| p.starts_with("QUACK_OPS_USER_IDS")),
+        "{problems:?}"
+    );
+    assert!(
+        problems
+            .iter()
+            .any(|p| p.starts_with("QUACK_OPS_TRACE_URL")),
+        "{problems:?}"
+    );
+
+    let mut v = serve_vars(&dashboard());
+    v.insert("ops_user_ids".into(), "111".into());
+    let problems = validate(Need::Serve, &v).unwrap_err().0;
+    assert!(
+        problems.iter().any(|p| p.starts_with("QUACK_OPS_GUILD_ID")),
+        "{problems:?}"
+    );
+}

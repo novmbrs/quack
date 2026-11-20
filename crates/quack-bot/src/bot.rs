@@ -33,6 +33,8 @@ pub(crate) struct Shared {
     /// Bounds the work after acknowledgements ([`MAX_WORK`] at once), so a
     /// slow handler never holds up another interaction's acknowledgement.
     pub(crate) work: Arc<tokio::sync::Semaphore>,
+    /// Ops in Discord (§21), when configured.
+    pub(crate) ops: std::sync::OnceLock<quack_ops::Ops>,
 }
 
 /// Most interactions doing their work (after the acknowledgement) at once;
@@ -73,8 +75,15 @@ impl Bot {
                 dedupe,
                 creating: ChannelLocks::default(),
                 work: Arc::new(tokio::sync::Semaphore::new(MAX_WORK)),
+                ops: std::sync::OnceLock::new(),
             }),
         }
+    }
+
+    /// Turns on `/ops`, the ops buttons, and the install posts (§21). Set
+    /// once, before the gateway starts; a second call is ignored.
+    pub fn set_ops(&self, ops: quack_ops::Ops) {
+        let _ = self.shared.ops.set(ops);
     }
 
     /// Handles one gateway event (§11.9); interactions go to

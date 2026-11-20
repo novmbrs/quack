@@ -1,0 +1,56 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## joined
+tone: Success
+--- discord ---
+### Quack joined a server
+Quack was added to **Quack \*Pond\*** (`1005778938108325970`).
+**Owner:** <@444>
+-# Quack is in 1,205 servers now.
+--- plain ---
+Quack joined a server
+Quack was added to Quack *Pond* (1005778938108325970).
+Owner: A member (ID 444)
+Quack is in 1,205 servers now.
+--- model ---
+Heading [Fixed("Quack joined a server")]
+Text [Fixed("Quack was added to "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
+Field "Owner" [Person(Person { id: AccountId(444), name: None })]
+Subtext [Fixed("Quack is in 1,205 servers now.")]
+
+## rejoined
+tone: Success
+--- discord ---
+### Quack rejoined a server
+Quack was added again to **Quack \*Pond\*** (`1005778938108325970`).
+**Owner:** <@444>
+-# Quack is in 1,205 servers now.
+--- plain ---
+Quack rejoined a server
+Quack was added again to Quack *Pond* (1005778938108325970).
+Owner: A member (ID 444)
+Quack is in 1,205 servers now.
+--- model ---
+Heading [Fixed("Quack rejoined a server")]
+Text [Fixed("Quack was added again to "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
+Field "Owner" [Person(Person { id: AccountId(444), name: None })]
+Subtext [Fixed("Quack is in 1,205 servers now.")]
+
+## left
+tone: Warning
+--- discord ---
+### Quack left a server
+Quack was removed from **Quack \*Pond\*** (`1005778938108325970`).
+**Owner:** <@444>
+-# Quack is in 1,205 servers now.
+--- plain ---
+Quack left a server
+Quack was removed from Quack *Pond* (1005778938108325970).
+Owner: A member (ID 444)
+Quack is in 1,205 servers now.
+--- model ---
+Heading [Fixed("Quack left a server")]
+Text [Fixed("Quack was removed from "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
+Field "Owner" [Person(Person { id: AccountId(444), name: None })]
+Subtext [Fixed("Quack is in 1,205 servers now.")]

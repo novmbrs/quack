@@ -24,6 +24,7 @@ quack-import = { workspace = true }
 quack-tickets = { workspace = true }
 quack-honeypot = { workspace = true }
 quack-activity-log = { workspace = true }
+quack-ops = { workspace = true }
 anyhow = { workspace = true }
 axum = { workspace = true }
 config = { workspace = true }

@@ -13,12 +13,12 @@ use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
-use quack_core::ids::GuildId;
+use quack_core::ids::{AccountId, GuildId};
 
 pub use quack_core::Secret;
 
 /// Every key Quack reads, without the `QUACK_` prefix, in lowercase.
-pub const KEYS: [&str; 17] = [
+pub const KEYS: [&str; 20] = [
     "database_url",
     "database_max_connections",
     "discord_token",
@@ -36,6 +36,9 @@ pub const KEYS: [&str; 17] = [
     "dev_guild_id",
     "trusted_proxy_hops",
     "import_source_url",
+    "ops_guild_id",
+    "ops_user_ids",
+    "ops_trace_url",
 ];
 
 /// Which command the configuration is for: each needs different keys.
@@ -58,6 +61,17 @@ pub struct DiscordConfig {
     pub token: Secret,
     /// The application id (also the OAuth client id).
     pub application_id: u64,
+}
+
+/// Ops in Discord (§21): the ops server and its operators.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OpsSettings {
+    /// `QUACK_OPS_GUILD_ID`.
+    pub guild: GuildId,
+    /// `QUACK_OPS_USER_IDS`, 1–25 accounts.
+    pub operators: Vec<AccountId>,
+    /// `QUACK_OPS_TRACE_URL`, containing `{trace_id}`.
+    pub trace_url: Option<String>,
 }
 
 /// Validated configuration.
@@ -95,6 +109,8 @@ pub struct Config {
     pub trusted_proxy_hops: u8,
     /// `QUACK_IMPORT_SOURCE_URL`.
     pub import_source_url: Option<Secret>,
+    /// The `QUACK_OPS_*` keys; `None` turns ops off.
+    pub ops: Option<OpsSettings>,
 }
 
 impl Config {
@@ -175,6 +191,7 @@ pub fn validate(need: Need, v: &BTreeMap<String, String>) -> Result<Config, Conf
         import_source_url: p
             .required(v, "import_source_url", need == Need::Import)
             .map(Secret::new),
+        ops: p.ops(v),
     };
     p.finish(config)
 }

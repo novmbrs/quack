@@ -1,0 +1,81 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## board
+tone: Success
+--- discord ---
+### Quack status
+**Version:** `0.1.0`, started <t:1794924309:R>
+**Gateway:** connected, 42 ms heartbeat
+**Servers:** 1,204
+**Jobs ready:** 3 run_action (oldest 12 seconds)
+**Dead jobs:** 0
+**Failed actions:** 2
+**Open appeals:** 5
+**Open tickets:** 1
+**Database:** 3 of 20 connections in use
+-# Updated <t:1795014309:R>.
+buttons: [Refresh · Secondary] OpsRefresh
+--- plain ---
+Quack status
+Version: 0.1.0, started on 17 Nov 2026 at 14:05 UTC
+Gateway: connected, 42 ms heartbeat
+Servers: 1,204
+Jobs ready: 3 run_action (oldest 12 seconds)
+Dead jobs: 0
+Failed actions: 2
+Open appeals: 5
+Open tickets: 1
+Database: 3 of 20 connections in use
+Updated on 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("Quack status")]
+Field "Version" [Code("0.1.0"), Fixed(", started "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Field "Gateway" [Fixed("connected, 42 ms heartbeat")]
+Field "Servers" [Fixed("1,204")]
+Field "Jobs ready" [Fixed("3 run_action (oldest 12 seconds)")]
+Field "Dead jobs" [Fixed("0")]
+Field "Failed actions" [Fixed("2")]
+Field "Open appeals" [Fixed("5")]
+Field "Open tickets" [Fixed("1")]
+Field "Database" [Fixed("3 of 20 connections in use")]
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## trouble, no button
+tone: Warning
+--- discord ---
+### Quack status
+**Version:** `0.1.0`, started <t:1794924309:R>
+**Gateway:** not connected
+**Servers:** 1,204
+**Jobs ready:** nothing waiting
+**Dead jobs:** 2
+**Failed actions:** 2
+**Open appeals:** 5
+**Open tickets:** 1
+**Database:** 3 of 20 connections in use
+-# Updated <t:1795014309:R>.
+--- plain ---
+Quack status
+Version: 0.1.0, started on 17 Nov 2026 at 14:05 UTC
+Gateway: not connected
+Servers: 1,204
+Jobs ready: nothing waiting
+Dead jobs: 2
+Failed actions: 2
+Open appeals: 5
+Open tickets: 1
+Database: 3 of 20 connections in use
+Updated on 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("Quack status")]
+Field "Version" [Code("0.1.0"), Fixed(", started "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Field "Gateway" [Fixed("not connected")]
+Field "Servers" [Fixed("1,204")]
+Field "Jobs ready" [Fixed("nothing waiting")]
+Field "Dead jobs" [Fixed("2")]
+Field "Failed actions" [Fixed("2")]
+Field "Open appeals" [Fixed("5")]
+Field "Open tickets" [Fixed("1")]
+Field "Database" [Fixed("3 of 20 connections in use")]
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]

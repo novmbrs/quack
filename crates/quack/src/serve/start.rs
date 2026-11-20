@@ -8,7 +8,7 @@ use quack_db::jobs::{Runner, RunnerConfig, ensure_housekeeping};
 use quack_db::notify::Listener;
 use quack_db::{Db, Fence};
 use quack_discord::cache::{GuildCache, MemberCache};
-use quack_discord::commands::{Scope, definitions, sync};
+use quack_discord::commands::{Scope, definitions, ops_definitions, sync};
 use quack_discord::facts::Facts;
 use quack_discord::gateway::{Gateway, check_shards};
 use quack_discord::{ClientConfig, DiscordClient, Outcome};
@@ -38,25 +38,33 @@ pub(super) struct Started {
     pub(super) fence_lost: CancellationToken,
     pub(super) gateway_lost: CancellationToken,
     pub(super) modules: Arc<Modules>,
+    pub(super) ops: Option<quack_ops::Ops>,
 }
 
 fn failed(what: &'static str) -> impl FnOnce(quack_db::DbError) -> ServeError {
     move |error| ServeError::Startup(format!("{what}: {error}"))
 }
 
-/// Step 3: connect, migrate or verify.
-async fn database(config: &Config, options: &Options, ready: &Readiness) -> Result<Db, ServeError> {
+/// Step 3: connect, migrate or verify. Returns how many migrations it
+/// applied.
+async fn database(
+    config: &Config,
+    options: &Options,
+    ready: &Readiness,
+) -> Result<(Db, usize), ServeError> {
     let db = Db::connect(
         config.database_url.expose(),
         config.database_max_connections,
     )
     .await
     .map_err(failed("couldn't connect to the database"))?;
+    let mut migrations = 0;
     if options.migrate {
         let applied = quack_db::migrate(&db)
             .await
             .map_err(failed("couldn't apply migrations"))?;
         tracing::info!(count = applied.len(), "applied migrations");
+        migrations = applied.len();
     }
     match quack_db::verify_migrations(&db).await {
         Ok(Ok(())) => Readiness::set(&ready.migrations, true),
@@ -67,7 +75,7 @@ async fn database(config: &Config, options: &Options, ready: &Readiness) -> Resu
         }
         Err(error) => return Err(failed("couldn't check migrations")(error)),
     }
-    Ok(db)
+    Ok((db, migrations))
 }
 
 /// Step 4: the singleton fence, retried every 5 s while another process
@@ -164,16 +172,31 @@ async fn rest(client: &DiscordClient, options: &Options) -> Result<(), ServeErro
     Ok(())
 }
 
-/// Step 7 (and `quack commands sync`): command sync (§11.2).
+/// Step 7 (and `quack commands sync`): command sync (§11.2), then `/ops`
+/// in the ops server (step 6; its failure only warns).
 pub async fn sync_commands(
     config: &Config,
     client: &DiscordClient,
 ) -> Result<quack_text::CommandIds, ServeError> {
     let scope = config.dev_guild_id.map_or(Scope::Global, Scope::Guild);
-    let report = sync(client, scope, &definitions())
+    let ops_guild = config.ops.as_ref().map(|o| o.guild);
+    let mut commands = definitions();
+    if ops_guild.is_some() && ops_guild == config.dev_guild_id {
+        commands.extend(ops_definitions());
+    }
+    let report = sync(client, scope, &commands)
         .await
         .map_err(|e| ServeError::Startup(format!("couldn't register the slash commands: {e}")))?;
     tracing::info!(changed = report.changed, "slash commands are registered");
+    if let Some(guild) = ops_guild.filter(|g| Some(*g) != config.dev_guild_id) {
+        match sync(client, Scope::Guild(guild), &ops_definitions()).await {
+            Ok(ops) => tracing::info!(
+                changed = ops.changed,
+                "/ops is registered in the ops server"
+            ),
+            Err(error) => tracing::warn!(%error, "couldn't register /ops in the ops server"),
+        }
+    }
     Ok(report.ids)
 }
 
@@ -316,14 +339,15 @@ async fn gateway(
     GatewaySource::Shard(status)
 }
 
-/// Runs the whole startup sequence.
+/// Runs the whole startup sequence; `began` is when the process started.
 pub(super) async fn start(
     config: &Config,
     options: &Options,
     ready: Arc<Readiness>,
     stop: CancellationToken,
+    began: Instant,
 ) -> Result<Started, ServeError> {
-    let db = database(config, options, &ready).await?;
+    let (db, migrations) = database(config, options, &ready).await?;
     let client = client(config, options)?;
     let (fence, fence_lost, fence_watch) = fence(&db, &ready, &client, &stop).await?;
     let mut tasks = vec![fence_watch];
@@ -369,6 +393,10 @@ pub(super) async fn start(
             () = gauges.run(gauge_db) => {}
         }
     }));
+    let ops = parts.app.ops.clone();
+    if let Some(ops) = &ops {
+        start_ops(ops, &gateway, migrations, began, &stop, &mut tasks).await;
+    }
     tasks.push(tokio::spawn(ready::refresh(
         Arc::clone(&ready),
         gateway,
@@ -384,7 +412,39 @@ pub(super) async fn start(
         fence_lost,
         gateway_lost,
         modules: Arc::clone(&parts.app.modules),
+        ops,
     })
+}
+
+/// Ops (§21): reads the gateway, records the run, posts `ops.started`,
+/// and starts its periodic work.
+async fn start_ops(
+    ops: &quack_ops::Ops,
+    gateway: &GatewaySource,
+    migrations: usize,
+    began: Instant,
+    stop: &CancellationToken,
+    tasks: &mut Vec<JoinHandle<()>>,
+) {
+    if let GatewaySource::Shard(status) = gateway {
+        let status = Arc::clone(status);
+        ops.set_gateway(Arc::new(move || {
+            let counts = status.counts();
+            quack_ops::GatewaySnapshot {
+                connected: status.is_connected(),
+                latency: status.heartbeat_latency(),
+                identifies: counts.identifies,
+                resumes: counts.resumes,
+                drops: counts.drops,
+                connect_failures: counts.connect_failures,
+                invalid_sessions: counts.invalid_sessions,
+            }
+        }));
+    }
+    if let Err(error) = ops.record_start(migrations, began.elapsed()).await {
+        tracing::warn!(%error, "couldn't record this run for ops");
+    }
+    tasks.extend(ops.start(stop));
 }
 
 /// Waits until the session is connected and every installed server has

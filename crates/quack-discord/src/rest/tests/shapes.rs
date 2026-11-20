@@ -240,6 +240,7 @@ async fn channels_and_threads() {
         name: "moderation-log".into(),
         topic: Some("Quack posts here.".into()),
         parent_id: None,
+        category: false,
         overwrites: vec![
             Overwrite {
                 target: OverwriteTarget::Role(RoleId::new(1).unwrap()),

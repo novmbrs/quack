@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH alerted AS (\n                 UPDATE actions SET ops_alerted_at = updated_at\n                 WHERE state = 'failed' AND dismissed_at IS NULL\n                   AND (ops_alerted_at IS NULL OR ops_alerted_at < updated_at)\n                 RETURNING guild_id, kind, failure_reason)\n               SELECT guild_id AS \"guild_id!\", kind AS \"kind!\", failure_reason AS \"reason!\", count(*) AS \"n!\"\n               FROM alerted\n               GROUP BY guild_id, kind, failure_reason\n               ORDER BY count(*) DESC, guild_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "guild_id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind!",
+        "type_info": {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "reason!",
+        "type_info": {
+          "Custom": {
+            "name": "action_failure",
+            "kind": {
+              "Enum": [
+                "quack_not_in_server",
+                "quack_missing_permission",
+                "quack_role_too_low",
+                "member_is_owner",
+                "member_not_in_server",
+                "member_is_administrator",
+                "timeout_window_passed",
+                "discord_refused",
+                "retries_exhausted",
+                "unconfirmed",
+                "original_unconfirmed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "7500a9f66e725c665621c23ab40ab2812193dac463ec096c93b66eee90f905de"
+}

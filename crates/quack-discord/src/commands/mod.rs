@@ -98,6 +98,26 @@ fn case() -> Command {
         .build()
 }
 
+/// The ops server's `/ops` (§21.8): hidden from everyone but
+/// administrators by default; Quack checks the operator list itself.
+pub fn ops_definitions() -> Vec<Command> {
+    vec![
+        command(text::OPS, CommandType::ChatInput)
+            .default_member_permissions(Permissions::empty())
+            .option(sub(text::OPS_STATUS))
+            .option(
+                sub(text::OPS_SERVER).option(
+                    StringBuilder::new(text::OPS_SERVER_ID.name, text::OPS_SERVER_ID.description)
+                        .required(true)
+                        .min_length(1)
+                        .max_length(20),
+                ),
+            )
+            .option(sub(text::OPS_JOBS))
+            .build(),
+    ]
+}
+
 /// Every command Quack registers, in a stable order.
 pub fn definitions() -> Vec<Command> {
     vec![

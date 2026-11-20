@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                 (SELECT count(*) FROM cases WHERE guild_id = $1) AS \"cases!\",\n                 (SELECT count(*) FROM cases WHERE guild_id = $1 AND voided_at IS NOT NULL) AS \"voided!\",\n                 (SELECT count(*) FROM rules WHERE guild_id = $1 AND archived_at IS NULL) AS \"rules!\",\n                 (SELECT count(*) FROM appeals WHERE guild_id = $1\n                    AND state IN ('pending', 'needs_information')) AS \"appeals!\",\n                 (SELECT count(*) FROM actions WHERE guild_id = $1 AND state = 'failed'\n                    AND dismissed_at IS NULL) AS \"failed!\",\n                 (SELECT count(*) FROM tickets WHERE guild_id = $1 AND state = 'open') AS \"tickets!\",\n                 coalesce((SELECT enabled FROM ticket_settings WHERE guild_id = $1), false) AS \"tickets_on!\",\n                 coalesce((SELECT enabled FROM activity_log_settings WHERE guild_id = $1), false) AS \"activity_on!\",\n                 coalesce((SELECT enabled FROM honeypot_settings WHERE guild_id = $1), false) AS \"honeypot_on!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cases!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "voided!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "rules!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "appeals!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "failed!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "tickets!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "tickets_on!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "activity_on!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "honeypot_on!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "1945fdce12c4b921d1591a5613048ba57ebafdb85723a4499777d73b11fe4187"
+}

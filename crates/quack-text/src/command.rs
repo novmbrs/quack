@@ -136,6 +136,34 @@ pub const HELP_TOPICS: [Choice; 4] = [
 /// `command.add_case`: the message and member command name.
 pub const ADD_CASE: &str = "Add case";
 
+/// `command.ops`: the ops server's command (§21.8).
+pub const OPS: Named = Named {
+    name: "ops",
+    description: "See how Quack is running. Only Quack's operators can use this.",
+};
+/// `command.ops.status`.
+pub const OPS_STATUS: Named = Named {
+    name: "status",
+    description: "Show the status board.",
+};
+/// `command.ops.server`.
+pub const OPS_SERVER: Named = Named {
+    name: "server",
+    description: "Look up a server Quack knows.",
+};
+/// `command.ops.server.id`.
+pub const OPS_SERVER_ID: Named = Named {
+    name: "id",
+    description: "The server's ID.",
+};
+/// `command.ops.jobs`.
+pub const OPS_JOBS: Named = Named {
+    name: "jobs",
+    description: "List dead jobs to requeue or dismiss.",
+};
+/// Every `/ops` name and description, for limit checks.
+pub const OPS_ALL: [Named; 5] = [OPS, OPS_STATUS, OPS_SERVER, OPS_SERVER_ID, OPS_JOBS];
+
 /// Every name and description above, for limit checks.
 pub const ALL: [Named; 19] = [
     CASE,

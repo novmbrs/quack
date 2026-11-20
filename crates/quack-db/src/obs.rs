@@ -200,6 +200,7 @@ pub(crate) fn job_kind(kind: crate::jobs::JobKind) -> quack_telemetry::labels::J
         K::HoneypotCleanup => L::HoneypotCleanup,
         K::OpenTicket => L::OpenTicket,
         K::CloseTicket => L::CloseTicket,
+        K::PostOps => L::PostOps,
         K::Housekeeping => L::Housekeeping,
     }
 }

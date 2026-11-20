@@ -1,0 +1,74 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one
+tone: Danger
+--- discord ---
+### 1 error in the last minute
+`quack_engine::actions::run` `couldn't settle an attempt error=database 1` trace `4bf92f3577b34da6a3ce929d0e0e4736`
+--- plain ---
+1 error in the last minute
+quack_engine::actions::run couldn't settle an attempt error=database 1 trace 4bf92f3577b34da6a3ce929d0e0e4736
+--- model ---
+Heading [Fixed("1 error in the last minute")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 1"), Fixed(" trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+
+## linked, dropped
+tone: Danger
+--- discord ---
+### 16 errors in the last minute
+`quack_engine::actions::run` `couldn't settle an attempt error=database 3` ×3 [trace](<https://grafana.example/explore?trace=4bf92f3577b34da6a3ce929d0e0e4736>)
+`quack_engine::actions::run` `couldn't settle an attempt error=database 1` [trace](<https://grafana.example/explore?trace=4bf92f3577b34da6a3ce929d0e0e4736>)
+-# 12 didn't fit in the buffer; the logs have them.
+--- plain ---
+16 errors in the last minute
+quack_engine::actions::run couldn't settle an attempt error=database 3 ×3 trace
+quack_engine::actions::run couldn't settle an attempt error=database 1 trace
+12 didn't fit in the buffer; the logs have them.
+--- model ---
+Heading [Fixed("16 errors in the last minute")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 3"), Fixed(" ×3 "), Link { text: [Fixed("trace")], url: "https://grafana.example/explore?trace=4bf92f3577b34da6a3ce929d0e0e4736" }]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 1"), Fixed(" "), Link { text: [Fixed("trace")], url: "https://grafana.example/explore?trace=4bf92f3577b34da6a3ce929d0e0e4736" }]
+Subtext [Fixed("12 didn't fit in the buffer; the logs have them.")]
+
+## more than shown
+tone: Danger
+--- discord ---
+### 78 errors in the last minute
+`quack_engine::actions::run` `couldn't settle an attempt error=database 1` trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 2` ×2 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 3` ×3 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 4` ×4 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 5` ×5 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 6` ×6 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 7` ×7 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 8` ×8 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 9` ×9 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+`quack_engine::actions::run` `couldn't settle an attempt error=database 10` ×10 trace `4bf92f3577b34da6a3ce929d0e0e4736`
+-# And 2 more kinds of error.
+--- plain ---
+78 errors in the last minute
+quack_engine::actions::run couldn't settle an attempt error=database 1 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 2 ×2 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 3 ×3 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 4 ×4 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 5 ×5 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 6 ×6 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 7 ×7 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 8 ×8 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 9 ×9 trace 4bf92f3577b34da6a3ce929d0e0e4736
+quack_engine::actions::run couldn't settle an attempt error=database 10 ×10 trace 4bf92f3577b34da6a3ce929d0e0e4736
+And 2 more kinds of error.
+--- model ---
+Heading [Fixed("78 errors in the last minute")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 1"), Fixed(" trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 2"), Fixed(" ×2 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 3"), Fixed(" ×3 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 4"), Fixed(" ×4 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 5"), Fixed(" ×5 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 6"), Fixed(" ×6 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 7"), Fixed(" ×7 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 8"), Fixed(" ×8 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 9"), Fixed(" ×9 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Text [Code("quack_engine::actions::run"), Fixed(" "), Code("couldn't settle an attempt error=database 10"), Fixed(" ×10 trace "), Code("4bf92f3577b34da6a3ce929d0e0e4736")]
+Subtext [Fixed("And 2 more kinds of error.")]

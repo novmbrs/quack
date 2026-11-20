@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE jobs SET dead_at = NULL, attempts = 0, run_at = now(), updated_at = now()\n               WHERE id = $1 AND dead_at IS NOT NULL\n               RETURNING kind",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "job_kind",
+            "kind": {
+              "Enum": [
+                "run_action",
+                "send_dm",
+                "sync_message",
+                "post_mod_log",
+                "capture_evidence",
+                "honeypot_case",
+                "honeypot_cleanup",
+                "open_ticket",
+                "close_ticket",
+                "housekeeping",
+                "post_ops"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "kind"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7278d4a8d1df73c6e4e30eebcf4bb9079e4e22fcd881e40bb40713d9ee87f428"
+}

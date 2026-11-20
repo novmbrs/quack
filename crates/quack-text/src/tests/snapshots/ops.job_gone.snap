@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: That job isn't dead any more: someone requeued or dismissed it, or housekeeping deleted it.
+plain:   That job isn't dead any more: someone requeued or dismissed it, or housekeeping deleted it.
+model:   [Fixed("That job isn't dead any more: someone requeued or dismissed it, or housekeeping deleted it.")]

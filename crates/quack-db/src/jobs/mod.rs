@@ -29,7 +29,7 @@ use crate::DbError;
 pub use kind::{DEADLINE_MARGIN, JobKind, JobPolicy};
 pub use queue::{
     JobBacklog, backlog, claim, enqueue, enqueue_many, ensure_housekeeping, fence, next_due_in,
-    settle, sweep_and_next_due, sweep_leases, wake,
+    notify, settle, sweep_and_next_due, sweep_leases, wake,
 };
 pub use runner::{FINALIZE_TRIES, Handled, Handler, HandlerFuture, Phase, Runner, RunnerConfig};
 
@@ -212,6 +212,16 @@ impl NewJob {
             Some(guild),
             &[&ticket],
             serde_json::json!({ "ticket_id": ticket }),
+        )
+    }
+
+    /// `post_ops:<post>`, run in the ops server (§21.3).
+    pub fn post_ops(guild: GuildId, post: Uuid) -> Self {
+        Self::new(
+            JobKind::PostOps,
+            Some(guild),
+            &[&post],
+            serde_json::json!({ "post_id": post }),
         )
     }
 

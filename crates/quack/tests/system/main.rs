@@ -19,6 +19,7 @@ mod common;
 mod dm_failed;
 mod honeypot;
 mod moderation;
+mod ops;
 mod shutdown;
 mod telemetry;
 mod tickets;
