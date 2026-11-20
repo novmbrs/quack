@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+Someone else changed this note since you opened it. Open the evidence again to see their note before you save.

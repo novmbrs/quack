@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+plain:   No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+model:   [Fixed("No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.")]

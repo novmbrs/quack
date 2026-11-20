@@ -120,7 +120,8 @@ impl CaseRecords {
     }
 
     /// The accounts the staff sentences about the case can name: the
-    /// member, the moderator, and whoever dismissed a failed action.
+    /// member, the moderator, whoever dismissed a failed action, and
+    /// whoever removed an evidence item.
     pub(crate) fn people(&self) -> impl Iterator<Item = AccountId> + '_ {
         [Some(self.case.member.account()), self.case.moderator]
             .into_iter()
@@ -129,6 +130,7 @@ impl CaseRecords {
                     .iter()
                     .map(|a| a.dismissed.and_then(|(_, by)| by)),
             )
+            .chain(self.evidence.iter().map(|e| e.removed.map(|(_, by)| by)))
             .flatten()
     }
 

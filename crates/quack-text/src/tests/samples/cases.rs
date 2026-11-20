@@ -189,6 +189,16 @@ pub fn samples() -> Vec<Sample> {
         v.push(sample("case.card", name, Out::Msg(case::card(&c))));
     }
     v.push(text("case.receipt.posted", "", case::receipt_posted(12)));
+    v.push(super::msg(
+        "case.receipt.posted",
+        "reply, no evidence yet",
+        case::receipt_posted_reply(case_id(), 12, false),
+    ));
+    v.push(super::msg(
+        "case.receipt.posted",
+        "reply, with evidence",
+        case::receipt_posted_reply(case_id(), 12, true),
+    ));
     v.push(text(
         "case.receipt.post_failed",
         "",
@@ -375,6 +385,16 @@ pub fn samples() -> Vec<Sample> {
         (
             "context.other_server",
             ContextProblemCode::OtherServer,
+            FieldKind::MessageLink,
+        ),
+        (
+            "context.evidence_channel",
+            ContextProblemCode::EvidenceChannel,
+            FieldKind::MessageLink,
+        ),
+        (
+            "context.no_access",
+            ContextProblemCode::NoAccess,
             FieldKind::MessageLink,
         ),
         (

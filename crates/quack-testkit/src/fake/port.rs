@@ -294,6 +294,28 @@ impl Discord for FakeDiscord {
         }))
     }
 
+    fn fetch_history_after(
+        &self,
+        channel: ChannelId,
+        after: MessageId,
+        limit: u8,
+    ) -> BoxFuture<'_, Outcome<Vec<FetchedMessage>>> {
+        let r = with(Call::FetchHistoryAfter, |r| {
+            r.channel = Some(channel);
+            r.message = Some(after);
+        });
+        Box::pin(self.call(r, move |w| {
+            Outcome::Done(
+                w.messages
+                    .values()
+                    .filter(|m| m.fetched.channel_id == channel && m.fetched.id > after)
+                    .take(usize::from(limit))
+                    .map(|m| m.fetched.clone())
+                    .collect(),
+            )
+        }))
+    }
+
     fn download_attachment<'a>(
         &'a self,
         url: &'a str,

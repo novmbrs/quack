@@ -383,7 +383,7 @@ function SettingsPage() {
 
       <Section
         title="Evidence channel"
-        description="Quack can keep copies of evidence files in a staff-only channel, so they last after the original message is deleted. Without one, Quack keeps each file's details and a link to the original."
+        description="Quack keeps copies of evidence files in a staff-only channel, so they last after the original message is deleted. Uploading files as evidence needs one. Without it, Quack keeps each saved file's details and a link to the original."
       >
         <Field
           label="Evidence channel"

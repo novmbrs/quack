@@ -63,7 +63,9 @@ enum_schema! {
     AppealState => quack_core::appeal::AppealState;
     /// What happened on an appeal.
     AppealEventKind => quack_core::appeal::AppealEventKind;
-    /// Where a saved message stands.
+    /// What an evidence item holds: a saved message or uploaded files.
+    EvidenceKind => quack_core::evidence::EvidenceKind;
+    /// Where an evidence item stands.
     EvidenceState => quack_core::evidence::EvidenceState;
     /// Why saving a message failed.
     EvidenceFailure => quack_core::evidence::EvidenceFailure;

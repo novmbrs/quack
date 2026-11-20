@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MessageLink
+discord: What happened? — You can't read the channel that message is in, so Quack didn't add it again. Ask a moderator who can read it.
+plain:   What happened? — You can't read the channel that message is in, so Quack didn't add it again. Ask a moderator who can read it.
+model:   [User("What happened?"), Fixed(" — You can't read the channel that message is in, so Quack didn't add it again. Ask a moderator who can read it.")]

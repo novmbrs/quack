@@ -41,6 +41,7 @@ const fn domain_reason(err: DomainError) -> Reason {
         DomainError::CaseNotFound
         | DomainError::RuleNotFound
         | DomainError::AppealNotFound
+        | DomainError::EvidenceNotFound
         | DomainError::TooManyLinks => Reason::Invalid,
         _ => Reason::Conflict,
     }
@@ -88,6 +89,9 @@ pub(crate) fn apply(err: &ApplyError, facts: &ErrorFacts<'_>) -> Failure {
         ApplyError::ContextInvalid(_)
         | ApplyError::LinksInvalid(_)
         | ApplyError::OperationKeyReused => invalid(),
+        ApplyError::FilesRefused(files) => {
+            Failure::refused(error::files_not_allowed(files), Reason::Invalid)
+        }
         ApplyError::CaseNumbersExhausted => {
             Failure::refused(error::case_numbers_exhausted(), Reason::Conflict)
         }
@@ -128,6 +132,11 @@ pub(crate) fn case(err: &CaseError, facts: &ErrorFacts<'_>) -> Failure {
         CaseError::Refused(d) => domain(*d, facts),
         CaseError::ContextChanged => Failure::refused(error::context_changed(), Reason::Conflict),
         CaseError::NoLinks => Failure::refused(error::no_links(), Reason::Invalid),
+        CaseError::FilesRefused(files) => {
+            Failure::refused(error::files_not_allowed(files), Reason::Invalid)
+        }
+        CaseError::NoteLength => Failure::refused(error::note_too_long(), Reason::Invalid),
+        CaseError::DiscordUnavailable => discord_unavailable(),
         CaseError::ReasonLength => reason("x", quack_core::limits::VOID_REASON.max),
         CaseError::ContextInvalid(_)
         | CaseError::LinksInvalid(_)

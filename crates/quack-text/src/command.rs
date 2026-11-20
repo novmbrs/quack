@@ -44,6 +44,41 @@ pub const CASE_ADD_PRIVATE: Named = Named {
     name: "private",
     description: "Show the receipt only to you.",
 };
+/// `command.case.add.file`: one file uploaded with the case (§7.1).
+pub const CASE_ADD_FILE: Named = Named {
+    name: "file",
+    description: "A file to save as evidence: an image, video, audio, text, or PDF up to 10 MB.",
+};
+/// `command.case.evidence`: add links or files to a case (§11.1).
+pub const CASE_EVIDENCE: Named = Named {
+    name: "evidence",
+    description: "Add message links or files to a case as evidence.",
+};
+/// `command.case.evidence.link`.
+pub const CASE_EVIDENCE_LINK: Named = Named {
+    name: "link",
+    description: "A link to a message in this server.",
+};
+/// `command.case.evidence.file` (also `file2`, `file3`).
+pub const CASE_EVIDENCE_FILE: Named = Named {
+    name: "file",
+    description: "A file to save: an image, video, audio, text, or PDF up to 10 MB.",
+};
+/// `command.case.evidence.file2`.
+pub const CASE_EVIDENCE_FILE_2: Named = Named {
+    name: "file2",
+    description: "Another file to save.",
+};
+/// `command.case.evidence.file3`.
+pub const CASE_EVIDENCE_FILE_3: Named = Named {
+    name: "file3",
+    description: "Another file to save.",
+};
+/// `command.case.evidence.note`.
+pub const CASE_EVIDENCE_NOTE: Named = Named {
+    name: "note",
+    description: "A short note for staff about this evidence. The member never sees it.",
+};
 /// `command.case.view`.
 pub const CASE_VIEW: Named = Named {
     name: "view",
@@ -135,6 +170,9 @@ pub const HELP_TOPICS: [Choice; 4] = [
 ];
 /// `command.add_case`: the message and member command name.
 pub const ADD_CASE: &str = "Add case";
+/// `command.add_as_evidence`: the message command that adds a message to a
+/// case's evidence (§11.1).
+pub const ADD_AS_EVIDENCE: &str = "Add as evidence";
 
 /// `command.ops`: the ops server's command (§21.8).
 pub const OPS: Named = Named {
@@ -165,12 +203,19 @@ pub const OPS_JOBS: Named = Named {
 pub const OPS_ALL: [Named; 5] = [OPS, OPS_STATUS, OPS_SERVER, OPS_SERVER_ID, OPS_JOBS];
 
 /// Every name and description above, for limit checks.
-pub const ALL: [Named; 19] = [
+pub const ALL: [Named; 26] = [
     CASE,
     CASE_ADD,
     CASE_ADD_MEMBER,
     CASE_ADD_RULE,
     CASE_ADD_PRIVATE,
+    CASE_ADD_FILE,
+    CASE_EVIDENCE,
+    CASE_EVIDENCE_LINK,
+    CASE_EVIDENCE_FILE,
+    CASE_EVIDENCE_FILE_2,
+    CASE_EVIDENCE_FILE_3,
+    CASE_EVIDENCE_NOTE,
     CASE_VIEW,
     CASE_NUMBER,
     CASE_LIST,

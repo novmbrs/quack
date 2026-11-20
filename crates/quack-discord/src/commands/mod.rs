@@ -17,7 +17,8 @@ use twilight_model::application::interaction::InteractionContextType;
 use twilight_model::guild::Permissions;
 use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::{
-    BooleanBuilder, CommandBuilder, IntegerBuilder, StringBuilder, SubCommandBuilder, UserBuilder,
+    AttachmentBuilder, BooleanBuilder, CommandBuilder, IntegerBuilder, StringBuilder,
+    SubCommandBuilder, UserBuilder,
 };
 
 pub use sync::{Scope, SyncError, SyncReport, canonical, command_ids, for_scope, sync};
@@ -26,6 +27,10 @@ pub use sync::{Scope, SyncError, SyncReport, canonical, command_ids, for_scope, 
 const RULE_OPTION_MAX: u16 = 100;
 /// The longest void reason (§3.9).
 const VOID_REASON_MAX: u16 = 1_000;
+/// The most characters `/case evidence link` accepts (§11.1).
+const LINK_OPTION_MAX: u16 = 4_000;
+/// The longest evidence note (§7.5).
+const NOTE_MAX: u16 = 500;
 
 fn command(named: Named, kind: CommandType) -> CommandBuilder {
     CommandBuilder::new(named.name, named.description, kind)
@@ -33,8 +38,8 @@ fn command(named: Named, kind: CommandType) -> CommandBuilder {
         .integration_types([ApplicationIntegrationType::GuildInstall])
 }
 
-fn context_menu(kind: CommandType) -> Command {
-    CommandBuilder::new(text::ADD_CASE, "", kind)
+fn context_menu(name: &str, kind: CommandType) -> Command {
+    CommandBuilder::new(name, "", kind)
         .contexts([InteractionContextType::Guild])
         .integration_types([ApplicationIntegrationType::GuildInstall])
         .build()
@@ -54,13 +59,17 @@ fn number(named: Named) -> IntegerBuilder {
         .min_value(1)
 }
 
+fn attachment(named: Named) -> AttachmentBuilder {
+    AttachmentBuilder::new(named.name, named.description).required(false)
+}
+
 fn rule(named: Named, required: bool) -> StringBuilder {
     StringBuilder::new(named.name, named.description)
         .required(required)
         .autocomplete(true)
 }
 
-/// `/case` and its five subcommands.
+/// `/case` and its six subcommands.
 fn case() -> Command {
     command(text::CASE, CommandType::ChatInput)
         .option(
@@ -73,6 +82,30 @@ fn case() -> Command {
                         text::CASE_ADD_PRIVATE.description,
                     )
                     .required(false),
+                )
+                .option(attachment(text::CASE_ADD_FILE)),
+        )
+        .option(
+            sub(text::CASE_EVIDENCE)
+                .option(number(text::CASE_NUMBER))
+                .option(
+                    StringBuilder::new(
+                        text::CASE_EVIDENCE_LINK.name,
+                        text::CASE_EVIDENCE_LINK.description,
+                    )
+                    .required(false)
+                    .max_length(LINK_OPTION_MAX),
+                )
+                .option(attachment(text::CASE_EVIDENCE_FILE))
+                .option(attachment(text::CASE_EVIDENCE_FILE_2))
+                .option(attachment(text::CASE_EVIDENCE_FILE_3))
+                .option(
+                    StringBuilder::new(
+                        text::CASE_EVIDENCE_NOTE.name,
+                        text::CASE_EVIDENCE_NOTE.description,
+                    )
+                    .required(false)
+                    .max_length(NOTE_MAX),
                 ),
         )
         .option(sub(text::CASE_VIEW).option(number(text::CASE_NUMBER)))
@@ -134,7 +167,8 @@ pub fn definitions() -> Vec<Command> {
                     .choices(text::HELP_TOPICS.iter().map(|c| (c.name, c.value))),
             )
             .build(),
-        context_menu(CommandType::Message),
-        context_menu(CommandType::User),
+        context_menu(text::ADD_CASE, CommandType::Message),
+        context_menu(text::ADD_AS_EVIDENCE, CommandType::Message),
+        context_menu(text::ADD_CASE, CommandType::User),
     ]
 }

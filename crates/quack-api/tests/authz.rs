@@ -91,6 +91,7 @@ struct Ids {
     action: String,
     appeal: String,
     appeal_version: u32,
+    evidence: String,
 }
 
 async fn world(app: &App) -> Ids {
@@ -118,7 +119,23 @@ async fn world(app: &App) -> Ids {
     )
     .await
     .unwrap();
+    let link = format!("https://discord.com/channels/{GUILD}/5/6");
+    let added = quack_engine::cases::add_evidence(
+        &app.h.engine,
+        &app.h.moderator(),
+        quack_engine::CaseRef::Id(case.case.id),
+        &quack_engine::cases::AddEvidence::links(&[link]),
+        &app.h.key("evidence"),
+    )
+    .await
+    .unwrap();
+    let mut conn = app.h.db.db.conn().await.unwrap();
+    let evidence = quack_db::evidence::for_case(&mut conn, app.h.guild, added.case)
+        .await
+        .unwrap()[0]
+        .id;
     Ids {
+        evidence: evidence.get().to_string(),
         rule: rule.get().to_string(),
         case: case.case.number,
         action: timed.action.unwrap().get().to_string(),
@@ -137,6 +154,7 @@ fn routes(ids: &Ids) -> Vec<(Need, Method, String, Option<Value>)> {
     let link = format!("https://discord.com/channels/{GUILD}/5/6");
     let unknown = "0190f5b2-6c1e-7cc0-9a3e-000000000001";
     let (r, c, a, p) = (&ids.rule, ids.case, &ids.action, &ids.appeal);
+    let item = &ids.evidence;
     vec![
         (InServer, Method::GET, g("/me"), None),
         (ManageSettings, Method::GET, g("/health"), None),
@@ -221,6 +239,31 @@ fn routes(ids: &Ids) -> Vec<(Need, Method, String, Option<Value>)> {
             Moderate,
             Method::GET,
             g(&format!("/cases/{c}/evidence/{unknown}")),
+            None,
+        ),
+        // A JSON body: allowed people get 415, after authorization.
+        (
+            Moderate,
+            Method::POST,
+            g(&format!("/cases/{c}/evidence/uploads")),
+            Some(json!({"files": []})),
+        ),
+        (
+            Moderate,
+            Method::PUT,
+            g(&format!("/cases/{c}/evidence/{item}/note")),
+            Some(json!({"note": "Seen.", "expected_note_revision": 0})),
+        ),
+        (
+            Moderate,
+            Method::PUT,
+            g(&format!("/cases/{c}/evidence/{item}/visibility")),
+            Some(json!({"visible_to_member": true})),
+        ),
+        (
+            Moderate,
+            Method::POST,
+            g(&format!("/cases/{c}/evidence/{item}/remove")),
             None,
         ),
         (
@@ -394,6 +437,24 @@ async fn staff_ids_from_another_server_are_not_found_here() {
         )
         .await;
     assert_eq!(void.code(), Some("not_found"));
+    let removed = app
+        .send(
+            app.post(&other(&format!(
+                "/cases/{}/evidence/{}/remove",
+                ids.case, ids.evidence
+            )))
+            .by(&owner),
+        )
+        .await;
+    assert_eq!(removed.code(), Some("not_found"), "{}", removed.json);
+    let upload = app
+        .send(
+            app.post(&other(&format!("/cases/{}/evidence/uploads", ids.case)))
+                .by(&owner)
+                .multipart(&[("files", Some("a.png"), "image/png", b"x".as_slice())]),
+        )
+        .await;
+    assert_eq!(upload.code(), Some("not_found"), "{}", upload.json);
     // And nothing changed in the standard server.
     let _: GuildId = common::sf(GUILD);
     let voided = app
@@ -403,4 +464,11 @@ async fn staff_ids_from_another_server_are_not_found_here() {
         .await
         .unwrap();
     assert_eq!(voided, 0);
+    let removed = app
+        .h
+        .db
+        .count("SELECT count(*) FROM evidence WHERE removed_at IS NOT NULL")
+        .await
+        .unwrap();
+    assert_eq!(removed, 0);
 }

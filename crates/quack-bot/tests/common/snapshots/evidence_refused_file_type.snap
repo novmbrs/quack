@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+No evidence was added. Quack can't save logs.zip (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.

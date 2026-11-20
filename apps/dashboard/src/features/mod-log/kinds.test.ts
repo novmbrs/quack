@@ -10,7 +10,7 @@ describe("kindGroups", () => {
     expect(new Set(kinds).size).toBe(kinds.length);
     expect(kinds).toContain("case_created");
     expect(kinds).toContain("legacy");
-    expect(kinds).toHaveLength(37);
+    expect(kinds).toHaveLength(39);
   });
   it("never uses banned words in labels", () => {
     for (const g of kindGroups)
@@ -42,5 +42,8 @@ describe("iconFor", () => {
     expect(iconFor("action_failed", "failed")).toBe("error");
     expect(iconFor("case_create_refused", "refused")).toBe("warn");
     expect(iconFor("case_voided" as ModLogKind, "ok")).toBe("case_void");
+    expect(iconFor("evidence_removed", "ok")).toBe("delete");
+    // Not a settings change, despite the suffix.
+    expect(iconFor("evidence_visibility_changed", "ok")).toBe("evidence");
   });
 });

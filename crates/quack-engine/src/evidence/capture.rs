@@ -1,16 +1,20 @@
-//! The `capture_evidence` handler (§7.2): check the channel is this
-//! server's and the adder's access, fetch the message, store the snapshot
-//! once under the case lock, copy files one per transaction, and settle.
+//! The `capture_evidence` handler (§7.2): for a message, check the channel
+//! is this server's, that it is no evidence copy, and the access of the
+//! staff member whose request started the capture, fetch the message and
+//! the messages around it, and store the snapshot once under the case lock;
+//! for either kind, copy files one per transaction, and settle. Uploaded
+//! files have no snapshot: they go straight to the copy.
 
 use quack_core::evidence::{
-    EvidenceFailure, EvidenceState, FileCopyState, copy_eligibility, files_within_caps,
+    EvidenceFailure, EvidenceKind, EvidenceState, FileCopyState, copy_eligibility,
+    files_within_caps,
 };
 use quack_core::ids::FileId;
 use quack_core::limits::{
     EVIDENCE_EMBED_DESCRIPTION_CHARS, EVIDENCE_EMBED_TITLE_CHARS, EVIDENCE_TEXT_CHARS,
     MAX_EVIDENCE_EMBEDS, truncate_chars,
 };
-use quack_db::evidence::{self, EmbedSummary, Evidence, NewFile, Snapshot};
+use quack_db::evidence::{self, EmbedSummary, Evidence, NewFile, Snapshot, SurroundingMessage};
 use quack_db::jobs::{ClaimedJob, Handled, JobResult, fence, settle as settle_job};
 use quack_db::messages::{self, Owner};
 use quack_db::{DbError, cases, settings};
@@ -55,19 +59,18 @@ pub async fn capture(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbErr
     .await
 }
 
-/// Steps 2–5: the channel's server, access check, fetch, and the
-/// snapshot. `Some` when the run ends here.
+/// Steps 2–6: the channel's server, no evidence copy, the access check,
+/// the fetch, and the snapshot. `Some` when the run ends here.
 async fn snapshot(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
 ) -> Result<Option<Handled>, DbError> {
+    let Some((channel, message)) = item.source() else {
+        return Ok(Some(dead("message_item_without_message")));
+    };
     // A fetched message names no server: its channel's server decides.
-    let here = match engine
-        .discord()
-        .channel_facts(item.guild, item.channel)
-        .await
-    {
+    let here = match engine.discord().channel_facts(item.guild, channel).await {
         Outcome::Done(found) => found.is_some(),
         Outcome::Refused(_) => false,
         other => return Ok(Some(Handled::Settle(retry(job, other.code())))),
@@ -81,8 +84,21 @@ async fn snapshot(
         };
         return fail(engine, job, item, failure).await.map(Some);
     }
-    if let Some(staff) = item.added_by {
-        match can_read(engine, item.guild, item.channel, staff).await {
+    // A message in the evidence channel, or one of Quack's copies, would
+    // show a staff-only or removed file as a saved message (§7.1).
+    let copies = {
+        let mut conn = engine.db().conn().await?;
+        evidence::evidence_copies(&mut conn, item.guild, &[(channel, message)]).await?
+    };
+    if !copies.is_empty() {
+        return fail(engine, job, item, EvidenceFailure::EvidenceCopy)
+            .await
+            .map(Some);
+    }
+    // The staff member whose request started this capture, not whoever
+    // first added the item (§7.1).
+    if let Some(staff) = item.capture_actor() {
+        match can_read(engine, item.guild, channel, staff).await {
             Ok(true) => {}
             Ok(false) => {
                 return fail(engine, job, item, EvidenceFailure::ModeratorNoAccess)
@@ -97,7 +113,8 @@ async fn snapshot(
         Fetched::Failed(failure) => return fail(engine, job, item, failure).await.map(Some),
         Fetched::Retry(code) => return Ok(Some(Handled::Settle(retry(job, &code)))),
     };
-    save(engine, job, item, &message).await?;
+    let surrounding = super::surrounding::read(engine, job, item).await;
+    save(engine, job, item, &message, surrounding).await?;
     Ok(None)
 }
 
@@ -110,11 +127,10 @@ enum Fetched {
 
 /// Step 4: fetch the message, with refusals as failure reasons.
 async fn fetch(engine: &Engine, item: &Evidence) -> Fetched {
-    match engine
-        .discord()
-        .fetch_message(item.channel, item.message)
-        .await
-    {
+    let Some((channel, message)) = item.source() else {
+        return Fetched::Failed(EvidenceFailure::DiscordError);
+    };
+    match engine.discord().fetch_message(channel, message).await {
         Outcome::Done(m) => Fetched::Message(Box::new(m)),
         Outcome::Refused(r) => Fetched::Failed(match r.kind {
             RefusalKind::UnknownMessage | RefusalKind::UnknownChannel => {
@@ -136,6 +152,7 @@ async fn save(
     job: &ClaimedJob,
     item: &Evidence,
     message: &FetchedMessage,
+    surrounding: Option<Vec<SurroundingMessage>>,
 ) -> Result<(), DbError> {
     let mut tx = engine.db().begin().await?;
     cases::lock(&mut tx, item.guild, item.case).await?;
@@ -158,7 +175,7 @@ async fn save(
             filename: truncate_chars(&a.filename, 255).to_owned(),
             content_type: a.content_type.clone(),
             size_bytes: a.size_bytes,
-            original_url: a.url.clone(),
+            original_url: Some(a.url.clone()),
             copy_state: match channel {
                 None => FileCopyState::LinkOnly,
                 Some(_) => match copy_eligibility(a.size_bytes, a.content_type.as_deref()) {
@@ -192,13 +209,16 @@ async fn save(
             })
             .collect(),
         files_not_saved: total - admitted,
+        surrounding,
     };
     evidence::save_snapshot(&mut tx, item.guild, item.id, &snapshot, &files).await?;
     fence(&mut tx, job).await?;
     tx.commit().await
 }
 
-/// Step 7: every file left `pending`: the item is `saved`.
+/// Step 7: no file left `pending`: a message item is `saved`; uploaded
+/// files are `saved` if one was copied, else `failed` (`no_file_copied`),
+/// and their staged bytes are deleted.
 async fn settle_saved(
     engine: &Engine,
     job: &ClaimedJob,
@@ -208,12 +228,30 @@ async fn settle_saved(
     let mut tx = engine.db().begin().await?;
     cases::lock(&mut tx, item.guild, item.case).await?;
     evidence::lock(&mut tx, item.guild, item.id).await?;
-    evidence::mark_saved(&mut tx, item.guild, item.id).await?;
+    let saved = settle_item(&mut tx, item).await?;
     messages::bump(&mut tx, item.guild, Owner::Case(item.case)).await?;
     settle_job(&mut tx, job, &JobResult::Done).await?;
     tx.commit().await?;
-    captured(item, Label::Done, copied.0, copied.1, "saved");
+    if saved {
+        captured(item, Label::Done, copied.0, copied.1, "saved");
+    } else {
+        captured(item, Label::Failed, copied.0, copied.1, "failed");
+    }
     Ok(Handled::Settled(JobResult::Done))
+}
+
+/// `saving` → `saved` (or, for uploaded files with no copy, `failed`
+/// `no_file_copied`), under the case and item locks once no file is
+/// pending; staged bytes go. Returns whether it ended `saved`.
+async fn settle_item(tx: &mut quack_db::Tx, item: &Evidence) -> Result<bool, DbError> {
+    let saved = evidence::mark_saved(tx, item.guild, item.id).await?;
+    if item.kind == EvidenceKind::Upload {
+        if !saved {
+            evidence::mark_failed(tx, item.guild, item.id, EvidenceFailure::NoFileCopied).await?;
+        }
+        evidence::delete_staged(tx, item.guild, item.id, None).await?;
+    }
+    Ok(saved)
 }
 
 /// Settles a `capture_evidence` job whose budget is spent, without calling
@@ -234,7 +272,7 @@ pub async fn finalize(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbEr
     if item.state == EvidenceState::Saving {
         evidence::fail_pending_files(&mut tx, guild, item.id, false).await?;
         if item.snapshot_stored() {
-            evidence::mark_saved(&mut tx, guild, item.id).await?;
+            settle_item(&mut tx, &item).await?;
         } else {
             evidence::mark_failed(&mut tx, guild, item.id, EvidenceFailure::DiscordError).await?;
         }

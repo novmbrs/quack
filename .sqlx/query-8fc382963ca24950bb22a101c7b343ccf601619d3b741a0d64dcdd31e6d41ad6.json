@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence SET state = 'saved', saved_at = now()\n             WHERE guild_id = $1 AND id = $2 AND state = 'saving'\n               AND (kind = 'message' OR EXISTS\n                      (SELECT 1 FROM evidence_files WHERE evidence_id = $2 AND copy_state = 'copied'))\n               AND (kind = 'upload' OR message_created_at IS NOT NULL)\n               AND NOT EXISTS (SELECT 1 FROM evidence_files WHERE evidence_id = $2 AND copy_state = 'pending')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8fc382963ca24950bb22a101c7b343ccf601619d3b741a0d64dcdd31e6d41ad6"
+}

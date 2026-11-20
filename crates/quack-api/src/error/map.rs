@@ -3,7 +3,7 @@
 
 use quack_core::DomainError;
 use quack_core::action::ActionKind;
-use quack_core::case::{ContextProblem, ContextProblemCode, LinkProblem};
+use quack_core::case::{ContextProblem, LinkProblem};
 use quack_core::modules::{ModuleName, ModuleProblem};
 use quack_core::permissions::ChannelProblem;
 use quack_core::rule::{Field, RuleFileError, RuleProblem};
@@ -125,10 +125,7 @@ fn link_fields(prefix: &str, problems: &[(usize, LinkProblem)]) -> Vec<FieldErro
     problems
         .iter()
         .map(|(index, problem)| {
-            let code = match problem {
-                LinkProblem::NotAMessageLink => ContextProblemCode::NotAMessageLink,
-                LinkProblem::OtherServer => ContextProblemCode::OtherServer,
-            };
+            let code = problem.context_code();
             let as_context = ContextProblem {
                 key: format!("{prefix}[{index}]"),
                 code,
@@ -138,6 +135,22 @@ fn link_fields(prefix: &str, problems: &[(usize, LinkProblem)]) -> Vec<FieldErro
                 code: code.as_str().to_owned(),
                 message: plain(&quack_text::case::context_problem(&as_context, None, None)),
             }
+        })
+        .collect()
+}
+
+/// Files Quack won't copy (field `files`, code `too_large` or
+/// `unsupported_type`), each with the `error.files_not_allowed` sentence
+/// naming it.
+fn file_fields(files: &[quack_core::evidence::RefusedFile]) -> Vec<FieldError> {
+    files
+        .iter()
+        .map(|f| FieldError {
+            field: "files".to_owned(),
+            code: f.why.as_str().to_owned(),
+            message: plain(&quack_text::error::files_not_allowed(std::slice::from_ref(
+                f,
+            ))),
         })
         .collect()
 }
@@ -164,6 +177,7 @@ pub(crate) fn apply(error: ApplyError, facts: &Facts) -> ApiError {
         ApplyError::LinksInvalid(problems) => {
             ApiError::validation(link_fields("evidence_links", &problems))
         }
+        ApplyError::FilesRefused(files) => ApiError::validation(file_fields(&files)),
         ApplyError::OperationKeyReused => ApiError::api(ApiCode::IdempotencyKeyReused),
         ApplyError::CaseNumbersExhausted => ApiError::api(ApiCode::CaseNumbersExhausted),
         // Only the honeypot flow can see this; the dashboard never does.
@@ -186,6 +200,13 @@ pub(crate) fn case(error: CaseError, facts: &Facts, reason: &str) -> ApiError {
         CaseError::NoLinks => {
             ApiError::field("links", "no_links", plain(&quack_text::error::no_links()))
         }
+        CaseError::FilesRefused(files) => ApiError::validation(file_fields(&files)),
+        CaseError::NoteLength => ApiError::field(
+            "note",
+            "note_too_long",
+            plain(&quack_text::error::note_too_long()),
+        ),
+        CaseError::DiscordUnavailable => ApiError::api(ApiCode::DiscordUnavailable),
         CaseError::ReasonLength => reason_problem(
             "reason",
             "reason_length",

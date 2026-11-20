@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in </setup:1004>, then try again.
+plain:   No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.
+model:   [Fixed("No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in "), Command(Setup), Fixed(", then try again.")]

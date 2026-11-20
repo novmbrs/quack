@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+Enter a case number, like 12. It's on the case's receipt.

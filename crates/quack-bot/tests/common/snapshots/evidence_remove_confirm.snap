@@ -1,0 +1,7 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[warning]
+Remove this evidence item from case #1? Staff won't see it in Discord and the member won't see it on their case page. The dashboard still lists it as removed, and its copies stay in the evidence channel.
+[Yes, remove] [Back]

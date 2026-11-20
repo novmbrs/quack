@@ -14,7 +14,9 @@ mod setup;
 #[cfg(test)]
 mod tests;
 
-use quack_core::ids::{ActionId, AppealId, CaseId, JobId, MemberId, RuleId, TicketId};
+use quack_core::ids::{
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, JobId, MemberId, MessageId, RuleId, TicketId,
+};
 use quack_text::actions::{DraftPage, SetupArea, SetupOp};
 
 pub use actions::{decode_input_id, encode_input_id, encode_select_value};
@@ -39,15 +41,75 @@ pub enum CustomId {
         revision: u32,
     },
     /// `ea`: open the add-evidence modal.
-    AddEvidence(CaseId),
+    AddEvidence {
+        /// The case.
+        case: CaseId,
+        /// `n`: answer in a new ephemeral message, never updating the
+        /// message the button is on (a card or `case.receipt.posted`,
+        /// which a receipt's sync owns, §11.7).
+        new_message: bool,
+    },
     /// `eam`: the add-evidence modal.
-    AddEvidenceModal(CaseId),
+    AddEvidenceModal {
+        /// The case.
+        case: CaseId,
+        /// `n`: answer in a new ephemeral message.
+        new_message: bool,
+    },
     /// `ev`: show one evidence item (1-based).
     ViewEvidence {
         /// The case.
         case: CaseId,
         /// Which item.
         item: u32,
+        /// `n`: answer in a new ephemeral message.
+        new_message: bool,
+    },
+    /// `evb`: back to an evidence item, found by id on click.
+    BackToEvidence(EvidenceId),
+    /// `evs`: the messages saved around an item's message.
+    EvidenceSurrounding(EvidenceId),
+    /// `evv`: show an uploaded-files item to the member (`1`) or hide it
+    /// (`0`).
+    EvidenceVisibility {
+        /// The item.
+        evidence: EvidenceId,
+        /// Whether the member should see it.
+        visible: bool,
+    },
+    /// `evn`: open the note modal (prefilled).
+    EditEvidenceNote(EvidenceId),
+    /// `evnm`: the note modal, opened at a note revision.
+    EvidenceNoteModal {
+        /// The item.
+        evidence: EvidenceId,
+        /// The note revision the modal showed.
+        revision: u32,
+    },
+    /// `evr`: ask to confirm removing an item.
+    RemoveEvidence(EvidenceId),
+    /// `evrc`: remove after confirming.
+    ConfirmRemoveEvidence(EvidenceId),
+    /// `exs`: the "Add as evidence" case select (the value is the case).
+    AddAsEvidence {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
+    },
+    /// `exn`: open the "Add as evidence" case number modal.
+    AddAsEvidenceByNumber {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
+    },
+    /// `exm`: the "Add as evidence" case number modal.
+    AddAsEvidenceModal {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
     },
     /// `vd`: open the void modal.
     VoidCase(CaseId),

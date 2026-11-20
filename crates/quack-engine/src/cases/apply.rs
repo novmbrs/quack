@@ -5,7 +5,8 @@ use std::time::Instant;
 
 use quack_core::DomainError;
 use quack_core::case::{
-    CaseSource, ContextInput, ContextValues, MessageLink, fill_message_links, validate_context,
+    CaseSource, ContextInput, ContextValues, LinkProblem, MessageLink, fill_message_links,
+    validate_context,
 };
 use quack_core::ids::{CaseId, GuildId, MemberId, RuleId};
 use quack_core::limits::MAX_EVIDENCE_ITEMS;
@@ -35,6 +36,9 @@ struct RequestForHash<'a> {
     pinned_version: Option<u32>,
     context: Vec<(&'a str, String)>,
     evidence_links: &'a [String],
+    // Left out when empty, so a request without files hashes as before.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    evidence_files: Vec<crate::evidence::FileForHash>,
     source_message: Option<String>,
     private: bool,
     replaces: Option<CaseId>,
@@ -141,9 +145,29 @@ async fn apply(
     if let Some((_, values)) = &early {
         let def = cached_definition(engine, request).await?;
         let sources = evidence_sources(request, values, def.as_ref())?;
-        if sources.len() > MAX_EVIDENCE_ITEMS as usize {
+        let upload = usize::from(!request.evidence_files.is_empty());
+        if sources.len() + upload > MAX_EVIDENCE_ITEMS as usize {
             return Err(DomainError::EvidenceLimitReached { count: 0 }.into());
         }
+    }
+    refuse_copies(engine, request, early.as_ref().map(|(_, v)| v)).await?;
+    //    Files go up only if Quack can copy them: refused before any write,
+    //    so no case is created for an upload that would be refused (§7.1).
+    if !request.evidence_files.is_empty() {
+        if matches!(request.actor, Actor::Quack) {
+            return Err(ApplyError::Db(quack_db::DbError::Invalid(
+                "Quack uploads no files".to_owned(),
+            )));
+        }
+        crate::evidence::check_uploads(engine, guild, &request.evidence_files)
+            .await
+            .map_err(|refused| match refused {
+                crate::evidence::UploadRefused::Domain(d) => ApplyError::Refused(d),
+                crate::evidence::UploadRefused::Files(files) => ApplyError::FilesRefused(files),
+                crate::evidence::UploadRefused::DiscordUnavailable => {
+                    ApplyError::DiscordUnavailable
+                }
+            })?;
     }
     // 5. Facts.
     let facts = gather(engine.discord(), guild, request.member, presence)
@@ -204,6 +228,7 @@ fn hash_request(request: &ApplyRule, source: CaseSource) -> [u8; 32] {
         pinned_version: request.pinned_version,
         context: context_for_hash(&request.context),
         evidence_links: &request.evidence_links,
+        evidence_files: crate::evidence::files_for_hash(&request.evidence_files),
         source_message: request.source_message.map(|l| l.to_url()),
         private: matches!(request.receipt, Some(Receipt::Private { .. })),
         replaces: request.replaces,
@@ -273,6 +298,45 @@ async fn cached_definition(
 ) -> Result<Option<RuleDefinition>, ApplyError> {
     let rules = engine.rules_cache().get(engine.db(), request.guild).await?;
     Ok(rules.active(request.rule).map(|r| r.definition.clone()))
+}
+
+/// Step 4: no explicit link and no `message_link` answer may point into the
+/// evidence channel or at one of Quack's copies (§7.1). Links inside text
+/// answers and the source message are left to the capture, which fails
+/// them (`evidence_copy`).
+async fn refuse_copies(
+    engine: &Engine,
+    request: &ApplyRule,
+    values: Option<&ContextValues>,
+) -> Result<(), ApplyError> {
+    let explicit =
+        parse_links(request.guild, &request.evidence_links).map_err(ApplyError::LinksInvalid)?;
+    let copies = crate::evidence::evidence_copies(engine, request.guild, &explicit).await?;
+    let problems: Vec<_> = explicit
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| copies.contains(&l.message_id))
+        .map(|(i, _)| (i, LinkProblem::EvidenceChannel))
+        .collect();
+    if !problems.is_empty() {
+        return Err(ApplyError::LinksInvalid(problems));
+    }
+    let (Some(values), Some(def)) = (values, cached_definition(engine, request).await?) else {
+        return Ok(());
+    };
+    let problems = crate::evidence::context_copies(
+        engine,
+        request.guild,
+        &def.context_fields(),
+        values,
+        &std::collections::HashSet::new(),
+    )
+    .await?;
+    if problems.is_empty() {
+        Ok(())
+    } else {
+        Err(ApplyError::ContextInvalid(problems))
+    }
 }
 
 /// Step 4: the source message, every `message_link` answer and link inside

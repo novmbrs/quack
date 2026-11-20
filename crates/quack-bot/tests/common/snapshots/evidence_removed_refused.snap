@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+plain:   No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+model:   [Fixed("No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.")]

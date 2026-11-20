@@ -1,12 +1,18 @@
-//! Evidence (§7): the `capture_evidence` job handler and its finalize, and
-//! resolving a file for the dashboard. Capture happens after the case is
-//! committed, so creating a case never waits on Discord fetches or file
-//! copies.
+//! Evidence (§7): the `capture_evidence` job handler and its finalize,
+//! uploads and their up-front checks, staff edits (note, visibility,
+//! removal), the gallery and picker reads, and resolving a file for the
+//! dashboard. Capture happens after the case is committed, so creating a
+//! case never waits on Discord fetches or file copies.
 
 mod access;
 mod capture;
 mod copy;
+mod edits;
 mod file;
+mod sources;
+mod surrounding;
+mod uploads;
+mod view;
 
 use quack_core::evidence::EvidenceFailure;
 use quack_core::ids::EvidenceId;
@@ -22,7 +28,14 @@ use crate::Engine;
 use crate::obs::{event, kv};
 
 pub use capture::{capture, finalize};
+pub use edits::{EvidenceEdited, remove_evidence, set_note, set_visibility};
 pub use file::{FileError, FileViewer, resolve_file};
+pub(crate) use sources::{context_copies, evidence_copies, unreadable};
+pub(crate) use uploads::{DESTINATION, FileForHash, files_for_hash, upload_item};
+pub use uploads::{
+    NewUpload, UploadRefused, UploadSource, check_destination, check_files, check_uploads,
+};
+pub use view::{GalleryFile, RecentCase, gallery, recent_cases};
 
 /// The `capture_evidence` payload.
 #[derive(Clone, Copy, Debug, serde::Deserialize)]

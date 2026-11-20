@@ -2,9 +2,9 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 ## Saving
-discord: Quack is still saving this message.
-plain:   Quack is still saving this message.
-model:   [Fixed("Quack is still saving this message.")]
+discord: Quack is still saving this evidence.
+plain:   Quack is still saving this evidence.
+model:   [Fixed("Quack is still saving this evidence.")]
 
 ## Saved
 discord: Saved.

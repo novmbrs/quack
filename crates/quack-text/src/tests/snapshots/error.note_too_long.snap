@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: This note is too long. Shorten it to 500 characters or fewer.
+plain:   This note is too long. Shorten it to 500 characters or fewer.
+model:   [Fixed("This note is too long. Shorten it to 500 characters or fewer.")]

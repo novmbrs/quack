@@ -8,7 +8,7 @@ use quack_core::ids::{ActionId, CaseId, EvidenceId, MessageRowId};
 use quack_core::limits::MAX_EVIDENCE_ITEMS;
 use quack_core::modlog::{CaseCreatedDetail, ModLogEntry, ModLogLinks};
 use quack_core::rule::{LevelAction, RuleDefinition};
-use quack_db::evidence::{self, Admission};
+use quack_db::evidence;
 use quack_db::messages::{self, NewTrackedMessage, Owner};
 use quack_db::{DbError, Tx, actions};
 use time::OffsetDateTime;
@@ -18,7 +18,8 @@ use super::apply_tx::moderator;
 use super::{Actor, ApplyError, ApplyRule, Receipt};
 use crate::modlog::{self, By};
 
-/// Step 18: one `saving` evidence row per source.
+/// Step 18: one `saving` evidence row per source, then the uploaded-files
+/// item when files came with the case.
 pub(super) async fn insert_evidence(
     tx: &mut Tx,
     request: &ApplyRule,
@@ -27,7 +28,8 @@ pub(super) async fn insert_evidence(
     def: &RuleDefinition,
 ) -> Result<Vec<EvidenceId>, ApplyError> {
     let sources = evidence_sources(request, values, Some(def))?;
-    if sources.len() > MAX_EVIDENCE_ITEMS as usize {
+    let upload = usize::from(!request.evidence_files.is_empty());
+    if sources.len() + upload > MAX_EVIDENCE_ITEMS as usize {
         return Err(DomainError::EvidenceLimitReached { count: 0 }.into());
     }
     let mut ids = Vec::new();
@@ -38,14 +40,20 @@ pub(super) async fn insert_evidence(
             request.guild,
             case,
             id,
-            link.channel_id,
-            link.message_id,
+            (link.channel_id, link.message_id),
             moderator(request),
+            None,
         )
         .await?;
-        if let Admission::Added(id) | Admission::Recapture(id) = admitted {
-            ids.push(id);
+        if admitted.needs_capture() {
+            ids.push(admitted.id());
         }
+    }
+    if let (false, Some(staff)) = (request.evidence_files.is_empty(), moderator(request)) {
+        let item =
+            crate::evidence::upload_item(request.guild, case, staff, None, &request.evidence_files);
+        evidence::insert_upload(tx, &item).await?;
+        ids.push(item.id);
     }
     Ok(ids)
 }

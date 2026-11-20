@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack saved the note on this evidence item of case #12.
+plain:   Quack saved the note on this evidence item of case #12.
+model:   [Fixed("Quack saved the note on this evidence item of case #12.")]

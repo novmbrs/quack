@@ -18,7 +18,7 @@ function Permissions() {
             {
               term: "Moderators",
               meaning:
-                "Apply rules, view cases and member history, void cases, edit case context, add evidence, retry, dismiss, and undo actions, review appeals, read the moderation log, and work tickets. The owner, Administrators, and holders of a moderator role are moderators.",
+                "Apply rules, view cases and member history, void cases, edit case context, add, note, show, and remove evidence, retry, dismiss, and undo actions, review appeals, read the moderation log, and work tickets. The owner, Administrators, and holders of a moderator role are moderators.",
             },
             {
               term: "Rules managers",

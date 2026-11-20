@@ -80,6 +80,8 @@ pub enum Call {
     FetchMessage,
     /// `fetch_history`.
     FetchHistory,
+    /// `fetch_history_after`.
+    FetchHistoryAfter,
     /// `download_attachment`.
     Download,
     /// `create_channel`.

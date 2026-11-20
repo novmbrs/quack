@@ -308,6 +308,7 @@ impl App {
             path: path.to_owned(),
             session: None,
             body: None,
+            raw: None,
             key: Some(format!("key-{}", uuid::Uuid::now_v7().simple())),
             origin: Some(PUBLIC.to_owned()),
             csrf: true,
@@ -351,12 +352,23 @@ impl App {
                 builder = builder.header("idempotency-key", k);
             }
         }
-        let body = match &req.body {
-            Some(json) => {
+        let body = match (&req.body, &req.raw) {
+            (Some(json), _) => {
                 builder = builder.header(header::CONTENT_TYPE, "application/json");
                 Body::from(serde_json::to_vec(json).unwrap())
             }
-            None => Body::empty(),
+            (None, Some((content_type, bytes))) => {
+                builder = builder.header(header::CONTENT_TYPE, content_type);
+                if !req
+                    .headers
+                    .iter()
+                    .any(|(n, _)| n.eq_ignore_ascii_case("content-length"))
+                {
+                    builder = builder.header(header::CONTENT_LENGTH, bytes.len());
+                }
+                Body::from(bytes.clone())
+            }
+            (None, None) => Body::empty(),
         };
         let response = self
             .router
@@ -387,6 +399,8 @@ pub struct Req {
     pub path: String,
     pub session: Option<Session>,
     pub body: Option<Value>,
+    /// A body that isn't JSON: its content type and bytes.
+    pub raw: Option<(String, Vec<u8>)>,
     pub key: Option<String>,
     pub origin: Option<String>,
     pub csrf: bool,
@@ -406,6 +420,18 @@ impl Req {
 
     pub fn json(mut self, body: Value) -> Self {
         self.body = Some(body);
+        self
+    }
+
+    /// A `multipart/form-data` body (see [`multipart`]).
+    pub fn multipart(mut self, parts: &[Part<'_>]) -> Self {
+        self.raw = Some(multipart(parts));
+        self
+    }
+
+    /// A raw body with its content type.
+    pub fn raw(mut self, content_type: &str, bytes: Vec<u8>) -> Self {
+        self.raw = Some((content_type.to_owned(), bytes));
         self
     }
 
@@ -433,6 +459,42 @@ impl Req {
         self.headers.push((name.to_owned(), value.to_owned()));
         self
     }
+}
+
+/// One part of a multipart form: name, file name, content type, bytes.
+pub type Part<'a> = (&'a str, Option<&'a str>, &'a str, &'a [u8]);
+
+/// A `multipart/form-data` body and its content type.
+pub fn multipart(parts: &[Part<'_>]) -> (String, Vec<u8>) {
+    const BOUNDARY: &str = "quack-test-boundary";
+    let mut out = Vec::new();
+    for (name, filename, content_type, bytes) in parts {
+        let file = filename.map_or_default(|f| format!("; filename=\"{f}\""));
+        out.extend_from_slice(
+            format!(
+                "--{BOUNDARY}\r\nContent-Disposition: form-data; name=\"{name}\"{file}\r\nContent-Type: {content_type}\r\n\r\n"
+            )
+            .as_bytes(),
+        );
+        out.extend_from_slice(bytes);
+        out.extend_from_slice(b"\r\n");
+    }
+    out.extend_from_slice(format!("--{BOUNDARY}--\r\n").as_bytes());
+    (format!("multipart/form-data; boundary={BOUNDARY}"), out)
+}
+
+/// Sets a staff-only evidence channel in the standard server's settings.
+pub async fn evidence_channel(app: &App) -> quack_core::ids::ChannelId {
+    let guild: GuildId = sf(GUILD);
+    let channel = app.h.fake.world(|w| w.add_text_channel(guild, true));
+    app.h
+        .db
+        .execute(&format!(
+            "UPDATE guild_settings SET evidence_channel_id = {channel} WHERE guild_id = {GUILD}"
+        ))
+        .await
+        .unwrap();
+    channel
 }
 
 fn rand_bytes<const N: usize>() -> [u8; N] {

@@ -12,7 +12,7 @@ use twilight_model::id::marker::UserMarker;
 
 use super::{
     AutocompleteFor, OpsRequest, PayloadMember, Person, Request, RuleArg, TargetMessage,
-    UnknownReason,
+    UnknownReason, Upload, upload,
 };
 use crate::convert;
 
@@ -49,6 +49,18 @@ fn user_option(
 fn string_option(options: &[CommandDataOption], name: &str) -> Option<String> {
     match option(options, name)? {
         CommandOptionValue::String(s) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+/// An ATTACHMENT option, read from `resolved.attachments`.
+fn attachment_option(
+    options: &[CommandDataOption],
+    name: &str,
+    resolved: Option<&InteractionDataResolved>,
+) -> Option<Upload> {
+    match option(options, name)? {
+        CommandOptionValue::Attachment(id) => upload(resolved?.attachments.get(id)?),
         _ => None,
     }
 }
@@ -92,10 +104,16 @@ fn autocomplete(sub: &str, options: &[CommandDataOption]) -> Request {
     focused.map_or(UNKNOWN, |query| Request::Autocomplete { command, query })
 }
 
+/// `/case add`; a sent `file` that isn't resolved makes the request
+/// unreadable, so a case is never added without the file it was sent with.
 fn case_add(
     options: &[CommandDataOption],
     resolved: Option<&InteractionDataResolved>,
 ) -> Option<Request> {
+    let file = match option(options, "file") {
+        Some(_) => Some(attachment_option(options, "file", resolved)?),
+        None => None,
+    };
     Some(Request::CaseAdd {
         member: user_option(options, "member", resolved)?,
         rule: rule_arg(&string_option(options, "rule")?),
@@ -103,6 +121,29 @@ fn case_add(
             Some(CommandOptionValue::Boolean(b)) => Some(*b),
             _ => None,
         },
+        file,
+    })
+}
+
+/// `/case evidence`: a sent ATTACHMENT option that isn't resolved makes
+/// the request unreadable rather than silently dropping the file.
+fn case_evidence(
+    options: &[CommandDataOption],
+    resolved: Option<&InteractionDataResolved>,
+) -> Option<Request> {
+    let mut files = Vec::new();
+    for name in ["file", "file2", "file3"] {
+        if option(options, name).is_some() {
+            files.push(attachment_option(options, name, resolved)?);
+        }
+    }
+    Some(Request::CaseEvidence {
+        number: number_option(options, "number")?,
+        links: string_option(options, "link").map_or_else(Vec::new, |l| {
+            l.split_whitespace().map(str::to_owned).collect()
+        }),
+        files,
+        note: string_option(options, "note"),
     })
 }
 
@@ -119,6 +160,7 @@ fn case(data: &CommandData, autocomplete_request: bool) -> Request {
     let resolved = data.resolved.as_ref();
     let request = match sub {
         "add" => case_add(options, resolved),
+        "evidence" => case_evidence(options, resolved),
         "view" => number_option(options, "number").map(|number| Request::CaseView { number }),
         "list" => Some(Request::CaseList {
             member: user_option(options, "member", resolved),
@@ -148,15 +190,13 @@ fn ops(data: &CommandData) -> Option<Request> {
     }))
 }
 
-fn target_message(data: &CommandData) -> Option<Request> {
+fn target_message(data: &CommandData) -> Option<TargetMessage> {
     let id = data.target_id?.cast();
     let message = data.resolved.as_ref()?.messages.get(&id)?;
-    Some(Request::AddCaseFromMessage {
-        message: TargetMessage {
-            id: convert::id(message.id)?,
-            channel_id: convert::id(message.channel_id)?,
-            author: convert::user(&message.author),
-        },
+    Some(TargetMessage {
+        id: convert::id(message.id)?,
+        channel_id: convert::id(message.channel_id)?,
+        author: convert::user(&message.author),
     })
 }
 
@@ -177,7 +217,12 @@ pub(super) fn decode(data: &CommandData, autocomplete: bool) -> Request {
         (CommandType::ChatInput, "help") => Some(Request::Help {
             topic: string_option(&data.options, "topic").and_then(|t| topic(&t)),
         }),
-        (CommandType::Message, quack_text::command::ADD_CASE) => target_message(data),
+        (CommandType::Message, quack_text::command::ADD_CASE) => {
+            target_message(data).map(|message| Request::AddCaseFromMessage { message })
+        }
+        (CommandType::Message, quack_text::command::ADD_AS_EVIDENCE) => {
+            target_message(data).map(|message| Request::AddAsEvidence { message })
+        }
         (CommandType::User, quack_text::command::ADD_CASE) => target_member(data),
         _ => None,
     };

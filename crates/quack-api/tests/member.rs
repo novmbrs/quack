@@ -15,8 +15,10 @@ mod common;
 
 use std::collections::BTreeSet;
 
+use axum::http::Method;
 use axum::http::StatusCode;
-use common::{App, MEMBER, MEMBER_2, MODERATOR, g, rules_for_tests};
+use common::{App, GUILD, MEMBER, MEMBER_2, MODERATOR, evidence_channel, g, rules_for_tests};
+use quack_core::ids::GuildId;
 use serde_json::{Value, json};
 
 /// Staff-only keys that must never reach a member.
@@ -43,6 +45,15 @@ const STAFF_ONLY: &[&str] = &[
     "description",
     "closed_by",
     "imported",
+    // Evidence: staff notes, the messages around a saved message, removal,
+    // and the staff-only switch never reach the member (§7.4).
+    "note",
+    "note_revision",
+    "note_updated_by",
+    "note_updated_at",
+    "surrounding",
+    "removed",
+    "visible_to_member",
 ];
 
 fn keys(value: &Value, out: &mut BTreeSet<String>) {
@@ -281,4 +292,195 @@ async fn an_appeal_closed_by_a_void_says_so() {
     let events = after.json["appeal"]["events"].as_array().unwrap();
     let closed = events.iter().find(|e| e["kind"] == "closed").unwrap();
     assert_eq!(closed["closed_by_void"], true, "{}", after.json);
+}
+
+/// The member's own case page shows only what §7.4 lets them see: saved
+/// messages without their surroundings, uploads only once staff show them,
+/// never a note or a removed item, and no file of an item they can't see.
+/// A leak here could name a reporter, so the raw body is checked too.
+#[tokio::test]
+async fn members_never_receive_staff_only_evidence() {
+    let app = App::new().await;
+    let rule = app.h.rule(rules_for_tests::warning("Spam")).await.unwrap();
+    let case = app.h.apply(MEMBER, rule).await.unwrap();
+    let case_id = case.case.id.get().to_string();
+    evidence_channel(&app).await;
+    let guild: GuildId = common::sf(GUILD);
+    let channel = app.h.fake.world(|w| w.add_text_channel(guild, false));
+    let post = |text: &str| {
+        app.h
+            .fake
+            .world(|w| w.post(guild, channel, common::sf(MEMBER_2), text, vec![]))
+    };
+    post("REPORTER-CONTEXT-BEFORE");
+    let target = post("the saved message");
+    post("REPORTER-CONTEXT-AFTER");
+    let removed_target = post("a message added by mistake");
+    let moderator = app.login(MODERATOR, true).await;
+    let link = |m| format!("https://discord.com/channels/{GUILD}/{channel}/{m}");
+    let linked = app
+        .send(
+            app.post(&g("/cases/1/evidence"))
+                .by(&moderator)
+                .json(json!({
+                    "links": [link(target), link(removed_target)],
+                    "note": "STAFF-NOTE-ON-MESSAGE reported by a member"
+                })),
+        )
+        .await;
+    assert_eq!(linked.status, StatusCode::OK, "{}", linked.json);
+    let uploaded = app
+        .send(
+            app.post(&g("/cases/1/evidence/uploads"))
+                .by(&moderator)
+                .multipart(&[
+                    (
+                        "files",
+                        Some("STAFF-ONLY-FILE.png"),
+                        "image/png",
+                        b"png".as_slice(),
+                    ),
+                    (
+                        "note",
+                        None,
+                        "text/plain",
+                        b"STAFF-NOTE-ON-UPLOAD".as_slice(),
+                    ),
+                ]),
+        )
+        .await;
+    assert_eq!(uploaded.status, StatusCode::OK, "{}", uploaded.json);
+    app.h.settle().await.unwrap();
+    let staff = app.send(app.get(&g("/cases/1")).by(&moderator)).await;
+    let items = staff.json["evidence"].as_array().unwrap().clone();
+    let find = |pred: &dyn Fn(&Value) -> bool| items.iter().find(|e| pred(e)).unwrap().clone();
+    let upload = find(&|e| e["kind"] == "upload");
+    let mistake = find(&|e| e["message_id"] == removed_target.to_string());
+    let saved = find(&|e| e["message_id"] == target.to_string());
+    assert!(saved["surrounding"].is_array(), "{saved}");
+    let upload_id = upload["id"].as_str().unwrap();
+    let upload_file = upload["files"][0]["id"].as_str().unwrap().to_owned();
+    let removed = app
+        .send(
+            app.post(&g(&format!(
+                "/cases/1/evidence/{}/remove",
+                mistake["id"].as_str().unwrap()
+            )))
+            .by(&moderator),
+        )
+        .await;
+    assert_eq!(removed.status, StatusCode::OK, "{}", removed.json);
+
+    let member = app.login(MEMBER, true).await;
+    let path = format!("/api/me/cases/{case_id}");
+    let file_route = |id: &str| format!("/api/me/cases/{case_id}/evidence/{id}");
+    let assert_hidden = |resp: &common::Resp| {
+        assert_member_projection(&resp.json);
+        let raw = String::from_utf8_lossy(&resp.body);
+        for secret in [
+            "STAFF-NOTE",
+            "REPORTER-CONTEXT",
+            "STAFF-ONLY-FILE",
+            "added by mistake",
+            upload_id,
+        ] {
+            assert!(!raw.contains(secret), "member body has {secret}: {raw}");
+        }
+    };
+
+    // Staff-only upload: not listed, and its file is not found.
+    let seen = app.send(app.get(&path).by(&member)).await;
+    assert_eq!(seen.status, StatusCode::OK, "{}", seen.json);
+    assert_hidden(&seen);
+    let evidence = seen.json["evidence"].as_array().unwrap();
+    assert_eq!(evidence.len(), 1, "only the saved message: {}", seen.json);
+    assert_eq!(evidence[0]["content"], "the saved message");
+    let hidden_file = app
+        .send(app.get(&file_route(&upload_file)).by(&member))
+        .await;
+    assert_eq!(hidden_file.status, StatusCode::NOT_FOUND);
+    assert_eq!(hidden_file.code(), Some("not_found"));
+    // The removed message's file route answers the same way as any other
+    // item the member can't see (it has no files here; an unknown id is
+    // also not found).
+    let other_file = app
+        .send(
+            app.get(&file_route("0190f5b2-6c1e-7cc0-9a3e-000000000001"))
+                .by(&member),
+        )
+        .await;
+    assert_eq!(other_file.code(), Some("not_found"));
+
+    // Once staff show the upload, its files are listed (never its note).
+    let shown = app
+        .send(
+            app.req(
+                Method::PUT,
+                &g(&format!("/cases/1/evidence/{upload_id}/visibility")),
+            )
+            .by(&moderator)
+            .json(json!({"visible_to_member": true})),
+        )
+        .await;
+    assert_eq!(shown.status, StatusCode::OK, "{}", shown.json);
+    let seen = app.send(app.get(&path).by(&member)).await;
+    assert_member_projection(&seen.json);
+    let raw = String::from_utf8_lossy(&seen.body);
+    assert!(!raw.contains("STAFF-NOTE"), "{raw}");
+    assert!(!raw.contains("REPORTER-CONTEXT"), "{raw}");
+    let evidence = seen.json["evidence"].as_array().unwrap();
+    assert_eq!(evidence.len(), 2, "{}", seen.json);
+    let files: Vec<&str> = evidence
+        .iter()
+        .flat_map(|e| e["files"].as_array().unwrap())
+        .map(|f| f["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(files, [upload_file.as_str()]);
+    let served = app
+        .send(app.get(&file_route(&upload_file)).by(&member))
+        .await;
+    assert_eq!(served.status, StatusCode::FOUND, "{}", served.json);
+    // Another member never sees it.
+    let stranger = app.login(MEMBER_2, true).await;
+    let theirs = app
+        .send(app.get(&file_route(&upload_file)).by(&stranger))
+        .await;
+    assert_eq!(theirs.code(), Some("not_found"));
+
+    // Hidden again, and then removed: gone from the member's page.
+    let hidden = app
+        .send(
+            app.req(
+                Method::PUT,
+                &g(&format!("/cases/1/evidence/{upload_id}/visibility")),
+            )
+            .by(&moderator)
+            .json(json!({"visible_to_member": false})),
+        )
+        .await;
+    assert_eq!(hidden.status, StatusCode::OK);
+    assert_hidden(&app.send(app.get(&path).by(&member)).await);
+    let shown_again = app
+        .send(
+            app.req(
+                Method::PUT,
+                &g(&format!("/cases/1/evidence/{upload_id}/visibility")),
+            )
+            .by(&moderator)
+            .json(json!({"visible_to_member": true})),
+        )
+        .await;
+    assert_eq!(shown_again.status, StatusCode::OK);
+    let removed = app
+        .send(
+            app.post(&g(&format!("/cases/1/evidence/{upload_id}/remove")))
+                .by(&moderator),
+        )
+        .await;
+    assert_eq!(removed.status, StatusCode::OK, "{}", removed.json);
+    assert_hidden(&app.send(app.get(&path).by(&member)).await);
+    let removed_file = app
+        .send(app.get(&file_route(&upload_file)).by(&member))
+        .await;
+    assert_eq!(removed_file.code(), Some("not_found"));
 }

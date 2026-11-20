@@ -1,0 +1,162 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## before and after
+tone: Neutral
+--- discord ---
+### Messages around the evidence · case #12
+-# Saved when the message was added, text only. Only staff see them.
+<@222> · <t:1794924309:R>
+> anyone want free nitro?
+<@222> · <t:1794924309:R> · 2 files
+-# No text.
+The saved message from <@222>.
+<@222> · <t:1794924309:R>
+> \@everyone check my profile
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Messages around the evidence · case #12
+Saved when the message was added, text only. Only staff see them.
+Sam · on 17 Nov 2026 at 14:05 UTC
+> anyone want free nitro?
+Sam · on 17 Nov 2026 at 14:05 UTC · 2 files
+No text.
+
+The saved message from Sam.
+
+Sam · on 17 Nov 2026 at 14:05 UTC
+> @everyone check my profile
+--- model ---
+Heading [Fixed("Messages around the evidence · case #12")]
+Subtext [Fixed("Saved when the message was added, text only. Only staff see them.")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Quote [User("anyone want free nitro?")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 2 files")]
+Subtext [Fixed("No text.")]
+Divider
+Text [Fixed("The saved message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+Divider
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Quote [User("@everyone check my profile")]
+
+## only before
+tone: Neutral
+--- discord ---
+### Messages around the evidence · case #12
+-# Saved when the message was added, text only. Only staff see them.
+<@222> · <t:1794924309:R>
+> hi
+The saved message.
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Messages around the evidence · case #12
+Saved when the message was added, text only. Only staff see them.
+Sam · on 17 Nov 2026 at 14:05 UTC
+> hi
+
+The saved message.
+
+--- model ---
+Heading [Fixed("Messages around the evidence · case #12")]
+Subtext [Fixed("Saved when the message was added, text only. Only staff see them.")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative)]
+Quote [User("hi")]
+Divider
+Text [Fixed("The saved message.")]
+Divider
+
+## none
+tone: Neutral
+--- discord ---
+### Messages around the evidence · case #12
+-# Saved when the message was added, text only. Only staff see them.
+There were no other messages around it when Quack saved it.
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Messages around the evidence · case #12
+Saved when the message was added, text only. Only staff see them.
+There were no other messages around it when Quack saved it.
+--- model ---
+Heading [Fixed("Messages around the evidence · case #12")]
+Subtext [Fixed("Saved when the message was added, text only. Only staff see them.")]
+Text [Fixed("There were no other messages around it when Quack saved it.")]
+
+## maximal
+tone: Neutral
+--- discord ---
+### Messages around the evidence · case #12
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentio
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentio
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentio
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentio
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*…
+The saved message from <@222>.
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
+<@222> · <t:1794924309:R> · 10 files
+> Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
+Quack shortened this message to fit in Discord.
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Messages around the evidence · case #12
+Saved when the message was added, text only. Only staff see them.
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+
+The saved message from Sam.
+
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+Sam · on 17 Nov 2026 at 14:05 UTC · 10 files
+> Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
+--- model ---
+Heading [Fixed("Messages around the evidence · case #12")]
+Subtext [Fixed("Saved when the message was added, text only. Only staff see them.")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Divider
+Text [Fixed("The saved message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(".")]
+Divider
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
+Text [Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" · "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · 10 files")]
+Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]

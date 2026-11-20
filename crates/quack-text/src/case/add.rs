@@ -292,5 +292,11 @@ pub fn context_problem(
         ContextProblemCode::OtherServer => {
             lead().s("That message is in another server. Use a message from this server.")
         }
+        ContextProblemCode::EvidenceChannel => lead().s(
+            "That message is in the evidence channel or is one of Quack's copies there, so it can't be evidence. Link the original message, or upload the file again.",
+        ),
+        ContextProblemCode::NoAccess => lead().s(
+            "You can't read the channel that message is in, so Quack didn't add it again. Ask a moderator who can read it.",
+        ),
     }
 }

@@ -1,0 +1,43 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## cases
+tone: Neutral
+--- discord ---
+### Add this message as evidence
+Choose a case about this message's author or one you added recently, or enter a case number.
+select AddAsEvidence { channel: ChannelId(444), message: MessageId(777) } "Choose a case": #14 · Spam (Added 17 Nov 2026) | #12 · Harassment (Voided · Added 17 Nov 2026) | #3 · Imported (Added 17 Nov 2026)
+buttons: [Enter a case number · Secondary] AddAsEvidenceByNumber { channel: ChannelId(444), message: MessageId(777) }
+--- plain ---
+Add this message as evidence
+Choose a case about this message's author or one you added recently, or enter a case number.
+--- model ---
+Heading [Fixed("Add this message as evidence")]
+Text [Fixed("Choose a case about this message's author or one you added recently, or enter a case number.")]
+
+## no cases
+tone: Neutral
+--- discord ---
+### Add this message as evidence
+Quack found no recent cases about this message's author or added by you. Enter a case number instead.
+buttons: [Enter a case number · Secondary] AddAsEvidenceByNumber { channel: ChannelId(444), message: MessageId(777) }
+--- plain ---
+Add this message as evidence
+Quack found no recent cases about this message's author or added by you. Enter a case number instead.
+--- model ---
+Heading [Fixed("Add this message as evidence")]
+Text [Fixed("Quack found no recent cases about this message's author or added by you. Enter a case number instead.")]
+
+## maximal
+tone: Neutral
+--- discord ---
+### Add this message as evidence
+Choose a case about this message's author or one you added recently, or enter a case number.
+select AddAsEvidence { channel: ChannelId(444), message: MessageId(777) } "Choose a case": #9007199254740991 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740990 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740989 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740988 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740987 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740986 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740985 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740984 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740983 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740982 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740981 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740980 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740979 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740978 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740977 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740976 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740975 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740974 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740973 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740972 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740971 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740970 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740969 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026) | #9007199254740968 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Added 17 Nov 2026) | #9007199254740967 · Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> menti… (Voided · Added 17 Nov 2026)
+buttons: [Enter a case number · Secondary] AddAsEvidenceByNumber { channel: ChannelId(444), message: MessageId(777) }
+--- plain ---
+Add this message as evidence
+Choose a case about this message's author or one you added recently, or enter a case number.
+--- model ---
+Heading [Fixed("Add this message as evidence")]
+Text [Fixed("Choose a case about this message's author or one you added recently, or enter a case number.")]

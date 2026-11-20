@@ -1,5 +1,7 @@
 use proptest::prelude::*;
-use quack_core::ids::{ActionId, AppealId, CaseId, JobId, MemberId, RuleId, TicketId};
+use quack_core::ids::{
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, JobId, MemberId, MessageId, RuleId, TicketId,
+};
 use quack_core::rule::FieldKey;
 use quack_text::actions::{
     ButtonAction, DraftPage, InputId, ModalAction, SelectAction, SelectValue,
@@ -26,7 +28,34 @@ fn draft_page() -> impl Strategy<Value = DraftPage> {
     })
 }
 
+/// The evidence ids (§11.5 `evs` … `exm`).
+fn evidence_id() -> impl Strategy<Value = CustomId> {
+    let evidence = || uuid().prop_map(EvidenceId::from_uuid);
+    let place = || {
+        (1..=i64::MAX as u64, 1..=i64::MAX as u64)
+            .prop_map(|(c, m)| (ChannelId::new(c).unwrap(), MessageId::new(m).unwrap()))
+    };
+    prop_oneof![
+        evidence().prop_map(CustomId::EvidenceSurrounding),
+        evidence().prop_map(CustomId::BackToEvidence),
+        (evidence(), any::<bool>())
+            .prop_map(|(evidence, visible)| CustomId::EvidenceVisibility { evidence, visible }),
+        evidence().prop_map(CustomId::EditEvidenceNote),
+        (evidence(), any::<u32>())
+            .prop_map(|(evidence, revision)| CustomId::EvidenceNoteModal { evidence, revision }),
+        evidence().prop_map(CustomId::RemoveEvidence),
+        evidence().prop_map(CustomId::ConfirmRemoveEvidence),
+        place().prop_map(|(channel, message)| CustomId::AddAsEvidence { channel, message }),
+        place().prop_map(|(channel, message)| CustomId::AddAsEvidenceByNumber { channel, message }),
+        place().prop_map(|(channel, message)| CustomId::AddAsEvidenceModal { channel, message }),
+    ]
+}
+
 fn custom_id() -> impl Strategy<Value = CustomId> {
+    prop_oneof![base_id(), evidence_id()]
+}
+
+fn base_id() -> impl Strategy<Value = CustomId> {
     let case = || uuid().prop_map(CaseId::from_uuid);
     let action = || uuid().prop_map(ActionId::from_uuid);
     let appeal = || uuid().prop_map(AppealId::from_uuid);
@@ -37,9 +66,17 @@ fn custom_id() -> impl Strategy<Value = CustomId> {
         case().prop_map(CustomId::EditContext),
         (case(), any::<u32>())
             .prop_map(|(case, revision)| CustomId::EditContextModal { case, revision }),
-        case().prop_map(CustomId::AddEvidence),
-        case().prop_map(CustomId::AddEvidenceModal),
-        (case(), any::<u32>()).prop_map(|(case, item)| CustomId::ViewEvidence { case, item }),
+        (case(), any::<bool>())
+            .prop_map(|(case, new_message)| CustomId::AddEvidence { case, new_message }),
+        (case(), any::<bool>())
+            .prop_map(|(case, new_message)| CustomId::AddEvidenceModal { case, new_message }),
+        (case(), any::<u32>(), any::<bool>()).prop_map(|(case, item, new_message)| {
+            CustomId::ViewEvidence {
+                case,
+                item,
+                new_message,
+            }
+        }),
         case().prop_map(CustomId::VoidCase),
         case().prop_map(CustomId::VoidCaseModal),
         (snowflake(), any::<u32>()).prop_map(|(member, page)| CustomId::History { member, page }),
@@ -276,6 +313,9 @@ fn input_ids_and_select_values() {
     for id in [
         InputId::Reason,
         InputId::Links,
+        InputId::Files,
+        InputId::Note,
+        InputId::CaseNumber,
         InputId::Statement,
         InputId::Invite,
         InputId::Warning,

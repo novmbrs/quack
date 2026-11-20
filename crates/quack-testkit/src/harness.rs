@@ -233,6 +233,7 @@ impl Harness {
             pinned_version: None,
             context: Vec::<(String, ContextInput)>::new(),
             evidence_links: Vec::new(),
+            evidence_files: Vec::new(),
             source_message: None,
             receipt: None,
             replaces: None,

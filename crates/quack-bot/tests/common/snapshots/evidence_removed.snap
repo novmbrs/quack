@@ -1,0 +1,7 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Quack removed the evidence item from case #1. A removed message comes back when its link is added again; removed files have to be uploaded again.
+[View evidence] [Open case]

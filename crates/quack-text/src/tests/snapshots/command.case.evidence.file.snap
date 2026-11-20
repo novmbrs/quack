@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+file — A file to save: an image, video, audio, text, or PDF up to 10 MB.
+
+## description
+A file to save: an image, video, audio, text, or PDF up to 10 MB.

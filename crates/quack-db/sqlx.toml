@@ -16,6 +16,7 @@
 'dm_kind' = "crate::pg::Pg<quack_core::dm::DmKind>"
 'dm_state' = "crate::pg::Pg<quack_core::dm::DmState>"
 'dm_failure' = "crate::pg::Pg<quack_core::dm::DmFailure>"
+'evidence_kind' = "crate::pg::Pg<quack_core::evidence::EvidenceKind>"
 'evidence_state' = "crate::pg::Pg<quack_core::evidence::EvidenceState>"
 'evidence_failure' = "crate::pg::Pg<quack_core::evidence::EvidenceFailure>"
 'file_copy_state' = "crate::pg::Pg<quack_core::evidence::FileCopyState>"

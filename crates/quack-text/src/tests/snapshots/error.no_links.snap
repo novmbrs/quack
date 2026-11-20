@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: No evidence was added. Paste at least one message link and try again.
-plain:   No evidence was added. Paste at least one message link and try again.
-model:   [Fixed("No evidence was added. Paste at least one message link and try again.")]
+discord: No evidence was added. Add at least one message link or file and try again.
+plain:   No evidence was added. Add at least one message link or file and try again.
+model:   [Fixed("No evidence was added. Add at least one message link or file and try again.")]

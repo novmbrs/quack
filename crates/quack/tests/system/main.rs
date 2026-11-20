@@ -17,6 +17,7 @@ mod activity;
 mod capture;
 mod common;
 mod dm_failed;
+mod evidence;
 mod honeypot;
 mod moderation;
 mod ops;

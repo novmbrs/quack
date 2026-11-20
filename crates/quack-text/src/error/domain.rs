@@ -51,6 +51,7 @@ fn action_or(f: &ErrorFacts<'_>, with: impl FnOnce(ActionKind) -> Text, fallback
 }
 
 /// The message for a domain error.
+#[allow(clippy::too_many_lines, reason = "one arm per domain error")]
 pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
     match err {
         DomainError::MissingCapability(c) => super::missing_capability(*c),
@@ -148,7 +149,33 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
             "This case would have more than 50 evidence items. Add fewer message links.",
         ),
         DomainError::TooManyLinks => super::too_many_links(),
+        DomainError::TooManyFiles
+        | DomainError::EvidenceFileLimitReached { .. }
+        | DomainError::EvidenceChannelMissing
+        | DomainError::EvidenceChannelNotStaffOnly
+        | DomainError::UploadsBusy
+        | DomainError::EvidenceNotFound
+        | DomainError::EvidenceRemoved
+        | DomainError::EvidenceNotUpload
+        | DomainError::NoteChanged => evidence(*err),
         DomainError::SettingsChanged => api::settings_changed(),
         DomainError::TicketNotOpen => ticket::close_not_open(),
+    }
+}
+
+/// The evidence refusals (§7), which need no facts.
+fn evidence(err: DomainError) -> Text {
+    match err {
+        DomainError::TooManyFiles => super::too_many_files(),
+        DomainError::EvidenceFileLimitReached { count } => {
+            super::evidence_file_limit_reached(count)
+        }
+        DomainError::EvidenceChannelMissing => super::evidence_channel_missing(),
+        DomainError::EvidenceChannelNotStaffOnly => super::evidence_channel_not_staff_only(),
+        DomainError::UploadsBusy => super::uploads_busy(),
+        DomainError::EvidenceNotFound => super::evidence_not_found(),
+        DomainError::EvidenceRemoved => super::evidence_removed(),
+        DomainError::EvidenceNotUpload => super::evidence_not_upload(),
+        _ => super::note_changed(),
     }
 }

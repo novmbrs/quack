@@ -279,22 +279,25 @@ async fn tell_moderator_posted(engine: &Engine, row: &TrackedMessage) {
     if *at <= OffsetDateTime::now_utc() {
         return;
     }
-    let number = match row.owner {
+    let (case, number, has_evidence) = match row.owner {
         quack_db::messages::Owner::Case(case) => {
             let Ok(mut conn) = engine.db().conn().await else {
                 return;
             };
-            match quack_db::cases::get(&mut conn, row.guild, case).await {
+            let number = match quack_db::cases::get(&mut conn, row.guild, case).await {
                 Ok(Some(c)) => c.number,
                 _ => return,
-            }
+            };
+            let items = quack_db::evidence::count_for_case(&mut conn, row.guild, case)
+                .await
+                .unwrap_or(0);
+            (case, number, items > 0)
         }
         _ => return,
     };
-    let msg = quack_text::Msg::text(
-        quack_text::Tone::Success,
-        quack_text::case::receipt_posted(number),
-    );
+    // Add evidence and View evidence follow the confirmation, so evidence
+    // can be added right after the case (§11.7).
+    let msg = quack_text::case::receipt_posted_reply(case, number, has_evidence);
     let token = InteractionToken::new(token.clone());
     let _ = engine
         .discord()

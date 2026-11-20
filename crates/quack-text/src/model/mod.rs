@@ -15,8 +15,8 @@ use quack_core::ids::{AccountId, ChannelId, RoleId};
 use time::OffsetDateTime;
 
 pub use msg::{
-    Block, Button, ButtonStyle, ButtonTarget, Input, InputKind, InputStyle, Modal, Msg, Row,
-    Select, SelectOption, SelectOptions, Tone,
+    Block, Button, ButtonStyle, ButtonTarget, GalleryItem, Input, InputKind, InputStyle, Modal,
+    Msg, Row, Select, SelectOption, SelectOptions, Tone,
 };
 
 /// Someone shown by name: a member, a moderator, or a message author.

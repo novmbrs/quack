@@ -1,0 +1,7 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Quack is saving 1 message as evidence for case #1. Quack is copying 1 file to the evidence channel for case #1. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+[Add evidence] [View evidence]

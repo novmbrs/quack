@@ -1,7 +1,15 @@
-import { api, write } from "~/api/client";
-import type { Action, Case, CaseVoided, ContextInput, EvidenceAdded } from "~/api/types";
+import { api, upload, type UploadProgress, write } from "~/api/client";
+import type {
+  Action,
+  Case,
+  CaseVoided,
+  ContextInput,
+  EvidenceAdded,
+  EvidenceEdited,
+} from "~/api/types";
 
-// Writes for cases and their actions (design §14.2 routes 21–25, 29–31).
+// Writes for cases and their actions (design §14.2 routes 21–25, 29–31,
+// 60–63).
 // Each call is one thing the moderator asked for, with its own
 // Idempotency-Key; write() reuses it on automatic retries.
 
@@ -73,18 +81,97 @@ export function editContext(
 }
 
 /**
- * addEvidence saves up to 10 more message links as evidence; the answer
- * says how many were new or already saved, in the bot's words.
+ * addEvidence saves up to 10 more message links as evidence, with an
+ * optional staff note on each; the answer says how many were new or
+ * already saved, in the bot's words.
  */
 export function addEvidence(
   guildId: string,
   caseRef: string,
   links: string[],
+  note?: string,
 ): Promise<EvidenceAdded> {
   return write((init) =>
     api.POST("/api/guilds/{guild_id}/cases/{case_ref}/evidence", {
       params: casePath(guildId, caseRef),
-      body: { links },
+      body: note?.trim() ? { links, note } : { links },
+      ...init,
+    }),
+  );
+}
+
+/**
+ * uploadEvidence sends 1–10 files (and an optional note) as one evidence
+ * item (route 60). Quack copies them to the evidence channel; only staff
+ * see them until someone shows them to the member.
+ */
+export function uploadEvidence(
+  guildId: string,
+  caseRef: string,
+  files: File[],
+  note: string,
+  key: string,
+  onProgress?: (p: UploadProgress) => void,
+): Promise<EvidenceAdded> {
+  const form = new FormData();
+  for (const f of files) form.append("files", f, f.name);
+  if (note.trim()) form.append("note", note.trim());
+  const url = `/api/guilds/${encodeURIComponent(guildId)}/cases/${encodeURIComponent(caseRef)}/evidence/uploads`;
+  return upload<EvidenceAdded>(url, form, key, onProgress);
+}
+
+const itemPath = (guildId: string, caseRef: string, evidenceId: string) => ({
+  path: { guild_id: guildId, case_ref: caseRef, evidence_id: evidenceId },
+});
+
+/**
+ * setEvidenceNote saves or clears (null or blank) an item's staff note. It
+ * sends the revision it read; a newer one is 409 note_changed.
+ */
+export function setEvidenceNote(
+  guildId: string,
+  caseRef: string,
+  evidenceId: string,
+  note: string | null,
+  expectedRevision: number,
+): Promise<EvidenceEdited> {
+  return write((init) =>
+    api.PUT("/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/note", {
+      params: itemPath(guildId, caseRef, evidenceId),
+      body: { note, expected_note_revision: expectedRevision },
+      ...init,
+    }),
+  );
+}
+
+/** setEvidenceVisibility shows uploaded files to the case's member, or hides them. */
+export function setEvidenceVisibility(
+  guildId: string,
+  caseRef: string,
+  evidenceId: string,
+  visible: boolean,
+): Promise<EvidenceEdited> {
+  return write((init) =>
+    api.PUT("/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/visibility", {
+      params: itemPath(guildId, caseRef, evidenceId),
+      body: { visible_to_member: visible },
+      ...init,
+    }),
+  );
+}
+
+/**
+ * removeEvidence hides an item added by mistake. It stays in the record,
+ * listed collapsed here, and is never deleted.
+ */
+export function removeEvidence(
+  guildId: string,
+  caseRef: string,
+  evidenceId: string,
+): Promise<EvidenceEdited> {
+  return write((init) =>
+    api.POST("/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/remove", {
+      params: itemPath(guildId, caseRef, evidenceId),
       ...init,
     }),
   );

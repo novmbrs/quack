@@ -6,6 +6,7 @@ use super::{ModLogKind, ModLogResult};
 use crate::action::{ActionFailure, ActionKind, ActionSkipReason};
 use crate::case::{CaseSource, VoidCause};
 use crate::dm::{DmFailure, DmKind};
+use crate::evidence::EvidenceKind;
 use crate::ids::{ActionId, ModLogId};
 use crate::modules::{
     ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
@@ -122,6 +123,10 @@ entries! {
     HoneypotCaseFailed(HoneypotCaseFailedDetail),
     /// `legacy` (imported Go rows only, already redacted).
     Legacy(LegacyDetail),
+    /// `evidence_removed`.
+    EvidenceRemoved(EvidenceRemovedDetail),
+    /// `evidence_visibility_changed`.
+    EvidenceVisibilityChanged(EvidenceVisibilityDetail),
 }
 
 impl ModLogEntry {
@@ -226,6 +231,24 @@ pub struct EvidenceAddedDetail {
     pub case_number: u64,
     /// How many items were added.
     pub count: u32,
+}
+
+/// `evidence_removed` detail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EvidenceRemovedDetail {
+    /// The case's number.
+    pub case_number: u64,
+    /// What the removed item held.
+    pub evidence_kind: EvidenceKind,
+}
+
+/// `evidence_visibility_changed` detail.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EvidenceVisibilityDetail {
+    /// The case's number.
+    pub case_number: u64,
+    /// Whether the member sees the item now.
+    pub visible_to_member: bool,
 }
 
 /// `action_done` detail.

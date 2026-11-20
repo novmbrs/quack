@@ -17,7 +17,7 @@ screenshot\-4.png · Original link only. Quack doesn't copy this file type.
 screenshot\-5.png · Quack couldn't copy this file. The original link may stop working.
 2 more files weren't saved, because a case keeps at most 100 files and 10 per message.
 Quack didn't copy files because the evidence channel is visible outside staff. Fix its View Channel permissions or choose another evidence channel in </setup:1004>.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -52,16 +52,151 @@ tone: Warning
 --- discord ---
 ### Evidence 1 of 3 · case #12
 Message in <#444> · [Open message](<https://discord.com/channels/111/444/777>)
-Quack is still saving this message.
-buttons: [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+Quack is still saving this evidence.
+buttons: [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2, new_message: false } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 1 of 3 · case #12
 Message in #general · Open message
-Quack is still saving this message.
+Quack is still saving this evidence.
 --- model ---
 Heading [Fixed("Evidence 1 of 3 · case #12")]
 Text [Fixed("Message in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
-Text [Fixed("Quack is still saving this message.")]
+Text [Fixed("Quack is still saving this evidence.")]
+
+## with a note and messages around it
+tone: Neutral
+--- discord ---
+### Evidence 2 of 3 · case #12
+Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+**Note:** The first of three spam posts \*\*that day\*\*.
+Edited <t:1795014309:R>.
+> Join my server discord.gg/spam
+Link previews: Spam Server, image
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Edit note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Messages around it · Secondary] EvidenceSurrounding(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Note: The first of three spam posts **that day**.
+Edited on 18 Nov 2026 at 15:05 UTC.
+> Join my server discord.gg/spam
+Link previews: Spam Server, image
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Field "Note" [User("The first of three spam posts **that day**.")]
+Text [Fixed("Edited "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+Quote [User("Join my server discord.gg/spam")]
+Text [Fixed("Link previews: "), User("Spam Server, image")]
+
+## uploaded files, staff only, with a gallery
+tone: Neutral
+--- discord ---
+### Evidence 2 of 3 · case #12
+Files uploaded by <@333> <t:1794924309:R>.
+Only staff see these files. The member doesn't see them on their case page.
+**Note:** Sent to us by a member in a ticket.
+report.png · Copy saved
+clip.mp4 · Copy saved
+notes.txt · Quack couldn't copy this file, so it wasn't saved. Upload it again.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Show to member · Secondary] EvidenceVisibility { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), visible: true } | [Edit note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Files uploaded by Ana on 17 Nov 2026 at 14:05 UTC.
+Only staff see these files. The member doesn't see them on their case page.
+Note: Sent to us by a member in a ticket.
+report.png · Copy saved
+clip.mp4 · Copy saved
+notes.txt · Quack couldn't copy this file, so it wasn't saved. Upload it again.
+[media: report.png] [media: clip.mp4]
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Files uploaded by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Fixed("Only staff see these files. The member doesn't see them on their case page.")]
+Field "Note" [User("Sent to us by a member in a ticket.")]
+Text [User("report.png"), Fixed(" · Copy saved")]
+Text [User("clip.mp4"), Fixed(" · Copy saved")]
+Text [User("notes.txt"), Fixed(" · Quack couldn't copy this file, so it wasn't saved. Upload it again.")]
+Gallery [GalleryItem { url: "https://cdn.discordapp.com/attachments/9/10/SPOILER_report.png?ex=1", description: Some("report.png"), spoiler: true }, GalleryItem { url: "https://cdn.discordapp.com/attachments/9/11/SPOILER_clip.mp4?ex=1", description: Some("clip.mp4"), spoiler: true }]
+
+## uploaded files the member sees
+tone: Neutral
+--- discord ---
+### Evidence 2 of 3 · case #12
+Files uploaded by <@333> <t:1794924309:R>.
+The member sees these files on their case page.
+report.png · Copy saved
+clip.mp4 · Copy saved
+notes.txt · Quack couldn't copy this file, so it wasn't saved. Upload it again.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Hide from member · Secondary] EvidenceVisibility { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), visible: false } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Files uploaded by Ana on 17 Nov 2026 at 14:05 UTC.
+The member sees these files on their case page.
+report.png · Copy saved
+clip.mp4 · Copy saved
+notes.txt · Quack couldn't copy this file, so it wasn't saved. Upload it again.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Files uploaded by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Fixed("The member sees these files on their case page.")]
+Text [User("report.png"), Fixed(" · Copy saved")]
+Text [User("clip.mp4"), Fixed(" · Copy saved")]
+Text [User("notes.txt"), Fixed(" · Quack couldn't copy this file, so it wasn't saved. Upload it again.")]
+
+## uploaded files, still copying
+tone: Warning
+--- discord ---
+### Evidence 2 of 3 · case #12
+Files uploaded by <@333> <t:1794924309:R>.
+Only staff see these files. The member doesn't see them on their case page.
+**Note:** Sent to us by a member in a ticket.
+Quack is still saving this evidence.
+report.png · Copying file…
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Show to member · Secondary] EvidenceVisibility { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), visible: true } | [Edit note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Files uploaded by Ana on 17 Nov 2026 at 14:05 UTC.
+Only staff see these files. The member doesn't see them on their case page.
+Note: Sent to us by a member in a ticket.
+Quack is still saving this evidence.
+report.png · Copying file…
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Files uploaded by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Fixed("Only staff see these files. The member doesn't see them on their case page.")]
+Field "Note" [User("Sent to us by a member in a ticket.")]
+Text [Fixed("Quack is still saving this evidence.")]
+Text [User("report.png"), Fixed(" · Copying file…")]
+
+## uploaded files, one not copied
+tone: Neutral
+--- discord ---
+### Evidence 2 of 3 · case #12
+Files uploaded by <@333> <t:1794924309:R>.
+Only staff see these files. The member doesn't see them on their case page.
+**Note:** Sent to us by a member in a ticket.
+report.png · Copy saved
+clip.mp4 · Quack couldn't copy this file, so it wasn't saved. Upload it again.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Show to member · Secondary] EvidenceVisibility { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), visible: true } | [Edit note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Files uploaded by Ana on 17 Nov 2026 at 14:05 UTC.
+Only staff see these files. The member doesn't see them on their case page.
+Note: Sent to us by a member in a ticket.
+report.png · Copy saved
+clip.mp4 · Quack couldn't copy this file, so it wasn't saved. Upload it again.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Files uploaded by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Fixed("Only staff see these files. The member doesn't see them on their case page.")]
+Field "Note" [User("Sent to us by a member in a ticket.")]
+Text [User("report.png"), Fixed(" · Copy saved")]
+Text [User("clip.mp4"), Fixed(" · Quack couldn't copy this file, so it wasn't saved. Upload it again.")]
 
 ## one file not saved
 tone: Neutral
@@ -72,7 +207,7 @@ Edited <t:1795014309:R>.
 > Join my server discord.gg/spam
 Link previews: Spam Server, image
 1 more file wasn't saved, because a case keeps at most 100 files and 10 per message.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2, new_message: false } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 3 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -93,9 +228,10 @@ tone: Neutral
 --- discord ---
 ### Evidence 2 of 3 · case #12
 Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
+**Note:** Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentio
 Edited <t:1795014309:R>.
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
-Link previews: Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long, Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long, Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long, Long text with \*stars\* and \<\@1\> mentions…
+Link previews: Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long, Long text with \*stars\* and \<\@1\> mentions. Long text with …
 Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\>  · Copy saved
 Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\>  · Copy saved
 Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\>  · Copy saved
@@ -109,10 +245,12 @@ Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@
 2 more files weren't saved, because a case keeps at most 100 files and 10 per message.
 Quack didn't copy files because the evidence channel is visible outside staff. Fix its View Channel permissions or choose another evidence channel in </setup:1004>.
 Quack shortened this message to fit in Discord.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3, new_message: false } | [Edit note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Messages around it · Secondary] EvidenceSurrounding(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
+Note: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio
 Edited on 18 Nov 2026 at 15:05 UTC.
 > Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text 
 Link previews: Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long
@@ -131,6 +269,7 @@ Quack didn't copy files because the evidence channel is visible outside staff. F
 --- model ---
 Heading [Fixed("Evidence 2 of 3 · case #12")]
 Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
+Field "Note" [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentio")]
 Text [Fixed("Edited "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
 Quote [User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text ")]
 Text [Fixed("Link previews: "), User("Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long, Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long text with *stars* and <@1> mentions. Long")]

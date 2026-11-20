@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## MessageLink
+discord: What happened? — That message is in the evidence channel or is one of Quack's copies there, so it can't be evidence. Link the original message, or upload the file again.
+plain:   What happened? — That message is in the evidence channel or is one of Quack's copies there, so it can't be evidence. Link the original message, or upload the file again.
+model:   [User("What happened?"), Fixed(" — That message is in the evidence channel or is one of Quack's copies there, so it can't be evidence. Link the original message, or upload the file again.")]

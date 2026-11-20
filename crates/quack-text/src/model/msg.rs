@@ -43,6 +43,20 @@ pub enum Block {
     Divider,
     /// A file sent with the message, by its attachment name.
     File(String),
+    /// Up to 10 images or videos shown inline from their URLs (fresh CDN
+    /// URLs of evidence copies). Evidence galleries are always spoilered.
+    Gallery(Vec<GalleryItem>),
+}
+
+/// One image or video of a [`Block::Gallery`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GalleryItem {
+    /// An `https://` URL of the media.
+    pub url: String,
+    /// Alt text (the file name), at most 1,024 characters.
+    pub description: Option<String>,
+    /// Blurred until clicked.
+    pub spoiler: bool,
 }
 
 /// A button's look.
@@ -269,6 +283,14 @@ pub enum InputKind {
         placeholder: String,
         /// The current answer.
         value: Option<bool>,
+    },
+    /// A file upload field (Discord's File Upload in a Label): `min`–`max`
+    /// files; never prefilled.
+    Files {
+        /// Fewest files (0 when optional).
+        min: u8,
+        /// Most files, at most 10.
+        max: u8,
     },
 }
 

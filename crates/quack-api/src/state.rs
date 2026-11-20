@@ -1,6 +1,6 @@
 //! The state every handler shares: the engine, configuration, the OAuth
-//! client, readiness facts, the rate limiters, and the account-servers
-//! cache.
+//! client, readiness facts, the rate limiters, the account-servers cache,
+//! and the upload memory budget.
 
 use std::sync::Arc;
 
@@ -12,6 +12,7 @@ use crate::config::{ApiConfig, ConfigError};
 use crate::middleware::rate_limit::RateLimits;
 use crate::readiness::Readiness;
 use crate::routes::modules::ModuleServices;
+use crate::routes::{UPLOAD_BUDGET_BYTES, UploadBudget};
 
 /// Everything the API's handlers share. Cheap to clone.
 #[derive(Clone)]
@@ -27,6 +28,7 @@ struct Inner {
     readiness: Arc<Readiness>,
     limits: RateLimits,
     account_guilds: AccountGuildsCache,
+    uploads: UploadBudget,
     fingerprint: [u8; 8],
 }
 
@@ -57,6 +59,7 @@ impl ApiState {
                 readiness,
                 limits: RateLimits::new(),
                 account_guilds: AccountGuildsCache::new(),
+                uploads: UploadBudget::new(UPLOAD_BUDGET_BYTES),
                 fingerprint,
             }),
             modules: Arc::default(),
@@ -97,6 +100,11 @@ impl ApiState {
 
     pub(crate) fn account_guilds(&self) -> &AccountGuildsCache {
         &self.inner.account_guilds
+    }
+
+    /// The memory budget dashboard uploads read their bytes within.
+    pub(crate) fn uploads(&self) -> &UploadBudget {
+        &self.inner.uploads
     }
 
     pub(crate) fn modules(&self) -> &ModuleServices {

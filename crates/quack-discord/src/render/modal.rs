@@ -1,11 +1,11 @@
 //! The neutral `Modal` → a modal callback: one Label per input, wrapping a
-//! Text Input or a Yes / No string select (§11.11).
+//! Text Input, a Yes / No string select, or a File Upload (§11.11).
 
 use quack_text::model::{Input, InputKind, InputStyle, Modal};
 use quack_text::{budget, word};
 use twilight_model::channel::message::Component;
 use twilight_model::channel::message::component::{
-    Label, SelectMenu, SelectMenuOption, SelectMenuType, TextInput, TextInputStyle,
+    FileUpload, Label, SelectMenu, SelectMenuOption, SelectMenuType, TextInput, TextInputStyle,
 };
 
 use crate::custom_id::{CustomId, encode_input_id};
@@ -67,6 +67,7 @@ fn input(id: String, kind: &InputKind, required: bool) -> Component {
     else {
         let (placeholder, value) = match kind {
             InputKind::YesNo { placeholder, value } => (placeholder.as_str(), *value),
+            InputKind::Files { min, max } => return file_upload(id, *min, *max, required),
             InputKind::Text { .. } => ("", None),
         };
         return yes_no(id, placeholder, value, required);
@@ -90,6 +91,19 @@ fn input(id: String, kind: &InputKind, required: bool) -> Component {
             .as_deref()
             .filter(|v| !v.is_empty())
             .map(|v| cut(v, usize::from(max))),
+    })
+}
+
+/// A File Upload of `min`–`max` files (Discord allows at most 10).
+fn file_upload(id: String, min: u8, max: u8, required: bool) -> Component {
+    let max = max.clamp(1, 10);
+    Component::FileUpload(FileUpload {
+        custom_id: id,
+        id: None,
+        max_values: Some(max),
+        min_values: Some(min.min(max)),
+        required: Some(required),
+        file_types: None,
     })
 }
 

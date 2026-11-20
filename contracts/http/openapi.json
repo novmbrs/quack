@@ -1157,6 +1157,365 @@
         ]
       }
     },
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/uploads": {
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Uploads 1–10 files (and a note) as one evidence item, copied to the\nserver's staff-only evidence channel. Only staff see them until someone\nshows them to the member.",
+        "operationId": "upload_evidence",
+        "parameters": [
+          {
+            "name": "guild_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "case_ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "description": "Route 60's `multipart/form-data` body: files and an optional note.",
+                "required": [
+                  "files"
+                ],
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "1–10 files: images, videos, audio, plain text, or PDFs, up to\n10 MiB each. Each part's file name and `Content-Type` are used."
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "A staff note (0–500 characters) for the uploaded files."
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceAdded"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/note": {
+      "put": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Sets or clears an evidence item's staff note.",
+        "operationId": "set_note",
+        "parameters": [
+          {
+            "name": "guild_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "case_ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetNote"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceEdited"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/remove": {
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Removes an evidence item added by mistake: hidden from Discord and the\nmember, listed collapsed for staff, never deleted.",
+        "operationId": "remove",
+        "parameters": [
+          {
+            "name": "guild_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "case_ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceEdited"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/visibility": {
+      "put": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Shows uploaded files to the case's member, or hides them again.",
+        "operationId": "set_visibility",
+        "parameters": [
+          {
+            "name": "guild_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "case_ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetVisibility"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceEdited"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "csrf": [],
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{file_id}": {
       "get": {
         "tags": [
@@ -3931,6 +4290,13 @@
               "type": "string"
             },
             "description": "1–10 message links in this server."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A staff note (0–500 characters) for each item this adds."
           }
         },
         "additionalProperties": false
@@ -5302,14 +5668,14 @@
       },
       "Evidence": {
         "type": "object",
-        "description": "One saved message, as staff see it.",
+        "description": "One evidence item as staff see it (§14.3): a saved message or uploaded\nfiles, with its note, whether the member sees it, the messages around\nit, and who removed it.",
         "required": [
           "id",
+          "kind",
           "state",
           "state_text",
-          "channel_id",
-          "message_id",
-          "url",
+          "visible_to_member",
+          "note_revision",
           "embeds",
           "files",
           "files_not_saved",
@@ -5337,7 +5703,15 @@
             ]
           },
           "channel_id": {
-            "$ref": "#/components/schemas/Snowflake"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Snowflake",
+                "description": "The message's channel; null for uploaded files."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "content": {
             "type": [
@@ -5380,6 +5754,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "kind": {
+            "$ref": "#/components/schemas/EvidenceKind"
+          },
           "message_created_at": {
             "type": [
               "string",
@@ -5395,7 +5772,56 @@
             "format": "date-time"
           },
           "message_id": {
-            "$ref": "#/components/schemas/Snowflake"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Snowflake",
+                "description": "The message; null for uploaded files."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The staff note (never shown to the member)."
+          },
+          "note_revision": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Send back as `expected_note_revision` when editing the note.",
+            "minimum": 0
+          },
+          "note_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "note_updated_by": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Snowflake"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "removed": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceRemoved",
+                "description": "Set once staff removed it; shown collapsed."
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "state": {
             "$ref": "#/components/schemas/EvidenceState"
@@ -5403,19 +5829,39 @@
           "state_text": {
             "type": "string"
           },
+          "surrounding": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SurroundingMessage"
+            },
+            "description": "Messages around a staff-added message, oldest first; null when none\nwere saved."
+          },
           "url": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The message's link; null for uploaded files."
+          },
+          "visible_to_member": {
+            "type": "boolean",
+            "description": "Whether the member sees it on their case page: always for a saved\nmessage; uploaded files only once staff show them."
           }
         }
       },
       "EvidenceAdded": {
         "type": "object",
-        "description": "Route 25's answer: the case and what adding the links did, in the\nsentence the bot answers with (`evidence.added`).",
+        "description": "Routes 25 and 60's answer: the case and what adding the evidence did,\nin the sentence the bot answers with (`evidence.added`).",
         "required": [
           "case",
           "new",
           "retrying",
+          "restored",
           "already_saved",
+          "files",
           "message"
         ],
         "properties": {
@@ -5427,16 +5873,28 @@
           },
           "case": {
             "$ref": "#/components/schemas/Case",
-            "description": "The case after the links were added."
+            "description": "The case after the evidence was added."
+          },
+          "files": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Files Quack is copying to the evidence channel (one uploaded-files\nitem).",
+            "minimum": 0
           },
           "message": {
             "type": "string",
-            "description": "What adding the links did, as a sentence."
+            "description": "What adding the evidence did, as a sentence."
           },
           "new": {
             "type": "integer",
             "format": "int32",
             "description": "New messages Quack is saving.",
+            "minimum": 0
+          },
+          "restored": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Removed messages shown again.",
             "minimum": 0
           },
           "retrying": {
@@ -5447,6 +5905,24 @@
           }
         }
       },
+      "EvidenceEdited": {
+        "type": "object",
+        "description": "Routes 61–63's answer: the case after the edit and what it did, in the\nsentence the bot answers with (`evidence.note.*`,\n`evidence.visibility.*`, `evidence.removed`).",
+        "required": [
+          "case",
+          "message"
+        ],
+        "properties": {
+          "case": {
+            "$ref": "#/components/schemas/Case",
+            "description": "The case after the edit."
+          },
+          "message": {
+            "type": "string",
+            "description": "What the edit did, as a sentence."
+          }
+        }
+      },
       "EvidenceFailure": {
         "type": "string",
         "enum": [
@@ -5454,12 +5930,14 @@
           "moderator_no_access",
           "quack_no_access",
           "other_server",
-          "discord_error"
+          "discord_error",
+          "no_file_copied",
+          "evidence_copy"
         ]
       },
       "EvidenceFile": {
         "type": "object",
-        "description": "One file of a saved message.",
+        "description": "One file of an evidence item.",
         "required": [
           "id",
           "filename",
@@ -5491,6 +5969,35 @@
           },
           "state_text": {
             "type": "string"
+          }
+        }
+      },
+      "EvidenceKind": {
+        "type": "string",
+        "enum": [
+          "message",
+          "upload"
+        ]
+      },
+      "EvidenceRemoved": {
+        "type": "object",
+        "description": "Who removed an evidence item, and when (§7.5).",
+        "required": [
+          "by",
+          "at",
+          "text"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "by": {
+            "$ref": "#/components/schemas/Snowflake"
+          },
+          "text": {
+            "type": "string",
+            "description": "\"Removed by …\" (`evidence.removed_by`)."
           }
         }
       },
@@ -6628,7 +7135,9 @@
           "ticket_opened",
           "ticket_closed",
           "honeypot_case_failed",
-          "legacy"
+          "legacy",
+          "evidence_removed",
+          "evidence_visibility_changed"
         ]
       },
       "ModLogPage": {
@@ -7117,6 +7626,43 @@
           }
         }
       },
+      "SetNote": {
+        "type": "object",
+        "description": "Route 61's body.",
+        "required": [
+          "expected_note_revision"
+        ],
+        "properties": {
+          "expected_note_revision": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The `note_revision` the editor loaded; another is `409 note_changed`.",
+            "minimum": 0
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The note (0–500 characters); null or blank clears it."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetVisibility": {
+        "type": "object",
+        "description": "Route 62's body.",
+        "required": [
+          "visible_to_member"
+        ],
+        "properties": {
+          "visible_to_member": {
+            "type": "boolean",
+            "description": "Whether the member sees these uploaded files on their case page."
+          }
+        },
+        "additionalProperties": false
+      },
       "Settings": {
         "type": "object",
         "description": "The server's settings.",
@@ -7395,6 +7941,46 @@
           }
         },
         "additionalProperties": false
+      },
+      "SurroundingMessage": {
+        "type": "object",
+        "description": "One message saved around a staff-added message (text only, §7.2).",
+        "required": [
+          "message_id",
+          "before",
+          "author_id",
+          "created_at",
+          "files"
+        ],
+        "properties": {
+          "author_id": {
+            "$ref": "#/components/schemas/Snowflake"
+          },
+          "before": {
+            "type": "boolean",
+            "description": "Sent before the saved message (else after)."
+          },
+          "content": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its text, at most 500 characters."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "files": {
+            "type": "integer",
+            "format": "int32",
+            "description": "How many files it had (never copied).",
+            "minimum": 0
+          },
+          "message_id": {
+            "$ref": "#/components/schemas/Snowflake"
+          }
+        }
       },
       "Ticket": {
         "type": "object",

@@ -9,7 +9,7 @@ use quack_core::ids::{CaseId, EvidenceId};
 use quack_core::modlog::{CaseContextEditedDetail, ModLogEntry, ModLogLinks};
 use quack_core::permissions::Capability;
 use quack_core::rule::RuleDefinition;
-use quack_db::evidence::{self, Admission};
+use quack_db::evidence;
 use quack_db::jobs::{self, NewJob};
 use quack_db::messages::{self, Owner};
 use quack_db::{Tx, cases, rules};
@@ -72,6 +72,7 @@ pub async fn edit_context(
         let fields = def.context_fields();
         let values =
             validate_context(&fields, guild, context).map_err(CaseError::ContextInvalid)?;
+        refuse_copies(engine, principal, found.id, &fields, &values).await?;
         let key = op_key.scoped(Some(guild), Some(principal.account));
         let hash = request_hash(&EditRequest {
             case: found.id,
@@ -155,6 +156,33 @@ fn no_fields() -> RuleDefinition {
     }
 }
 
+/// A new `message_link` answer becomes evidence, so it may not point into
+/// the evidence channel or at one of Quack's copies (§7.1); messages
+/// already on the case become nothing new.
+async fn refuse_copies(
+    engine: &Engine,
+    principal: &Principal,
+    case: CaseId,
+    fields: &[quack_core::rule::Field],
+    values: &quack_core::case::ContextValues,
+) -> Result<(), CaseError> {
+    let on_case: std::collections::HashSet<_> = {
+        let mut conn = engine.db().conn().await?;
+        evidence::for_case(&mut conn, principal.guild, case)
+            .await?
+            .into_iter()
+            .filter_map(|e| e.message)
+            .collect()
+    };
+    let copies =
+        crate::evidence::context_copies(engine, principal.guild, fields, values, &on_case).await?;
+    if copies.is_empty() {
+        Ok(())
+    } else {
+        Err(CaseError::ContextInvalid(copies))
+    }
+}
+
 /// New links that are not yet evidence get `saving` rows and capture jobs,
 /// under the per-case cap (counted under the case lock).
 async fn admit_links(
@@ -166,12 +194,15 @@ async fn admit_links(
     if links.is_empty() {
         return Ok(0);
     }
+    // Messages already on the case, removed ones included, stay as they
+    // are: only "Add evidence" brings a removed item back (§7.5).
     let existing = evidence::for_case(tx, case.guild, case.id).await?;
     let fresh: Vec<&MessageLink> = links
         .iter()
-        .filter(|l| !existing.iter().any(|e| e.message == l.message_id))
+        .filter(|l| !existing.iter().any(|e| e.message == Some(l.message_id)))
         .collect();
-    let count = u32::try_from(existing.len()).unwrap_or(u32::MAX);
+    let count =
+        u32::try_from(existing.iter().filter(|e| !e.is_removed()).count()).unwrap_or(u32::MAX);
     check_room(count, fresh.len(), 0)?;
     let mut added = 0;
     for link in fresh {
@@ -181,13 +212,13 @@ async fn admit_links(
             case.guild,
             case.id,
             id,
-            link.channel_id,
-            link.message_id,
+            (link.channel_id, link.message_id),
             Some(principal.account),
+            None,
         )
         .await?;
-        if let Admission::Added(id) | Admission::Recapture(id) = admitted {
-            jobs::enqueue(tx, &NewJob::capture_evidence(case.guild, id)).await?;
+        if admitted.needs_capture() {
+            jobs::enqueue(tx, &NewJob::capture_evidence(case.guild, admitted.id())).await?;
             added += 1;
         }
     }

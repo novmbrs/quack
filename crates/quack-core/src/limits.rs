@@ -108,6 +108,8 @@ pub const MAX_EVIDENCE_ITEMS: u32 = 50;
 pub const MAX_EVIDENCE_FILES: u32 = 100;
 /// Most message links in one add-evidence call.
 pub const MAX_LINKS_PER_CALL: usize = 10;
+/// Most recent cases the "Add as evidence" picker offers.
+pub const RECENT_CASES: u32 = 25;
 /// Saved message text per evidence item, in characters.
 pub const EVIDENCE_TEXT_CHARS: usize = 4_000;
 /// Saved embeds per evidence item.
@@ -120,6 +122,28 @@ pub const EVIDENCE_EMBED_DESCRIPTION_CHARS: usize = 1_000;
 pub const MAX_FILES_PER_EVIDENCE: u32 = 10;
 /// Largest file Quack copies, in bytes (10 MiB).
 pub const MAX_COPY_BYTES: u64 = 10_485_760;
+/// Most files in one uploaded-files evidence item (also per add call).
+pub const MAX_UPLOAD_FILES: usize = 10;
+/// A staff note on an evidence item (empty stores none).
+pub const EVIDENCE_NOTE: CharLimit = CharLimit::new(0, 500);
+/// Messages saved before, and separately after, a linked message.
+pub const SURROUNDING_MESSAGES: u8 = 5;
+/// Saved text of one surrounding message, in characters.
+pub const SURROUNDING_TEXT_CHARS: usize = 500;
+/// Longest stored evidence file name, in characters.
+pub const EVIDENCE_FILENAME_CHARS: usize = 255;
+/// Largest dashboard upload request body: ten 10 MiB files and 64 KiB for
+/// the note and multipart framing.
+pub const MAX_UPLOAD_BODY_BYTES: usize = 10 * 10_485_760 + 65_536;
+/// Most dashboard-upload bytes one server may have staged in PostgreSQL
+/// at once, waiting for their copy (256 MiB, about two and a half full
+/// uploads); a new upload past it is refused as `uploads_busy` (§7.1).
+pub const MAX_STAGED_BYTES_PER_GUILD: u64 = 256 * 1_048_576;
+/// Most dashboard-upload bytes staged at once across every server (1 GiB).
+pub const MAX_STAGED_BYTES_TOTAL: u64 = 1_024 * 1_048_576;
+/// How long dashboard-uploaded bytes may wait in PostgreSQL for their copy
+/// before housekeeping deletes them (§7.3).
+pub const STAGED_UPLOAD_TTL: Duration = Duration::hours(24);
 
 /// Most moderator roles, and separately most rules manager roles.
 pub const MAX_STAFF_ROLES: usize = 25;

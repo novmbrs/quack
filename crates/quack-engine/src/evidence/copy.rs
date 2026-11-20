@@ -1,13 +1,15 @@
 //! Copying evidence files to the evidence channel (§7.3): one file per
 //! transaction, so progress survives a crash; each upload follows §10.4
-//! with the file's id as its nonce.
+//! with the file's id as its nonce. A file's bytes come from Discord's CDN
+//! (a message attachment, or an interaction attachment's short-lived URL)
+//! or, for a dashboard upload, from the bytes staged in PostgreSQL, which
+//! are deleted once the file is copied.
 
 use std::time::Duration;
 
 use quack_core::evidence::FileCopyState;
 use quack_core::ids::ChannelId;
 use quack_core::limits::MAX_COPY_BYTES;
-use quack_core::permissions::Permission;
 use quack_db::evidence::{self, Evidence, EvidenceFile};
 use quack_db::jobs::{ClaimedJob, Handled, JobResult, fence};
 use quack_db::{DbError, cases, settings};
@@ -82,9 +84,8 @@ async fn destination(engine: &Engine, item: &Evidence) -> Result<Destination, Db
     let Some(channel) = channel else {
         return Ok(Destination::Missing);
     };
-    let needs = Permission::ViewChannel | Permission::SendMessages | Permission::AttachFiles;
     Ok(
-        match staff_channel(engine, item.guild, channel, needs).await {
+        match staff_channel(engine, item.guild, channel, super::uploads::DESTINATION).await {
             ChannelCheck::Ok => Destination::Ok(channel),
             ChannelCheck::Problems(_) => Destination::NotStaffOnly,
             ChannelCheck::Missing => Destination::Missing,
@@ -124,6 +125,7 @@ pub(super) async fn copy_pending(
                     files += 1;
                     bytes += size;
                 }
+                evidence::delete_staged(&mut tx, item.guild, item.id, Some(file.id)).await?;
             }
             Err(failed) => {
                 evidence::set_file_state(&mut tx, item.guild, file.id, failed).await?;
@@ -173,50 +175,125 @@ async fn reserve(
     Ok(reserved)
 }
 
-/// Gives back a reserved try that never reached Discord.
-async fn release(engine: &Engine, item: &Evidence, file: &EvidenceFile) -> Result<(), DbError> {
-    let mut conn = engine.db().conn().await?;
-    evidence::release_upload(&mut conn, item.guild, file.id).await
+/// Gives back a reserved try that never reached Discord, in the same lock
+/// order as the reservation and with the job's fence, so a worker that
+/// lost its lease can't give back a newer worker's try.
+async fn release(
+    engine: &Engine,
+    job: &ClaimedJob,
+    item: &Evidence,
+    file: &EvidenceFile,
+) -> Result<(), DbError> {
+    let mut tx = engine.db().begin().await?;
+    cases::lock(&mut tx, item.guild, item.case).await?;
+    evidence::lock(&mut tx, item.guild, item.id).await?;
+    evidence::release_upload(&mut tx, item.guild, file.id).await?;
+    fence(&mut tx, job).await?;
+    tx.commit().await
 }
 
-/// Downloads one file from Discord's CDN and uploads it as a plain message
-/// with one spoilered attachment. Every upload is preceded by a fresh
-/// destination check and a durably reserved try (three per file); a
-/// rate limit stops the run with its delay; a run never starts a call it
-/// has no time to finish.
+/// Where a file's bytes come from.
+enum Bytes<'a> {
+    /// Download from this CDN URL.
+    Cdn(&'a str),
+    /// Staged in PostgreSQL (a dashboard upload).
+    Staged,
+}
+
+/// A file's bytes for one upload try: downloaded (counted against the
+/// run's download tries) or read from staging.
+enum Got {
+    Bytes(Vec<u8>),
+    /// Try the download again.
+    Again,
+    /// The run ends here.
+    Stop(One),
+}
+
+async fn get_bytes(
+    engine: &Engine,
+    job: &ClaimedJob,
+    item: &Evidence,
+    file: &EvidenceFile,
+    source: &Bytes<'_>,
+) -> Result<Got, DbError> {
+    match source {
+        Bytes::Staged => {
+            let mut conn = engine.db().conn().await?;
+            Ok(
+                match evidence::staged_bytes(&mut conn, item.guild, file.id).await? {
+                    Some(bytes) => Got::Bytes(bytes),
+                    // Swept, or never staged: nothing left to copy.
+                    None => Got::Stop(One::Failed),
+                },
+            )
+        }
+        Bytes::Cdn(url) => Ok(
+            match engine
+                .discord()
+                .download_attachment(url, MAX_COPY_BYTES)
+                .await
+            {
+                Outcome::Done(bytes) => Got::Bytes(bytes),
+                Outcome::Refused(_) => Got::Stop(One::Failed),
+                Outcome::RetryAfter(d) => Got::Stop(One::Stop(Handled::Settle(retry_in(job, d)))),
+                _ => Got::Again,
+            },
+        ),
+    }
+}
+
+/// Gets one file's bytes and uploads them as a plain message with one
+/// spoilered attachment. Every upload is preceded by a fresh destination
+/// check and a durably reserved try (three per file); a rate limit stops
+/// the run with its delay; a run never starts a call it has no time to
+/// finish. A run that ends because a download failed costs the job a
+/// counted attempt, so a download that keeps failing settles the file
+/// through the job's budget. Only Discord's CDN hosts are downloaded from.
 async fn copy_one(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
     file: &EvidenceFile,
 ) -> Result<One, DbError> {
-    if !HOSTS.iter().any(|h| file.original_url.starts_with(h)) {
-        return Ok(One::Failed);
-    }
+    let source = match file.original_url.as_deref() {
+        Some(url) if HOSTS.iter().any(|h| url.starts_with(h)) => Bytes::Cdn(url),
+        Some(_) => return Ok(One::Failed),
+        None => Bytes::Staged,
+    };
     let discord = engine.discord();
     let nonce = Nonce::new(file.id.to_u22());
     let empty = Msg::default();
-    let continue_later = || One::Stop(Handled::Settle(JobResult::Continue));
+    // Out of time: start again in a new run, which is free after progress
+    // and counted after a failed download (else it never runs out).
+    let out_of_time = |download_failed: bool| {
+        One::Stop(Handled::Settle(if download_failed {
+            retry(job, "download_failed")
+        } else {
+            JobResult::Continue
+        }))
+    };
     let mut downloads = 0;
+    let mut download_failed = false;
     loop {
         if job.time_left() < DOWNLOAD_ROOM + CHECK_ROOM + UPLOAD_ROOM + MARGIN {
-            return Ok(continue_later());
+            return Ok(out_of_time(download_failed));
         }
         if downloads == DOWNLOAD_TRIES {
             return Ok(One::Failed);
         }
         downloads += 1;
-        let bytes = match discord
-            .download_attachment(&file.original_url, MAX_COPY_BYTES)
-            .await
-        {
-            Outcome::Done(bytes) => bytes,
-            Outcome::Refused(_) => return Ok(One::Failed),
-            Outcome::RetryAfter(d) => return Ok(One::Stop(Handled::Settle(retry_in(job, d)))),
-            _ => continue,
+        let bytes = match get_bytes(engine, job, item, file, &source).await? {
+            Got::Bytes(bytes) => bytes,
+            Got::Stop(one) => return Ok(one),
+            Got::Again => {
+                download_failed = true;
+                continue;
+            }
         };
+        download_failed = false;
         if job.time_left() < CHECK_ROOM + UPLOAD_ROOM + MARGIN {
-            return Ok(continue_later());
+            return Ok(out_of_time(false));
         }
         let channel = match destination(engine, item).await? {
             Destination::Ok(channel) => channel,
@@ -245,10 +322,10 @@ async fn copy_one(
             }
             Outcome::Refused(_) => return Ok(One::Failed),
             Outcome::RetryAfter(d) => {
-                release(engine, item, file).await?;
+                release(engine, job, item, file).await?;
                 return Ok(One::Stop(Handled::Settle(retry_in(job, d))));
             }
-            Outcome::NotSent(_) => release(engine, item, file).await?,
+            Outcome::NotSent(_) => release(engine, job, item, file).await?,
             // May have created the copy: the try stays counted, and the
             // next one reuses the nonce while the window lasts.
             Outcome::Unknown(_) => {}

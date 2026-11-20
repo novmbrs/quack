@@ -262,6 +262,9 @@ impl Route {
             None => route.with_query(format!("limit={limit}")),
         }
     }
+    pub(crate) fn history_after(channel: ChannelId, after: MessageId, limit: u8) -> Self {
+        Self::messages(Method::Get, channel).with_query(format!("limit={limit}&after={after}"))
+    }
     pub(crate) fn message(method: Method, channel: ChannelId, message: MessageId) -> Self {
         Self::bot(
             method,

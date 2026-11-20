@@ -139,7 +139,8 @@ fn values(fields: &[(InputId, FieldValue)]) -> Vec<(String, String)> {
                 FieldValue::Text(t) => t.clone(),
                 FieldValue::YesNo(Some(true)) => "yes".to_owned(),
                 FieldValue::YesNo(Some(false)) => "no".to_owned(),
-                FieldValue::YesNo(None) => String::new(),
+                // Context fields are never file uploads.
+                FieldValue::YesNo(None) | FieldValue::Files(_) => String::new(),
             };
             Some((key.as_str().to_owned(), text))
         })

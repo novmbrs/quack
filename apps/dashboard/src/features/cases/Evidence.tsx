@@ -2,6 +2,7 @@ import { ExternalLink, FileText } from "lucide-react";
 
 import { useUser } from "~/api/directory";
 import type { Evidence, EvidenceFile } from "~/api/types";
+import { cx } from "~/lib/cx";
 import { bytes, stamp } from "~/lib/format";
 import { Avatar } from "~/ui/Avatar";
 import { QuackIcon } from "~/ui/QuackIcon";
@@ -17,8 +18,11 @@ export function EvidenceMessage({
   evidence,
   files,
   guildId,
+  bare,
 }: {
   evidence: Evidence;
+  /** Drops the frame, for a message shown inside an evidence item. */
+  bare?: boolean;
   /**
    * The case's evidence file route, such as `/api/guilds/{id}/cases/{ref}/evidence`.
    * It redirects to a freshly signed copy, since stored Discord links expire.
@@ -41,7 +45,7 @@ export function EvidenceMessage({
     .join(", ");
 
   return (
-    <article className={s.message}>
+    <article className={cx(s.message, bare && s.bare)}>
       <Avatar src={author?.avatar_url} name={author?.display_name ?? "?"} size={40} />
       <div className={s.body}>
         <header className={s.meta}>
@@ -50,9 +54,11 @@ export function EvidenceMessage({
             {stamp(time)}
           </time>
           {evidence.message_edited_at ? <span className={s.time}>(edited)</span> : null}
-          <a href={evidence.url} target="_blank" rel="noreferrer" className={s.jump}>
-            Open message <ExternalLink size={12} />
-          </a>
+          {evidence.url ? (
+            <a href={evidence.url} target="_blank" rel="noreferrer" className={s.jump}>
+              Open message <ExternalLink size={12} />
+            </a>
+          ) : null}
         </header>
         {evidence.state === "saved" ? (
           evidence.content ? (
@@ -90,25 +96,71 @@ export function filesNotSaved(count: number): string {
   return `${lead}, because a case keeps at most 100 files and 10 per message.`;
 }
 
-function FileView({ file: f, url }: { file: EvidenceFile; url: string }) {
+/**
+ * UploadedFiles is the body of an uploaded-files item: its files, each
+ * served through the case's file route once copied, with the copy's state.
+ */
+export function UploadedFiles({ evidence, files }: { evidence: Evidence; files: string }) {
+  return (
+    <div className={s.uploads}>
+      {evidence.state === "failed" ? (
+        <p className={s.warning}>
+          <QuackIcon name="warn" size={14} /> {evidence.state_text}
+        </p>
+      ) : null}
+      <div className={s.grid}>
+        {evidence.files.map((f) => (
+          <FileView
+            key={f.id}
+            file={f}
+            url={`${files}/${encodeURIComponent(f.id)}`}
+            servable={f.copy_state === "copied"}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * FileView is one evidence file: an image preview or a file tile. A file
+ * that can't be served yet (an upload before its copy) shows as a plain
+ * tile with its state.
+ */
+export function FileView({
+  file: f,
+  url,
+  servable = true,
+}: {
+  file: EvidenceFile;
+  url: string;
+  servable?: boolean;
+}) {
   const image = (f.content_type ?? "").startsWith("image/");
+  const tile = (
+    <>
+      <FileText size={28} />
+      <span className={s.fileText}>
+        <span className={cx(s.fileName, !servable && s.fileNamePlain)}>{f.filename}</span>
+        <span className={s.time}>{bytes(f.size_bytes)}</span>
+      </span>
+    </>
+  );
   return (
     <div className={s.attachment}>
-      {image ? (
+      {!servable ? (
+        <div className={s.file}>{tile}</div>
+      ) : image ? (
         <a href={url} target="_blank" rel="noreferrer">
           <img src={url} alt={f.filename} loading="lazy" className={s.image} />
         </a>
       ) : (
         <a href={url} target="_blank" rel="noreferrer" className={s.file}>
-          <FileText size={28} />
-          <span className={s.fileText}>
-            <span className={s.fileName}>{f.filename}</span>
-            <span className={s.time}>{bytes(f.size_bytes)}</span>
-          </span>
+          {tile}
         </a>
       )}
       {f.copy_state !== "copied" ? (
-        <p className={s.warning}>
+        <p className={cx(s.warning, f.copy_state === "pending" && s.pending)}>
           {f.copy_state === "pending" ? null : <QuackIcon name="warn" size={14} />}
           {f.state_text}
         </p>

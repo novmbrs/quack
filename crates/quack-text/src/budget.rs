@@ -68,7 +68,7 @@ pub fn component_count(msg: &Msg) -> usize {
     let mut count = 1;
     let mut previous_was_text = false;
     for block in &msg.blocks {
-        let text = !matches!(block, Block::Divider | Block::File(_));
+        let text = !matches!(block, Block::Divider | Block::File(_) | Block::Gallery(_));
         if !text || !previous_was_text {
             count += 1;
         }

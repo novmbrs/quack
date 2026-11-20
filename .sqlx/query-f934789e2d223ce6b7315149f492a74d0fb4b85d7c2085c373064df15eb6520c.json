@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(sum(octet_length(bytes)) FILTER (WHERE guild_id = $1), 0)::bigint AS \"guild!\",\n                      COALESCE(sum(octet_length(bytes)), 0)::bigint AS \"total!\"\n               FROM evidence_upload_bytes",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "guild!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "f934789e2d223ce6b7315149f492a74d0fb4b85d7c2085c373064df15eb6520c"
+}

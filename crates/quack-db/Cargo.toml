@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 quack-core = { workspace = true }
 quack-telemetry = { workspace = true }
+bytes = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 # `sqlx-toml` reads `sqlx.toml`, which maps Quack's Postgres enums to their

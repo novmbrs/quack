@@ -51,7 +51,7 @@ pub(crate) async fn run(engine: &Engine, job: &ClaimedJob) -> Result<Handled, Db
         let state = evidence::for_case(&mut conn, guild, case)
             .await?
             .iter()
-            .find(|e| e.message == p.message_id)
+            .find(|e| e.message == Some(p.message_id))
             .map(|e| e.state);
         drop(conn);
         if state == Some(EvidenceState::Saving)

@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+plain:   Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+model:   [Fixed("Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.")]

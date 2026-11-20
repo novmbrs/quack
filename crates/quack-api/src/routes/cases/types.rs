@@ -298,18 +298,34 @@ pub(crate) struct CaseVoided {
     pub message: String,
 }
 
-/// Route 25's answer: the case and what adding the links did, in the
-/// sentence the bot answers with (`evidence.added`).
+/// Routes 25 and 60's answer: the case and what adding the evidence did,
+/// in the sentence the bot answers with (`evidence.added`).
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct EvidenceAdded {
-    /// The case after the links were added.
+    /// The case after the evidence was added.
     pub case: Case,
     /// New messages Quack is saving.
     pub new: u32,
     /// Messages whose earlier save failed, being saved again.
     pub retrying: u32,
+    /// Removed messages shown again.
+    pub restored: u32,
     /// Messages that were already saved (or being saved) for the case.
     pub already_saved: u32,
-    /// What adding the links did, as a sentence.
+    /// Files Quack is copying to the evidence channel (one uploaded-files
+    /// item).
+    pub files: u32,
+    /// What adding the evidence did, as a sentence.
+    pub message: String,
+}
+
+/// Routes 61–63's answer: the case after the edit and what it did, in the
+/// sentence the bot answers with (`evidence.note.*`,
+/// `evidence.visibility.*`, `evidence.removed`).
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct EvidenceEdited {
+    /// The case after the edit.
+    pub case: Case,
+    /// What the edit did, as a sentence.
     pub message: String,
 }

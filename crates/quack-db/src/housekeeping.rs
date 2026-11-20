@@ -29,6 +29,9 @@ pub struct Report {
     pub journal: u64,
     /// Honeypot hits older than 30 days.
     pub honeypot_hits: u64,
+    /// Dashboard upload bytes whose file is no longer pending, or older
+    /// than 24 hours (§7.3).
+    pub staged_uploads: u64,
     /// Private receipts whose token expired (now `gone`) and expired
     /// tokens cleared.
     pub receipt_tokens: u64,
@@ -55,6 +58,7 @@ pub async fn run(
         total.transcripts += pass.transcripts;
         total.journal += pass.journal;
         total.honeypot_hits += pass.honeypot_hits;
+        total.staged_uploads += pass.staged_uploads;
         total.receipt_tokens += pass.receipt_tokens;
         total.more = pass.more;
         if !pass.more || started.elapsed() >= budget {
@@ -71,6 +75,7 @@ pub async fn pass(conn: &mut PgConnection, key_fingerprint: &[u8; 8]) -> Result<
         oauth_states: auth.oauth_states,
         operation_keys: auth.operation_keys,
         drafts: auth.drafts,
+        staged_uploads: auth.staged_uploads,
         ..expired_work(conn).await?
     };
     r.journal += trim_long_journals(conn).await?;
@@ -83,6 +88,7 @@ pub async fn pass(conn: &mut PgConnection, key_fingerprint: &[u8; 8]) -> Result<
         r.dead_jobs,
         r.transcripts,
         r.honeypot_hits,
+        r.staged_uploads,
         r.receipt_tokens,
     ]
     .iter()
@@ -216,6 +222,22 @@ async fn expired_sign_ins(
             sqlx::query!(
                 "DELETE FROM case_drafts WHERE ctid IN (SELECT ctid FROM case_drafts WHERE expires_at < now() LIMIT $1)",
                 BATCH
+            )
+            .execute(&mut *conn),
+        )
+        .await?
+        .rows_affected(),
+        staged_uploads: obs::run(
+            Delete,
+            "evidence_upload_bytes",
+            sqlx::query!(
+                "DELETE FROM evidence_upload_bytes WHERE ctid IN
+                   (SELECT b.ctid FROM evidence_upload_bytes b
+                    JOIN evidence_files f ON f.guild_id = b.guild_id AND f.id = b.file_id
+                    WHERE f.copy_state <> 'pending' OR b.created_at < now() - make_interval(secs => $2)
+                    LIMIT $1)",
+                BATCH,
+                quack_core::limits::STAGED_UPLOAD_TTL.as_seconds_f64(),
             )
             .execute(&mut *conn),
         )

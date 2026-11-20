@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"n!\" FROM evidence_files f JOIN evidence e ON e.id = f.evidence_id\n               WHERE f.guild_id = $1 AND f.case_id = $2 AND e.removed_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e6e8a54e4a94cb79f45acab5cefc807016d1179d82b5f5e6da042b30405f4458"
+}

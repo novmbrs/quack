@@ -19,6 +19,7 @@ mod void;
 
 use quack_core::DomainError;
 use quack_core::case::{ContextInput, ContextProblem, LinkProblem, MessageLink};
+use quack_core::evidence::RefusedFile;
 use quack_core::ids::{
     ActionId, CaseId, ChannelId, DmId, EvidenceId, MemberId, MessageRowId, RuleId,
 };
@@ -34,7 +35,7 @@ pub use action_list::{ListedAction, action, actions};
 pub use apply::apply_rule;
 pub(crate) use card::{card, receipt};
 pub use edit::{ContextEdited, edit_context};
-pub use evidence_add::{EvidenceAdded, add_evidence};
+pub use evidence_add::{AddEvidence, EvidenceAdded, add_evidence, add_evidence_ran};
 pub use list::{CasePreview, list, member_cases, member_summary, preview};
 pub(crate) use records::CaseRecords;
 pub use view::{
@@ -109,6 +110,9 @@ pub struct ApplyRule {
     pub context: Vec<(String, ContextInput)>,
     /// Explicit evidence links (dashboard).
     pub evidence_links: Vec<String>,
+    /// Files uploaded with the case (the `/case add` file option): one
+    /// uploaded-files item, refused up front unless Quack can copy them.
+    pub evidence_files: Vec<crate::evidence::NewUpload>,
     /// The message an "Add case" message command was used on (or the
     /// honeypot post).
     pub source_message: Option<MessageLink>,
@@ -155,7 +159,7 @@ pub struct CaseCreated {
     pub action: Option<ActionId>,
     /// Its DM, when the level sends one.
     pub dm: Option<DmId>,
-    /// Its evidence items (`saving`).
+    /// Its evidence items (`saving`), the uploaded-files item last.
     pub evidence: Vec<EvidenceId>,
     /// Its receipt's tracked message.
     pub receipt: Option<MessageRowId>,
@@ -175,6 +179,10 @@ pub enum ApplyError {
     /// Explicit evidence links have problems, by position.
     #[error("evidence links invalid")]
     LinksInvalid(Vec<(usize, LinkProblem)>),
+    /// Files offered with the case can't be copied
+    /// (`error.files_not_allowed`); nothing was saved.
+    #[error("files not allowed")]
+    FilesRefused(Vec<RefusedFile>),
     /// The operation key was used for a different request.
     #[error("operation key reused")]
     OperationKeyReused,
@@ -233,9 +241,19 @@ pub enum CaseError {
     /// The void reason is empty or longer than 1,000 characters.
     #[error("reason length")]
     ReasonLength,
-    /// Adding evidence named no message link (`error.no_links`).
+    /// Adding evidence named no message link and no file
+    /// (`error.no_links`).
     #[error("no evidence links")]
     NoLinks,
+    /// Offered files can't be copied (`error.files_not_allowed`).
+    #[error("files not allowed")]
+    FilesRefused(Vec<RefusedFile>),
+    /// The note is longer than 500 characters (`error.note_too_long`).
+    #[error("note too long")]
+    NoteLength,
+    /// Discord didn't answer a check the operation needs; nothing changed.
+    #[error("Discord unavailable")]
+    DiscordUnavailable,
     /// The operation key was used for a different request.
     #[error("operation key reused")]
     OperationKeyReused,

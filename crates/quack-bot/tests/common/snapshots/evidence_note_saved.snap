@@ -1,0 +1,13 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Evidence 1 of 2 · case #1
+Quack saved the note on this evidence item of case #1.
+Files uploaded by a member (ID 30) on [date].
+The member sees these files on their case page.
+Note: Screenshot from the ticket.
+proof.png · Copy saved
+[media: proof.png]
+[Next] [Hide from member] [Edit note] [Remove] [Open case]

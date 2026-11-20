@@ -6,10 +6,10 @@ import { useState } from "react";
 import { guildMeQuery, caseQuery, keys } from "~/api/queries";
 import type { Case, Field } from "~/api/types";
 import { CaseActions } from "~/features/cases/Actions";
-import { AddEvidenceDialog, EditContextDialog } from "~/features/cases/CaseEdits";
+import { EditContextDialog } from "~/features/cases/CaseEdits";
 import { contextFields } from "~/features/cases/context";
 import { CreateCaseDialog } from "~/features/cases/CreateCaseDialog";
-import { EvidenceMessage } from "~/features/cases/Evidence";
+import { EvidenceSection } from "~/features/cases/EvidenceSection";
 import { Outcome, OutcomeBadge } from "~/features/cases/Outcome";
 import { Timeline } from "~/features/cases/Timeline";
 import { voidCase } from "~/features/cases/writes";
@@ -57,7 +57,6 @@ function CasePage() {
   const [voiding, setVoiding] = useState(false);
   const [replacing, setReplacing] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
 
   const moderate = can("moderate");
@@ -180,30 +179,18 @@ function CasePage() {
             )}
           </section>
 
-          <section className={s.block}>
-            <div className={s.blockHead}>
-              <Heading>Evidence</Heading>
-              {moderate ? (
-                <Button size="sm" variant="ghost" onClick={() => setAdding(true)}>
-                  Add evidence
-                </Button>
-              ) : null}
-            </div>
-            {c.evidence.length === 0 ? (
-              <p className={s.muted}>
-                Case #{c.number} has no evidence yet. Use Add evidence to add message links.
-              </p>
-            ) : (
-              c.evidence.map((e) => (
-                <EvidenceMessage
-                  key={e.id}
-                  evidence={e}
-                  guildId={guildId}
-                  files={`/api/guilds/${guildId}/cases/${c.number}/evidence`}
-                />
-              ))
-            )}
-          </section>
+          <EvidenceSection
+            // A new case gets a new section, so staged files, drafts, and
+            // pending writes never follow the reader to another case.
+            key={`${guildId}:${c.id}`}
+            guildId={guildId}
+            value={c}
+            moderate={moderate}
+            onCase={(updated) => {
+              queryClient.setQueryData(caseQuery(guildId, caseRef).queryKey, updated);
+              void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
+            }}
+          />
 
           {c.timeline.length ? (
             <section className={s.block}>
@@ -292,12 +279,6 @@ function CasePage() {
           onClose={() => setEditing(false)}
         />
       ) : null}
-      <AddEvidenceDialog
-        guildId={guildId}
-        caseNumber={c.number}
-        open={adding}
-        onClose={() => setAdding(false)}
-      />
     </Page>
   );
 }
@@ -390,11 +371,11 @@ function sideDetails(guildId: string, c: Case) {
           ),
         }
       : null,
-    c.evidence.some((e) => e.state === "failed")
+    c.evidence.some((e) => e.state === "failed" && !e.removed)
       ? {
           label: "Evidence",
           value: `Quack couldn't save ${plural(
-            c.evidence.filter((e) => e.state === "failed").length,
+            c.evidence.filter((e) => e.state === "failed" && !e.removed).length,
             "evidence item",
           )}. See why under Evidence.`,
         }

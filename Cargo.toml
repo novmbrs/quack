@@ -44,6 +44,9 @@ tokio-util = { version = "=0.7.20", features = ["rt"] }
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "http2", "json", "matched-path", "query", "tokio"] }
 tower = { version = "=0.5.3", features = ["util"] }
 tower-http = { version = "=0.7.1", features = ["limit", "timeout", "sensitive-headers"] }
+# Shared byte buffers: dashboard upload bytes pass from the HTTP body to
+# PostgreSQL without a copy (design §14.8).
+bytes = { version = "=1.12.2" }
 reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "json"] }
 
 # Storage.

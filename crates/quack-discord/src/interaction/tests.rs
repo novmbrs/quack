@@ -65,6 +65,7 @@ fn case_add_carries_the_invoker_member_rule_and_privacy() {
         member,
         rule: arg,
         private,
+        file,
     } = &i.request
     else {
         panic!("expected /case add, got {:?}", i.request);
@@ -76,6 +77,7 @@ fn case_add_carries_the_invoker_member_rule_and_privacy() {
     );
     assert_eq!(*arg, RuleArg::Id(RuleId::from_uuid(rule)));
     assert_eq!(*private, Some(true));
+    assert_eq!(*file, None);
     assert_eq!(i.telemetry_kind(), InteractionKind::SlashCommand);
     assert_eq!(i.command_name().to_string(), "case add");
     let ms = i.created_at().unwrap().unix_timestamp_nanos() / 1_000_000;

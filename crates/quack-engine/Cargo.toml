@@ -17,6 +17,7 @@ quack-text = { workspace = true }
 quack-db = { workspace = true }
 quack-telemetry = { workspace = true }
 aws-lc-rs = { workspace = true }
+bytes = { workspace = true }
 opentelemetry = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

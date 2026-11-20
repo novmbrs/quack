@@ -2,6 +2,7 @@
 
 use quack_core::action::ActionKind;
 use quack_core::case::VoidCause;
+use quack_core::evidence::EvidenceKind;
 use quack_core::modlog::ModLogEntry;
 use quack_core::modules::{
     ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
@@ -103,6 +104,21 @@ pub fn lead(entry: &ModLogEntry, f: &LogFacts) -> Text {
             d.case_number,
         )
         .s("."),
+        ModLogEntry::EvidenceRemoved(d) => case(
+            actor().s(match d.evidence_kind {
+                EvidenceKind::Message => " removed a saved message from the evidence of ",
+                EvidenceKind::Upload => " removed uploaded files from the evidence of ",
+            }),
+            d.case_number,
+        )
+        .s("."),
+        ModLogEntry::EvidenceVisibilityChanged(d) => {
+            if d.visible_to_member {
+                member(case(actor().s(" showed uploaded evidence files of "), d.case_number).s(" to ")).s(".")
+            } else {
+                member(case(actor().s(" hid uploaded evidence files of "), d.case_number).s(" from ")).s(".")
+            }
+        }
         ModLogEntry::ActionDone(d) => super::actions::action_done(d, f),
         ModLogEntry::ActionFailed(d) => super::actions::action_failed(d, f),
         ModLogEntry::ActionRetryRequested(d) => case(

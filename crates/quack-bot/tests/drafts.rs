@@ -240,7 +240,8 @@ async fn a_page_with_problems_reopens_prefilled() -> Result {
             .find(|i| i.id == InputId::Field(FieldKey(key.to_owned())))
             .and_then(|i| match &i.kind {
                 quack_text::model::InputKind::Text { value, .. } => value.clone(),
-                quack_text::model::InputKind::YesNo { .. } => None,
+                quack_text::model::InputKind::YesNo { .. }
+                | quack_text::model::InputKind::Files { .. } => None,
             })
     };
     assert_eq!(value("q1").as_deref(), Some("links"));

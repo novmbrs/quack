@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+Only moderators can do this. Ask a server administrator to check the moderator roles in the Quack dashboard's server settings.

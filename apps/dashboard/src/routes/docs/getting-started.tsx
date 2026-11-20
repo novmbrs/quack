@@ -61,7 +61,8 @@ function GettingStarted() {
         </p>
         <ul>
           <li>
-            <b>Evidence copies</b> keep copies of evidence files in a staff channel.
+            <b>Evidence channel</b> keeps copies of evidence files in a staff channel, and lets
+            staff upload files as evidence.
           </li>
           <li>
             <b>Tickets</b> let members open private support threads with your staff.

@@ -13,10 +13,10 @@ pub use entry::{
     ActionDetail, ActionDoneDetail, ActionFailedDetail, AppealClosedDetail,
     CaseContextEditedDetail, CaseCreateRefusedDetail, CaseCreatedDetail, CaseNumberDetail,
     CaseVoidedDetail, ChannelSettingClearedDetail, DmFailedDetail, DmFailedState, DmSentDetail,
-    Empty, EvidenceAddedDetail, FieldsDetail, HoneypotCaseFailedDetail, LegacyDetail,
-    LogChannelFailedDetail, ModLogEntry, ModuleDetail, ModuleDisabledDetail,
-    ModuleSettingsChangedDetail, QuackJoinedDetail, RuleNameDetail, RuleVersionDetail,
-    TicketClosedDetail, UndoSkippedDetail,
+    Empty, EvidenceAddedDetail, EvidenceRemovedDetail, EvidenceVisibilityDetail, FieldsDetail,
+    HoneypotCaseFailedDetail, LegacyDetail, LogChannelFailedDetail, ModLogEntry, ModuleDetail,
+    ModuleDisabledDetail, ModuleSettingsChangedDetail, QuackJoinedDetail, RuleNameDetail,
+    RuleVersionDetail, TicketClosedDetail, UndoSkippedDetail,
 };
 pub use links::{Link, LinkProblem, LinkRule, ModLogLinks};
 pub use redact::{REDACTED, redact, redact_failure_reason};
@@ -98,6 +98,10 @@ str_enum! {
         HoneypotCaseFailed = "honeypot_case_failed",
         /// An entry imported from the Go version with no new kind.
         Legacy = "legacy",
+        /// Staff removed an evidence item (hidden, never deleted).
+        EvidenceRemoved = "evidence_removed",
+        /// Staff showed an uploaded-files item to the member, or hid it.
+        EvidenceVisibilityChanged = "evidence_visibility_changed",
     }
 }
 
@@ -148,6 +152,8 @@ impl ModLogKind {
         !matches!(
             self,
             Self::EvidenceAdded
+                | Self::EvidenceRemoved
+                | Self::EvidenceVisibilityChanged
                 | Self::DmSent
                 | Self::QuackLeft
                 | Self::LogChannelFailed

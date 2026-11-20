@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in </setup:1004>, then try again.
+plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
+model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]

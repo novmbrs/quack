@@ -1,0 +1,377 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, guild_id, case_id, kind, channel_id, message_id, added_by, capture_by,\n                               visible_to_member,\n                               note, note_revision, note_updated_by, note_updated_at, removed_at, removed_by,\n                               surrounding AS \"surrounding: Json<Vec<SurroundingMessage>>\",\n                               state, failure, author_id,\n                               content, message_created_at, message_edited_at,\n                               embeds AS \"embeds: Json<Vec<EmbedSummary>>\", files_not_saved,\n                               copy_skipped_not_staff_only, created_at, saved_at\n                        FROM evidence WHERE guild_id = $1 AND id = $2 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "evidence_kind",
+            "kind": {
+              "Enum": [
+                "message",
+                "upload"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "channel_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "message_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "message_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "added_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "added_by"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "capture_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "capture_by"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "visible_to_member",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "visible_to_member"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "note",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "note"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "note_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "note_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "note_updated_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "note_updated_by"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "note_updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "note_updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "removed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "removed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "removed_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "removed_by"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "surrounding: Json<Vec<SurroundingMessage>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "surrounding"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "state",
+        "type_info": {
+          "Custom": {
+            "name": "evidence_state",
+            "kind": {
+              "Enum": [
+                "saving",
+                "saved",
+                "failed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "state"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "failure",
+        "type_info": {
+          "Custom": {
+            "name": "evidence_failure",
+            "kind": {
+              "Enum": [
+                "message_deleted",
+                "moderator_no_access",
+                "quack_no_access",
+                "other_server",
+                "discord_error",
+                "no_file_copied",
+                "evidence_copy"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "failure"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "author_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "author_id"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "content",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "message_created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "message_created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "message_edited_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "message_edited_at"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "embeds: Json<Vec<EmbedSummary>>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "embeds"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "files_not_saved",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "files_not_saved"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "copy_skipped_not_staff_only",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "copy_skipped_not_staff_only"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "saved_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "saved_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c66a22d900f02a8850510b223736abcbfb43df8483ac128bbbaf340ef8f072f7"
+}

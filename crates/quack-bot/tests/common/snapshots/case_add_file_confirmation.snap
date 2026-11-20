@@ -1,0 +1,7 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[success]
+Case #1 is saved. Quack posted the receipt in this channel.
+[Add evidence] [View evidence] [Open case]

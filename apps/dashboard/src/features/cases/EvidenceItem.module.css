@@ -1,0 +1,256 @@
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  animation: rise-in var(--slow) var(--ease-out) both;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kind {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.added {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Surrounding messages and removed items fold the same way. */
+.fold,
+.removed {
+  border-radius: var(--radius-md);
+}
+
+.fold {
+  background: var(--surface-sunken);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  list-style: none;
+  cursor: pointer;
+  transition:
+    background-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary:hover {
+  background: var(--hover);
+  color: var(--text-strong);
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.chevron {
+  flex-shrink: 0;
+  transition: transform var(--base) var(--ease-out);
+}
+
+details[open] > .summary .chevron {
+  transform: rotate(90deg);
+}
+
+.staffOnly {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 12px 12px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 8px;
+  font-size: 14px;
+}
+
+.lineTime {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.lineText {
+  flex-basis: 100%;
+  padding-left: 24px;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.lineFiles {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.marker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.marker::before,
+.marker::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background: var(--accent-line);
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent-line);
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.noteBody {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.noteText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.noteMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.addNote {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition:
+    background-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.addNote:hover {
+  background: var(--hover);
+  color: var(--text-strong);
+}
+
+.noteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.noteLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.noteBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.count {
+  margin-right: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+.count[data-over] {
+  color: var(--danger);
+}
+
+.removed {
+  border: 1px dashed var(--border-strong);
+  animation: fade-in var(--base) var(--ease-out);
+}
+
+.removedText {
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.removedBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 14px 14px;
+  opacity: 0.75;
+  animation: fade-in var(--base) var(--ease-out);
+}

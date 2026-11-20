@@ -18,6 +18,7 @@ import {
   missingRequired,
 } from "./context";
 import { ContextForm } from "./ContextForm";
+import { NOTE_MAX, noteLength } from "./uploads";
 import { addEvidence, editContext } from "./writes";
 
 import s from "./CreateCaseDialog.module.css";
@@ -121,43 +122,55 @@ export function EditContextDialog({
   );
 }
 
-/** AddEvidenceDialog saves up to 10 more Discord messages as evidence on a case. */
+/**
+ * AddEvidenceDialog saves up to 10 more Discord messages as evidence on a
+ * case, with an optional staff note on each.
+ */
 export function AddEvidenceDialog({
   guildId,
   caseNumber,
   open,
   onClose,
+  onCase,
 }: {
   guildId: string;
   caseNumber: number;
   open: boolean;
   onClose: () => void;
+  /** Shows the case the write answered with. */
+  onCase?: (c: Case) => void;
 }) {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
+  const [note, setNote] = useState("");
   const [error, setError] = useState<unknown>(null);
   const links = evidenceLinks(text);
+  const noteTooLong = noteLength(note) > NOTE_MAX;
 
   const add = useMutation({
-    mutationFn: () => addEvidence(guildId, String(caseNumber), links),
+    mutationFn: () => addEvidence(guildId, String(caseNumber), links, note),
     onSuccess: (added) => {
-      void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
+      if (onCase) onCase(added.case);
+      else void queryClient.invalidateQueries({ queryKey: keys.cases(guildId) });
       toast.success(added.message);
       setText("");
+      setNote("");
       onClose();
     },
     onError: setError,
   });
 
   const apiError = error instanceof ApiError ? error : null;
+  const blocked = links.length === 0 || links.length > 10 || noteTooLong;
   return (
     <Dialog
       open={open}
       onClose={onClose}
       size="md"
       title={`Add evidence · case #${caseNumber}`}
+      description="Quack saves a copy of each message and the messages around it. To upload files, drop, paste, or pick them on the case page."
       onSubmit={() => {
-        if (links.length > 0 && links.length <= 10 && !add.isPending) {
+        if (!blocked && !add.isPending) {
           setError(null);
           add.mutate();
         }
@@ -167,11 +180,7 @@ export function AddEvidenceDialog({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={links.length === 0 || links.length > 10}
-            pending={add.isPending}
-          >
+          <Button type="submit" disabled={blocked} pending={add.isPending}>
             Add evidence
           </Button>
         </>
@@ -196,7 +205,28 @@ export function AddEvidenceDialog({
           />
         )}
       </Field>
-      {error && !apiError?.field("links") ? (
+      <Field
+        label="Staff note"
+        hint="Optional. Only staff see it."
+        error={
+          apiError?.field("note") ??
+          (noteTooLong
+            ? `This note is too long. Shorten it to ${NOTE_MAX} characters or fewer.`
+            : undefined)
+        }
+      >
+        {(id) => (
+          <TextArea
+            id={id}
+            rows={2}
+            value={note}
+            invalid={noteTooLong}
+            placeholder="Where these came from, or what to look for."
+            onChange={(e) => setNote(e.currentTarget.value)}
+          />
+        )}
+      </Field>
+      {error && !apiError?.field("links") && !apiError?.field("note") ? (
         <p role="alert" className={s.error}>
           {errorMessage(error)} <TraceId error={error} />
         </p>

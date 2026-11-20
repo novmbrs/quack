@@ -561,8 +561,8 @@ async fn evidence_is_admitted_once_and_saved_once(
             g,
             c.id,
             EvidenceId::from_uuid(Uuid::now_v7()),
-            channel(3),
-            message(4),
+            (channel(3), message(4)),
+            None,
             None,
         )
         .await
@@ -573,9 +573,9 @@ async fn evidence_is_admitted_once_and_saved_once(
             g,
             c.id,
             id,
-            channel(3),
-            message(4),
-            Some(account_id(2))
+            (channel(3), message(4)),
+            Some(account_id(2)),
+            None,
         )
         .await?,
         Admission::Added(id)
@@ -595,6 +595,7 @@ async fn evidence_is_admitted_once_and_saved_once(
         edited_at: None,
         embeds: Vec::new(),
         files_not_saved: 0,
+        surrounding: None,
     };
     let file = |n: u8, state| NewFile {
         id: FileId::from_uuid(Uuid::now_v7()),
@@ -603,7 +604,7 @@ async fn evidence_is_admitted_once_and_saved_once(
         filename: format!("{n}.png"),
         content_type: Some("image/png".to_owned()),
         size_bytes: 10,
-        original_url: "https://cdn.discordapp.com/x.png".to_owned(),
+        original_url: Some("https://cdn.discordapp.com/x.png".to_owned()),
         copy_state: state,
     };
     let files = [
@@ -668,12 +669,15 @@ async fn evidence_is_admitted_once_and_saved_once(
         (saved.state, saved.snapshot_stored()),
         (EvidenceState::Saved, true)
     );
-    let (copied, source_channel, _) = evidence::file(&mut conn, g, c.id, first.id)
+    let (copied, item) = evidence::file(&mut conn, g, c.id, first.id)
         .await?
         .context("file")?;
     assert_eq!(
-        (copied.copy, source_channel),
-        (Some((channel(8), message(9), attachment(10))), channel(3))
+        (copied.copy, item.channel),
+        (
+            Some((channel(8), message(9), attachment(10))),
+            Some(channel(3))
+        )
     );
     Ok(())
 }
@@ -731,5 +735,249 @@ async fn moving_appeal_posts_is_one_batch(
         .fetch_one(&mut *conn)
         .await?;
     assert_eq!(jobs, 3, "one coalesced sync job per row");
+    Ok(())
+}
+
+/// Uploaded-files items, notes, visibility, removal and restore (§7.1,
+/// §7.5): removed items leave the caps, re-adding a removed message brings
+/// it back, and an upload saves only once a file was copied.
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn uploads_notes_visibility_and_removal(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    use quack_core::evidence::EvidenceKind;
+    use quack_db::evidence::{Edited, NewUploadItem};
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (spam, _) = rule(&db, g, "Spam").await?;
+    let c = case(&db, g, member_id(7), spam, None).await?;
+    let mut conn = db.conn().await?;
+    let staff = account_id(2);
+    let upload = EvidenceId::from_uuid(Uuid::now_v7());
+    let staged = FileId::from_uuid(Uuid::now_v7());
+    let linked = FileId::from_uuid(Uuid::now_v7());
+    let new_file = |id, position, url: Option<&str>| NewFile {
+        id,
+        position,
+        attachment_id: None,
+        filename: format!("{position}.png"),
+        content_type: Some("image/png".to_owned()),
+        size_bytes: 3,
+        original_url: url.map(str::to_owned),
+        copy_state: FileCopyState::Pending,
+    };
+    evidence::insert_upload(
+        &mut conn,
+        &NewUploadItem {
+            id: upload,
+            guild: g,
+            case: c.id,
+            added_by: staff,
+            note: Some("from the report".to_owned()),
+            files: vec![
+                new_file(staged, 1, None),
+                new_file(
+                    linked,
+                    2,
+                    Some("https://cdn.discordapp.com/ephemeral-attachments/1/2/2.png"),
+                ),
+            ],
+            staged: vec![(staged, vec![1, 2, 3].into())],
+        },
+    )
+    .await?;
+    let item = evidence::get(&mut conn, g, upload).await?.context("item")?;
+    assert_eq!(
+        (
+            item.kind,
+            item.visible_to_member,
+            item.note.as_deref(),
+            item.source()
+        ),
+        (EvidenceKind::Upload, false, Some("from the report"), None)
+    );
+    assert!(
+        item.snapshot_stored(),
+        "an upload has no snapshot to wait for"
+    );
+    assert_eq!(
+        evidence::staged_bytes(&mut conn, g, staged).await?,
+        Some(vec![1, 2, 3])
+    );
+    assert_eq!(
+        evidence::staged_bytes(&mut conn, guild_id(99), staged).await?,
+        None
+    );
+    // Another server's case gets nothing.
+    let foreign = evidence::insert_upload(
+        &mut conn,
+        &NewUploadItem {
+            id: EvidenceId::from_uuid(Uuid::now_v7()),
+            guild: guild_id(99),
+            case: c.id,
+            added_by: staff,
+            note: None,
+            files: vec![],
+            staged: vec![],
+        },
+    )
+    .await;
+    assert!(
+        matches!(foreign, Err(quack_db::DbError::NotFound)),
+        "{foreign:?}"
+    );
+    // Not saved while nothing is copied; failed files alone don't save it.
+    assert!(evidence::set_file_state(&mut conn, g, linked, FileCopyState::CopyFailed).await?);
+    assert!(
+        !evidence::mark_saved(&mut conn, g, upload).await?,
+        "a file is pending"
+    );
+    assert!(
+        evidence::mark_copied(&mut conn, g, staged, channel(8), message(9), attachment(10)).await?
+    );
+    assert_eq!(
+        evidence::delete_staged(&mut conn, g, upload, Some(staged)).await?,
+        1
+    );
+    assert!(evidence::mark_saved(&mut conn, g, upload).await?);
+    assert_eq!(evidence::count_files_for_case(&mut conn, g, c.id).await?, 2);
+
+    // Notes: an edit names the revision it saw.
+    assert_eq!(
+        evidence::set_note(&mut conn, g, upload, Some("better"), 1, staff).await?,
+        Edited::Unchanged,
+        "a stale revision"
+    );
+    assert_eq!(
+        evidence::set_note(&mut conn, g, upload, Some("better"), 0, staff).await?,
+        Edited::Changed
+    );
+    assert_eq!(
+        evidence::set_note(&mut conn, g, upload, Some("better"), 1, staff).await?,
+        Edited::Unchanged,
+        "the same note"
+    );
+    let item = evidence::get(&mut conn, g, upload).await?.context("item")?;
+    assert_eq!(
+        (item.note.as_deref(), item.note_revision),
+        (Some("better"), 1)
+    );
+    assert_eq!(item.note_updated.and_then(|(_, by)| by), Some(staff));
+
+    // Visibility: uploads only.
+    assert_eq!(
+        evidence::set_visibility(&mut conn, g, upload, true).await?,
+        Edited::Changed
+    );
+    assert_eq!(
+        evidence::set_visibility(&mut conn, g, upload, true).await?,
+        Edited::Unchanged
+    );
+
+    // A message item, removed: out of the caps; re-adding restores it.
+    let msg = EvidenceId::from_uuid(Uuid::now_v7());
+    evidence::admit(
+        &mut conn,
+        g,
+        c.id,
+        msg,
+        (channel(3), message(4)),
+        Some(staff),
+        Some("first"),
+    )
+    .await?;
+    assert_eq!(evidence::count_for_case(&mut conn, g, c.id).await?, 2);
+    assert_eq!(
+        evidence::remove(&mut conn, g, msg, staff).await?,
+        Edited::Changed
+    );
+    assert_eq!(
+        evidence::remove(&mut conn, g, msg, staff).await?,
+        Edited::Unchanged
+    );
+    assert_eq!(evidence::count_for_case(&mut conn, g, c.id).await?, 1);
+    assert_eq!(
+        evidence::set_note(&mut conn, g, msg, Some("x"), 0, staff).await?,
+        Edited::Unchanged,
+        "a removed item keeps its note"
+    );
+    assert_eq!(
+        evidence::admit(
+            &mut conn,
+            g,
+            c.id,
+            EvidenceId::from_uuid(Uuid::now_v7()),
+            (channel(3), message(4)),
+            Some(staff),
+            Some("second"),
+        )
+        .await?,
+        Admission::Restored {
+            id: msg,
+            recapture: false
+        }
+    );
+    let back = evidence::get(&mut conn, g, msg).await?.context("item")?;
+    assert_eq!((back.removed, back.note.as_deref()), (None, Some("first")));
+    // A removed item whose capture failed is captured again when restored.
+    assert!(evidence::mark_failed(&mut conn, g, msg, EvidenceFailure::DiscordError).await?);
+    evidence::remove(&mut conn, g, msg, staff).await?;
+    let again = evidence::admit(
+        &mut conn,
+        g,
+        c.id,
+        EvidenceId::from_uuid(Uuid::now_v7()),
+        (channel(3), message(4)),
+        Some(staff),
+        None,
+    )
+    .await?;
+    assert_eq!(
+        again,
+        Admission::Restored {
+            id: msg,
+            recapture: true
+        }
+    );
+    assert!(again.needs_capture());
+    // The upload removed: its files leave the file cap.
+    evidence::remove(&mut conn, g, upload, staff).await?;
+    assert_eq!(evidence::count_files_for_case(&mut conn, g, c.id).await?, 0);
+    assert_eq!(
+        evidence::set_visibility(&mut conn, g, upload, false).await?,
+        Edited::Unchanged
+    );
+    Ok(())
+}
+
+/// The "Add as evidence" picker's cases (§11.1): the author's and the
+/// actor's own, newest first, without repeats.
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn recent_cases_merge_the_author_and_the_actor(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    let (spam, _) = rule(&db, g, "Spam").await?;
+    let about_seven = case(&db, g, member_id(7), spam, None).await?;
+    let about_eight = case(&db, g, member_id(8), spam, None).await?;
+    let mut conn = db.conn().await?;
+    let moderator = about_seven.moderator.context("moderator")?;
+    let mine = cases::recent(&mut conn, g, Some(member_id(7)), moderator, 25).await?;
+    let numbers: Vec<u64> = mine.iter().map(|c| c.number).collect();
+    assert_eq!(numbers, vec![about_eight.number, about_seven.number]);
+    assert_eq!(mine[1].rule_name.as_deref(), Some("Spam"));
+    let other = cases::recent(&mut conn, g, Some(member_id(7)), account_id(77), 25).await?;
+    assert_eq!(
+        other.iter().map(|c| c.number).collect::<Vec<_>>(),
+        vec![about_seven.number]
+    );
+    let one = cases::recent(&mut conn, g, Some(member_id(7)), moderator, 1).await?;
+    assert_eq!(one.len(), 1);
+    let elsewhere =
+        cases::recent(&mut conn, guild_id(99), Some(member_id(7)), moderator, 25).await?;
+    assert_eq!(elsewhere.len(), 0, "another server's cases");
     Ok(())
 }

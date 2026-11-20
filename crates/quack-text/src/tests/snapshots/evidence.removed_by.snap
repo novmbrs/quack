@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Removed by <@333> <t:1795014309:R>.
+plain:   Removed by Ana on 18 Nov 2026 at 15:05 UTC.
+model:   [Fixed("Removed by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]

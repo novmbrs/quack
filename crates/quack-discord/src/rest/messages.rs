@@ -290,6 +290,25 @@ impl DiscordClient {
     }
 }
 
+impl DiscordClient {
+    /// Reads up to `limit` (1–100) of the messages right after `after`
+    /// (the messages around evidence, §7.2), in Discord's order.
+    pub async fn fetch_history_after(
+        &self,
+        channel: ChannelId,
+        after: MessageId,
+        limit: u8,
+    ) -> Outcome<Vec<Message>> {
+        self.json::<Vec<twilight_model::channel::Message>>(Request::new(Route::history_after(
+            channel,
+            after,
+            limit.clamp(1, 100),
+        )))
+        .await
+        .map(|messages| messages.iter().filter_map(convert::message).collect())
+    }
+}
+
 #[cfg(test)]
 mod name_tests {
     use super::{AttachmentRef, uploads};

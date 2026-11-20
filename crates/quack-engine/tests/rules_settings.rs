@@ -12,7 +12,7 @@ use quack_core::modlog::ModLogKind;
 use quack_core::permissions::{Capability, Permission, RoleFacts};
 use quack_core::rule::{Field, FieldKey, FieldKind, RuleFile};
 use quack_engine::cases::{Applied, ApplyError, apply_rule};
-use quack_engine::drafts::{PageSaved, PageSubmit, save_page};
+use quack_engine::drafts::{CommandDraft, PageSaved, PageSubmit, save_page, start};
 use quack_engine::rules::{RuleError, archive, create, edit, export, import, restore};
 use quack_engine::settings::{FieldProblem, SettingsError, SettingsPatch, patch};
 use quack_engine::{Origin, guilds};
@@ -396,6 +396,19 @@ async fn a_deleted_channel_clears_its_settings() -> Result<()> {
     Ok(())
 }
 
+/// The draft `/case add` writes before the form for `submit` opens.
+fn command_draft(submit: &PageSubmit) -> CommandDraft {
+    CommandDraft {
+        draft: submit.draft,
+        member: submit.member,
+        rule: Some((submit.rule, submit.version)),
+        source: None,
+        private: submit.private,
+        channel: submit.channel,
+        evidence_file: None,
+    }
+}
+
 #[tokio::test]
 async fn a_two_page_draft() -> Result<()> {
     let h = Harness::new().await?;
@@ -424,6 +437,8 @@ async fn a_two_page_draft() -> Result<()> {
         channel,
     };
     let p = h.moderator();
+    // `/case add` writes the draft before its first page opens (§11.6).
+    start(&h.engine, &p, &command_draft(&page(1, 0..5))).await?;
     let one = save_page(&h.engine, &p, &page(1, 0..5), None).await?;
     assert_eq!(one, PageSaved::Next { page: 2, pages: 2 });
     // A double click on page 1.
@@ -488,6 +503,7 @@ async fn a_draft_whose_rule_changed_is_dropped() -> Result<()> {
         private: true,
         channel,
     };
+    start(&h.engine, &h.moderator(), &command_draft(&submit)).await?;
     let saved = save_page(&h.engine, &h.moderator(), &submit, None).await?;
     assert_eq!(saved, PageSaved::RuleChanged);
     assert_eq!(h.db.count("SELECT count(*) FROM case_drafts").await?, 0);

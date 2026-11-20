@@ -65,6 +65,7 @@ fn model(m: &Msg, out: &mut String) {
             Block::Subtext(t) => writeln!(out, "Subtext {}", model_text(t)),
             Block::Divider => writeln!(out, "Divider"),
             Block::File(name) => writeln!(out, "File {name:?}"),
+            Block::Gallery(items) => writeln!(out, "Gallery {items:?}"),
         };
     }
 }
@@ -95,6 +96,7 @@ fn modal_text(m: &Modal, out: &mut String) {
                     "  Yes/No select, placeholder {placeholder:?}, value {value:?}"
                 )
             }
+            InputKind::Files { min, max } => writeln!(out, "  file upload, {min}–{max} files"),
         };
     }
 }

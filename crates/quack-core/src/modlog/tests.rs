@@ -154,6 +154,14 @@ fn one_of_each() -> Vec<ModLogEntry> {
             resource_id: None,
             failure_reason: None,
         }),
+        ModLogEntry::EvidenceRemoved(EvidenceRemovedDetail {
+            case_number: 3,
+            evidence_kind: crate::evidence::EvidenceKind::Upload,
+        }),
+        ModLogEntry::EvidenceVisibilityChanged(EvidenceVisibilityDetail {
+            case_number: 3,
+            visible_to_member: true,
+        }),
     ]
 }
 
@@ -266,6 +274,8 @@ fn results_and_posting() {
     use ModLogKind as K;
     let not_posted = [
         K::EvidenceAdded,
+        K::EvidenceRemoved,
+        K::EvidenceVisibilityChanged,
         K::DmSent,
         K::QuackLeft,
         K::LogChannelFailed,
@@ -319,7 +329,7 @@ fn enum_names_match_the_database() {
          rule_created,rule_edited,rule_archived,rule_restored,rule_imported,settings_changed,\
          module_enabled,module_disabled,module_settings_changed,quack_joined,quack_left,\
          channel_setting_cleared,log_channel_failed,ticket_opened,ticket_closed,\
-         honeypot_case_failed,legacy"
+         honeypot_case_failed,legacy,evidence_removed,evidence_visibility_changed"
     );
 }
 

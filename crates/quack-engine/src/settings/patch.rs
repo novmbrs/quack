@@ -75,7 +75,8 @@ impl SettingsPatch {
             (
                 "evidence_channel_id",
                 self.evidence_channel_id.flatten(),
-                send | Permission::AttachFiles,
+                // Copies are read back for fresh URLs (§7.3).
+                crate::evidence::DESTINATION,
             ),
         ]
         .into_iter()

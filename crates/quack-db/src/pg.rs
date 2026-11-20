@@ -91,6 +91,7 @@ pg_enums! {
     quack_core::dm::DmKind => "dm_kind",
     quack_core::dm::DmState => "dm_state",
     quack_core::dm::DmFailure => "dm_failure",
+    quack_core::evidence::EvidenceKind => "evidence_kind",
     quack_core::evidence::EvidenceState => "evidence_state",
     quack_core::evidence::EvidenceFailure => "evidence_failure",
     quack_core::evidence::FileCopyState => "file_copy_state",
