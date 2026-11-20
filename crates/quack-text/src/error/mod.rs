@@ -221,9 +221,95 @@ pub fn appeal_text_too_long(max: usize) -> Text {
     ))
 }
 
-/// `error.no_links`: adding evidence without a message link.
+/// `error.no_links`: adding evidence without a message link or a file.
 pub fn no_links() -> Text {
-    Text::fixed("No evidence was added. Paste at least one message link and try again.")
+    Text::fixed("No evidence was added. Add at least one message link or file and try again.")
+}
+
+/// `error.too_many_files`.
+pub fn too_many_files() -> Text {
+    Text::fixed("Add at most 10 files at a time.")
+}
+
+/// `error.evidence_file_limit_reached`: a case keeps at most 100 files.
+pub fn evidence_file_limit_reached(files: u32) -> Text {
+    Text::fixed(format!(
+        "No evidence was added. This case already keeps {} and can keep at most 100. Add fewer files, or remove evidence added by mistake.",
+        fmt::plural(u64::from(files), "file", "files")
+    ))
+}
+
+/// `error.evidence_channel_missing`: uploads need an evidence channel.
+pub fn evidence_channel_missing() -> Text {
+    Text::fixed(
+        "No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in ",
+    )
+    .command(Command::Setup)
+    .s(", then try again.")
+}
+
+/// `error.evidence_channel_not_staff_only`.
+pub fn evidence_channel_not_staff_only() -> Text {
+    Text::fixed(
+        "No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in ",
+    )
+    .command(Command::Setup)
+    .s(", then try again.")
+}
+
+/// `error.files_not_allowed`: files Quack can't copy, by name.
+pub fn files_not_allowed(files: &[quack_core::evidence::RefusedFile]) -> Text {
+    let mut t = Text::fixed("No evidence was added. Quack can't save ");
+    for (i, f) in files.iter().enumerate() {
+        if i > 0 {
+            t = t.s(if i + 1 == files.len() { " and " } else { ", " });
+        }
+        t = t.user(fmt::one_line(&f.filename)).s(match f.why {
+            quack_core::evidence::FileRefusal::TooLarge => " (larger than 10 MB)",
+            quack_core::evidence::FileRefusal::UnsupportedType => {
+                " (a file type Quack doesn't copy)"
+            }
+        });
+    }
+    t.s(". Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.")
+}
+
+/// `error.evidence_not_found`.
+pub fn evidence_not_found() -> Text {
+    Text::fixed(
+        "Quack couldn't find that evidence item on this case. Open the case again to see its evidence.",
+    )
+}
+
+/// `error.evidence_removed`.
+pub fn evidence_removed() -> Text {
+    Text::fixed(
+        "That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.",
+    )
+}
+
+/// `error.evidence_not_upload`.
+pub fn evidence_not_upload() -> Text {
+    Text::fixed(
+        "Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.",
+    )
+}
+
+/// `error.note_changed`.
+pub fn note_changed() -> Text {
+    Text::fixed(
+        "Someone else changed this note since you opened it. Open the evidence again to see their note before you save.",
+    )
+}
+
+/// `error.note_too_long`.
+pub fn note_too_long() -> Text {
+    Text::fixed("This note is too long. Shorten it to 500 characters or fewer.")
+}
+
+/// `error.case_number_invalid`: a typed case number that isn't one.
+pub fn case_number_invalid() -> Text {
+    Text::fixed("Enter a case number, like 12. It's on the case's receipt.")
 }
 
 /// `error.appeal_not_found`.

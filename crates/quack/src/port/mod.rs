@@ -231,6 +231,20 @@ impl Discord for DiscordPort {
         })
     }
 
+    fn fetch_history_after(
+        &self,
+        channel: ChannelId,
+        after: MessageId,
+        limit: u8,
+    ) -> BoxFuture<'_, Outcome<Vec<FetchedMessage>>> {
+        Box::pin(async move {
+            self.client()
+                .fetch_history_after(channel, after, limit)
+                .await
+                .map(|list| list.into_iter().map(convert::fetched).collect())
+        })
+    }
+
     fn download_attachment<'a>(
         &'a self,
         url: &'a str,

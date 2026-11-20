@@ -5,6 +5,7 @@
 
 use quack_core::DomainError;
 use quack_core::appeal::{AppealEventKind, AppealState, EligibilityFacts, eligibility};
+use quack_core::evidence::member_sees;
 use quack_core::ids::{AccountId, AppealId, CaseId, EvidenceId, FileId, GuildId};
 use quack_core::rule::FieldKind;
 use quack_db::{cases, guilds};
@@ -54,7 +55,8 @@ pub struct MemberCaseView {
     pub dm_text: String,
     /// The case context; message links show as a placeholder.
     pub context: Vec<MemberContextLine>,
-    /// Saved messages: text, embed types and titles, file names.
+    /// Saved messages (text, embed types and titles, file names) and the
+    /// uploaded files staff showed them; never removed items or notes.
     pub evidence: Vec<MemberEvidence>,
     /// The case this one replaces, when both are about this member.
     pub replaces_case_number: Option<u64>,
@@ -238,9 +240,12 @@ fn context(r: &CaseRecords) -> Vec<MemberContextLine> {
         .collect()
 }
 
+/// Only what the member sees (§7.4): no removed item, no staff-only
+/// upload, never notes or surrounding messages.
 fn evidence(r: &CaseRecords) -> Vec<MemberEvidence> {
     r.evidence
         .iter()
+        .filter(|e| member_sees(e.kind, e.visible_to_member, e.is_removed()))
         .map(|e| MemberEvidence {
             id: e.id,
             content: e.content.clone(),

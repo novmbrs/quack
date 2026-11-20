@@ -23,7 +23,7 @@ fn source(message: Option<&Message>) -> Source {
 /// Reads one select value in the context of its select.
 fn choice(id: &ComponentId, value: &str) -> Option<SelectChoice> {
     match id {
-        ComponentId::Current(CustomId::CasePicker) => {
+        ComponentId::Current(CustomId::CasePicker | CustomId::AddAsEvidence { .. }) => {
             CaseId::from_u22(value).ok().map(SelectChoice::Case)
         }
         ComponentId::Current(CustomId::RulePicker(_) | CustomId::Setup(_, SetupOp::Rule)) => {

@@ -14,7 +14,9 @@ mod setup;
 #[cfg(test)]
 mod tests;
 
-use quack_core::ids::{ActionId, AppealId, CaseId, MemberId, RuleId, TicketId};
+use quack_core::ids::{
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, MemberId, MessageId, RuleId, TicketId,
+};
 use quack_text::actions::{DraftPage, SetupArea, SetupOp};
 
 pub use actions::{decode_input_id, encode_input_id, encode_select_value};
@@ -48,6 +50,50 @@ pub enum CustomId {
         case: CaseId,
         /// Which item.
         item: u32,
+    },
+    /// `evs`: the messages saved around an item's message.
+    EvidenceSurrounding(EvidenceId),
+    /// `evv`: show an uploaded-files item to the member (`1`) or hide it
+    /// (`0`).
+    EvidenceVisibility {
+        /// The item.
+        evidence: EvidenceId,
+        /// Whether the member should see it.
+        visible: bool,
+    },
+    /// `evn`: open the note modal (prefilled).
+    EditEvidenceNote(EvidenceId),
+    /// `evnm`: the note modal, opened at a note revision.
+    EvidenceNoteModal {
+        /// The item.
+        evidence: EvidenceId,
+        /// The note revision the modal showed.
+        revision: u32,
+    },
+    /// `evr`: ask to confirm removing an item.
+    RemoveEvidence(EvidenceId),
+    /// `evrc`: remove after confirming.
+    ConfirmRemoveEvidence(EvidenceId),
+    /// `exs`: the "Add as evidence" case select (the value is the case).
+    AddAsEvidence {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
+    },
+    /// `exn`: open the "Add as evidence" case number modal.
+    AddAsEvidenceByNumber {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
+    },
+    /// `exm`: the "Add as evidence" case number modal.
+    AddAsEvidenceModal {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
     },
     /// `vd`: open the void modal.
     VoidCase(CaseId),

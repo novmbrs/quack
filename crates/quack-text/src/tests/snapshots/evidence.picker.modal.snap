@@ -1,0 +1,10 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+modal "Add as evidence" AddAsEvidence { channel: ChannelId(444), message: MessageId(777) }
+- CaseNumber "Case number" (required)
+  description: The number on the case's receipt.
+  Short text, 1–16 characters, placeholder Some("12"), value None
+- Note "Note" (optional)
+  description: Optional. Only staff see it.
+  Paragraph text, 0–500 characters, placeholder Some("What this shows, or where it came from"), value None

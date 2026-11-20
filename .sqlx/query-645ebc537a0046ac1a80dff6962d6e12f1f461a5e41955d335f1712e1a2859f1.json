@@ -69,7 +69,9 @@
                 "ticket_opened",
                 "ticket_closed",
                 "honeypot_case_failed",
-                "legacy"
+                "legacy",
+                "evidence_removed",
+                "evidence_visibility_changed"
               ]
             }
           }

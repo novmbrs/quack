@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence SET note = $3, note_revision = note_revision + 1, note_updated_by = $5,\n                                 note_updated_at = now()\n             WHERE guild_id = $1 AND id = $2 AND note_revision = $4 AND removed_at IS NULL\n               AND note IS DISTINCT FROM $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Text",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9ab613f434c2c53c6685b5dcb0b4b81533cc14266a8c846babe90436192f89ec"
+}

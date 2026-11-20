@@ -52,6 +52,7 @@ rust_enums! {
     "dm_kind" => crate::dm::DmKind,
     "dm_state" => crate::dm::DmState,
     "dm_failure" => crate::dm::DmFailure,
+    "evidence_kind" => crate::evidence::EvidenceKind,
     "evidence_state" => crate::evidence::EvidenceState,
     "evidence_failure" => crate::evidence::EvidenceFailure,
     "file_copy_state" => crate::evidence::FileCopyState,

@@ -353,3 +353,27 @@ async fn fetching_messages_converts_them() {
     assert_eq!(page.len(), 2);
     history.assert_async().await;
 }
+
+/// The messages after a message (evidence's surrounding messages, §7.2).
+#[tokio::test]
+async fn fetching_the_messages_after_one() {
+    let server = MockServer::start_async().await;
+    let after = server
+        .mock_async(|when, then| {
+            when.method("GET")
+                .path("/api/v10/channels/5/messages")
+                .query_param("limit", "5")
+                .query_param("after", "10");
+            then.status(200)
+                .json_body(json!([fixtures::message(12, 5), fixtures::message(11, 5)]));
+        })
+        .await;
+    let client = client(&server.base_url());
+    let page = client
+        .fetch_history_after(c(5), MessageId::new(10).unwrap(), 5)
+        .await
+        .done()
+        .unwrap();
+    assert_eq!(page.len(), 2);
+    after.assert_async().await;
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM evidence_upload_bytes WHERE ctid IN\n                   (SELECT b.ctid FROM evidence_upload_bytes b\n                    JOIN evidence_files f ON f.guild_id = b.guild_id AND f.id = b.file_id\n                    WHERE f.copy_state <> 'pending' OR b.created_at < now() - make_interval(secs => $2)\n                    LIMIT $1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d677e6c0a6fe7c82bc7b0dd2c82353085d1003e9b7b566ab424e257826dc5f02"
+}

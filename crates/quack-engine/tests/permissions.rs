@@ -10,7 +10,7 @@ use quack_core::ids::{ActionId, AppealId, RuleId};
 use quack_core::permissions::{Capability, Permission, Permissions, RoleFacts};
 use quack_engine::actions::{ActionError, dismiss, retry, undo};
 use quack_engine::appeals::{AppealError, decide};
-use quack_engine::cases::{CaseError, add_evidence, get, void_case};
+use quack_engine::cases::{AddEvidence, CaseError, add_evidence, get, void_case};
 use quack_engine::rules::{RuleError, archive, create, export, list as list_rules};
 use quack_engine::settings::{SettingsError, SettingsPatch, get as get_settings, health, patch};
 use quack_engine::stats::{StatsError, compute};
@@ -97,7 +97,16 @@ async fn moderation(h: &Harness, p: &Principal) -> Outcomes {
         (
             "add evidence",
             Capability::Moderate,
-            of_case(add_evidence(&h.engine, p, missing_case, &link, &h.key("eam")).await),
+            of_case(
+                add_evidence(
+                    &h.engine,
+                    p,
+                    missing_case,
+                    &AddEvidence::links(&link),
+                    &h.key("eam"),
+                )
+                .await,
+            ),
         ),
         (
             "retry",

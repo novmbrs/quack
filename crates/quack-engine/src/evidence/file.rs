@@ -1,9 +1,11 @@
 //! Resolving one evidence file to a fresh Discord CDN URL (§7.4): fetch the
 //! copy message when the file was copied, else (or when the copy is gone)
-//! the source message, and find the attachment by its ID.
+//! the source message, and find the attachment by its ID. The member gets
+//! only files of items they see (§7.4): never a removed item's or a
+//! staff-only upload's.
 
 use quack_core::DomainError;
-use quack_core::evidence::FileCopyState;
+use quack_core::evidence::{FileCopyState, member_sees};
 use quack_core::ids::{AccountId, AttachmentId, CaseId, ChannelId, FileId, MessageId};
 use quack_core::permissions::Capability;
 use quack_db::DbError;
@@ -69,21 +71,39 @@ pub async fn resolve_file(
             let mut conn = engine.db().conn().await?;
             quack_db::evidence::file(&mut conn, case.guild, case.id, file).await?
         };
-        let (file, source_channel, source_message) = found.ok_or(FileError::NotFound)?;
-        if file.copy_state == FileCopyState::Copied
-            && let Some((channel, message, attachment)) = file.copy
-            && let Some(url) = locate(engine, channel, message, attachment).await?
+        let (file, item) = found.ok_or(FileError::NotFound)?;
+        if matches!(viewer, FileViewer::Member { .. })
+            && !member_sees(item.kind, item.visible_to_member, item.is_removed())
         {
-            return Ok(url);
+            return Err(FileError::NotFound);
         }
-        match file.attachment_id {
-            Some(attachment) => locate(engine, source_channel, source_message, attachment)
-                .await?
-                .ok_or(FileError::Unavailable),
-            None => Err(FileError::Unavailable),
-        }
+        fresh_url(engine, &file, item.source()).await
     })
     .await
+}
+
+/// A fresh URL for a file: its copy, else the source message's attachment
+/// (an uploaded file has no source message, and its interaction attachment
+/// URL is short-lived, so only the copy serves it).
+pub(crate) async fn fresh_url(
+    engine: &Engine,
+    file: &quack_db::evidence::EvidenceFile,
+    source: Option<(ChannelId, MessageId)>,
+) -> Result<String, FileError> {
+    if file.copy_state == FileCopyState::Copied
+        && let Some((channel, message, attachment)) = file.copy
+        && let Some(url) = locate(engine, channel, message, attachment).await?
+    {
+        return Ok(url);
+    }
+    match (file.attachment_id, source) {
+        (Some(attachment), Some((channel, message))) => {
+            locate(engine, channel, message, attachment)
+                .await?
+                .ok_or(FileError::Unavailable)
+        }
+        _ => Err(FileError::Unavailable),
+    }
 }
 
 /// The viewer's case.

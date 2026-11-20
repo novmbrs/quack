@@ -192,7 +192,7 @@ fn block_to(block: &Block, surface: Surface<'_>) -> Option<String> {
         Block::Text(t) | Block::Subtext(t) => text(t, surface),
         Block::Quote(t) => quote(&text(t, surface)),
         Block::Field { label, value } => field(label, &text(value, surface), discord),
-        Block::Divider | Block::File(_) => return None,
+        Block::Divider | Block::File(_) | Block::Gallery(_) => return None,
     })
 }
 
@@ -225,6 +225,14 @@ pub fn plain_msg(msg: &Msg) -> String {
         .map(|b| match b {
             Block::Divider => String::new(),
             Block::File(name) => format!("[file: {}]", fmt::clean(name)),
+            Block::Gallery(items) => items
+                .iter()
+                .map(|i| match &i.description {
+                    Some(d) => format!("[media: {}]", fmt::clean(d)),
+                    None => "[media]".to_owned(),
+                })
+                .collect::<Vec<_>>()
+                .join(" "),
             other => block_to(other, Surface::Plain).unwrap_or_default(),
         })
         .collect::<Vec<_>>()

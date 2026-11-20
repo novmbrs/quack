@@ -78,6 +78,14 @@ pub fn domain_errors() -> Vec<DomainError> {
         DomainError::TooManyLinks,
         DomainError::SettingsChanged,
         DomainError::TicketNotOpen,
+        DomainError::TooManyFiles,
+        DomainError::EvidenceFileLimitReached { count: 95 },
+        DomainError::EvidenceChannelMissing,
+        DomainError::EvidenceChannelNotStaffOnly,
+        DomainError::EvidenceNotFound,
+        DomainError::EvidenceRemoved,
+        DomainError::EvidenceNotUpload,
+        DomainError::NoteChanged,
     ]
 }
 
@@ -147,6 +155,65 @@ pub fn samples() -> Vec<Sample> {
         error::appeal_text_too_long(quack_core::limits::APPEAL_TEXT.max),
     ));
     v.push(text("error.no_links", "", error::no_links()));
+    v.push(text("error.too_many_files", "", error::too_many_files()));
+    v.push(text(
+        "error.evidence_file_limit_reached",
+        "",
+        error::evidence_file_limit_reached(95),
+    ));
+    v.push(text(
+        "error.evidence_channel_missing",
+        "",
+        error::evidence_channel_missing(),
+    ));
+    v.push(text(
+        "error.evidence_channel_not_staff_only",
+        "",
+        error::evidence_channel_not_staff_only(),
+    ));
+    {
+        use quack_core::evidence::{FileRefusal, RefusedFile};
+        let refused = |name: &str, why| RefusedFile {
+            filename: name.to_owned(),
+            why,
+        };
+        v.push(text(
+            "error.files_not_allowed",
+            "one",
+            error::files_not_allowed(&[refused("setup.exe", FileRefusal::UnsupportedType)]),
+        ));
+        v.push(text(
+            "error.files_not_allowed",
+            "several",
+            error::files_not_allowed(&[
+                refused("clip.mov", FileRefusal::TooLarge),
+                refused("page.html", FileRefusal::UnsupportedType),
+                refused("**bold**.zip", FileRefusal::UnsupportedType),
+            ]),
+        ));
+    }
+    v.push(text(
+        "error.evidence_not_found",
+        "",
+        error::evidence_not_found(),
+    ));
+    v.push(text(
+        "error.evidence_removed",
+        "",
+        error::evidence_removed(),
+    ));
+    v.push(text(
+        "error.evidence_not_upload",
+        "",
+        error::evidence_not_upload(),
+    ));
+    v.push(text("error.note_changed", "", error::note_changed()));
+    v.push(text("error.note_too_long", "", error::note_too_long()));
+    v.push(text(
+        "error.case_number_invalid",
+        "",
+        error::case_number_invalid(),
+    ));
     v.push(text(
         "error.action_not_found",
         "",

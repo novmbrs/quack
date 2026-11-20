@@ -143,6 +143,69 @@ pub async fn list(
     Ok(Page::of(rows?, page, 100))
 }
 
+/// One case the "Add as evidence" picker offers (§11.1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RecentCase {
+    /// The case.
+    pub id: CaseId,
+    /// Its number.
+    pub number: u64,
+    /// Its member.
+    pub member: MemberId,
+    /// The rule's name in the case's version; `None` for imported cases.
+    pub rule_name: Option<String>,
+    /// When it was created.
+    pub created_at: OffsetDateTime,
+    /// Whether it is voided (still offered, and marked).
+    pub voided: bool,
+}
+
+/// Cases about `member` and cases `moderator` added, newest first, each
+/// side at most `limit` before merging, without repeats, at most `limit`
+/// in all (indexes `cases_member`, `cases_moderator`).
+pub async fn recent(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    member: Option<MemberId>,
+    moderator: AccountId,
+    limit: u32,
+) -> Result<Vec<RecentCase>, DbError> {
+    let rows = obs::run(
+        Select,
+        "cases",
+        sqlx::query!(
+            r#"SELECT c.id AS "id!", c.number AS "number!", c.member_id AS "member_id!",
+                      c.created_at AS "created_at!", c.voided_at, v.definition->>'name' AS rule_name
+               FROM ((SELECT id, number, member_id, rule_id, rule_version, created_at, voided_at FROM cases
+                      WHERE guild_id = $1 AND member_id = $2 ORDER BY number DESC LIMIT $4)
+                     UNION
+                     (SELECT id, number, member_id, rule_id, rule_version, created_at, voided_at FROM cases
+                      WHERE guild_id = $1 AND moderator_id = $3 ORDER BY number DESC LIMIT $4)) c
+               LEFT JOIN rule_versions v ON v.rule_id = c.rule_id AND v.version = c.rule_version
+               ORDER BY c.number DESC
+               LIMIT $4"#,
+            i64::from(guild),
+            member.map(i64::from),
+            i64::from(moderator),
+            i64::from(limit),
+        )
+        .fetch_all(conn),
+    )
+    .await?;
+    rows.into_iter()
+        .map(|r| {
+            Ok(RecentCase {
+                id: CaseId::from_uuid(r.id),
+                number: count(r.number)?,
+                member: id(r.member_id)?,
+                rule_name: r.rule_name,
+                created_at: r.created_at,
+                voided: r.voided_at.is_some(),
+            })
+        })
+        .collect()
+}
+
 /// One of a member's own cases (route 51).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MemberCaseSummary {

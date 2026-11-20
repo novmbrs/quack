@@ -30,7 +30,7 @@ pub(crate) fn card(engine: &Engine, r: &CaseRecords) -> CaseCard {
         }
     };
     let mut evidence = EvidenceSummary::default();
-    for e in &r.evidence {
+    for e in r.evidence.iter().filter(|e| !e.is_removed()) {
         match e.state {
             EvidenceState::Saving => evidence.saving += 1,
             EvidenceState::Saved => evidence.saved += 1,

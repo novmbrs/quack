@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+model:   [Fixed("Quack couldn't find that evidence item on this case. Open the case again to see its evidence.")]

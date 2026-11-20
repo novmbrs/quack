@@ -1,6 +1,6 @@
 ---
 source: crates/quack-text/src/tests/snapshots.rs
 ---
-discord: Case #12 has no evidence yet. Use Add evidence to add message links.
-plain:   Case #12 has no evidence yet. Use Add evidence to add message links.
-model:   [Fixed("Case #12 has no evidence yet. Use Add evidence to add message links.")]
+discord: Case #12 has no evidence yet. Use Add evidence to add message links or files.
+plain:   Case #12 has no evidence yet. Use Add evidence to add message links or files.
+model:   [Fixed("Case #12 has no evidence yet. Use Add evidence to add message links or files.")]

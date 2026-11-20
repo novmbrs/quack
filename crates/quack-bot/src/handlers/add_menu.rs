@@ -88,6 +88,7 @@ async fn begin(
             source,
             private,
             channel,
+            evidence_file: None,
         },
     )
     .await

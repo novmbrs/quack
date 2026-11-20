@@ -9,7 +9,7 @@ use sqlx::PgConnection;
 use sqlx::types::Json;
 use time::OffsetDateTime;
 
-use super::{EmbedSummary, EvidenceFile};
+use super::{EmbedSummary, EvidenceFile, SurroundingMessage};
 use crate::DbError;
 use crate::obs::{self, Insert, Select, Update};
 use crate::pg::{Pg, count, id, int, opt_id};
@@ -29,6 +29,8 @@ pub struct Snapshot {
     pub embeds: Vec<EmbedSummary>,
     /// Files over the caps, only counted.
     pub files_not_saved: u32,
+    /// The messages around it, when they were read (staff-added items).
+    pub surrounding: Option<Vec<SurroundingMessage>>,
 }
 
 /// An admitted file, with its first copy state decided by the caller.
@@ -46,8 +48,9 @@ pub struct NewFile {
     pub content_type: Option<String>,
     /// The size.
     pub size_bytes: u64,
-    /// The original URL.
-    pub original_url: String,
+    /// The original URL; `None` for a dashboard upload, whose bytes are
+    /// staged.
+    pub original_url: Option<String>,
     /// `pending`, `link_only`, `too_large`, or `unsupported_type`.
     pub copy_state: FileCopyState,
 }
@@ -66,8 +69,9 @@ pub async fn save_snapshot(
         "evidence",
         sqlx::query_scalar!(
             "UPDATE evidence SET author_id = $3, content = $4, message_created_at = $5, message_edited_at = $6,
-                                 embeds = $7, files_not_saved = $8
-             WHERE guild_id = $1 AND id = $2 AND state = 'saving' AND message_created_at IS NULL
+                                 embeds = $7, files_not_saved = $8, surrounding = $9
+             WHERE guild_id = $1 AND id = $2 AND kind = 'message' AND state = 'saving'
+               AND message_created_at IS NULL
              RETURNING case_id",
             i64::from(guild),
             evidence.get(),
@@ -77,6 +81,7 @@ pub async fn save_snapshot(
             snapshot.edited_at,
             Json(&snapshot.embeds) as _,
             int::<u32, i32>(snapshot.files_not_saved)?,
+            snapshot.surrounding.as_ref().map(Json) as _,
         )
         .fetch_optional(&mut *conn),
     )
@@ -84,6 +89,18 @@ pub async fn save_snapshot(
     let Some(case) = case else {
         return Ok(false);
     };
+    insert_files(conn, guild, CaseId::from_uuid(case), evidence, files).await?;
+    Ok(true)
+}
+
+/// Inserts an item's files (a snapshot's, or an upload's).
+pub(super) async fn insert_files(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    case: CaseId,
+    evidence: EvidenceId,
+    files: &[NewFile],
+) -> Result<(), DbError> {
     for file in files {
         obs::run(
             Insert,
@@ -94,7 +111,7 @@ pub async fn save_snapshot(
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
                 file.id.get(),
                 i64::from(guild),
-                case,
+                case.get(),
                 evidence.get(),
                 i16::from(file.position),
                 file.attachment_id.map(i64::from),
@@ -108,7 +125,7 @@ pub async fn save_snapshot(
         )
         .await?;
     }
-    Ok(true)
+    Ok(())
 }
 
 struct FileRow {
@@ -120,7 +137,7 @@ struct FileRow {
     filename: String,
     content_type: Option<String>,
     size_bytes: i64,
-    original_url: String,
+    original_url: Option<String>,
     copy_state: Pg<FileCopyState>,
     copy_started_at: Option<OffsetDateTime>,
     copy_channel_id: Option<i64>,
@@ -206,19 +223,18 @@ pub async fn pending_files(
     rows.into_iter().map(EvidenceFile::try_from).collect()
 }
 
-/// A file of a case in this server, with its source message's location
-/// (file routes, §7.4).
+/// A file of a case in this server, with its item (file routes, §7.4).
 pub async fn file(
     conn: &mut PgConnection,
     guild: GuildId,
     case: CaseId,
     file: FileId,
-) -> Result<Option<(EvidenceFile, ChannelId, MessageId)>, DbError> {
+) -> Result<Option<(EvidenceFile, super::Evidence)>, DbError> {
     let row = obs::run(
         Select,
         "evidence_files",
         sqlx::query!(
-            "SELECT e.channel_id, e.message_id FROM evidence_files f JOIN evidence e ON e.id = f.evidence_id
+            "SELECT f.evidence_id FROM evidence_files f
              WHERE f.guild_id = $1 AND f.case_id = $2 AND f.id = $3",
             i64::from(guild),
             case.get(),
@@ -227,7 +243,10 @@ pub async fn file(
         .fetch_optional(&mut *conn),
     )
     .await?;
-    let Some(source) = row else {
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let Some(item) = super::get(conn, guild, EvidenceId::from_uuid(row.evidence_id)).await? else {
         return Ok(None);
     };
     let found = obs::run(
@@ -241,11 +260,7 @@ pub async fn file(
         .fetch_one(conn),
     )
     .await?;
-    Ok(Some((
-        EvidenceFile::try_from(found)?,
-        id(source.channel_id)?,
-        id(source.message_id)?,
-    )))
+    Ok(Some((EvidenceFile::try_from(found)?, item)))
 }
 
 /// Starts a pending file's upload window (§10.4), or keeps the current
@@ -428,7 +443,8 @@ pub async fn fail_pending_files(
     Ok(done.rows_affected())
 }
 
-/// `saving` → `saved`, once the snapshot is stored and no file is pending.
+/// `saving` → `saved`, once no file is pending and the snapshot is stored
+/// (a message), or at least one file was copied (uploaded files).
 pub async fn mark_saved(
     conn: &mut PgConnection,
     guild: GuildId,
@@ -439,7 +455,10 @@ pub async fn mark_saved(
         "evidence",
         sqlx::query!(
             "UPDATE evidence SET state = 'saved', saved_at = now()
-             WHERE guild_id = $1 AND id = $2 AND state = 'saving' AND message_created_at IS NOT NULL
+             WHERE guild_id = $1 AND id = $2 AND state = 'saving'
+               AND (kind = 'message' OR EXISTS
+                      (SELECT 1 FROM evidence_files WHERE evidence_id = $2 AND copy_state = 'copied'))
+               AND (kind = 'upload' OR message_created_at IS NOT NULL)
                AND NOT EXISTS (SELECT 1 FROM evidence_files WHERE evidence_id = $2 AND copy_state = 'pending')",
             i64::from(guild),
             evidence.get(),

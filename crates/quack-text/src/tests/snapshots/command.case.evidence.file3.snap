@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+file3 — Another file to save.
+
+## description
+Another file to save.

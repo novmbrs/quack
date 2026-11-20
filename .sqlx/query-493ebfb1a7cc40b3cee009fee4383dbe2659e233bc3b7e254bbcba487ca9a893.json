@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE evidence SET visible_to_member = $3\n             WHERE guild_id = $1 AND id = $2 AND kind = 'upload' AND removed_at IS NULL\n               AND visible_to_member <> $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "493ebfb1a7cc40b3cee009fee4383dbe2659e233bc3b7e254bbcba487ca9a893"
+}

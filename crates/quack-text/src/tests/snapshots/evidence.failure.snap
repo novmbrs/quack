@@ -7,7 +7,7 @@ tone: Danger
 ### Evidence 2 of 3 · case #12
 Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
 The message was deleted before Quack saved it. If another message shows what happened, add its link.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -23,7 +23,7 @@ tone: Danger
 ### Evidence 2 of 3 · case #12
 Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
 Quack didn't save this message because the moderator who added it can't read the channel. Ask a moderator who can read the channel to add it.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -39,7 +39,7 @@ tone: Danger
 ### Evidence 2 of 3 · case #12
 Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
 Quack couldn't save this message because it can't read the channel. Ask an administrator to allow View Channel and Read Message History for Quack there, then add the link again.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -55,7 +55,7 @@ tone: Danger
 ### Evidence 2 of 3 · case #12
 Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
 Quack didn't save this message because it's from another server. Add a message link from this server.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -71,7 +71,7 @@ tone: Danger
 ### Evidence 2 of 3 · case #12
 Message from <@222> in <#444>, sent <t:1794924309:R> · [Open message](<https://discord.com/channels/111/444/777>)
 Quack couldn't save this message. Add the link again to retry.
-buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Add note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Evidence 2 of 3 · case #12
 Message from Sam in #general, sent on 17 Nov 2026 at 14:05 UTC · Open message
@@ -80,3 +80,26 @@ Quack couldn't save this message. Add the link again to retry.
 Heading [Fixed("Evidence 2 of 3 · case #12")]
 Text [Fixed("Message from "), Person(Person { id: AccountId(222), name: Some("Sam") }), Fixed(" in "), Channel(ChannelRef { id: ChannelId(444), name: Some("general") }), Fixed(", sent "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" · "), Link { text: [Fixed("Open message")], url: "https://discord.com/channels/111/444/777" }]
 Text [Fixed("Quack couldn't save this message. Add the link again to retry.")]
+
+## NoFileCopied
+tone: Danger
+--- discord ---
+### Evidence 2 of 3 · case #12
+Files uploaded by <@333> <t:1794924309:R>.
+Only staff see these files. The member doesn't see them on their case page.
+**Note:** Sent to us by a member in a ticket.
+Quack couldn't copy any of these files to the evidence channel, so none were saved. Check the evidence channel in </setup:1004>, then upload the files again.
+buttons: [Previous · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Next · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 3 } | [Show to member · Secondary] EvidenceVisibility { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), visible: true } | [Edit note · Secondary] EditEvidenceNote(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Remove · Danger] RemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234))
+buttons: [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Evidence 2 of 3 · case #12
+Files uploaded by Ana on 17 Nov 2026 at 14:05 UTC.
+Only staff see these files. The member doesn't see them on their case page.
+Note: Sent to us by a member in a ticket.
+Quack couldn't copy any of these files to the evidence channel, so none were saved. Check the evidence channel in /setup, then upload the files again.
+--- model ---
+Heading [Fixed("Evidence 2 of 3 · case #12")]
+Text [Fixed("Files uploaded by "), Person(Person { id: AccountId(333), name: Some("Ana") }), Fixed(" "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(".")]
+Text [Fixed("Only staff see these files. The member doesn't see them on their case page.")]
+Field "Note" [User("Sent to us by a member in a ticket.")]
+Text [Fixed("Quack couldn't copy any of these files to the evidence channel, so none were saved. Check the evidence channel in "), Command(Setup), Fixed(", then upload the files again.")]

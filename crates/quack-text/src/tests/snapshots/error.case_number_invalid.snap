@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Enter a case number, like 12. It's on the case's receipt.
+plain:   Enter a case number, like 12. It's on the case's receipt.
+model:   [Fixed("Enter a case number, like 12. It's on the case's receipt.")]

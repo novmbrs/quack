@@ -3,8 +3,10 @@
 
 use std::time::Duration;
 
-use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId, MessageId, RuleId};
+use quack_core::ids::{AccountId, AttachmentId, ChannelId, GuildId, MemberId, MessageId, RuleId};
+use serde::{Deserialize, Serialize};
 use sqlx::PgConnection;
+use sqlx::types::Json;
 use time::OffsetDateTime;
 
 use crate::DbError;
@@ -13,6 +15,22 @@ use crate::pg::{count, id, int, opt_id};
 
 /// How long a draft lives after it is created.
 pub const DRAFT_TTL: Duration = Duration::from_mins(15);
+
+/// The `/case add` file option, kept until the draft becomes a case
+/// (§11.6): a Discord interaction attachment.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DraftFile {
+    /// Discord's attachment id.
+    pub attachment_id: AttachmentId,
+    /// Its name.
+    pub filename: String,
+    /// Its content type, when Discord gave one.
+    pub content_type: Option<String>,
+    /// Its size.
+    pub size_bytes: u64,
+    /// Its short-lived CDN URL.
+    pub url: String,
+}
 
 /// A draft.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,6 +51,8 @@ pub struct Draft {
     pub receipt_channel: ChannelId,
     /// The message command's message.
     pub source: Option<(ChannelId, MessageId)>,
+    /// The `/case add` file option.
+    pub evidence_file: Option<DraftFile>,
     /// The values saved so far (field key → value).
     pub values: serde_json::Value,
     /// The next page to save; past the last page means every page is saved.
@@ -60,6 +80,8 @@ pub struct NewDraft {
     pub receipt_channel: ChannelId,
     /// The message command's message.
     pub source: Option<(ChannelId, MessageId)>,
+    /// The `/case add` file option.
+    pub evidence_file: Option<DraftFile>,
 }
 
 /// Creates a draft unless it exists (the first page's submit, or a double
@@ -70,8 +92,9 @@ pub async fn create(conn: &mut PgConnection, draft: &NewDraft) -> Result<bool, D
         "case_drafts",
         sqlx::query!(
             "INSERT INTO case_drafts (id, guild_id, actor_id, member_id, rule_id, rule_version, private,
-                                      receipt_channel_id, source_channel_id, source_message_id, expires_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now() + make_interval(secs => $11))
+                                      receipt_channel_id, source_channel_id, source_message_id, expires_at,
+                                      evidence_file)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now() + make_interval(secs => $11), $12)
              ON CONFLICT (id) DO NOTHING",
             draft.id,
             i64::from(draft.guild),
@@ -84,6 +107,7 @@ pub async fn create(conn: &mut PgConnection, draft: &NewDraft) -> Result<bool, D
             draft.source.map(|(c, _)| i64::from(c)),
             draft.source.map(|(_, m)| i64::from(m)),
             DRAFT_TTL.as_secs_f64(),
+            draft.evidence_file.as_ref().map(Json) as _,
         )
         .execute(conn),
     )
@@ -102,11 +126,12 @@ pub async fn lock(
         Select,
         "case_drafts",
         sqlx::query!(
-            "SELECT id, guild_id, actor_id, member_id, rule_id, rule_version, private, receipt_channel_id,
-                    source_channel_id, source_message_id, values, page, expires_at
+            r#"SELECT id, guild_id, actor_id, member_id, rule_id, rule_version, private, receipt_channel_id,
+                    source_channel_id, source_message_id, values, page, expires_at,
+                    evidence_file AS "evidence_file: Json<DraftFile>"
              FROM case_drafts
              WHERE id = $1 AND guild_id = $2 AND actor_id = $3 AND expires_at > now()
-             FOR UPDATE",
+             FOR UPDATE"#,
             draft,
             i64::from(guild),
             i64::from(actor),
@@ -132,6 +157,7 @@ pub async fn lock(
             private: r.private,
             receipt_channel: id(r.receipt_channel_id)?,
             source,
+            evidence_file: r.evidence_file.map(|f| f.0),
             values: r.values,
             page: count(r.page)?,
             expires_at: r.expires_at,

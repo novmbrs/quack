@@ -15,7 +15,8 @@ use crate::obs::{self, Insert, Select, Update};
 use crate::pg::{Pg, count, id, int};
 
 pub use list::{
-    CaseFilter, CaseSummary, MemberCaseSummary, RuleTally, list, member_cases, member_summary,
+    CaseFilter, CaseSummary, MemberCaseSummary, RecentCase, RuleTally, list, member_cases,
+    member_summary, recent,
 };
 
 /// A case row.

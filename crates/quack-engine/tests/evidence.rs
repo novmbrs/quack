@@ -12,7 +12,7 @@ use quack_core::rule::{Field, FieldKey, FieldKind};
 use quack_db::evidence::Evidence;
 use quack_db::jobs::JobKind;
 use quack_engine::CaseRef;
-use quack_engine::cases::{CaseError, add_evidence, edit_context};
+use quack_engine::cases::{AddEvidence, CaseError, add_evidence, edit_context};
 use quack_engine::port::RefusalKind;
 use quack_testkit::fake::{Call, GuildSetup, Script};
 use quack_testkit::rules_for_tests::{levels, warning};
@@ -48,7 +48,7 @@ async fn add(h: &Harness, case: quack_core::ids::CaseId, links: &[String]) -> Re
         &h.engine,
         &h.moderator(),
         CaseRef::Id(case),
-        links,
+        &AddEvidence::links(links),
         &h.key("eam"),
     )
     .await?;
@@ -229,7 +229,10 @@ async fn quack_without_access_and_a_moderator_without_access() -> Result<()> {
     add(&h, case, &[link(secret, s)]).await?;
     h.settle().await?;
     let found = items(&h, case).await?;
-    let item = found.iter().find(|e| e.message == s).context("item")?;
+    let item = found
+        .iter()
+        .find(|e| e.message == Some(s))
+        .context("item")?;
     assert_eq!(item.failure, Some(EvidenceFailure::ModeratorNoAccess));
     // A private thread the moderator isn't in, under a channel they see.
     let thread = h.fake.world(|w| {
@@ -251,7 +254,10 @@ async fn quack_without_access_and_a_moderator_without_access() -> Result<()> {
     add(&h, case, &[link(thread, t)]).await?;
     h.settle().await?;
     let found = items(&h, case).await?;
-    let item = found.iter().find(|e| e.message == t).context("item")?;
+    let item = found
+        .iter()
+        .find(|e| e.message == Some(t))
+        .context("item")?;
     assert_eq!(item.failure, Some(EvidenceFailure::ModeratorNoAccess));
     Ok(())
 }
@@ -274,7 +280,7 @@ async fn a_failed_item_is_captured_again_when_added_again() -> Result<()> {
         &h.engine,
         &h.moderator(),
         CaseRef::Id(case),
-        &[link(channel, m)],
+        &AddEvidence::links(&[link(channel, m)]),
         &h.key("eam"),
     )
     .await?;
@@ -285,7 +291,7 @@ async fn a_failed_item_is_captured_again_when_added_again() -> Result<()> {
         &h.engine,
         &h.moderator(),
         CaseRef::Id(case),
-        &[link(channel, m)],
+        &AddEvidence::links(&[link(channel, m)]),
         &h.key("eam"),
     )
     .await?;
@@ -317,7 +323,7 @@ async fn the_cap_holds_under_concurrent_adds() -> Result<()> {
                 &h.engine,
                 &h.moderator(),
                 CaseRef::Id(case),
-                &links,
+                &AddEvidence::links(&links),
                 &h.key("eam"),
             )
             .await

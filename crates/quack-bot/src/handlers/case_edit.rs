@@ -191,7 +191,7 @@ async fn add(a: &Acked<'_>, case: CaseId, links: &[String]) -> Result<Msg, Failu
         engine,
         &principal,
         CaseRef::Id(case),
-        links,
+        &cases::AddEvidence::links(links),
         &op_key(a.ix, "case_add_evidence"),
     )
     .await
@@ -211,7 +211,14 @@ async fn add(a: &Acked<'_>, case: CaseId, links: &[String]) -> Result<Msg, Failu
     })?;
     Ok(Msg::text(
         Tone::Success,
-        quack_text::evidence::added(added.number, added.new, added.retrying, added.already_saved),
+        quack_text::evidence::added(&quack_text::evidence::Added {
+            number: added.number,
+            new: added.new,
+            retrying: added.retrying,
+            restored: added.restored,
+            already_saved: added.already_saved,
+            files: added.files,
+        }),
     ))
 }
 
@@ -231,7 +238,9 @@ pub(crate) async fn view_evidence(
 }
 
 async fn show_item(a: &Acked<'_>, case: CaseId, item: u32) -> Result<Msg, Failure> {
-    let v = view(a.engine(), a.ix, case).await?;
+    let mut v = view(a.engine(), a.ix, case).await?;
+    // Removed items are only listed on the dashboard (§7.5).
+    v.evidence.retain(|e| e.removed.is_none());
     let total = u32::try_from(v.evidence.len()).unwrap_or(u32::MAX);
     if total == 0 {
         return Ok(Msg::text(
@@ -255,12 +264,16 @@ fn evidence_item(
     quack_text::evidence::EvidenceItem {
         case: v.id,
         number: v.number,
+        evidence: e.id,
+        kind: e.kind,
         item,
         total,
         state: e.state,
         failure: e.failure,
+        added_by: e.added_by.map(Person::unnamed),
+        added_at: e.created_at,
         author: e.author_id.map(Person::unnamed),
-        channel: channel_ref(e.channel_id),
+        channel: e.channel_id.map(channel_ref),
         sent_at: e.message_created_at,
         edited_at: e.message_edited_at,
         url: e.url.clone(),
@@ -277,6 +290,13 @@ fn evidence_item(
             .collect(),
         files_not_saved: e.files_not_saved,
         channel_not_staff_only: false,
+        note: e.note.clone(),
+        visible_to_member: e.visible_to_member,
+        surrounding: e
+            .surrounding
+            .as_ref()
+            .map(|s| u32::try_from(s.len()).unwrap_or(u32::MAX)),
+        gallery: Vec::new(),
     }
 }
 

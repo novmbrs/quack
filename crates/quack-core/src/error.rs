@@ -112,6 +112,34 @@ pub enum DomainError {
     /// More message links than one add-evidence call accepts.
     #[error("too many links")]
     TooManyLinks,
+    /// More files than one upload accepts (10).
+    #[error("too many files")]
+    TooManyFiles,
+    /// The case's uploaded files would pass the per-case cap (100); `count`
+    /// is how many files its items already have.
+    #[error("evidence file limit reached")]
+    EvidenceFileLimitReached {
+        /// Files the case's items (not removed) already have.
+        count: u32,
+    },
+    /// Uploading needs an evidence channel, and none is set (or it is gone).
+    #[error("no evidence channel")]
+    EvidenceChannelMissing,
+    /// Uploading needs a staff-only evidence channel, and this one isn't.
+    #[error("evidence channel not staff-only")]
+    EvidenceChannelNotStaffOnly,
+    /// No such evidence item on this case.
+    #[error("evidence not found")]
+    EvidenceNotFound,
+    /// The evidence item was removed, so it can't be changed.
+    #[error("evidence removed")]
+    EvidenceRemoved,
+    /// Only uploaded files can be shown to or hidden from the member.
+    #[error("evidence not an upload")]
+    EvidenceNotUpload,
+    /// The note changed since the editor loaded it.
+    #[error("note changed")]
+    NoteChanged,
     /// The settings changed since the editor loaded them.
     #[error("settings changed")]
     SettingsChanged,
@@ -127,7 +155,10 @@ impl DomainError {
             Self::MissingCapability(_) => "missing_capability",
             Self::MfaRequired => "mfa_required",
             Self::MemberRefused(_) => "member_refused",
-            Self::CaseNotFound | Self::RuleNotFound | Self::AppealNotFound => "not_found",
+            Self::CaseNotFound
+            | Self::RuleNotFound
+            | Self::AppealNotFound
+            | Self::EvidenceNotFound => "not_found",
             Self::CaseAlreadyVoided => "case_already_voided",
             Self::CaseVoided => "case_voided",
             Self::ReplacementInvalid => "replacement_invalid",
@@ -144,8 +175,17 @@ impl DomainError {
             Self::AppealChanged => "appeal_changed",
             Self::AppealExists => "appeal_exists",
             Self::AppealNotAllowed => "appeal_not_allowed",
-            Self::EvidenceLimitReached { .. } => "evidence_limit_reached",
+            Self::EvidenceLimitReached { .. } | Self::EvidenceFileLimitReached { .. } => {
+                "evidence_limit_reached"
+            }
             Self::TooManyLinks => "too_many_links",
+            Self::TooManyFiles => "too_many_files",
+            Self::EvidenceChannelMissing | Self::EvidenceChannelNotStaffOnly => {
+                "evidence_channel_unavailable"
+            }
+            Self::EvidenceRemoved => "evidence_removed",
+            Self::EvidenceNotUpload => "evidence_not_upload",
+            Self::NoteChanged => "note_changed",
             Self::SettingsChanged => "settings_changed",
             Self::TicketNotOpen => "ticket_not_open",
         }
@@ -155,13 +195,18 @@ impl DomainError {
     pub const fn http_status(&self) -> u16 {
         match self {
             Self::MissingCapability(_) | Self::MfaRequired => 403,
-            Self::CaseNotFound | Self::RuleNotFound | Self::AppealNotFound => 404,
+            Self::CaseNotFound
+            | Self::RuleNotFound
+            | Self::AppealNotFound
+            | Self::EvidenceNotFound => 404,
             Self::MemberRefused(_)
             | Self::RuleArchived
             | Self::AppealNotAllowed
             | Self::TimeoutWindowPassed
             | Self::EvidenceLimitReached { .. }
-            | Self::TooManyLinks => 422,
+            | Self::EvidenceFileLimitReached { .. }
+            | Self::TooManyLinks
+            | Self::TooManyFiles => 422,
             _ => 409,
         }
     }
@@ -200,6 +245,21 @@ mod tests {
                 422,
             ),
             (DomainError::AppealChanged, "appeal_changed", 409),
+            (DomainError::TooManyFiles, "too_many_files", 422),
+            (
+                DomainError::EvidenceFileLimitReached { count: 95 },
+                "evidence_limit_reached",
+                422,
+            ),
+            (
+                DomainError::EvidenceChannelNotStaffOnly,
+                "evidence_channel_unavailable",
+                409,
+            ),
+            (DomainError::EvidenceNotFound, "not_found", 404),
+            (DomainError::EvidenceRemoved, "evidence_removed", 409),
+            (DomainError::EvidenceNotUpload, "evidence_not_upload", 409),
+            (DomainError::NoteChanged, "note_changed", 409),
             (DomainError::CaseNotFound, "not_found", 404),
             (DomainError::MfaRequired, "mfa_required", 403),
             (

@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+link — A link to a message in this server.
+
+## description
+A link to a message in this server.

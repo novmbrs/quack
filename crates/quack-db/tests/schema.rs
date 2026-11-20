@@ -444,8 +444,8 @@ async fn children_must_match_their_parents_server_case_and_member(
         b,
         c.id,
         EvidenceId::from_uuid(Uuid::now_v7()),
-        channel,
-        message,
+        (channel, message),
+        None,
         None,
     )
     .await;
@@ -651,5 +651,98 @@ async fn historical_rows_may_lack_what_go_did_not_keep(
     // Only a ticket still opening needs its entry channel.
     assert_eq!(try_sql(&db, &ticket("opening", "")).await?, check);
     assert_eq!(try_sql(&db, &ticket("closed", ", now()")).await?, None);
+    Ok(())
+}
+
+/// Migration 0007 (§15.10): an uploaded-files item has no source message, a
+/// saved message is always visible to the member, removal names who did
+/// it, staged bytes belong to a file of their own server, and housekeeping
+/// drops bytes whose file is no longer pending.
+#[sqlx::test(migrator = "quack_db::MIGRATOR")]
+async fn evidence_items_keep_their_shape(
+    _: PgPoolOptions,
+    options: PgConnectOptions,
+) -> Result<()> {
+    let db = db(options).await?;
+    let g = guild(&db, 1).await?;
+    guild(&db, 2).await?;
+    let (r, _) = rule(&db, g, "Spam").await?;
+    let c = case(&db, g, member_id(7), r, None).await?;
+    let check = Some("23514".to_owned());
+    let item = |kind: &str, source: &str, visible: bool, removed: &str| {
+        format!(
+            "INSERT INTO evidence (guild_id, case_id, kind, channel_id, message_id, visible_to_member,
+                                   removed_at, removed_by)
+             VALUES (1, '{}', '{kind}', {source}, {visible}, {removed})",
+            c.id.get()
+        )
+    };
+    assert_eq!(
+        try_sql(&db, &item("upload", "NULL, NULL", false, "NULL, NULL")).await?,
+        None
+    );
+    assert_eq!(
+        try_sql(&db, &item("upload", "3, 4", false, "NULL, NULL")).await?,
+        check
+    );
+    assert_eq!(
+        try_sql(&db, &item("message", "NULL, NULL", true, "NULL, NULL")).await?,
+        check
+    );
+    assert_eq!(
+        try_sql(&db, &item("message", "3, 5", false, "NULL, NULL")).await?,
+        check
+    );
+    assert_eq!(
+        try_sql(&db, &item("message", "3, 6", true, "now(), NULL")).await?,
+        check
+    );
+    assert_eq!(
+        try_sql(&db, &item("message", "3, 7", true, "now(), 2")).await?,
+        None
+    );
+    let file = Uuid::now_v7();
+    let evidence: Uuid = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "SELECT id FROM evidence WHERE guild_id = 1 AND kind = 'upload' AND case_id = '{}'",
+        c.id.get()
+    )))
+    .fetch_one(db.pool())
+    .await?;
+    assert_eq!(
+        try_sql(
+            &db,
+            &format!(
+                "INSERT INTO evidence_files (id, guild_id, case_id, evidence_id, position, filename, size_bytes,
+                                             original_url)
+                 VALUES ('{file}', 1, '{}', '{evidence}', 1, 'a.png', 3, NULL)",
+                c.id.get()
+            )
+        )
+        .await?,
+        None
+    );
+    let bytes = |guild: u8| {
+        format!(
+            "INSERT INTO evidence_upload_bytes (file_id, guild_id, bytes) VALUES ('{file}', {guild}, '\\x010203')"
+        )
+    };
+    assert_eq!(
+        try_sql(&db, &bytes(2)).await?,
+        Some("23503".to_owned()),
+        "another server"
+    );
+    assert_eq!(try_sql(&db, &bytes(1)).await?, None);
+    let mut conn = db.conn().await?;
+    let kept =
+        quack_db::housekeeping::run(&mut conn, &[0; 8], std::time::Duration::from_secs(5)).await?;
+    assert_eq!(kept.staged_uploads, 0, "still pending");
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "UPDATE evidence_files SET copy_state = 'copy_failed' WHERE id = '{file}'"
+    )))
+    .execute(&mut *conn)
+    .await?;
+    let swept =
+        quack_db::housekeeping::run(&mut conn, &[0; 8], std::time::Duration::from_secs(5)).await?;
+    assert_eq!(swept.staged_uploads, 1);
     Ok(())
 }

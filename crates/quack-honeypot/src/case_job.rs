@@ -133,6 +133,7 @@ async fn decide(engine: &Engine, guild: GuildId, batch: &[Hit]) -> Result<Settle
         pinned_version: None,
         context: Vec::new(),
         evidence_links: Vec::new(),
+        evidence_files: Vec::new(),
         source_message: Some(MessageLink {
             guild_id: guild,
             channel_id: first.channel,

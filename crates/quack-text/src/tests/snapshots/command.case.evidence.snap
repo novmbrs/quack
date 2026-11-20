@@ -1,0 +1,7 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+evidence — Add message links or files to a case as evidence.
+
+## description
+Add message links or files to a case as evidence.

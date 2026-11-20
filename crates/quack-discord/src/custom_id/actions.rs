@@ -14,6 +14,16 @@ impl From<&ButtonAction> for CustomId {
             B::EditContext(c) => Self::EditContext(c),
             B::AddEvidence(c) => Self::AddEvidence(c),
             B::ViewEvidence { case, item } => Self::ViewEvidence { case, item },
+            B::EvidenceSurrounding(e) => Self::EvidenceSurrounding(e),
+            B::EvidenceVisibility { evidence, visible } => {
+                Self::EvidenceVisibility { evidence, visible }
+            }
+            B::EditEvidenceNote(e) => Self::EditEvidenceNote(e),
+            B::RemoveEvidence(e) => Self::RemoveEvidence(e),
+            B::ConfirmRemoveEvidence(e) => Self::ConfirmRemoveEvidence(e),
+            B::AddAsEvidenceByNumber { channel, message } => {
+                Self::AddAsEvidenceByNumber { channel, message }
+            }
             B::VoidCase(c) => Self::VoidCase(c),
             B::History { member, page } => Self::History { member, page },
             B::CaseListPage { page, member, rule } => Self::CaseList { page, member, rule },
@@ -44,6 +54,9 @@ impl From<SelectAction> for CustomId {
         match action {
             SelectAction::OpenCase => Self::CasePicker,
             SelectAction::PickRule(draft) => Self::RulePicker(draft),
+            SelectAction::AddAsEvidence { channel, message } => {
+                Self::AddAsEvidence { channel, message }
+            }
             SelectAction::Setup(area, op) => Self::Setup(area, op),
         }
     }
@@ -55,6 +68,10 @@ impl From<&ModalAction> for CustomId {
         match *action {
             M::EditContext { case, revision } => Self::EditContextModal { case, revision },
             M::AddEvidence(c) => Self::AddEvidenceModal(c),
+            M::EvidenceNote { evidence, revision } => {
+                Self::EvidenceNoteModal { evidence, revision }
+            }
+            M::AddAsEvidence { channel, message } => Self::AddAsEvidenceModal { channel, message },
             M::VoidCase(c) => Self::VoidCaseModal(c),
             M::DraftPage(p) => Self::DraftPageModal(p),
             M::Appeal(c) => Self::AppealModal(c),
@@ -77,6 +94,9 @@ pub fn encode_input_id(id: &InputId) -> String {
         }
         InputId::Reason => "reason".to_owned(),
         InputId::Links => "links".to_owned(),
+        InputId::Files => "files".to_owned(),
+        InputId::Note => "note".to_owned(),
+        InputId::CaseNumber => "case".to_owned(),
         InputId::Statement => "statement".to_owned(),
         InputId::Invite => "invite".to_owned(),
         InputId::Warning => "warning".to_owned(),
@@ -88,6 +108,9 @@ pub fn decode_input_id(raw: &str) -> Option<InputId> {
     Some(match raw {
         "reason" => InputId::Reason,
         "links" => InputId::Links,
+        "files" => InputId::Files,
+        "note" => InputId::Note,
+        "case" => InputId::CaseNumber,
         "statement" => InputId::Statement,
         "invite" => InputId::Invite,
         "warning" => InputId::Warning,

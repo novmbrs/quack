@@ -266,3 +266,42 @@ proptest! {
         }
     }
 }
+
+/// Evidence galleries (§11.11) are Media Galleries whose items are
+/// spoilered; a URL that isn't `https://` is left out.
+#[test]
+fn a_gallery_is_a_spoilered_media_gallery() {
+    use quack_text::model::GalleryItem;
+    let item = |url: &str| GalleryItem {
+        url: url.to_owned(),
+        description: Some("proof.png".to_owned()),
+        spoiler: true,
+    };
+    let msg = Msg::new(Tone::Neutral)
+        .block(Block::Text(Text::fixed("before")))
+        .block(Block::Gallery(vec![
+            item("https://cdn.discordapp.com/attachments/1/2/SPOILER_proof.png"),
+            item("javascript:alert(1)"),
+        ]));
+    let rendered = render(&msg, &ids());
+    let value = json(&rendered);
+    let gallery = &value[0]["components"][1];
+    assert_eq!(gallery["type"], 12, "{value}");
+    assert_eq!(gallery["items"].as_array().map(Vec::len), Some(1));
+    assert_eq!(gallery["items"][0]["spoiler"], true);
+    assert_eq!(gallery["items"][0]["description"], "proof.png");
+}
+
+/// The add-evidence modal's file field is a File Upload in a Label.
+#[test]
+fn the_files_input_is_a_file_upload() {
+    let modal = render_modal(&quack_text::evidence::modal(case(4), 12));
+    let wire = modal.wire_components();
+    let upload = &wire[1]["component"];
+    assert_eq!(upload["type"], 19, "{wire}");
+    assert_eq!(upload["custom_id"], "files");
+    assert_eq!(upload["max_values"], 10);
+    assert_eq!(upload["min_values"], 0);
+    assert_eq!(upload["required"], false);
+    assert_eq!(wire[2]["component"]["custom_id"], "note");
+}

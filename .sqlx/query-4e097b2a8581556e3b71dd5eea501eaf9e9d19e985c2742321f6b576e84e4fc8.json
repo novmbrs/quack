@@ -16,7 +16,8 @@
                 "moderator_no_access",
                 "quack_no_access",
                 "other_server",
-                "discord_error"
+                "discord_error",
+                "no_file_copied"
               ]
             }
           }

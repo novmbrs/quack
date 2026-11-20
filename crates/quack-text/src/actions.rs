@@ -3,7 +3,9 @@
 //! These carry ids, never authority: `quack-discord` encodes each one as a
 //! custom id (§11.5), and every click is authorized again when it arrives.
 
-use quack_core::ids::{ActionId, AppealId, CaseId, MemberId, RuleId, TicketId};
+use quack_core::ids::{
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, MemberId, MessageId, RuleId, TicketId,
+};
 use quack_core::rule::FieldKey;
 
 /// A `/setup` area (§11.8).
@@ -78,12 +80,35 @@ pub enum ButtonAction {
     EditContext(CaseId),
     /// Open the add-evidence modal (`ea`).
     AddEvidence(CaseId),
-    /// Show one evidence item, 1-based (`ev`).
+    /// Show one evidence item, 1-based among items that aren't removed
+    /// (`ev`).
     ViewEvidence {
         /// The case.
         case: CaseId,
         /// Which item.
         item: u32,
+    },
+    /// Show the messages saved around an item's message (`evs`).
+    EvidenceSurrounding(EvidenceId),
+    /// Show an uploaded-files item to the member, or hide it (`evv`).
+    EvidenceVisibility {
+        /// The item.
+        evidence: EvidenceId,
+        /// Whether the member should see it.
+        visible: bool,
+    },
+    /// Open the note modal, prefilled (`evn`).
+    EditEvidenceNote(EvidenceId),
+    /// Ask to confirm removing an item (`evr`).
+    RemoveEvidence(EvidenceId),
+    /// Remove an item after confirming (`evrc`).
+    ConfirmRemoveEvidence(EvidenceId),
+    /// "Add as evidence": open the case number modal (`exn`).
+    AddAsEvidenceByNumber {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
     },
     /// Open the void modal (`vd`).
     VoidCase(CaseId),
@@ -163,6 +188,13 @@ pub enum SelectAction {
     OpenCase,
     /// Set a draft's rule (`rp`).
     PickRule(CaseId),
+    /// "Add as evidence": add the message to the chosen case (`exs`).
+    AddAsEvidence {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
+    },
     /// A `/setup` select (`su`): a channel or the honeypot rule.
     Setup(SetupArea, SetupOp),
 }
@@ -190,8 +222,22 @@ pub enum ModalAction {
         /// The context revision the modal was opened at.
         revision: u32,
     },
-    /// Add evidence links (`eam`).
+    /// Add evidence: links, files, and a note (`eam`).
     AddEvidence(CaseId),
+    /// Save an item's note (`evnm`).
+    EvidenceNote {
+        /// The item.
+        evidence: EvidenceId,
+        /// The note revision the modal was opened at.
+        revision: u32,
+    },
+    /// "Add as evidence" by case number, with a note (`exm`).
+    AddAsEvidence {
+        /// The message's channel.
+        channel: ChannelId,
+        /// The message.
+        message: MessageId,
+    },
     /// Void a case (`vdm`).
     VoidCase(CaseId),
     /// Save a `/case add` form page (`cd`).
@@ -227,6 +273,12 @@ pub enum InputId {
     Reason,
     /// Message links, one per line.
     Links,
+    /// Uploaded files (a file upload field).
+    Files,
+    /// A staff note.
+    Note,
+    /// A case number.
+    CaseNumber,
     /// The member's appeal statement.
     Statement,
     /// The rejoin invite link.

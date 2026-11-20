@@ -3,7 +3,7 @@
 use quack_core::action::{
     ActionFailure, ActionKind, ActionSkipReason, ActionState, AttemptOutcome,
 };
-use quack_core::evidence::{EvidenceFailure, EvidenceState, FileCopyState};
+use quack_core::evidence::{EvidenceFailure, EvidenceKind, EvidenceState, FileCopyState};
 use quack_core::ids::{AccountId, ActionId, ChannelId, EvidenceId, FileId, MessageId};
 use quack_db::evidence::EmbedSummary;
 use quack_text::render::plain;
@@ -95,23 +95,42 @@ pub struct AttemptItem {
     pub discord_code: Option<u32>,
 }
 
-/// One saved message.
+/// One evidence item as staff see it: a saved message or uploaded files.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct EvidenceItem {
     /// The item.
     pub id: EvidenceId,
+    /// A saved message or uploaded files.
+    pub kind: EvidenceKind,
     /// Its state.
     pub state: EvidenceState,
     /// Why it failed.
     pub failure: Option<EvidenceFailure>,
     /// The state sentence.
     pub state_text: String,
-    /// The message's channel.
-    pub channel_id: ChannelId,
-    /// The message.
-    pub message_id: MessageId,
-    /// The message's link.
-    pub url: String,
+    /// The message's channel (`None` for uploaded files).
+    pub channel_id: Option<ChannelId>,
+    /// The message (`None` for uploaded files).
+    pub message_id: Option<MessageId>,
+    /// The message's link (`None` for uploaded files).
+    pub url: Option<String>,
+    /// Whether the member sees it on their case page (always for a saved
+    /// message; uploads start staff-only).
+    pub visible_to_member: bool,
+    /// The staff note.
+    pub note: Option<String>,
+    /// The note's revision, sent back with an edit.
+    pub note_revision: u32,
+    /// Who last changed the note.
+    pub note_updated_by: Option<AccountId>,
+    /// When the note last changed.
+    #[serde(with = "time::serde::rfc3339::option")]
+    pub note_updated_at: Option<OffsetDateTime>,
+    /// Set once staff removed it (shown collapsed; hidden everywhere else).
+    pub removed: Option<RemovedItem>,
+    /// Messages around a staff-added message, oldest first; `None` when
+    /// none were saved.
+    pub surrounding: Option<Vec<SurroundingItem>>,
     /// The message's author.
     pub author_id: Option<AccountId>,
     /// Its text.
@@ -135,7 +154,37 @@ pub struct EvidenceItem {
     pub created_at: OffsetDateTime,
 }
 
-/// One file of a saved message.
+/// Who removed an item, and when.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct RemovedItem {
+    /// The staff member.
+    pub by: AccountId,
+    /// When.
+    #[serde(with = "time::serde::rfc3339")]
+    pub at: OffsetDateTime,
+    /// `evidence.removed_by`, naming them.
+    pub text: String,
+}
+
+/// One message saved around a linked message (text only).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct SurroundingItem {
+    /// The message.
+    pub message_id: MessageId,
+    /// Before the linked message (else after).
+    pub before: bool,
+    /// Its author.
+    pub author_id: AccountId,
+    /// Its text (at most 500 characters).
+    pub content: Option<String>,
+    /// When it was sent.
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// How many files it had (never copied).
+    pub files: u32,
+}
+
+/// One file of an evidence item.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct EvidenceFileItem {
     /// The file.
@@ -207,15 +256,37 @@ pub(super) fn action_item(
 pub(super) fn evidence_item(r: &CaseRecords, e: &quack_db::evidence::Evidence) -> EvidenceItem {
     EvidenceItem {
         id: e.id,
+        kind: e.kind,
         state: e.state,
         failure: e.failure,
         state_text: plain(&quack_text::evidence::state_text(e.state, e.failure)),
         channel_id: e.channel,
         message_id: e.message,
-        url: format!(
-            "https://discord.com/channels/{}/{}/{}",
-            e.guild, e.channel, e.message
-        ),
+        url: e
+            .source()
+            .map(|(c, m)| format!("https://discord.com/channels/{}/{c}/{m}", e.guild)),
+        visible_to_member: e.visible_to_member,
+        note: e.note.clone(),
+        note_revision: e.note_revision,
+        note_updated_by: e.note_updated.and_then(|(_, by)| by),
+        note_updated_at: e.note_updated.map(|(at, _)| at),
+        removed: e.removed.map(|(at, by)| RemovedItem {
+            by,
+            at,
+            text: plain(&quack_text::evidence::removed_by(&r.names.person(by), at)),
+        }),
+        surrounding: e.surrounding.as_ref().map(|list| {
+            list.iter()
+                .map(|m| SurroundingItem {
+                    message_id: m.message_id,
+                    before: m.before,
+                    author_id: m.author_id,
+                    content: m.content.clone(),
+                    created_at: m.created_at,
+                    files: m.files,
+                })
+                .collect()
+        }),
         author_id: e.author,
         content: e.content.clone(),
         message_created_at: e.message_created_at,

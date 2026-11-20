@@ -1,0 +1,61 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.id AS \"id!\", c.number AS \"number!\", c.member_id AS \"member_id!\",\n                      c.created_at AS \"created_at!\", c.voided_at, v.definition->>'name' AS rule_name\n               FROM ((SELECT id, number, member_id, rule_id, rule_version, created_at, voided_at FROM cases\n                      WHERE guild_id = $1 AND member_id = $2 ORDER BY number DESC LIMIT $4)\n                     UNION\n                     (SELECT id, number, member_id, rule_id, rule_version, created_at, voided_at FROM cases\n                      WHERE guild_id = $1 AND moderator_id = $3 ORDER BY number DESC LIMIT $4)) c\n               LEFT JOIN rule_versions v ON v.rule_id = c.rule_id AND v.version = c.rule_version\n               ORDER BY c.number DESC\n               LIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "number!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "member_id!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "voided_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "rule_name",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "08f28c0bf158b59a5eb16fe6ffb53ad999552fdb48f455d8ffe67e3b2ccb7044"
+}

@@ -21,7 +21,8 @@ pub use card::{CardAction, CaseCard, EvidenceSummary, Imported, Voided, card};
 pub use edit::{context_modal, context_saved, context_too_many_fields};
 pub use list::{CaseRow, HistoryTotals, ListFilter, ListPage, history, list};
 pub use receipt::{
-    ReceiptView, receipt, receipt_post_failed, receipt_posted, receipt_replayed, saved_unconfirmed,
+    ReceiptView, receipt, receipt_post_failed, receipt_posted, receipt_posted_reply,
+    receipt_replayed, saved_unconfirmed,
 };
 pub use void::{VoidResult, void_done, void_modal, void_reason_appeal_accepted};
 

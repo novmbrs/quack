@@ -21,7 +21,8 @@ use twilight_model::channel::ChannelType;
 use twilight_model::channel::message::Component;
 use twilight_model::channel::message::component::{
     ActionRow, Button as TwButton, ButtonStyle as TwButtonStyle, Container, FileDisplay,
-    SelectMenu, SelectMenuOption, SelectMenuType, Separator, TextDisplay, UnfurledMediaItem,
+    MediaGallery, MediaGalleryItem, SelectMenu, SelectMenuOption, SelectMenuType, Separator,
+    TextDisplay, UnfurledMediaItem,
 };
 
 use crate::custom_id::{CustomId, encode_select_value};
@@ -83,6 +84,33 @@ fn blocks(msg: &Msg, commands: &CommandIds) -> Vec<Component> {
                     id: None,
                     spoiler: None,
                 }));
+            }
+            Block::Gallery(items) => {
+                flush(&mut run, &mut out);
+                let items: Vec<MediaGalleryItem> = items
+                    .iter()
+                    .filter_map(|i| {
+                        Some(MediaGalleryItem {
+                            description: i
+                                .description
+                                .as_deref()
+                                .map(|d| d.chars().take(1024).collect()),
+                            media: UnfurledMediaItem {
+                                content_type: None,
+                                height: None,
+                                proxy_url: None,
+                                url: quack_text::fmt::safe_url(&i.url)
+                                    .filter(|u| u.starts_with("https://"))?,
+                                width: None,
+                            },
+                            spoiler: i.spoiler.then_some(true),
+                        })
+                    })
+                    .take(10)
+                    .collect();
+                if !items.is_empty() {
+                    out.push(Component::MediaGallery(MediaGallery { id: None, items }));
+                }
             }
             text => {
                 if let Some(markdown) = block_markdown(text, commands) {

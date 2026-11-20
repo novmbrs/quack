@@ -126,6 +126,7 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
             source: None,
             private,
             channel,
+            evidence_file: None,
         };
         start(engine, &principal, &form)
             .await
@@ -193,6 +194,7 @@ async fn apply_now(
             source: None,
             private,
             channel,
+            evidence_file: None,
         };
         start(engine, &principal, &form)
             .await
@@ -213,6 +215,7 @@ async fn apply_now(
         pinned_version: None,
         context: Vec::new(),
         evidence_links: Vec::new(),
+        evidence_files: Vec::new(),
         source_message: None,
         receipt: Some(receipt(a.ix, private, channel)),
         replaces: None,

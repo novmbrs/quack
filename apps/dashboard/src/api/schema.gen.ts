@@ -1587,7 +1587,7 @@ export interface components {
             retrying: number;
         };
         /** @enum {string} */
-        EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error";
+        EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error" | "no_file_copied";
         /** @description One file of a saved message. */
         EvidenceFile: {
             content_type?: string | null;
@@ -1951,7 +1951,7 @@ export interface components {
             ticket_id?: string | null;
         };
         /** @enum {string} */
-        ModLogKind: "case_created" | "case_create_refused" | "case_voided" | "case_context_edited" | "evidence_added" | "action_done" | "action_failed" | "action_retry_requested" | "action_dismissed" | "action_undo_requested" | "action_undo_skipped" | "dm_sent" | "dm_failed" | "appeal_submitted" | "appeal_information_requested" | "appeal_information_provided" | "appeal_accepted" | "appeal_rejected" | "appeal_closed" | "appeal_reopened" | "rule_created" | "rule_edited" | "rule_archived" | "rule_restored" | "rule_imported" | "settings_changed" | "module_enabled" | "module_disabled" | "module_settings_changed" | "quack_joined" | "quack_left" | "channel_setting_cleared" | "log_channel_failed" | "ticket_opened" | "ticket_closed" | "honeypot_case_failed" | "legacy";
+        ModLogKind: "case_created" | "case_create_refused" | "case_voided" | "case_context_edited" | "evidence_added" | "action_done" | "action_failed" | "action_retry_requested" | "action_dismissed" | "action_undo_requested" | "action_undo_skipped" | "dm_sent" | "dm_failed" | "appeal_submitted" | "appeal_information_requested" | "appeal_information_provided" | "appeal_accepted" | "appeal_rejected" | "appeal_closed" | "appeal_reopened" | "rule_created" | "rule_edited" | "rule_archived" | "rule_restored" | "rule_imported" | "settings_changed" | "module_enabled" | "module_disabled" | "module_settings_changed" | "quack_joined" | "quack_left" | "channel_setting_cleared" | "log_channel_failed" | "ticket_opened" | "ticket_closed" | "honeypot_case_failed" | "legacy" | "evidence_removed" | "evidence_visibility_changed";
         /** @description Route 35's body. */
         ModLogPage: {
             entries: components["schemas"]["ModLogEntry"][];

@@ -78,9 +78,10 @@ impl ModLogKind {
             K::CaseCreated => [Required, Required, Absent, Absent, Required, Absent],
             K::CaseCreateRefused => [Absent, Required, Absent, Absent, Required, Absent],
             K::CaseVoided => [Required, Required, Optional, Absent, Absent, Absent],
-            K::CaseContextEdited | K::EvidenceAdded => {
-                [Required, Required, Absent, Absent, Absent, Absent]
-            }
+            K::CaseContextEdited
+            | K::EvidenceAdded
+            | K::EvidenceRemoved
+            | K::EvidenceVisibilityChanged => [Required, Required, Absent, Absent, Absent, Absent],
             K::ActionDone
             | K::ActionFailed
             | K::ActionRetryRequested

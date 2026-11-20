@@ -128,6 +128,7 @@ async fn add_case(
         pinned_version: body.rule_version,
         context,
         evidence_links: body.evidence_links,
+        evidence_files: Vec::new(),
         source_message: None,
         receipt: None,
         replaces,
@@ -320,8 +321,8 @@ async fn add_evidence(
     if body.links.is_empty() {
         return Err(invalid("links"));
     }
-    let added =
-        cases::add_evidence(state.engine(), &staff.principal, case, &body.links, &key.0).await;
+    let add = cases::AddEvidence::links(&body.links);
+    let added = cases::add_evidence(state.engine(), &staff.principal, case, &add, &key.0).await;
     let added = match added {
         Ok(a) => a,
         Err(e) => {
@@ -334,12 +335,15 @@ async fn add_evidence(
     };
     let id: CaseId = added.case;
     let view = read(&state, &staff, CaseRef::Id(id)).await?;
-    let message = quack_text::render::plain(&quack_text::evidence::added(
-        added.number,
-        added.new,
-        added.retrying,
-        added.already_saved,
-    ));
+    let message =
+        quack_text::render::plain(&quack_text::evidence::added(&quack_text::evidence::Added {
+            number: added.number,
+            new: added.new,
+            retrying: added.retrying,
+            restored: added.restored,
+            already_saved: added.already_saved,
+            files: added.files,
+        }));
     Ok(Json(EvidenceAdded {
         case: view.into(),
         new: added.new,

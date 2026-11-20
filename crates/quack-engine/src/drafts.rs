@@ -11,6 +11,8 @@ use quack_core::ids::{ChannelId, MemberId, RuleId};
 use quack_core::permissions::Capability;
 use quack_core::rule::{Field, RuleDefinition};
 use quack_db::drafts::{self, Draft, NewDraft};
+
+pub use quack_db::drafts::DraftFile;
 use quack_db::{DbError, Tx, rules};
 
 use crate::cases::{Actor, Applied, ApplyError, ApplyRule, Receipt, apply_rule};
@@ -117,6 +119,7 @@ pub async fn save_page(
                 private: submit.private,
                 receipt_channel: submit.channel,
                 source: None,
+                evidence_file: None,
             },
         )
         .await?;
@@ -267,6 +270,7 @@ pub async fn apply(
         pinned_version: Some(version),
         context,
         evidence_links: Vec::new(),
+        evidence_files: found.evidence_file.iter().map(draft_upload).collect(),
         source_message: source,
         receipt,
         replaces: None,
@@ -282,6 +286,19 @@ pub async fn apply(
             Ok(PageSaved::RuleChanged)
         }
         Err(e) => Err(e),
+    }
+}
+
+/// The upload a draft's file becomes when the case is applied.
+fn draft_upload(f: &DraftFile) -> crate::evidence::NewUpload {
+    crate::evidence::NewUpload {
+        filename: f.filename.clone(),
+        content_type: f.content_type.clone(),
+        size_bytes: f.size_bytes,
+        source: crate::evidence::UploadSource::Discord {
+            attachment_id: f.attachment_id,
+            url: f.url.clone(),
+        },
     }
 }
 
@@ -302,16 +319,26 @@ pub struct CommandDraft {
     pub private: bool,
     /// Where the command was used.
     pub channel: ChannelId,
+    /// The `/case add` file option, uploaded with the case.
+    pub evidence_file: Option<DraftFile>,
 }
 
 /// Starts a draft: for the "Add case" commands (step 1), and for
 /// `/case add` before its first form page opens, so the page's submit
-/// finds who and where the case is for even after a restart.
+/// finds who and where the case is for even after a restart. A file Quack
+/// can't copy is refused here (`FilesRefused`), before the form opens; the
+/// evidence channel is checked again when the draft is applied.
 pub async fn start(
     engine: &Engine,
     principal: &Principal,
     new: &CommandDraft,
 ) -> Result<(), ApplyError> {
+    let uploads: Vec<_> = new.evidence_file.iter().map(draft_upload).collect();
+    crate::evidence::check_files(&uploads).map_err(|refused| match refused {
+        crate::evidence::UploadRefused::Domain(d) => ApplyError::Refused(d),
+        crate::evidence::UploadRefused::Files(files) => ApplyError::FilesRefused(files),
+        crate::evidence::UploadRefused::DiscordUnavailable => ApplyError::DiscordUnavailable,
+    })?;
     let mut conn = engine.db().conn().await?;
     principal.require(&mut conn, Capability::Moderate).await??;
     drafts::create(
@@ -325,6 +352,7 @@ pub async fn start(
             private: new.private,
             receipt_channel: new.channel,
             source: new.source.map(|l| (l.channel_id, l.message_id)),
+            evidence_file: new.evidence_file.clone(),
         },
     )
     .await?;

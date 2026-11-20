@@ -30,3 +30,33 @@ model:   [Fixed("Quack will try again to save 1 message that it couldn't save be
 discord: Quack is saving 1 message as evidence for case #12. Quack will try again to save 2 messages that it couldn't save before. Select View evidence to see the outcome.
 plain:   Quack is saving 1 message as evidence for case #12. Quack will try again to save 2 messages that it couldn't save before. Select View evidence to see the outcome.
 model:   [Fixed("Quack is saving 1 message as evidence for case #12. Quack will try again to save 2 messages that it couldn't save before. Select View evidence to see the outcome.")]
+
+## files
+discord: Quack is copying 3 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+plain:   Quack is copying 3 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+model:   [Fixed("Quack is copying 3 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.")]
+
+## one file and a message
+discord: Quack is saving 1 message as evidence for case #12. Quack is copying 1 file to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+plain:   Quack is saving 1 message as evidence for case #12. Quack is copying 1 file to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+model:   [Fixed("Quack is saving 1 message as evidence for case #12. Quack is copying 1 file to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.")]
+
+## restored one
+discord: 1 message that had been removed is back.
+plain:   1 message that had been removed is back.
+model:   [Fixed("1 message that had been removed is back.")]
+
+## restored several
+discord: 2 messages that had been removed are back. 1 message was already saved as evidence.
+plain:   2 messages that had been removed are back. 1 message was already saved as evidence.
+model:   [Fixed("2 messages that had been removed are back. 1 message was already saved as evidence.")]
+
+## reply with buttons
+tone: Success
+--- discord ---
+Quack is saving 1 message as evidence for case #12. Quack is copying 2 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+buttons: [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 }
+--- plain ---
+Quack is saving 1 message as evidence for case #12. Quack is copying 2 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
+--- model ---
+Text [Fixed("Quack is saving 1 message as evidence for case #12. Quack is copying 2 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.")]

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, actor_id, member_id, rule_id, rule_version, private, receipt_channel_id,\n                    source_channel_id, source_message_id, values, page, expires_at\n             FROM case_drafts\n             WHERE id = $1 AND guild_id = $2 AND actor_id = $3 AND expires_at > now()\n             FOR UPDATE",
+  "query": "SELECT id, guild_id, actor_id, member_id, rule_id, rule_version, private, receipt_channel_id,\n                    source_channel_id, source_message_id, values, page, expires_at,\n                    evidence_file AS \"evidence_file: Json<DraftFile>\"\n             FROM case_drafts\n             WHERE id = $1 AND guild_id = $2 AND actor_id = $3 AND expires_at > now()\n             FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -145,6 +145,17 @@
             "name": "expires_at"
           }
         }
+      },
+      {
+        "ordinal": 13,
+        "name": "evidence_file: Json<DraftFile>",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "case_drafts",
+            "name": "evidence_file"
+          }
+        }
       }
     ],
     "parameters": {
@@ -167,8 +178,9 @@
       true,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "74023643dc7cd4d8c251f8f0520b8757a27807f814d93c432d40f0c29ec3c4f6"
+  "hash": "3e124c837a7247057dbe46b626e70e8912e505d96371ec8bdf0130c38d7baa70"
 }

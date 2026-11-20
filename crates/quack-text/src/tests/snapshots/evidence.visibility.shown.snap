@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: The member can now see these files on their page for case #12.
+plain:   The member can now see these files on their page for case #12.
+model:   [Fixed("The member can now see these files on their page for case #12.")]

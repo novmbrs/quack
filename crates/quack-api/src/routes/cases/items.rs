@@ -109,16 +109,26 @@ pub(crate) struct Evidence {
     pub(crate) created_at: OffsetDateTime,
 }
 
-impl From<EvidenceItem> for Evidence {
-    fn from(e: EvidenceItem) -> Self {
-        Self {
+impl Evidence {
+    /// A saved message that isn't removed, as this wire type describes it;
+    /// `None` for uploaded files and removed items, which it can't
+    /// describe (they are listed once the wire type grows them, §14.3).
+    pub(crate) fn message(e: EvidenceItem) -> Option<Self> {
+        if e.removed.is_some() {
+            return None;
+        }
+        let (Some(channel_id), Some(message_id), Some(url)) = (e.channel_id, e.message_id, e.url)
+        else {
+            return None;
+        };
+        Some(Self {
             id: e.id,
             state: e.state,
             failure: e.failure,
             state_text: e.state_text,
-            channel_id: e.channel_id,
-            message_id: e.message_id,
-            url: e.url,
+            channel_id,
+            message_id,
+            url,
             author_id: e.author_id,
             content: e.content,
             message_created_at: e.message_created_at,
@@ -139,7 +149,7 @@ impl From<EvidenceItem> for Evidence {
             files_not_saved: e.files_not_saved,
             added_by: e.added_by,
             created_at: e.created_at,
-        }
+        })
     }
 }
 

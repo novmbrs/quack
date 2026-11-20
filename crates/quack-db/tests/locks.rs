@@ -181,8 +181,8 @@ async fn evidence_conflict_does_not_cross_guilds(
         GuildId::new(2).unwrap(),
         case,
         item,
-        ChannelId::new(11).unwrap(),
-        MessageId::new(12).unwrap(),
+        (ChannelId::new(11).unwrap(), MessageId::new(12).unwrap()),
+        None,
         None,
     )
     .await;

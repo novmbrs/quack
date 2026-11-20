@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Quack removed the note from this evidence item of case #12.
+plain:   Quack removed the note from this evidence item of case #12.
+model:   [Fixed("Quack removed the note from this evidence item of case #12.")]

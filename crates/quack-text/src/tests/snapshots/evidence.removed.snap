@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## removed
+discord: Quack removed the evidence item from case #12. Adding the same message link again brings it back.
+plain:   Quack removed the evidence item from case #12. Adding the same message link again brings it back.
+model:   [Fixed("Quack removed the evidence item from case #12. Adding the same message link again brings it back.")]
+
+## already removed
+discord: That evidence item was already removed from case #12.
+plain:   That evidence item was already removed from case #12.
+model:   [Fixed("That evidence item was already removed from case #12.")]

@@ -1,0 +1,14 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## with a note
+modal "Note · case #12" EvidenceNote { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), revision: 3 }
+- Note "Note" (optional)
+  description: Optional. Only staff see it.
+  Paragraph text, 0–500 characters, placeholder Some("What this shows, or where it came from"), value Some("From the ticket.")
+
+## without a note
+modal "Note · case #12" EvidenceNote { evidence: EvidenceId(00000000-0000-0000-0000-000000001234), revision: 0 }
+- Note "Note" (optional)
+  description: Optional. Only staff see it.
+  Paragraph text, 0–500 characters, placeholder Some("What this shows, or where it came from"), value None

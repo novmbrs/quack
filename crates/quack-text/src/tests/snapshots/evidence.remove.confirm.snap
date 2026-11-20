@@ -1,0 +1,11 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Warning
+--- discord ---
+Remove this evidence item from case #12? Staff won't see it in Discord and the member won't see it on their case page. The dashboard still lists it as removed, and its copies stay in the evidence channel.
+buttons: [Yes, remove · Danger] ConfirmRemoveEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Back · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 }
+--- plain ---
+Remove this evidence item from case #12? Staff won't see it in Discord and the member won't see it on their case page. The dashboard still lists it as removed, and its copies stay in the evidence channel.
+--- model ---
+Text [Fixed("Remove this evidence item from case #12? Staff won't see it in Discord and the member won't see it on their case page. The dashboard still lists it as removed, and its copies stay in the evidence channel.")]

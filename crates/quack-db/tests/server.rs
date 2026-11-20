@@ -268,6 +268,7 @@ async fn draft_pages_are_saved_once(_: PgPoolOptions, options: PgConnectOptions)
             channel(5),
             MessageId::new(6).unwrap_or_else(|| unreachable!()),
         )),
+        evidence_file: None,
     };
     let mut conn = db.conn().await?;
     assert!(drafts::create(&mut conn, &draft).await?);

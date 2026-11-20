@@ -2,6 +2,12 @@
 source: crates/quack-text/src/tests/snapshots.rs
 ---
 modal "Add evidence · case #12" AddEvidence(CaseId(01930000-0000-7000-8000-000000000001))
-- Links "Message links" (required)
+- Links "Message links" (optional)
   description: One Discord message link per line, up to 10.
-  Paragraph text, 1–4000 characters, placeholder Some("https://discord.com/channels/…"), value None
+  Paragraph text, 0–4000 characters, placeholder Some("https://discord.com/channels/…"), value None
+- Files "Files" (optional)
+  description: Up to 10 images, videos, audio, text, or PDFs, 10 MB each.
+  file upload, 0–10 files
+- Note "Note" (optional)
+  description: Optional. Only staff see it.
+  Paragraph text, 0–500 characters, placeholder Some("What this shows, or where it came from"), value None

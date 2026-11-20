@@ -225,7 +225,11 @@ impl From<CaseView> for Case {
                 outcome_text: d.outcome_text,
                 settled_at: d.settled_at,
             }),
-            evidence: v.evidence.into_iter().map(Into::into).collect(),
+            evidence: v
+                .evidence
+                .into_iter()
+                .filter_map(Evidence::message)
+                .collect(),
             appeal: v.appeal.map(|a| CaseAppeal {
                 id: a.id,
                 state: a.state,

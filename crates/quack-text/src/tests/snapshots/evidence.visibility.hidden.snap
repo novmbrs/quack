@@ -1,0 +1,6 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+discord: Only staff can see these files now. They're hidden from the member's page for case #12.
+plain:   Only staff can see these files now. They're hidden from the member's page for case #12.
+model:   [Fixed("Only staff can see these files now. They're hidden from the member's page for case #12.")]

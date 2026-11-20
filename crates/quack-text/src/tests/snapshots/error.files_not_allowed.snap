@@ -1,0 +1,12 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## one
+discord: No evidence was added. Quack can't save setup.exe (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.
+plain:   No evidence was added. Quack can't save setup.exe (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.
+model:   [Fixed("No evidence was added. Quack can't save "), User("setup.exe"), Fixed(" (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.")]
+
+## several
+discord: No evidence was added. Quack can't save clip.mov (larger than 10 MB), page.html (a file type Quack doesn't copy) and \*\*bold\*\*.zip (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.
+plain:   No evidence was added. Quack can't save clip.mov (larger than 10 MB), page.html (a file type Quack doesn't copy) and **bold**.zip (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.
+model:   [Fixed("No evidence was added. Quack can't save "), User("clip.mov"), Fixed(" (larger than 10 MB), "), User("page.html"), Fixed(" (a file type Quack doesn't copy) and "), User("**bold**.zip"), Fixed(" (a file type Quack doesn't copy). Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.")]

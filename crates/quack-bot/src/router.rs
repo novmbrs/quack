@@ -132,8 +132,18 @@ async fn component(
         CustomId::AppealsPage(page) => appeals::page(p, page, source).await,
         CustomId::RulesPage(page) => rules::page(p, page, source).await,
         CustomId::Setup(area, op) => setup::control(p, area, op, values, source).await,
-        // A modal's id on a button: nothing current renders that.
-        CustomId::EditContextModal { .. }
+        // Evidence controls without a handler yet answer like an expired
+        // button, as does a modal's id on a button (nothing renders that).
+        CustomId::EvidenceSurrounding(_)
+        | CustomId::EvidenceVisibility { .. }
+        | CustomId::EditEvidenceNote(_)
+        | CustomId::RemoveEvidence(_)
+        | CustomId::ConfirmRemoveEvidence(_)
+        | CustomId::AddAsEvidence { .. }
+        | CustomId::AddAsEvidenceByNumber { .. }
+        | CustomId::EditContextModal { .. }
+        | CustomId::EvidenceNoteModal { .. }
+        | CustomId::AddAsEvidenceModal { .. }
         | CustomId::AddEvidenceModal(_)
         | CustomId::VoidCaseModal(_)
         | CustomId::DraftPageModal(_)

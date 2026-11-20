@@ -83,6 +83,13 @@ pub fn samples() -> Vec<Sample> {
         "command.case.add.member",
         "command.case.add.rule",
         "command.case.add.private",
+        "command.case.add.file",
+        "command.case.evidence",
+        "command.case.evidence.link",
+        "command.case.evidence.file",
+        "command.case.evidence.file2",
+        "command.case.evidence.file3",
+        "command.case.evidence.note",
         "command.case.view",
         "command.case.number",
         "command.case.list",
@@ -122,6 +129,11 @@ pub fn samples() -> Vec<Sample> {
         v.push(label(id, c.name, CHOICE_NAME));
     }
     v.push(label("command.add_case", command::ADD_CASE, 32));
+    v.push(label(
+        "command.add_as_evidence",
+        command::ADD_AS_EVIDENCE,
+        32,
+    ));
 
     for (id, kind) in [
         ("word.action.timeout", ActionKind::Timeout),

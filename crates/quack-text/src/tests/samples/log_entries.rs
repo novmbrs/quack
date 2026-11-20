@@ -8,10 +8,10 @@ use quack_core::modlog::{
     ActionDetail, ActionDoneDetail, ActionFailedDetail, AppealClosedDetail,
     CaseContextEditedDetail, CaseCreateRefusedDetail, CaseCreatedDetail, CaseNumberDetail,
     CaseVoidedDetail, ChannelSettingClearedDetail, DmFailedDetail, DmFailedState, DmSentDetail,
-    Empty, EvidenceAddedDetail, FieldsDetail, HoneypotCaseFailedDetail, LegacyDetail,
-    LogChannelFailedDetail, ModLogEntry, ModuleDetail, ModuleDisabledDetail,
-    ModuleSettingsChangedDetail, QuackJoinedDetail, RuleNameDetail, RuleVersionDetail,
-    TicketClosedDetail, UndoSkippedDetail,
+    Empty, EvidenceAddedDetail, EvidenceRemovedDetail, EvidenceVisibilityDetail, FieldsDetail,
+    HoneypotCaseFailedDetail, LegacyDetail, LogChannelFailedDetail, ModLogEntry, ModuleDetail,
+    ModuleDisabledDetail, ModuleSettingsChangedDetail, QuackJoinedDetail, RuleNameDetail,
+    RuleVersionDetail, TicketClosedDetail, UndoSkippedDetail,
 };
 use quack_core::modules::{
     ChannelSetting, HoneypotRefusal, LogChannelFailure, ModuleDisabledReason, ModuleName,
@@ -546,5 +546,29 @@ pub fn entries() -> Vec<(&'static str, String, ModLogEntry)> {
             may_have_applied: true,
         }),
     );
+    // After it, so the rotation above holds for the older kinds.
+    for (variant, kind) in [
+        ("message", quack_core::evidence::EvidenceKind::Message),
+        ("upload", quack_core::evidence::EvidenceKind::Upload),
+    ] {
+        push(
+            "log.evidence_removed",
+            variant,
+            ModLogEntry::EvidenceRemoved(EvidenceRemovedDetail {
+                case_number: 12,
+                evidence_kind: kind,
+            }),
+        );
+    }
+    for (variant, visible) in [("shown", true), ("hidden", false)] {
+        push(
+            "log.evidence_visibility_changed",
+            variant,
+            ModLogEntry::EvidenceVisibilityChanged(EvidenceVisibilityDetail {
+                case_number: 12,
+                visible_to_member: visible,
+            }),
+        );
+    }
     v
 }

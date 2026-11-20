@@ -1,6 +1,9 @@
 //! Copying evidence files to the evidence channel (§7.3): one file per
 //! transaction, so progress survives a crash; each upload follows §10.4
-//! with the file's id as its nonce.
+//! with the file's id as its nonce. A file's bytes come from Discord's CDN
+//! (a message attachment, or an interaction attachment's short-lived URL)
+//! or, for a dashboard upload, from the bytes staged in PostgreSQL, which
+//! are deleted once the file is copied.
 
 use std::time::Duration;
 
@@ -124,6 +127,7 @@ pub(super) async fn copy_pending(
                     files += 1;
                     bytes += size;
                 }
+                evidence::delete_staged(&mut tx, item.guild, item.id, Some(file.id)).await?;
             }
             Err(failed) => {
                 evidence::set_file_state(&mut tx, item.guild, file.id, failed).await?;
@@ -179,20 +183,73 @@ async fn release(engine: &Engine, item: &Evidence, file: &EvidenceFile) -> Resul
     evidence::release_upload(&mut conn, item.guild, file.id).await
 }
 
-/// Downloads one file from Discord's CDN and uploads it as a plain message
-/// with one spoilered attachment. Every upload is preceded by a fresh
-/// destination check and a durably reserved try (three per file); a
-/// rate limit stops the run with its delay; a run never starts a call it
-/// has no time to finish.
+/// Where a file's bytes come from.
+enum Bytes<'a> {
+    /// Download from this CDN URL.
+    Cdn(&'a str),
+    /// Staged in PostgreSQL (a dashboard upload).
+    Staged,
+}
+
+/// A file's bytes for one upload try: downloaded (counted against the
+/// run's download tries) or read from staging.
+enum Got {
+    Bytes(Vec<u8>),
+    /// Try the download again.
+    Again,
+    /// The run ends here.
+    Stop(One),
+}
+
+async fn get_bytes(
+    engine: &Engine,
+    job: &ClaimedJob,
+    item: &Evidence,
+    file: &EvidenceFile,
+    source: &Bytes<'_>,
+) -> Result<Got, DbError> {
+    match source {
+        Bytes::Staged => {
+            let mut conn = engine.db().conn().await?;
+            Ok(
+                match evidence::staged_bytes(&mut conn, item.guild, file.id).await? {
+                    Some(bytes) => Got::Bytes(bytes),
+                    // Swept, or never staged: nothing left to copy.
+                    None => Got::Stop(One::Failed),
+                },
+            )
+        }
+        Bytes::Cdn(url) => Ok(
+            match engine
+                .discord()
+                .download_attachment(url, MAX_COPY_BYTES)
+                .await
+            {
+                Outcome::Done(bytes) => Got::Bytes(bytes),
+                Outcome::Refused(_) => Got::Stop(One::Failed),
+                Outcome::RetryAfter(d) => Got::Stop(One::Stop(Handled::Settle(retry_in(job, d)))),
+                _ => Got::Again,
+            },
+        ),
+    }
+}
+
+/// Gets one file's bytes and uploads them as a plain message with one
+/// spoilered attachment. Every upload is preceded by a fresh destination
+/// check and a durably reserved try (three per file); a rate limit stops
+/// the run with its delay; a run never starts a call it has no time to
+/// finish. Only Discord's CDN hosts are downloaded from.
 async fn copy_one(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
     file: &EvidenceFile,
 ) -> Result<One, DbError> {
-    if !HOSTS.iter().any(|h| file.original_url.starts_with(h)) {
-        return Ok(One::Failed);
-    }
+    let source = match file.original_url.as_deref() {
+        Some(url) if HOSTS.iter().any(|h| url.starts_with(h)) => Bytes::Cdn(url),
+        Some(_) => return Ok(One::Failed),
+        None => Bytes::Staged,
+    };
     let discord = engine.discord();
     let nonce = Nonce::new(file.id.to_u22());
     let empty = Msg::default();
@@ -206,14 +263,10 @@ async fn copy_one(
             return Ok(One::Failed);
         }
         downloads += 1;
-        let bytes = match discord
-            .download_attachment(&file.original_url, MAX_COPY_BYTES)
-            .await
-        {
-            Outcome::Done(bytes) => bytes,
-            Outcome::Refused(_) => return Ok(One::Failed),
-            Outcome::RetryAfter(d) => return Ok(One::Stop(Handled::Settle(retry_in(job, d)))),
-            _ => continue,
+        let bytes = match get_bytes(engine, job, item, file, &source).await? {
+            Got::Bytes(bytes) => bytes,
+            Got::Stop(one) => return Ok(one),
+            Got::Again => continue,
         };
         if job.time_left() < CHECK_ROOM + UPLOAD_ROOM + MARGIN {
             return Ok(continue_later());

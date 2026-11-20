@@ -48,6 +48,7 @@ fn strings(s: &Sample) -> Vec<String> {
                         v.extend(value.clone());
                     }
                     InputKind::YesNo { placeholder, .. } => v.push(placeholder.clone()),
+                    InputKind::Files { .. } => {}
                 }
             }
         }

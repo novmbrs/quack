@@ -80,6 +80,14 @@ const fn domain_index(e: &DomainError) -> usize {
         DomainError::TooManyLinks => 23,
         DomainError::SettingsChanged => 24,
         DomainError::TicketNotOpen => 25,
+        DomainError::TooManyFiles => 26,
+        DomainError::EvidenceFileLimitReached { .. } => 27,
+        DomainError::EvidenceChannelMissing => 28,
+        DomainError::EvidenceChannelNotStaffOnly => 29,
+        DomainError::EvidenceNotFound => 30,
+        DomainError::EvidenceRemoved => 31,
+        DomainError::EvidenceNotUpload => 32,
+        DomainError::NoteChanged => 33,
     }
 }
 
@@ -88,7 +96,7 @@ fn every_domain_error_is_sampled() {
     let seen: BTreeSet<usize> = domain_errors().iter().map(domain_index).collect();
     assert_eq!(
         seen.len(),
-        26,
+        34,
         "add the new DomainError variant to the samples"
     );
 }

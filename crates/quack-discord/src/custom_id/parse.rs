@@ -1,6 +1,8 @@
 //! Encoding and decoding current (`1:`) ids.
 
-use quack_core::ids::{ActionId, AppealId, CaseId, MemberId, RuleId, TicketId};
+use quack_core::ids::{
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, MemberId, MessageId, RuleId, TicketId,
+};
 use quack_text::actions::DraftPage;
 
 use super::CustomId;
@@ -18,6 +20,14 @@ fn number<T: std::str::FromStr>(s: &str) -> Option<T> {
 
 fn member(s: &str) -> Option<MemberId> {
     number::<u64>(s).and_then(MemberId::new)
+}
+
+/// A message's location: `<channel>:<message>`.
+fn located(channel: &str, message: &str) -> Option<(ChannelId, MessageId)> {
+    Some((
+        number::<u64>(channel).and_then(ChannelId::new)?,
+        number::<u64>(message).and_then(MessageId::new)?,
+    ))
 }
 
 fn draft_page(args: &[&str]) -> Option<DraftPage> {
@@ -53,6 +63,20 @@ pub(super) fn encode(id: &CustomId) -> String {
         C::AddEvidence(c) => ("ea", c.to_u22()),
         C::AddEvidenceModal(c) => ("eam", c.to_u22()),
         C::ViewEvidence { case, item } => ("ev", format!("{}:{item}", case.to_u22())),
+        C::EvidenceSurrounding(e) => ("evs", e.to_u22()),
+        C::EvidenceVisibility { evidence, visible } => (
+            "evv",
+            format!("{}:{}", evidence.to_u22(), u8::from(*visible)),
+        ),
+        C::EditEvidenceNote(e) => ("evn", e.to_u22()),
+        C::EvidenceNoteModal { evidence, revision } => {
+            ("evnm", format!("{}:{revision}", evidence.to_u22()))
+        }
+        C::RemoveEvidence(e) => ("evr", e.to_u22()),
+        C::ConfirmRemoveEvidence(e) => ("evrc", e.to_u22()),
+        C::AddAsEvidence { channel, message } => ("exs", format!("{channel}:{message}")),
+        C::AddAsEvidenceByNumber { channel, message } => ("exn", format!("{channel}:{message}")),
+        C::AddAsEvidenceModal { channel, message } => ("exm", format!("{channel}:{message}")),
         C::VoidCase(c) => ("vd", c.to_u22()),
         C::VoidCaseModal(c) => ("vdm", c.to_u22()),
         C::History { member, page } => ("hi", format!("{member}:{page}")),
@@ -179,6 +203,43 @@ pub(super) fn decode(rest: &str) -> Option<CustomId> {
         ("to", []) => C::OpenTicket,
         ("tc", [t]) => C::CloseTicket(ticket(t)?),
         ("tf", [t]) => C::FixTicketAccess(ticket(t)?),
+        (code, args) => return decode_evidence(code, args),
+    })
+}
+
+/// The evidence ids (`evs` … `exm`).
+fn decode_evidence(code: &str, args: &[&str]) -> Option<CustomId> {
+    use CustomId as C;
+    let evidence = |s: &str| EvidenceId::from_u22(s).ok();
+    Some(match (code, args) {
+        ("evs", [e]) => C::EvidenceSurrounding(evidence(e)?),
+        ("evv", [e, v]) => C::EvidenceVisibility {
+            evidence: evidence(e)?,
+            visible: match *v {
+                "1" => true,
+                "0" => false,
+                _ => return None,
+            },
+        },
+        ("evn", [e]) => C::EditEvidenceNote(evidence(e)?),
+        ("evnm", [e, r]) => C::EvidenceNoteModal {
+            evidence: evidence(e)?,
+            revision: number(r)?,
+        },
+        ("evr", [e]) => C::RemoveEvidence(evidence(e)?),
+        ("evrc", [e]) => C::ConfirmRemoveEvidence(evidence(e)?),
+        ("exs", [c, m]) => {
+            let (channel, message) = located(c, m)?;
+            C::AddAsEvidence { channel, message }
+        }
+        ("exn", [c, m]) => {
+            let (channel, message) = located(c, m)?;
+            C::AddAsEvidenceByNumber { channel, message }
+        }
+        ("exm", [c, m]) => {
+            let (channel, message) = located(c, m)?;
+            C::AddAsEvidenceModal { channel, message }
+        }
         _ => return None,
     })
 }

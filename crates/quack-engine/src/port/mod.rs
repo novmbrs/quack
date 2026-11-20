@@ -157,6 +157,15 @@ pub trait Discord: Send + Sync + 'static {
         before: Option<MessageId>,
         limit: u8,
     ) -> BoxFuture<'_, Outcome<Vec<FetchedMessage>>>;
+    /// Reads up to `limit` of the messages right after `after` (the
+    /// surrounding messages of evidence, §7.2); in whatever order Discord
+    /// returns them, so callers sort by id.
+    fn fetch_history_after(
+        &self,
+        channel: ChannelId,
+        after: MessageId,
+        limit: u8,
+    ) -> BoxFuture<'_, Outcome<Vec<FetchedMessage>>>;
 
     // Files.
 

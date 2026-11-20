@@ -650,3 +650,203 @@ model:   [Fixed("This ticket is already closed or closing.")]
 discord: This ticket is already closed or closing.
 plain:   This ticket is already closed or closing.
 model:   [Fixed("This ticket is already closed or closing.")]
+
+## TooManyFiles · staff · all facts
+discord: Add at most 10 files at a time.
+plain:   Add at most 10 files at a time.
+model:   [Fixed("Add at most 10 files at a time.")]
+
+## TooManyFiles · adding a case · all facts
+discord: Add at most 10 files at a time.
+plain:   Add at most 10 files at a time.
+model:   [Fixed("Add at most 10 files at a time.")]
+
+## TooManyFiles · editing a rule · all facts
+discord: Add at most 10 files at a time.
+plain:   Add at most 10 files at a time.
+model:   [Fixed("Add at most 10 files at a time.")]
+
+## TooManyFiles · member · all facts
+discord: Add at most 10 files at a time.
+plain:   Add at most 10 files at a time.
+model:   [Fixed("Add at most 10 files at a time.")]
+
+## TooManyFiles · no facts
+discord: Add at most 10 files at a time.
+plain:   Add at most 10 files at a time.
+model:   [Fixed("Add at most 10 files at a time.")]
+
+## EvidenceFileLimitReached { count: 95 } · staff · all facts
+discord: No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+plain:   No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+model:   [Fixed("No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.")]
+
+## EvidenceFileLimitReached { count: 95 } · adding a case · all facts
+discord: No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+plain:   No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+model:   [Fixed("No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.")]
+
+## EvidenceFileLimitReached { count: 95 } · editing a rule · all facts
+discord: No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+plain:   No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+model:   [Fixed("No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.")]
+
+## EvidenceFileLimitReached { count: 95 } · member · all facts
+discord: No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+plain:   No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+model:   [Fixed("No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.")]
+
+## EvidenceFileLimitReached { count: 95 } · no facts
+discord: No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+plain:   No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.
+model:   [Fixed("No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.")]
+
+## EvidenceChannelMissing · staff · all facts
+discord: No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in </setup:1004>, then try again.
+plain:   No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.
+model:   [Fixed("No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelMissing · adding a case · all facts
+discord: No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in </setup:1004>, then try again.
+plain:   No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.
+model:   [Fixed("No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelMissing · editing a rule · all facts
+discord: No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in </setup:1004>, then try again.
+plain:   No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.
+model:   [Fixed("No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelMissing · member · all facts
+discord: No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in </setup:1004>, then try again.
+plain:   No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.
+model:   [Fixed("No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelMissing · no facts
+discord: No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in </setup:1004>, then try again.
+plain:   No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.
+model:   [Fixed("No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelNotStaffOnly · staff · all facts
+discord: No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in </setup:1004>, then try again.
+plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
+model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelNotStaffOnly · adding a case · all facts
+discord: No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in </setup:1004>, then try again.
+plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
+model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelNotStaffOnly · editing a rule · all facts
+discord: No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in </setup:1004>, then try again.
+plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
+model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelNotStaffOnly · member · all facts
+discord: No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in </setup:1004>, then try again.
+plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
+model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceChannelNotStaffOnly · no facts
+discord: No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in </setup:1004>, then try again.
+plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
+model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]
+
+## EvidenceNotFound · staff · all facts
+discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+model:   [Fixed("Quack couldn't find that evidence item on this case. Open the case again to see its evidence.")]
+
+## EvidenceNotFound · adding a case · all facts
+discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+model:   [Fixed("Quack couldn't find that evidence item on this case. Open the case again to see its evidence.")]
+
+## EvidenceNotFound · editing a rule · all facts
+discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+model:   [Fixed("Quack couldn't find that evidence item on this case. Open the case again to see its evidence.")]
+
+## EvidenceNotFound · member · all facts
+discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+model:   [Fixed("Quack couldn't find that evidence item on this case. Open the case again to see its evidence.")]
+
+## EvidenceNotFound · no facts
+discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
+model:   [Fixed("Quack couldn't find that evidence item on this case. Open the case again to see its evidence.")]
+
+## EvidenceRemoved · staff · all facts
+discord: That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+plain:   That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+model:   [Fixed("That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.")]
+
+## EvidenceRemoved · adding a case · all facts
+discord: That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+plain:   That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+model:   [Fixed("That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.")]
+
+## EvidenceRemoved · editing a rule · all facts
+discord: That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+plain:   That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+model:   [Fixed("That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.")]
+
+## EvidenceRemoved · member · all facts
+discord: That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+plain:   That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+model:   [Fixed("That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.")]
+
+## EvidenceRemoved · no facts
+discord: That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+plain:   That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.
+model:   [Fixed("That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.")]
+
+## EvidenceNotUpload · staff · all facts
+discord: Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+plain:   Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+model:   [Fixed("Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.")]
+
+## EvidenceNotUpload · adding a case · all facts
+discord: Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+plain:   Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+model:   [Fixed("Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.")]
+
+## EvidenceNotUpload · editing a rule · all facts
+discord: Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+plain:   Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+model:   [Fixed("Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.")]
+
+## EvidenceNotUpload · member · all facts
+discord: Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+plain:   Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+model:   [Fixed("Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.")]
+
+## EvidenceNotUpload · no facts
+discord: Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+plain:   Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.
+model:   [Fixed("Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.")]
+
+## NoteChanged · staff · all facts
+discord: Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+plain:   Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+model:   [Fixed("Someone else changed this note since you opened it. Open the evidence again to see their note before you save.")]
+
+## NoteChanged · adding a case · all facts
+discord: Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+plain:   Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+model:   [Fixed("Someone else changed this note since you opened it. Open the evidence again to see their note before you save.")]
+
+## NoteChanged · editing a rule · all facts
+discord: Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+plain:   Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+model:   [Fixed("Someone else changed this note since you opened it. Open the evidence again to see their note before you save.")]
+
+## NoteChanged · member · all facts
+discord: Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+plain:   Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+model:   [Fixed("Someone else changed this note since you opened it. Open the evidence again to see their note before you save.")]
+
+## NoteChanged · no facts
+discord: Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+plain:   Someone else changed this note since you opened it. Open the evidence again to see their note before you save.
+model:   [Fixed("Someone else changed this note since you opened it. Open the evidence again to see their note before you save.")]
