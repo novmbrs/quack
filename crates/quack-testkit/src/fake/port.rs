@@ -347,6 +347,10 @@ impl Discord for FakeDiscord {
             {
                 c.name.clone_from(&spec.name);
                 c.overwrites.clone_from(&spec.overwrites);
+                c.parent_id = spec.parent;
+                if spec.category {
+                    c.kind = 4;
+                }
                 // What Quack's own member overwrite allows, it holds there.
                 for o in &spec.overwrites {
                     if o.target == quack_core::permissions::OverwriteTarget::Member(quack.member())

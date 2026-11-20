@@ -43,13 +43,14 @@ pub(crate) fn fetched(m: model::Message) -> engine::FetchedMessage {
     }
 }
 
-/// A channel to create (the engine's specs have no category).
+/// A channel to create.
 pub(crate) fn channel_spec(s: &engine::ChannelSpec) -> model::ChannelSpec {
     model::ChannelSpec {
         name: s.name.clone(),
         topic: s.topic.clone(),
-        parent_id: None,
+        parent_id: s.parent,
         overwrites: s.overwrites.clone(),
+        category: s.category,
     }
 }
 

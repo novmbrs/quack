@@ -20,6 +20,7 @@ mod dm_failed;
 mod evidence;
 mod honeypot;
 mod moderation;
+mod ops;
 mod shutdown;
 mod telemetry;
 mod tickets;

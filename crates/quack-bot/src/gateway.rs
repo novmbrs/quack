@@ -36,7 +36,7 @@ pub(crate) async fn handle(shared: &Shared, event: &Event) {
         Event::GuildDelete {
             guild_id,
             unavailable: false,
-        } => left(engine, *guild_id).await,
+        } => leave(shared, *guild_id).await,
         Event::MessageDelete {
             guild_id: Some(_),
             channel_id,
@@ -56,6 +56,16 @@ pub(crate) async fn handle(shared: &Shared, event: &Event) {
     }
 }
 
+/// Marks a server left and, when it was installed, tells ops (§21.4).
+async fn leave(shared: &Shared, guild: GuildId) -> Result<(), quack_db::DbError> {
+    if left(&shared.engine, guild).await?
+        && let Some(ops) = shared.ops.get()
+    {
+        ops.server_left(guild).await;
+    }
+    Ok(())
+}
+
 /// `READY`: installed servers missing from its list are treated as left;
 /// one server failing doesn't stop the others.
 async fn ready(shared: &Shared, present: &[GuildId]) -> Result<(), quack_db::DbError> {
@@ -66,7 +76,7 @@ async fn ready(shared: &Shared, present: &[GuildId]) -> Result<(), quack_db::DbE
     };
     let mut failed = None;
     for guild in installed.into_iter().filter(|g| !present.contains(g)) {
-        if let Err(error) = left(engine, guild).await {
+        if let Err(error) = leave(shared, guild).await {
             tracing::warn!(guild_id = guild.get(), %error, "couldn't mark a server left");
             failed = Some(error);
         }
@@ -85,6 +95,11 @@ async fn guild_create(
     let done = bootstrap(engine, &facts(guild), Some(channels)).await?;
     if done.first_join {
         tracing::info!(guild = guild.id.get(), "joined a new server");
+    }
+    if (done.first_join || done.returned)
+        && let Some(ops) = shared.ops.get()
+    {
+        ops.server_joined(guild.id, done.returned).await;
     }
     engine.config_cache().reload(engine.db(), guild.id).await?;
     Ok(())

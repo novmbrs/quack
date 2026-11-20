@@ -4,7 +4,7 @@
 //! custom id (§11.5), and every click is authorized again when it arrives.
 
 use quack_core::ids::{
-    ActionId, AppealId, CaseId, ChannelId, EvidenceId, MemberId, MessageId, RuleId, TicketId,
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, JobId, MemberId, MessageId, RuleId, TicketId,
 };
 use quack_core::rule::FieldKey;
 
@@ -192,6 +192,14 @@ pub enum ButtonAction {
     CloseTicket(TicketId),
     /// Fix a ticket's access (`tf`).
     FixTicketAccess(TicketId),
+    /// Refresh the ops status board (`op:st`).
+    OpsRefresh,
+    /// Requeue a dead job (`op:rq`).
+    OpsRequeueJob(JobId),
+    /// Dismiss a dead job (`op:dm`).
+    OpsDismissJob(JobId),
+    /// Show a `/ops jobs` page (`op:jp`).
+    OpsJobsPage(u32),
 }
 
 /// What choosing in a select does.

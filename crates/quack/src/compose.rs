@@ -12,6 +12,7 @@ use quack_discord::cache::GuildCache;
 use quack_engine::jobs::ModuleJobs;
 use quack_engine::port::Discord;
 use quack_engine::{Engine, EngineConfig};
+use quack_ops::{Ops, OpsConfig};
 
 use crate::config::Config;
 use crate::serve::Readiness;
@@ -28,6 +29,8 @@ pub struct App {
     pub router: axum::Router,
     /// The modules' process-wide state.
     pub modules: Arc<Modules>,
+    /// Ops in Discord (§21), when `QUACK_OPS_GUILD_ID` is set.
+    pub ops: Option<Ops>,
 }
 
 impl std::fmt::Debug for App {
@@ -35,6 +38,7 @@ impl std::fmt::Debug for App {
         f.debug_struct("App")
             .field("bot", &self.bot)
             .field("modules", &self.modules)
+            .field("ops", &self.ops)
             .finish_non_exhaustive()
     }
 }
@@ -63,6 +67,23 @@ impl App {
         );
         let modules = Arc::new(Modules::new(&engine));
         let bot = Bot::new(engine.clone(), responder, modules.adapters(guilds));
+        let ops = config.ops.as_ref().map(|o| {
+            Ops::new(
+                engine.clone(),
+                OpsConfig {
+                    guild: o.guild,
+                    operators: o.operators.clone(),
+                    trace_url: o.trace_url.clone(),
+                    version: env!("CARGO_PKG_VERSION").to_owned(),
+                    commit: option_env!("QUACK_GIT_COMMIT")
+                        .filter(|c| !c.is_empty())
+                        .map(str::to_owned),
+                },
+            )
+        });
+        if let Some(ops) = &ops {
+            bot.set_ops(ops.clone());
+        }
         let api = wiring::api_config(config, discord_api_base)?;
         let router = wiring::api_router(&engine, api, ready, &modules)?;
         Ok(Self {
@@ -70,11 +91,15 @@ impl App {
             bot,
             router,
             modules,
+            ops,
         })
     }
 
-    /// The modules' job kinds and handlers, for the runner (§16.4).
+    /// The modules' job kinds and handlers (and ops' `post_ops`), for the
+    /// runner (§16.4).
     pub fn module_jobs(&self) -> Vec<ModuleJobs> {
-        Modules::jobs(&self.engine)
+        let mut jobs = Modules::jobs(&self.engine);
+        jobs.extend(self.ops.as_ref().map(Ops::jobs));
+        jobs
     }
 }

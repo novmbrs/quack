@@ -174,7 +174,7 @@ fn close_code(code: Option<u16>) -> String {
 
 /// Logs and counts one connection change; returns how long the shard loop
 /// waits before reading again. `why` says what happened, in plain words.
-fn report(change: Change, why: &str) -> Duration {
+fn report(status: &GatewayStatus, change: Change, why: &str) -> Duration {
     let gateway = &metrics().gateway;
     match change {
         Change::Connected => tracing::info!("connected to the gateway"),
@@ -195,10 +195,12 @@ fn report(change: Change, why: &str) -> Duration {
             }
         }
         Change::Dropped => {
+            status.drops.fetch_add(1, Ordering::Relaxed);
             gateway.connection(GatewayConnectionEvent::Reconnect);
             tracing::info!(why, "the gateway connection dropped; reconnecting");
         }
         Change::Failed { failures, wait } => {
+            status.connect_failures.fetch_add(1, Ordering::Relaxed);
             gateway.connection(GatewayConnectionEvent::ConnectFailed);
             let wait_ms = u64::try_from(wait.as_millis()).unwrap_or(u64::MAX);
             if failures >= link::WARN_AFTER {
@@ -272,14 +274,46 @@ pub async fn check_shards(client: &DiscordClient) -> Result<(), GatewayError> {
     }
 }
 
-/// The gateway's connection state, shared with readiness checks.
+/// The gateway's connection state, shared with readiness checks and ops.
 #[derive(Debug, Default)]
 pub struct GatewayStatus {
     connected: AtomicBool,
     latency_micros: AtomicU64,
+    identifies: AtomicU64,
+    resumes: AtomicU64,
+    drops: AtomicU64,
+    connect_failures: AtomicU64,
+    invalid_sessions: AtomicU64,
+}
+
+/// How often each connection change happened since the process started
+/// (the same events as `quack.gateway.connection.events`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ConnectionCounts {
+    /// New sessions (`READY`).
+    pub identifies: u64,
+    /// Resumed sessions.
+    pub resumes: u64,
+    /// Live connections that dropped.
+    pub drops: u64,
+    /// Failed attempts to reconnect.
+    pub connect_failures: u64,
+    /// Sessions Discord invalidated.
+    pub invalid_sessions: u64,
 }
 
 impl GatewayStatus {
+    /// The connection changes counted so far.
+    pub fn counts(&self) -> ConnectionCounts {
+        ConnectionCounts {
+            identifies: self.identifies.load(Ordering::Relaxed),
+            resumes: self.resumes.load(Ordering::Relaxed),
+            drops: self.drops.load(Ordering::Relaxed),
+            connect_failures: self.connect_failures.load(Ordering::Relaxed),
+            invalid_sessions: self.invalid_sessions.load(Ordering::Relaxed),
+        }
+    }
+
     /// Whether the session is `READY` or `RESUMED` right now.
     pub fn is_connected(&self) -> bool {
         self.connected.load(Ordering::Acquire)
@@ -393,7 +427,7 @@ impl Gateway {
             }
             self.track(&raw);
             let (change, why) = connection_change(&mut link, &raw, Instant::now());
-            if !pause(report(change, &why), &shutdown).await {
+            if !pause(report(&self.status, change, &why), &shutdown).await {
                 break Ok(());
             }
             if let Some(event) = event::map(&raw, sessions) {
@@ -427,7 +461,7 @@ impl Gateway {
             // error and holds no frame, so it is safe to log.
             let cause = std::error::Error::source(error)
                 .map_or_else(|| "unknown".to_owned(), ToString::to_string);
-            return report(link.connect_failed(now), &cause);
+            return report(&self.status, link.connect_failed(now), &cause);
         }
         // Never the error itself: Twilight's message holds the whole frame
         // (interaction tokens, message text).
@@ -436,7 +470,11 @@ impl Gateway {
             Duration::ZERO
         } else {
             // A compressed frame Twilight couldn't read closes the connection.
-            report(link.closed(now), "an unreadable compressed frame")
+            report(
+                &self.status,
+                link.closed(now),
+                "an unreadable compressed frame",
+            )
         }
     }
 
@@ -466,16 +504,19 @@ impl Gateway {
         match raw {
             Raw::Ready(_) => {
                 self.status.set_connected(true);
+                self.status.identifies.fetch_add(1, Ordering::Relaxed);
                 gateway.connection(GatewayConnectionEvent::Identify);
             }
             Raw::Resumed => {
                 self.status.set_connected(true);
+                self.status.resumes.fetch_add(1, Ordering::Relaxed);
                 gateway.connection(GatewayConnectionEvent::Resume);
             }
             // Drops are counted once each by `report`.
             Raw::GatewayReconnect | Raw::GatewayClose(_) => self.status.set_connected(false),
             Raw::GatewayInvalidateSession(_) => {
                 self.status.set_connected(false);
+                self.status.invalid_sessions.fetch_add(1, Ordering::Relaxed);
                 gateway.connection(GatewayConnectionEvent::InvalidSession);
             }
             Raw::GatewayHeartbeatAck => {

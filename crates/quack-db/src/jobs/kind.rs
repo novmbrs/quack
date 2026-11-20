@@ -27,6 +27,8 @@ pub enum JobKind {
     OpenTicket,
     /// Freeze, transcribe, close, and delete a ticket's thread.
     CloseTicket,
+    /// Post one ops message to the ops server (§21.3).
+    PostOps,
     /// Delete expired rows (periodic).
     Housekeeping,
 }
@@ -43,6 +45,7 @@ impl JobKind {
         Self::HoneypotCleanup,
         Self::OpenTicket,
         Self::CloseTicket,
+        Self::PostOps,
         Self::Housekeeping,
     ];
 
@@ -58,6 +61,7 @@ impl JobKind {
             Self::HoneypotCleanup => "honeypot_cleanup",
             Self::OpenTicket => "open_ticket",
             Self::CloseTicket => "close_ticket",
+            Self::PostOps => "post_ops",
             Self::Housekeeping => "housekeeping",
         }
     }
@@ -78,6 +82,7 @@ impl JobKind {
                 Self::HoneypotCleanup => (2, 30, 10, &[S, 2, 4, 8, 16, 32, 64, 64, 64]),
                 Self::OpenTicket => (2, 60, 4, &[2, 10, 30]),
                 Self::CloseTicket => (2, 300, 6, &[5, 30, 2 * M, 10 * M, H]),
+                Self::PostOps => (1, 60, 6, &[10, 30, 2 * M, 10 * M, H]),
                 Self::Housekeeping => (1, 300, 1, &[10 * M]),
             };
         JobPolicy {

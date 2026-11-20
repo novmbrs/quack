@@ -12,9 +12,10 @@ use quack_text::appeal::ModalDecision;
 use quack_text::error;
 
 use crate::ack::{Failure, Finish, Pending};
+use crate::handlers::ops::JobControl;
 use crate::handlers::{
     add_menu, appeals, case_add, case_edit, case_list, case_view, case_void, controls, drafts,
-    evidence, evidence_view, help, member_appeal, module, rules, setup,
+    evidence, evidence_view, help, member_appeal, module, ops, rules, setup,
 };
 use crate::modules::is_module_id;
 
@@ -52,6 +53,7 @@ pub(crate) async fn route(p: Pending<'_>) -> Finish {
         Request::Appeals => appeals::command(p).await,
         Request::Rules => rules::command(p).await,
         Request::Setup => setup::command(p).await,
+        Request::Ops(request) => ops::command(p, request).await,
         Request::AddCaseFromMessage { message } => add_menu::from_message(p, message).await,
         Request::AddCaseForMember { member } => add_menu::for_member(p, member).await,
         Request::AddAsEvidence { message } => evidence::from_message(p, message).await,
@@ -158,6 +160,10 @@ async fn component(
         CustomId::AppealsPage(page) => appeals::page(p, page, source).await,
         CustomId::RulesPage(page) => rules::page(p, page, source).await,
         CustomId::Setup(area, op) => setup::control(p, area, op, values, source).await,
+        CustomId::OpsRefresh => ops::refresh(p).await,
+        CustomId::OpsJobsPage(page) => ops::page(p, page, source).await,
+        CustomId::OpsRequeueJob(job) => ops::job(p, job, JobControl::Requeue, source).await,
+        CustomId::OpsDismissJob(job) => ops::job(p, job, JobControl::Dismiss, source).await,
         // A modal's id on a button: nothing current renders that.
         CustomId::EditContextModal { .. }
         | CustomId::EvidenceNoteModal { .. }

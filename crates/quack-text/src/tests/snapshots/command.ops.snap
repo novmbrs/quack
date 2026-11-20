@@ -1,0 +1,4 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+ops — See how Quack is running. Only Quack's operators can use this.

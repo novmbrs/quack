@@ -219,6 +219,8 @@ pub(crate) async fn create(
         name: name.to_owned(),
         topic: Some(channel_topic(kind).to_owned()),
         overwrites,
+        parent: None,
+        category: false,
     };
     match discord.create_channel(guild, &spec).await {
         Outcome::Done(id) => Ok(Made::Created(ChannelRef::new(id, name))),

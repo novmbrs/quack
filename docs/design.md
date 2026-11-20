@@ -41,6 +41,7 @@ Every limit is a number in §3.9.
 18. [Telemetry](#18-telemetry)
 19. [MySQL to PostgreSQL import](#19-mysql-to-postgresql-import)
 20. [Testing, development, operations, and decisions](#20-testing-development-operations-and-decisions)
+21. [Ops in Discord](#21-ops-in-discord)
 
 ---
 
@@ -84,6 +85,9 @@ than one short note on an evidence item, §7.5); hard deletion; Quack-managed
 roles; rule editing in Discord; Quack hosting evidence files (copies live in
 the server's own evidence channel; a dashboard upload's bytes wait in
 PostgreSQL only until copied, at most 24 hours, §7.3).
+
+The ops channels (§21) are the one exception to principle 5, for Quack's
+operator only, and carry only server metadata and counts.
 
 ### 1.3 Glossary
 
@@ -1318,6 +1322,7 @@ itself.
 | `/rules` | slash | — | `moderate` or `manage_rules` | Ephemeral active rules with a dashboard link each, 10 per page. |
 | `/setup` | slash | — | `manage_settings` | Ephemeral guided setup panel (§11.8). |
 | `/help` | slash | `topic` STRING, choices `cases`, `rules`, `appeals`, `setup` | none | Ephemeral help (§12.12). |
+| `/ops status`, `/ops server`, `/ops jobs` | slash subcommands, ops server only (§21.8) | `server` STRING req. (a server id) for `/ops server` | operator (§21.1) | Ephemeral; §21.8. |
 | Add case | message command | (the message) | `moderate` | Rule picker, then the private receipt. The message becomes evidence. |
 | Add as evidence | message command | (the message) | `moderate` | Ephemeral picker (`evidence.picker`): a select of the message author's cases in this server and the actor's own recently added cases (`evidence::recent_cases`: each side newest 25 by number, merged newest first, without repeats, at most 25; voided ones included and marked) and **Enter a case number** (modal: number, note). Choosing adds the message (`add_evidence`) and answers `evidence.added` with Add evidence and View evidence. |
 | Add case | member command | (the member) | `moderate` | Rule picker, then an ephemeral confirmation and the public receipt. |
@@ -1344,6 +1349,10 @@ against active rule names, after the capability check; no match →
    definition, which also removes Go-era commands.
 5. Store the returned command ids by `(type, name)` for command mentions
    (`</case view:ID>`). A failure stops `serve`; `commands sync` exits 1.
+6. With `QUACK_OPS_GUILD_ID` set, sync `/ops` to that server the same way
+   (its definitions plus every other command when it is also
+   `QUACK_DEV_GUILD_ID`). This failing only logs a `warn`: Quack may not
+   be in the ops server yet.
 
 ### 11.3 Acknowledgement rules
 
@@ -1399,8 +1408,9 @@ response must be immediate, and fully (with 2FA) before any write.
 Everything staff-facing is ephemeral, errors included. Quack posts
 publicly only the public receipt (§11.7), the ticket panel and thread
 welcome, the honeypot warning, and posts in staff-only channels (appeal,
-ticket, log, evidence copy, server activity). Every button on a public
-message re-checks the clicker and answers privately.
+ticket, log, evidence copy, server activity) and the ops channels (§21).
+Every button on a public message re-checks the clicker and answers
+privately.
 
 ### 11.5 Custom IDs
 
@@ -1444,6 +1454,7 @@ authorizes the clicker.
 | `al` / `rl` | Pager | page | `/appeals` / `/rules` page. |
 | `su` | Setup control | area, operation | §11.8. |
 | `to` / `tc` / `tf` | Button Open a ticket / Close ticket / Restore private access | — / ticket / ticket | §13.2. |
+| `op` | Ops buttons | `st`; `rq` or `dm`, job; `jp`, page | Refresh the status board; requeue or dismiss a dead job; a `/ops jobs` page (§21.8). |
 
 **Legacy ids** (Go-era messages stay in Discord). Each supported shape is
 decoded exactly; the ULID is mapped with §19.3 and must name a record of
@@ -1874,6 +1885,14 @@ on the dashboard (never posted).
 page's `api.sign_in_failed`, `api.sign_in_denied`); otherwise the matching
 `error.*` or `refusal.*` text. Codes reusing another text: snapshot
 `api.code`.
+
+### 12.15 Ops messages
+
+Operator-only (§21): `ops.started`, `ops.gateway`, `ops.install`,
+`ops.dead_job`, `ops.dead_job_handled`, `ops.dead_jobs_more`,
+`ops.failed_actions`, `ops.errors`, `ops.status`, `ops.server`,
+`ops.server_unknown`, `ops.jobs`, `ops.job_gone`, `ops.not_allowed`,
+`command.ops.*`.
 
 ## 13. Settings and optional modules
 
@@ -2628,7 +2647,7 @@ CREATE TYPE honeypot_hit_state     AS ENUM ('pending', 'case_created', 'failed')
 
 `original_unconfirmed` comes from migration `0004`; `evidence_kind`,
 `no_file_copied`, `evidence_removed`, and `evidence_visibility_changed`
-from `0007`. A test checks these lines against the `quack-core` enums.
+from `0008`. A test checks these lines against the `quack-core` enums.
 
 ### 15.2 Servers, accounts, sessions
 
@@ -2692,6 +2711,10 @@ from `0007`. A test checks these lines against the `quack-core` enums.
 - `jobs` (§16), `operation_keys` (§4.3; account 0 is Quack, guild 0 none),
   `case_drafts` (§11.6, with the `/case add` file as `evidence_file`),
   `import_runs` and `import_guilds` (§19.11).
+- `ops_posts` and the one-row `ops_state` (§21.3): durable ops posts
+  waiting for their `post_ops` job, and the current run and the status
+  board's message. `jobs.ops_alerted_at` and `actions.ops_alerted_at`
+  mark what the ops alerts reported (§21.5).
 
 ### 15.7 Honeypot hits
 
@@ -2730,7 +2753,10 @@ Each hot-path read has an index declared with its table (escalation:
   tickets numbered per server in creation order. A ticket still `opening`
   at the upgrade with a thread created under the old `ticket-<u22>` name
   but not yet saved gets a second, numbered thread.
-- `0007`: evidence beyond message links (§7): `evidence_kind`;
+- `0007`: `job_kind` value `post_ops`, `ops_posts`, `ops_state` (§21.3),
+  and `ops_alerted_at` on `jobs` and `actions` (§21.5; rows dead or failed
+  at the upgrade count as reported).
+- `0008`: evidence beyond message links (§7): `evidence_kind`;
   `evidence_failure` value `no_file_copied`; `mod_log_kind` values
   `evidence_removed`, `evidence_visibility_changed`; `evidence.kind`,
   `visible_to_member`, the note columns, `removed_at`/`removed_by`,
@@ -2823,6 +2849,7 @@ From `JobKind::policy`; the last backoff repeats.
 | `honeypot_cleanup` | `honeypot_cleanup:<guild>:<message>` | 2 | 30 s | 1, 2, 4, 8, 16, 32, 64 s | 10 | Delete is idempotent (404 = done). | `cleanup_failed_at`. |
 | `open_ticket` | `open_ticket:<ticket>` | 2 | 60 s | 2 s, 10 s, 30 s | 4 | Thread looked up before any create; steps check saved progress (§13.2.3). | The open fails (§13.2.2). |
 | `close_ticket` | `close_ticket:<ticket>` | 2 | 300 s | 5 s, 30 s, 2 min, 10 min, 1 h | 6 | Each step records its column (§13.2.4). | §13.2.4 finalization. |
+| `post_ops` | `post_ops:<post>` | 1 | 60 s | 10 s, 30 s, 2 min, 10 min, 1 h | 6 | Nonce = post ID; the row is deleted with the settle. | Drop the post (`warn`). |
 | `housekeeping` | `housekeeping` | 1 | 300 s | `Reschedule` | 1 | Deletes expired rows. | `Reschedule` in 10 min. |
 
 
@@ -2874,8 +2901,9 @@ public surfaces in rustdoc (`cargo doc --workspace --no-deps`).
 | `quack-discord` | Twilight: gateway, caches, REST with typed outcomes, rendering, custom ids, commands. | core, text, telemetry |
 | `quack-engine` | Use cases and job handlers; defines the `Discord` port. | core, text, db, telemetry |
 | `quack-tickets`, `quack-activity-log`, `quack-honeypot` | The optional modules, as service functions plus `ModuleJobs`/`ModuleHooks`. | core, text, db, engine, telemetry |
+| `quack-ops` | Ops in Discord (§21): channels, durable posts, alerts, the status board, the error feed, `/ops` answers. | core, text, db, engine, telemetry |
 | `quack-api` | axum HTTP API, Discord sign-in, sessions, CSRF, rate limits, OpenAPI, dashboard files. | core, text, db, engine, modules, telemetry |
-| `quack-bot` | Interactions and gateway events into engine calls and replies; the module adapters and `/setup`. | core, text, db, engine, discord, modules, telemetry |
+| `quack-bot` | Interactions and gateway events into engine calls and replies; the module adapters, `/setup`, and `/ops`. | core, text, db, engine, discord, modules, ops, telemetry |
 | `quack-import` | The one-time MySQL importer (the only crate with sqlx's `mysql`). | core, db |
 | `quack-testkit` | The fake `Discord` port, the PostgreSQL test harness, the queue driver. Dev-dependency only. | core, text, engine, db |
 | `quack` | Config, CLI, the `DiscordPort` adapter, composition (`compose::App`), `serve` startup and shutdown. | everything |
@@ -2967,7 +2995,7 @@ no shell to chain `migrate` and `serve`).
 9. Connect the gateway; wait until every installed server loaded (≤ 30
    s); start the modules (`quack_honeypot::recover`, activity senders,
    ticket gauge, journal-gap recorder), the job runner (ensuring
-   `housekeeping`), and the gauge task.
+   `housekeeping`), the gauge task, and ops (§21.2) when configured.
 10. `/readyz` is ready with the fence, a `READY`/`RESUMED` session, and a
     pass from every dispatcher.
 
@@ -2992,7 +3020,8 @@ a grace period of at least 35 s):
 1. Mark not ready.
 2. Stop claiming jobs, gateway intake, and new HTTP connections.
 3. Drain until 5 s before the deadline: interactions, requests, jobs, the
-   activity log's batches and queue.
+   activity log's batches and queue; alongside, when ops is on, record how
+   the run stopped in `ops_state` (§21.3; never after a lost fence).
 4. Abort the rest, close the Discord client (§16.7), close the pool and
    release the fence.
 5. Flush telemetry (≤ 5 s; a failed or late flush logs a warning to
@@ -3035,6 +3064,9 @@ the parser's message, which may quote a secret). Quack never reads `.env`.
 | `QUACK_DEV_GUILD_ID` | snowflake | unset | Register commands to this server only. |
 | `QUACK_TRUSTED_PROXY_HOPS` | integer 0–5 | 0 | Proxies in front of Quack, for the client IP (§14.7). |
 | `QUACK_IMPORT_SOURCE_URL` | secret MySQL URL | required for `import-mysql` | The Go database (§19). |
+| `QUACK_OPS_GUILD_ID` | snowflake | unset | The ops server (§21); unset turns ops off. |
+| `QUACK_OPS_USER_IDS` | 1–25 snowflakes, comma-separated | required with `QUACK_OPS_GUILD_ID` | The operators (§21.1). |
+| `QUACK_OPS_TRACE_URL` | absolute URL containing `{trace_id}` | unset | Trace links in the error feed (§21.7). |
 
 
 ### 17.8 Engineering rules
@@ -3139,10 +3171,13 @@ Alerts (counter increases; gauges report explicit zeros):
 | Down | `/readyz` failing or `quack.gateway.connected` = 0 for 2 minutes; no `quack.build.info` series for 5 minutes. |
 | Slow acknowledgements | p99 `quack.interaction.ack.duration` > 1.5 s for 10 minutes, or any observation above 3 s. |
 | Job backlog | `quack.jobs.oldest_ready.age{quack.job.kind="run_action"}` > 120 s, or any kind > 600 s, for 5 minutes. |
-| Jobs failing | `quack.job.lease_expired` increases on 3 consecutive 5-minute windows; `quack.jobs.dead` > 0 for `run_action`, `send_dm`, or `close_ticket`; `quack.actions.failed` grows by 10 in an hour. |
+| Jobs failing | `quack.job.lease_expired` increases on 3 consecutive 5-minute windows. Dead jobs and failed actions are posted by Quack itself when ops is on (§21.5); without it, alert on `quack.jobs.dead` > 0 for `run_action`, `send_dm`, or `close_ticket`, and `quack.actions.failed` growing by 10 in an hour. |
 | Unconfirmed effects | `quack.dm.outcomes{quack.dm.outcome="unknown"}` grows by 5 or more in an hour, or `quack.action.attempts{quack.action.attempt.outcome="unknown"}` by 20 or more. |
 | Limits and drops | `quack.discord.rate_limit.hits{quack.discord.rate_limit.scope="global"}` or `quack.queue.dropped` increases in 5 minutes. |
 | API and database | 5xx share of `http.server.request.duration` > 2% for 10 minutes; p95 `db.client.connection.wait_time` > 100 ms, any `db.client.connection.timeouts`, or failed operations > 10/min, for 5 minutes. |
+
+Route the alerts to Discord with Grafana's Discord contact point and a
+webhook in `#ops-alerts` (§21.2): it keeps working while Quack is down.
 
 
 ## 19. MySQL to PostgreSQL import
@@ -3444,7 +3479,7 @@ OTLP `4318`, Grafana `3001`). Commands: `quack migrate`, `quack serve
 | --- | --- |
 | Postgres down (`/readyz` fails, jobs stop) | Restore it; Quack resumes, nothing committed is lost. |
 | Discord down or rate limiting | Afterwards review failed actions; check `unconfirmed` ones in Discord first. |
-| Dead jobs (`quack.jobs.dead`) | Fix the cause; `UPDATE jobs SET dead_at = NULL, attempts = 0, run_at = now() WHERE id = …` is the only sanctioned edit. |
+| Dead jobs (`quack.jobs.dead`) | Fix the cause; `UPDATE jobs SET dead_at = NULL, attempts = 0, run_at = now() WHERE id = …` is the only sanctioned edit (the ops **Requeue** button and `/ops jobs` run exactly it, §21.5). |
 | Stuck "in progress" | Impossible past §16.5's budgets; check `quack.jobs.oldest_ready.age` and `quack.job.lease_expired`. |
 | Fence lost or terminal gateway close (4004, 4014) | Exits 1 (§17.5); fix intents or token, let the supervisor restart. A second instance waits on the fence. |
 | Leaked token, client secret, or session secret | Rotate; for the session secret also `DELETE FROM sessions`. |
@@ -3535,15 +3570,18 @@ Choices made without the owner; overrule by editing this document first.
 | 49 | Context numbers are exact decimals (strings on the API). |
 | 50 | Setup adopts its own fresh channel (same name, under 10 minutes old, Quack's overwrite) instead of creating a second. |
 | 51 | The dashboard CSP is the Go server's, including the visitors.now analytics origins. |
-| 52 | Uploaded files are stored only as copies in the evidence channel: uploading is refused unless one is set and staff-only. Dashboard bytes wait in PostgreSQL (`evidence_upload_bytes`) so the same durable capture job copies them, and are deleted once copied (at most 24 hours); no external storage. |
-| 53 | One note per evidence item (0–500 characters, staff-only, optimistic `note_revision`), the only private staff note Quack keeps (§1.2). |
-| 54 | Removal hides an item (Discord and the member never see it; the dashboard lists it collapsed), never deletes it or its copies; a removed message comes back when its link is added again; uploads are not restored. |
-| 55 | Up to 5 messages before and 5 after a staff-added message are saved, text only (500 characters each), best effort; never for Quack's own items. |
-| 56 | "Add as evidence" offers the author's and the actor's own newest cases (25), voided ones marked, and a case number modal. |
-| 57 | Discord evidence galleries are always spoilered; their URLs are fetched fresh per view, never stored. |
-| 58 | Dashboard staging ceilings: 256 MiB per server and 1 GiB across the service, checked under one transaction-scoped advisory lock (staging is serialized service-wide); past them `503 uploads_busy` with `Retry-After: 60`. |
-| 59 | Route 60 reads a body for at most 15 minutes in all (on top of 30 s idle), part headers at most 8 KiB, file names cut to 1,024 characters at the parser. |
-| 60 | Evidence buttons on a card and on `case.receipt.posted` always answer in a new ephemeral message (ids with `n`), also on a card that isn't a receipt (`/case view`), so one rule covers every card. |
+| 52 | Ops in Discord (§21) for one ops server and a fixed operator list; server metadata and counts cross servers there, nothing else. |
+| 53 | Ops posts are durable jobs except the status board (10-minute refresh) and the error feed (best effort); Grafana keeps the alerts Quack can't send. |
+| 54 | Dismissing a dead job deletes it early; requeueing it is §20.3's sanctioned edit. |
+| 55 | Uploaded files are stored only as copies in the evidence channel: uploading is refused unless one is set and staff-only. Dashboard bytes wait in PostgreSQL (`evidence_upload_bytes`) so the same durable capture job copies them, and are deleted once copied (at most 24 hours); no external storage. |
+| 56 | One note per evidence item (0–500 characters, staff-only, optimistic `note_revision`), the only private staff note Quack keeps (§1.2). |
+| 57 | Removal hides an item (Discord and the member never see it; the dashboard lists it collapsed), never deletes it or its copies; a removed message comes back when its link is added again; uploads are not restored. |
+| 58 | Up to 5 messages before and 5 after a staff-added message are saved, text only (500 characters each), best effort; never for Quack's own items. |
+| 59 | "Add as evidence" offers the author's and the actor's own newest cases (25), voided ones marked, and a case number modal. |
+| 60 | Discord evidence galleries are always spoilered; their URLs are fetched fresh per view, never stored. |
+| 61 | Dashboard staging ceilings: 256 MiB per server and 1 GiB across the service, checked under one transaction-scoped advisory lock (staging is serialized service-wide); past them `503 uploads_busy` with `Retry-After: 60`. |
+| 62 | Route 60 reads a body for at most 15 minutes in all (on top of 30 s idle), part headers at most 8 KiB, file names cut to 1,024 characters at the parser. |
+| 63 | Evidence buttons on a card and on `case.receipt.posted` always answer in a new ephemeral message (ids with `n`), also on a card that isn't a receipt (`/case view`), so one rule covers every card. |
 
 ### 20.6 Live rehearsal checklist
 
@@ -3579,3 +3617,141 @@ Discord. Run it with a staging application before release and at cutover
 | Operations | [ ] `SIGTERM` with jobs in flight, nothing runs twice; a second instance waits; fence loss exits 1; the 4014 disallowed-intents close stops `serve` with exit 1. |
 | Operations | [ ] Probes, the 35-second grace, telemetry in `grafana/otel-lgtm`. |
 | Import | [ ] The full runbook (§19.12) on a production copy, staging application in no production server. |
+
+## 21. Ops in Discord
+
+Quack can post its own operations into private channels of one server its
+operator chooses (the **ops server**), and answers `/ops` there. Grafana
+stays the place for history and for alerts Quack can't send itself (it
+can't report that it is down); Grafana's Discord contact point posts into
+`#ops-alerts` through an ordinary webhook, with no Quack code involved.
+`crates/quack-ops` owns all of it; with `QUACK_OPS_GUILD_ID` unset nothing
+here runs and no `/ops` command is registered.
+
+### 21.1 Operators and the boundary
+
+`QUACK_OPS_USER_IDS` lists the **operators** (1–25 account ids). Only
+they see the ops channels (member overwrites) and may use `/ops` and the
+ops buttons; the check is the clicker's id and the ops server, on every
+interaction, and no server role or permission counts. `/ops` is
+registered in the ops server only, with default member permissions `0`.
+
+This is the one place data crosses servers (§1.1 principle 5). It is
+limited to **server metadata and counts**: a server's id, name, owner id,
+install dates, enabled modules, Quack's missing permissions, and counts of
+cases, rules, appeals, failed actions, and open tickets. Never case
+contents, reasons, context, evidence, appeals, member names, messages, or
+DMs. The error feed carries log lines, which §18.5 already keeps free of
+member and staff text and secrets.
+
+### 21.2 Channels
+
+After the gateway is ready, `quack_ops::start` makes sure the ops server
+has a category named `Ops` holding five text channels, and repeats every
+5 minutes until it succeeds (a missing install or permission is logged
+once at `warn`):
+
+| Channel | Gets |
+| --- | --- |
+| `#ops-status` | The status board (§21.6). |
+| `#ops-deploys` | Startups and gateway trouble (§21.3). |
+| `#ops-installs` | Joins and leaves (§21.4). |
+| `#ops-alerts` | Dead jobs and failed actions (§21.5); Grafana's webhook. |
+| `#ops-errors` | The error feed (§21.7). |
+
+**Find first**: a category named `Ops` (any case) and, under it, text
+channels with exactly these names are adopted; anything missing is
+created. Created ones get: @everyone deny View Channel; Quack (member
+overwrite) allow View Channel, Send Messages, Read Message History, Embed
+Links; each operator (member overwrite) allow View Channel, Send Messages,
+Read Message History. An adopted channel whose own overwrites don't deny
+@everyone View Channel is never posted to (`warn`, once per start), so an
+ops feed can't leak into a public channel.
+
+### 21.3 Posts and lifecycle
+
+Every ops post except the status board and the error feed is durable: an
+`ops_posts` row (feed and a typed body) and a `post_ops:<post>` job
+inserted together (§16.5). The job posts to its feed's channel (nonce =
+post id), then deletes the row. While the channels aren't ready a post
+retries on the kind's backoff; one that runs out of attempts (about 70
+minutes), or whose channel isn't private, is dropped with a `warn`.
+`post_ops` runs one at a time, so posts arrive in order.
+
+The single `ops_state` row remembers the current run: version, started
+and last-seen times (a heartbeat every minute, from its own task so it
+runs even while the channels aren't ready), and how it stopped. Each
+start posts `ops.started` to `#ops-deploys` with the version (and the
+commit when the build set `QUACK_GIT_COMMIT`), the time to ready, the
+migrations applied, the servers Quack is in, and what happened to the run
+before: stopped cleanly (a signal, or the gateway closing for good) or
+ended without stopping, last seen at a time (a crash, a kill, or a lost
+database lock: a run that lost the lock writes nothing, since another may
+own `ops_state` already; "down about" the gap). Gateway trouble after startup (drops,
+failed reconnects, new sessions, invalid sessions) is counted and posted
+as one `ops.gateway` summary per 10 minutes that had any.
+
+### 21.4 Installs
+
+After `GUILD_CREATE` bootstraps a first join or a return, and after a
+server is marked left (`GUILD_DELETE` or missing from `READY`),
+`#ops-installs` gets `ops.install`: joined, rejoined, or left; the
+server's name and id, owner id, and how many servers Quack is now in.
+Startup's `GUILD_CREATE` for servers already installed posts nothing.
+
+### 21.5 Alerts
+
+Each minute Quack reports what no alert covered yet and marks it
+(`ops_alerted_at` on the job or action, set to the death or failure time
+it reported, in the same transaction as the posts). Nothing is missed
+across restarts, and a change still uncommitted during a poll is picked
+up by the next one:
+
+- **Dead jobs** (dead, not yet alerted for this death, except `post_ops`): one
+  `ops.dead_job` post each (kind, key, server, attempts, last error code,
+  when), with **Requeue** and **Dismiss**; more than 5 in a minute post 5
+  and `ops.dead_jobs_more`. Requeue is the sanctioned edit of §20.3
+  (`dead_at = NULL, attempts = 0, run_at = now()`, then the kind is woken);
+  Dismiss deletes the dead row now, as housekeeping would after 7 days.
+  Either edits the post to say who did it; a job already gone says
+  `ops.job_gone`.
+- **Failed actions** (`state = 'failed'`, not dismissed, not yet alerted
+  since their last change): one `ops.failed_actions` post per minute that had any, by
+  kind and failure reason, with the servers (up to 10). Staff retry or
+  dismiss them in their own server; this post has no buttons.
+
+Grafana keeps every other alert of §18.7; these two moved here because
+they need a click, not a page.
+
+### 21.6 Status board
+
+One message in `#ops-status` (its id in `ops_state`), edited every 10
+minutes and by its **Refresh** button: version, uptime, gateway connection
+and heartbeat latency, servers, jobs ready and the oldest wait by kind
+(non-zero kinds only), dead jobs, failed actions, open appeals, open
+tickets, database pool use, and when it was updated. A board Discord no
+longer has (404) is posted again. `/ops status` answers the same message
+privately.
+
+### 21.7 Error feed
+
+A `quack-telemetry` layer copies every `error` event (target, message and
+fields, trace id when exported) into a bounded in-memory buffer (256
+events; overflow counted). Each minute `quack-ops` drains it and posts one
+`ops.errors` message: up to 10 distinct target-and-message groups with
+counts, and each group's first trace id, linked through
+`QUACK_OPS_TRACE_URL` (`{trace_id}` replaced) when set. Events from
+`quack_ops` itself are skipped, so a failing post can't feed the feed.
+Best effort: a restart or a Discord failure loses the minute.
+
+### 21.8 Commands and buttons
+
+| Command | Answer (ephemeral) |
+| --- | --- |
+| `/ops status` | The status board. |
+| `/ops server id:<server id>` | `ops.server`: §21.1's metadata and counts for any stored server, plus Quack's missing permissions there when Discord answers; `ops.server_unknown` otherwise. |
+| `/ops jobs` | `ops.jobs`: dead jobs, newest first, 5 per page, each with **Requeue** and **Dismiss**. |
+
+Custom ids (§11.5): `op:st` refresh the board; `op:rq:<job>` and
+`op:dm:<job>` requeue and dismiss; `op:jp:<page>` a `/ops jobs` page. A
+non-operator gets `ops.not_allowed`.

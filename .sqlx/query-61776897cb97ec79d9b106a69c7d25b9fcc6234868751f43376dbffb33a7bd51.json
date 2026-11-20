@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops_state SET status_channel_id = $1, status_message_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "61776897cb97ec79d9b106a69c7d25b9fcc6234868751f43376dbffb33a7bd51"
+}

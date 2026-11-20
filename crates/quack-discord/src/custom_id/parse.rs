@@ -1,7 +1,7 @@
 //! Encoding and decoding current (`1:`) ids.
 
 use quack_core::ids::{
-    ActionId, AppealId, CaseId, ChannelId, EvidenceId, MemberId, MessageId, RuleId, TicketId,
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, JobId, MemberId, MessageId, RuleId, TicketId,
 };
 use quack_text::actions::DraftPage;
 
@@ -134,6 +134,10 @@ pub(super) fn encode(id: &CustomId) -> String {
         C::OpenTicket => ("to", String::new()),
         C::CloseTicket(t) => ("tc", t.to_u22()),
         C::FixTicketAccess(t) => ("tf", t.to_u22()),
+        C::OpsRefresh => ("op", "st".to_owned()),
+        C::OpsRequeueJob(j) => ("op", format!("rq:{}", j.to_u22())),
+        C::OpsDismissJob(j) => ("op", format!("dm:{}", j.to_u22())),
+        C::OpsJobsPage(p) => ("op", format!("jp:{p}")),
     };
     if args.is_empty() {
         format!("1:{code}")
@@ -240,7 +244,20 @@ pub(super) fn decode(rest: &str) -> Option<CustomId> {
         ("to", []) => C::OpenTicket,
         ("tc", [t]) => C::CloseTicket(ticket(t)?),
         ("tf", [t]) => C::FixTicketAccess(ticket(t)?),
+        ("op", args) => return decode_ops(args),
         (code, args) => return decode_evidence(code, args),
+    })
+}
+
+/// The ops ids (`op:…`).
+fn decode_ops(args: &[&str]) -> Option<CustomId> {
+    use CustomId as C;
+    Some(match args {
+        ["st"] => C::OpsRefresh,
+        ["rq", j] => C::OpsRequeueJob(JobId::from_u22(j).ok()?),
+        ["dm", j] => C::OpsDismissJob(JobId::from_u22(j).ok()?),
+        ["jp", p] => C::OpsJobsPage(number(p)?),
+        _ => return None,
     })
 }
 

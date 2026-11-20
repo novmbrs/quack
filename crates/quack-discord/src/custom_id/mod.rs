@@ -15,7 +15,7 @@ mod setup;
 mod tests;
 
 use quack_core::ids::{
-    ActionId, AppealId, CaseId, ChannelId, EvidenceId, MemberId, MessageId, RuleId, TicketId,
+    ActionId, AppealId, CaseId, ChannelId, EvidenceId, JobId, MemberId, MessageId, RuleId, TicketId,
 };
 use quack_text::actions::{DraftPage, SetupArea, SetupOp};
 
@@ -206,6 +206,14 @@ pub enum CustomId {
     CloseTicket(TicketId),
     /// `tf`: fix a ticket's access.
     FixTicketAccess(TicketId),
+    /// `op:st`: refresh the ops status board.
+    OpsRefresh,
+    /// `op:rq`: requeue a dead job.
+    OpsRequeueJob(JobId),
+    /// `op:dm`: dismiss a dead job.
+    OpsDismissJob(JobId),
+    /// `op:jp`: a `/ops jobs` page.
+    OpsJobsPage(u32),
 }
 
 /// What a received custom id means.

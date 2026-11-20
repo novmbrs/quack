@@ -196,6 +196,60 @@ impl Problems {
         text.to_owned()
     }
 
+    /// `QUACK_OPS_GUILD_ID`, `QUACK_OPS_USER_IDS`, and
+    /// `QUACK_OPS_TRACE_URL` (§21): all or nothing.
+    pub(super) fn ops(&mut self, v: &BTreeMap<String, String>) -> Option<super::OpsSettings> {
+        use quack_core::ids::{AccountId, GuildId};
+        let guild = self.snowflake(v, "ops_guild_id", false);
+        let users = get(v, "ops_user_ids");
+        let trace = get(v, "ops_trace_url");
+        if guild.is_none() {
+            if users.is_some() || trace.is_some() {
+                self.push(
+                    "ops_guild_id",
+                    "is required when QUACK_OPS_USER_IDS or QUACK_OPS_TRACE_URL is set.",
+                );
+            }
+            return None;
+        }
+        let mut operators = Vec::new();
+        let mut bad = users.is_none();
+        for part in users.unwrap_or_default().split(',') {
+            match part.trim().parse::<u64>().ok().and_then(AccountId::new) {
+                Some(id) if !operators.contains(&id) => operators.push(id),
+                Some(_) => {}
+                None => bad = true,
+            }
+        }
+        if bad || operators.is_empty() || operators.len() > 25 {
+            self.push(
+                "ops_user_ids",
+                "must list 1 to 25 Discord account IDs, separated by commas.",
+            );
+        }
+        let trace_url = trace.and_then(|t| {
+            let url = t.replace("{trace_id}", "0");
+            let ok = t.contains("{trace_id}")
+                && reqwest::Url::parse(&url).is_ok_and(|u| {
+                    matches!(u.scheme(), "http" | "https") && u.host_str().is_some()
+                });
+            if ok {
+                Some(t.to_owned())
+            } else {
+                self.push(
+                    "ops_trace_url",
+                    "must be an absolute http or https URL containing {trace_id}.",
+                );
+                None
+            }
+        });
+        Some(super::OpsSettings {
+            guild: GuildId::new(guild?)?,
+            operators,
+            trace_url,
+        })
+    }
+
     /// The configuration, or every problem.
     pub(super) fn finish<T>(self, value: T) -> Result<T, ConfigErrors> {
         if self.0.is_empty() {

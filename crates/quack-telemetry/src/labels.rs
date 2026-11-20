@@ -347,6 +347,8 @@ label_enum! {
         OpenTicket => "open_ticket",
         /// Freeze a ticket, save its transcript, and close it.
         CloseTicket => "close_ticket",
+        /// Post an ops message to the ops server.
+        PostOps => "post_ops",
         /// Expire sessions, drafts, and operation keys.
         Housekeeping => "housekeeping",
     }
@@ -662,6 +664,7 @@ mod tests {
                 "honeypot_cleanup",
                 "open_ticket",
                 "close_ticket",
+                "post_ops",
                 "housekeeping"
             ]
         );

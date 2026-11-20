@@ -12,12 +12,15 @@
 //!   [`current_trace_context`] / [`spans::job`] carry traces through the
 //!   job queue as links.
 //!
+//! - [`errors`] buffers `error` events for the ops error feed.
+//!
 //! Metric attributes are typed [`labels`], so ids can never become metric
 //! labels; ids go on spans and logs.
 
 pub mod catalog;
 mod config;
 mod error;
+pub mod errors;
 mod guard;
 mod init;
 pub mod keys;

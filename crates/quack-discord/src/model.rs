@@ -199,6 +199,8 @@ pub struct ChannelSpec {
     pub parent_id: Option<ChannelId>,
     /// Its permission overwrites.
     pub overwrites: Vec<Overwrite>,
+    /// Whether it is a category (type 4) rather than a text channel.
+    pub category: bool,
 }
 
 /// What `GET /gateway/bot` says about sharding.

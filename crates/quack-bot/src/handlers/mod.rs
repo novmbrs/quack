@@ -16,6 +16,7 @@ pub(crate) mod evidence_view;
 pub(crate) mod help;
 pub(crate) mod member_appeal;
 pub(crate) mod module;
+pub(crate) mod ops;
 pub(crate) mod outcome;
 pub(crate) mod rules;
 pub(crate) mod setup;

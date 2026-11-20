@@ -654,7 +654,7 @@ async fn historical_rows_may_lack_what_go_did_not_keep(
     Ok(())
 }
 
-/// Migration 0007 (§15.10): an uploaded-files item has no source message, a
+/// Migration 0008 (§15.10): an uploaded-files item has no source message, a
 /// saved message is always visible to the member, removal names who did
 /// it, staged bytes belong to a file of their own server, and housekeeping
 /// drops bytes whose file is no longer pending.

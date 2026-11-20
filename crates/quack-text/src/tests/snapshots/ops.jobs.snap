@@ -1,0 +1,65 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## none
+tone: Success
+--- discord ---
+No dead jobs.
+--- plain ---
+No dead jobs.
+--- model ---
+Text [Fixed("No dead jobs.")]
+
+## first of two pages
+tone: Warning
+--- discord ---
+### 7 dead jobs, newest first
+1. `run_action` `run_action:0193-1`, died <t:1794924309:R>: `discord_unavailable`
+2. `run_action` `run_action:0193-2`, died <t:1794924309:R>: `discord_unavailable`
+3. `run_action` `run_action:0193-3`, died <t:1794924309:R>: `discord_unavailable`
+4. `run_action` `run_action:0193-4`, died <t:1794924309:R>: `discord_unavailable`
+5. `run_action` `run_action:0193-5`, died <t:1794924309:R>: `discord_unavailable`
+-# Page 1 of 2
+buttons: [Requeue 1 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000001)) | [Dismiss 1 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000001))
+buttons: [Requeue 2 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000002)) | [Dismiss 2 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000002))
+buttons: [Requeue 3 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000003)) | [Dismiss 3 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000003))
+buttons: [Requeue 4 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000004)) | [Dismiss 4 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000004))
+buttons: [Requeue 5 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000005)) | [Dismiss 5 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000005))
+buttons: [Next · Secondary] OpsJobsPage(2)
+--- plain ---
+7 dead jobs, newest first
+1. run_action run_action:0193-1, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+2. run_action run_action:0193-2, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+3. run_action run_action:0193-3, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+4. run_action run_action:0193-4, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+5. run_action run_action:0193-5, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+Page 1 of 2
+--- model ---
+Heading [Fixed("7 dead jobs, newest first")]
+Text [Fixed("1. "), Code("run_action"), Fixed(" "), Code("run_action:0193-1"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Text [Fixed("2. "), Code("run_action"), Fixed(" "), Code("run_action:0193-2"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Text [Fixed("3. "), Code("run_action"), Fixed(" "), Code("run_action:0193-3"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Text [Fixed("4. "), Code("run_action"), Fixed(" "), Code("run_action:0193-4"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Text [Fixed("5. "), Code("run_action"), Fixed(" "), Code("run_action:0193-5"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Subtext [Fixed("Page 1 of 2")]
+
+## last page
+tone: Warning
+--- discord ---
+### 7 dead jobs, newest first
+6. `run_action` `run_action:0193-6`, died <t:1794924309:R>: `discord_unavailable`
+7. `run_action` `run_action:0193-7`, died <t:1794924309:R>: `discord_unavailable`
+-# Page 2 of 2
+buttons: [Requeue 6 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000006)) | [Dismiss 6 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000006))
+buttons: [Requeue 7 · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000007)) | [Dismiss 7 · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000007))
+buttons: [Previous · Secondary] OpsJobsPage(1)
+--- plain ---
+7 dead jobs, newest first
+6. run_action run_action:0193-6, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+7. run_action run_action:0193-7, died on 17 Nov 2026 at 14:05 UTC: discord_unavailable
+Page 2 of 2
+--- model ---
+Heading [Fixed("7 dead jobs, newest first")]
+Text [Fixed("6. "), Code("run_action"), Fixed(" "), Code("run_action:0193-6"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Text [Fixed("7. "), Code("run_action"), Fixed(" "), Code("run_action:0193-7"), Fixed(", died "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(": "), Code("discord_unavailable")]
+Subtext [Fixed("Page 2 of 2")]
