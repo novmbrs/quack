@@ -1,11 +1,12 @@
-//! In-memory Discord state (§11.10): the guild cache and the bounded member
-//! cache. Both are fed by the gateway loop before events are dispatched and
-//! produce quack-core facts.
+//! In-memory Discord state (§11.10): the guild cache, the bounded member
+//! cache, and the account cache the member cache owns. All are fed by the
+//! gateway loop before events are dispatched and produce quack-core facts.
 //!
 //! The server activity log's message cache stores redacted text under the
 //! module's privacy settings, so it lives in `quack-activity-log` (§11.10),
 //! not here.
 
+mod account;
 mod guild;
 mod lru;
 mod member;
@@ -19,8 +20,9 @@ use twilight_model::gateway::payload::incoming::{GuildCreate, MemberUpdate};
 use crate::convert::{self, MemberParts};
 use crate::model::Member;
 
+pub use account::AccountCache;
 pub use guild::GuildCache;
-pub use member::MemberCache;
+pub use member::{MemberCache, Since};
 
 /// The member a `GUILD_MEMBER_UPDATE` describes.
 pub(crate) fn member_update(update: &MemberUpdate) -> Option<Member> {
@@ -33,8 +35,10 @@ pub(crate) fn member_update(update: &MemberUpdate) -> Option<Member> {
     })
 }
 
-/// Feeds the member cache from a gateway event.
+/// Feeds the member cache, and through it the account cache, from a
+/// gateway event. Interaction and message authors refresh their accounts.
 pub(crate) fn feed_members(members: &MemberCache, event: &Event) {
+    let accounts = members.accounts();
     match event {
         Event::Ready(_) => members.clear(),
         Event::GuildCreate(create) => {
@@ -71,7 +75,22 @@ pub(crate) fn feed_members(members: &MemberCache, event: &Event) {
             {
                 members.remove(guild, member);
             }
+            accounts_of(accounts, [&remove.user]);
+        }
+        Event::InteractionCreate(create) => accounts_of(accounts, create.author()),
+        Event::MessageCreate(create) if create.webhook_id.is_none() => {
+            accounts_of(accounts, [&create.author]);
         }
         _ => {}
+    }
+}
+
+fn accounts_of<'a>(
+    accounts: &AccountCache,
+    users: impl IntoIterator<Item = &'a twilight_model::user::User>,
+) {
+    let now = std::time::Instant::now();
+    for account in users.into_iter().filter_map(convert::user) {
+        accounts.put(account, now);
     }
 }

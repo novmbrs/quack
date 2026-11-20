@@ -63,7 +63,7 @@ impl Discord for DiscordPort {
     }
 
     fn accounts<'a>(&'a self, ids: &'a [AccountId]) -> BoxFuture<'a, Outcome<Vec<AccountFacts>>> {
-        Box::pin(async move { self.client().accounts(ids).await })
+        Box::pin(async move { self.facts.accounts(ids).await })
     }
 
     fn channel_facts(

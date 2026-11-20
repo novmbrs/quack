@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use httpmock::MockServer;
-use quack_core::ids::{ChannelId, GuildId, MemberId};
+use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId};
 use quack_core::permissions::Permissions;
 use serde_json::json;
 
@@ -245,4 +245,24 @@ async fn an_untrusted_cache_reads_everything_over_rest() {
     );
     // Quack's id is read once.
     assert_eq!(me.calls_async().await, 1);
+}
+
+#[tokio::test]
+async fn accounts_come_from_the_cache_and_rest_answers_fill_it() {
+    let server = MockServer::start_async().await;
+    let user = server
+        .mock_async(|when, then| {
+            when.method("GET").path("/api/v10/users/9");
+            then.status(200).json_body(fixtures::user(9, "nine"));
+        })
+        .await;
+    let facts = facts(&server.base_url(), loaded());
+    let ids = [AccountId::new(9).unwrap(), AccountId::new(7).unwrap()];
+    for _ in 0..2 {
+        let found = facts.accounts(&ids).await.done().unwrap();
+        let names: Vec<_> = found.iter().map(|a| a.username.as_str()).collect();
+        assert_eq!(names, ["nine", "member"], "in the order asked");
+    }
+    // Member 7 came from GUILD_CREATE; 9 was read once, then cached.
+    assert_eq!(user.calls_async().await, 1);
 }
