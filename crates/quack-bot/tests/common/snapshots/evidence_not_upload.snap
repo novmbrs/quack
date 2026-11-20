@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.

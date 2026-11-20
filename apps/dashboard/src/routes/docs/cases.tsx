@@ -61,16 +61,78 @@ function Cases() {
       </Section>
 
       <Section id="evidence" title="Evidence">
+        <p>Evidence is what shows what happened. Each evidence item is one of two kinds:</p>
+        <ul>
+          <li>
+            A <b>saved message</b>: Quack's copy of a Discord message, its files, and up to 5
+            messages before and after it.
+          </li>
+          <li>
+            <b>Uploaded files</b>: up to 10 files a moderator uploaded, such as a screenshot from a
+            DM. Quack saves images, videos, audio, plain text, and PDFs up to 10 MB each.
+          </li>
+        </ul>
+        <p>Ways to add evidence:</p>
+        <ul>
+          <li>
+            Right-click a message and choose <Cmd>Apps → Add case</Cmd> or{" "}
+            <Cmd>Apps → Add as evidence</Cmd>. Add as evidence offers the author's cases and the
+            ones you added recently, or a case number.
+          </li>
+          <li>
+            Put message links in the case context, or give <Cmd>/case add</Cmd> a <b>file</b>.
+          </li>
+          <li>
+            Run <Cmd>/case evidence</Cmd> with a case number and message links, up to three files,
+            or both.
+          </li>
+          <li>
+            Select <b>Add evidence</b> on a case or after adding one: paste message links, attach
+            files, or both.
+          </li>
+          <li>
+            On the dashboard's case page, drop files on <b>Evidence</b>, paste them, or select{" "}
+            <b>Upload files</b>. <b>Add message links</b> saves messages.
+          </li>
+        </ul>
         <p>
-          Evidence is saved message snapshots and their files. Add case from a message, message
-          links in the case context, and <b>Add evidence</b> on the case all add evidence. Quack
-          saves a copy of each message. With evidence copies turned on in <Cmd>/setup</Cmd>, it also
-          keeps copies of the files in a staff channel, so they're still there if the original gets
-          deleted. Members can see the evidence on their case, but not who wrote it.
+          Every item can have a short <b>staff note</b>, such as where it came from. Only staff see
+          notes. Add one while adding evidence, or edit it later.
         </p>
+        <Note>
+          Uploaded files are kept as copies in the server's evidence channel, so set a staff-only
+          one in <Cmd>/setup</Cmd> first. Quack won't upload anything without it. With an evidence
+          channel set, Quack also copies the files of saved messages there, so they're still there
+          if the original gets deleted.
+        </Note>
         <Note tone="warn">
           Quack can't save a message that's already gone. Add the case before deleting the message.
         </Note>
+      </Section>
+
+      <Section id="evidence-members" title="What the member sees">
+        <p>The member can open their own case on the dashboard. There they see:</p>
+        <ul>
+          <li>Saved messages: the text and files, never who sent them or where.</li>
+          <li>
+            Uploaded files only once staff select <b>Show to member</b>. New uploads are staff only,
+            and <b>Hide from member</b> hides them again.
+          </li>
+        </ul>
+        <p>
+          The member never sees staff notes, the messages around a saved message, or removed
+          evidence.
+        </p>
+      </Section>
+
+      <Section id="evidence-remove" title="Removing evidence">
+        <p>
+          If evidence was added by mistake, select <b>Remove</b> on it. Discord and the member stop
+          seeing it, and the case page lists it collapsed as removed. Nothing is deleted: the
+          moderation log records who removed it, and file copies stay in the evidence channel.
+          Adding the same message link again brings a removed message back. Removed uploads don't
+          come back; upload the files again.
+        </p>
       </Section>
 
       <Section id="mistakes" title="Fixing a mistake">

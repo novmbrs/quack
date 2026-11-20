@@ -300,6 +300,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Uploads 1–10 files (and a note) as one evidence item, copied to the
+         *     server's staff-only evidence channel. Only staff see them until someone
+         *     shows them to the member.
+         */
+        post: operations["upload_evidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Sets or clears an evidence item's staff note. */
+        put: operations["set_note"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Removes an evidence item added by mistake: hidden from Discord and the
+         *     member, listed collapsed for staff, never deleted.
+         */
+        post: operations["remove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Shows uploaded files to the case's member, or hides them again. */
+        put: operations["set_visibility"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{file_id}": {
         parameters: {
             query?: never;
@@ -1109,6 +1184,8 @@ export interface components {
         AddEvidence: {
             /** @description 1–10 message links in this server. */
             links: string[];
+            /** @description A staff note (0–500 characters) for each item this adds. */
+            note?: string | null;
         };
         /** @description Route 55's body. */
         AddInformation: {
@@ -1537,11 +1614,15 @@ export interface components {
             /** @description The error. */
             error: components["schemas"]["ErrorBody"];
         };
-        /** @description One saved message, as staff see it. */
+        /**
+         * @description One evidence item as staff see it (§14.3): a saved message or uploaded
+         *     files, with its note, whether the member sees it, the messages around
+         *     it, and who removed it.
+         */
         Evidence: {
             added_by?: components["schemas"]["Snowflake"] | null;
             author_id?: components["schemas"]["Snowflake"] | null;
-            channel_id: components["schemas"]["Snowflake"];
+            channel_id?: components["schemas"]["Snowflake"] | null;
             content?: string | null;
             /** Format: date-time */
             created_at: string;
@@ -1552,18 +1633,41 @@ export interface components {
             files_not_saved: number;
             /** Format: uuid */
             id: string;
+            kind: components["schemas"]["EvidenceKind"];
             /** Format: date-time */
             message_created_at?: string | null;
             /** Format: date-time */
             message_edited_at?: string | null;
-            message_id: components["schemas"]["Snowflake"];
+            message_id?: components["schemas"]["Snowflake"] | null;
+            /** @description The staff note (never shown to the member). */
+            note?: string | null;
+            /**
+             * Format: int32
+             * @description Send back as `expected_note_revision` when editing the note.
+             */
+            note_revision: number;
+            /** Format: date-time */
+            note_updated_at?: string | null;
+            note_updated_by?: components["schemas"]["Snowflake"] | null;
+            removed?: components["schemas"]["EvidenceRemoved"] | null;
             state: components["schemas"]["EvidenceState"];
             state_text: string;
-            url: string;
+            /**
+             * @description Messages around a staff-added message, oldest first; null when none
+             *     were saved.
+             */
+            surrounding?: components["schemas"]["SurroundingMessage"][] | null;
+            /** @description The message's link; null for uploaded files. */
+            url?: string | null;
+            /**
+             * @description Whether the member sees it on their case page: always for a saved
+             *     message; uploaded files only once staff show them.
+             */
+            visible_to_member: boolean;
         };
         /**
-         * @description Route 25's answer: the case and what adding the links did, in the
-         *     sentence the bot answers with (`evidence.added`).
+         * @description Routes 25 and 60's answer: the case and what adding the evidence did,
+         *     in the sentence the bot answers with (`evidence.added`).
          */
         EvidenceAdded: {
             /**
@@ -1571,9 +1675,15 @@ export interface components {
              * @description Messages that were already saved (or being saved) for the case.
              */
             already_saved: number;
-            /** @description The case after the links were added. */
+            /** @description The case after the evidence was added. */
             case: components["schemas"]["Case"];
-            /** @description What adding the links did, as a sentence. */
+            /**
+             * Format: int32
+             * @description Files Quack is copying to the evidence channel (one uploaded-files
+             *     item).
+             */
+            files: number;
+            /** @description What adding the evidence did, as a sentence. */
             message: string;
             /**
              * Format: int32
@@ -1582,13 +1692,29 @@ export interface components {
             new: number;
             /**
              * Format: int32
+             * @description Removed messages shown again.
+             */
+            restored: number;
+            /**
+             * Format: int32
              * @description Messages whose earlier save failed, being saved again.
              */
             retrying: number;
         };
+        /**
+         * @description Routes 61–63's answer: the case after the edit and what it did, in the
+         *     sentence the bot answers with (`evidence.note.*`,
+         *     `evidence.visibility.*`, `evidence.removed`).
+         */
+        EvidenceEdited: {
+            /** @description The case after the edit. */
+            case: components["schemas"]["Case"];
+            /** @description What the edit did, as a sentence. */
+            message: string;
+        };
         /** @enum {string} */
         EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error" | "no_file_copied";
-        /** @description One file of a saved message. */
+        /** @description One file of an evidence item. */
         EvidenceFile: {
             content_type?: string | null;
             copy_state: components["schemas"]["FileCopyState"];
@@ -1598,6 +1724,16 @@ export interface components {
             /** Format: int64 */
             size_bytes: number;
             state_text: string;
+        };
+        /** @enum {string} */
+        EvidenceKind: "message" | "upload";
+        /** @description Who removed an evidence item, and when (§7.5). */
+        EvidenceRemoved: {
+            /** Format: date-time */
+            at: string;
+            by: components["schemas"]["Snowflake"];
+            /** @description "Removed by …" (`evidence.removed_by`). */
+            text: string;
         };
         /** @enum {string} */
         EvidenceState: "saving" | "saved" | "failed";
@@ -2107,6 +2243,21 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @description Route 61's body. */
+        SetNote: {
+            /**
+             * Format: int32
+             * @description The `note_revision` the editor loaded; another is `409 note_changed`.
+             */
+            expected_note_revision: number;
+            /** @description The note (0–500 characters); null or blank clears it. */
+            note?: string | null;
+        };
+        /** @description Route 62's body. */
+        SetVisibility: {
+            /** @description Whether the member sees these uploaded files on their case page. */
+            visible_to_member: boolean;
+        };
         /** @description The server's settings. */
         Settings: {
             appeal_channel_id?: components["schemas"]["Snowflake"] | null;
@@ -2171,6 +2322,22 @@ export interface components {
         SubmitAppeal: {
             /** @description Why the case should be reconsidered (1–4,000 characters). */
             statement: string;
+        };
+        /** @description One message saved around a staff-added message (text only, §7.2). */
+        SurroundingMessage: {
+            author_id: components["schemas"]["Snowflake"];
+            /** @description Sent before the saved message (else after). */
+            before: boolean;
+            /** @description Its text, at most 500 characters. */
+            content?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: int32
+             * @description How many files it had (never copied).
+             */
+            files: number;
+            message_id: components["schemas"]["Snowflake"];
         };
         /**
          * @description A ticket. The ticket's member gets it without `closed_by` and with
@@ -2978,6 +3145,213 @@ export interface operations {
                 };
             };
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    upload_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * @description 1–10 files: images, videos, audio, plain text, or PDFs, up to
+                     *     10 MiB each. Each part's file name and `Content-Type` are used.
+                     */
+                    files: string[];
+                    /** @description A staff note (0–500 characters) for the uploaded files. */
+                    note?: string | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceAdded"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    set_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetNote"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceEdited"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceEdited"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    set_visibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guild_id: string;
+                case_ref: string;
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetVisibility"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceEdited"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

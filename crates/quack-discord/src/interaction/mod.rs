@@ -12,8 +12,10 @@ mod json;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod upload_tests;
 
-use quack_core::ids::{ChannelId, GuildId, MessageId, RoleId, RuleId};
+use quack_core::ids::{AttachmentId, ChannelId, GuildId, MessageId, RoleId, RuleId};
 use quack_core::permissions::{AccountFacts, Permissions};
 use quack_telemetry::labels::{CommandName, InteractionKind};
 use quack_text::actions::InputId;
@@ -66,6 +68,24 @@ pub struct TargetMessage {
     pub author: Option<AccountFacts>,
 }
 
+/// A file someone attached to the interaction: a slash command's
+/// ATTACHMENT option or one file of a modal's File Upload, from the
+/// payload's `resolved.attachments` (§7.1). Its URL is a short-lived
+/// `cdn.discordapp.com/ephemeral-attachments/…` link.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Upload {
+    /// Discord's attachment id.
+    pub attachment_id: AttachmentId,
+    /// Its file name.
+    pub filename: String,
+    /// Its content type, when Discord gave one.
+    pub content_type: Option<String>,
+    /// Its size in bytes.
+    pub size_bytes: u64,
+    /// Its CDN URL.
+    pub url: String,
+}
+
 /// A `rule` option: a picked rule's id, or typed text to match by name.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RuleArg {
@@ -102,6 +122,9 @@ pub enum FieldValue {
     Text(String),
     /// A Yes / No select: `None` when nothing was chosen.
     YesNo(Option<bool>),
+    /// A File Upload's files, in the order Discord listed them (an id
+    /// missing from `resolved.attachments` is left out).
+    Files(Vec<Upload>),
 }
 
 /// Where a component or modal interaction came from.
@@ -136,7 +159,7 @@ pub enum UnknownReason {
 /// Everything Quack handles, decoded.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Request {
-    /// `/case add member rule [private]`.
+    /// `/case add member rule [private] [file]`.
     CaseAdd {
         /// The member.
         member: Person,
@@ -144,6 +167,19 @@ pub enum Request {
         rule: RuleArg,
         /// Whether the receipt should be private.
         private: Option<bool>,
+        /// A file to upload as evidence with the case.
+        file: Option<Upload>,
+    },
+    /// `/case evidence number [link] [file] [file2] [file3] [note]`.
+    CaseEvidence {
+        /// The case number.
+        number: u64,
+        /// The message links in the `link` option (split on whitespace).
+        links: Vec<String>,
+        /// The files, in option order.
+        files: Vec<Upload>,
+        /// The staff note.
+        note: Option<String>,
     },
     /// `/case view number`.
     CaseView {
@@ -182,6 +218,11 @@ pub enum Request {
     },
     /// The "Add case" message command.
     AddCaseFromMessage {
+        /// The message.
+        message: TargetMessage,
+    },
+    /// The "Add as evidence" message command.
+    AddAsEvidence {
         /// The message.
         message: TargetMessage,
     },
@@ -261,7 +302,9 @@ impl Interaction {
     /// The interaction kind recorded on metrics and spans.
     pub const fn telemetry_kind(&self) -> InteractionKind {
         match &self.request {
-            Request::AddCaseFromMessage { .. } => InteractionKind::MessageCommand,
+            Request::AddCaseFromMessage { .. } | Request::AddAsEvidence { .. } => {
+                InteractionKind::MessageCommand
+            }
             Request::AddCaseForMember { .. } => InteractionKind::UserCommand,
             Request::Autocomplete { .. } => InteractionKind::Autocomplete,
             Request::Component { .. } => InteractionKind::Component,
@@ -280,6 +323,7 @@ impl Interaction {
                 ..
             } => "case add",
             Request::CaseView { .. } => "case view",
+            Request::CaseEvidence { .. } => "case evidence",
             Request::CaseList { .. }
             | Request::Autocomplete {
                 command: AutocompleteFor::CaseList,
@@ -292,6 +336,7 @@ impl Interaction {
             Request::Setup => "setup",
             Request::Help { .. } => "help",
             Request::AddCaseFromMessage { .. } | Request::AddCaseForMember { .. } => "Add case",
+            Request::AddAsEvidence { .. } => "Add as evidence",
             Request::Component { .. } => "component",
             Request::ModalSubmit { .. } => "modal",
             Request::Unknown(_) => "unknown",
@@ -307,6 +352,17 @@ fn payload_member(m: &twilight_model::guild::PartialMember) -> PayloadMember {
         joined_at: m.joined_at.and_then(convert::time),
         timeout_until: m.communication_disabled_until.and_then(convert::time),
     }
+}
+
+/// A resolved attachment as an [`Upload`].
+fn upload(a: &twilight_model::channel::Attachment) -> Option<Upload> {
+    Some(Upload {
+        attachment_id: convert::id(a.id)?,
+        filename: a.filename.clone(),
+        content_type: a.content_type.clone(),
+        size_bytes: a.size,
+        url: a.url.clone(),
+    })
 }
 
 fn invoker(raw: &RawInteraction) -> Option<Person> {

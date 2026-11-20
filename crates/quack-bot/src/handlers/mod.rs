@@ -11,6 +11,8 @@ pub(crate) mod case_view;
 pub(crate) mod case_void;
 pub(crate) mod controls;
 pub(crate) mod drafts;
+pub(crate) mod evidence;
+pub(crate) mod evidence_view;
 pub(crate) mod help;
 pub(crate) mod member_appeal;
 pub(crate) mod module;

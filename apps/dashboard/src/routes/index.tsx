@@ -34,7 +34,7 @@ const features: { icon: QuackIconName; title: string; body: string }[] = [
   {
     icon: "evidence",
     title: "Evidence that sticks",
-    body: "Add message links as evidence. Quack saves a copy of each message and its files, so it's still there after the message is deleted.",
+    body: "Save messages or upload screenshots as evidence. Quack keeps a copy of each message and its files, so it's still there after the message is deleted.",
   },
   {
     icon: "appeal",

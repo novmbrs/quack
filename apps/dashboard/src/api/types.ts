@@ -33,6 +33,7 @@ export type CaseSummary = S["CaseSummary"];
 export type Case = S["Case"];
 export type CaseVoided = S["CaseVoided"];
 export type EvidenceAdded = S["EvidenceAdded"];
+export type EvidenceEdited = S["EvidenceEdited"];
 export type ImportedCase = S["ImportedCase"];
 export type CasePreview = S["CasePreview"];
 export type CaseSource = S["CaseSource"];
@@ -47,6 +48,8 @@ export type Dm = S["Dm"];
 export type DmState = S["DmState"];
 export type Evidence = S["Evidence"];
 export type EvidenceFile = S["EvidenceFile"];
+export type EvidenceKind = S["EvidenceKind"];
+export type SurroundingMessage = S["SurroundingMessage"];
 
 export type AppealSummary = S["AppealSummary"];
 export type Appeal = S["Appeal"];

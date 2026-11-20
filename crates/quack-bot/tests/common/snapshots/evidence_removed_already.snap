@@ -1,0 +1,7 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+That evidence item was already removed from case #1.
+[View evidence] [Open case]

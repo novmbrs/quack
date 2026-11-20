@@ -1,0 +1,12 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Evidence 1 of 1 · case #1
+Files uploaded by a member (ID 30) on [date].
+Only staff see these files. The member doesn't see them on their case page.
+Note: From a ticket.
+proof.png · Copy saved
+[media: proof.png]
+[Show to member] [Edit note] [Remove] [Open case]

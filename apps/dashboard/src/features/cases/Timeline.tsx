@@ -24,6 +24,8 @@ const kindIcons: Partial<Record<ModLogKind, QuackIconName>> = {
   case_voided: "case_void",
   case_context_edited: "edit",
   evidence_added: "evidence",
+  evidence_removed: "delete",
+  evidence_visibility_changed: "evidence",
   action_done: "success",
   action_failed: "error",
   action_retry_requested: "retry",

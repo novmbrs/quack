@@ -14,7 +14,7 @@ use quack_text::error;
 use crate::ack::{Failure, Finish, Pending};
 use crate::handlers::{
     add_menu, appeals, case_add, case_edit, case_list, case_view, case_void, controls, drafts,
-    help, member_appeal, module, rules, setup,
+    evidence, evidence_view, help, member_appeal, module, rules, setup,
 };
 use crate::modules::is_module_id;
 
@@ -35,7 +35,14 @@ pub(crate) async fn route(p: Pending<'_>) -> Finish {
             member,
             rule,
             private,
-        } => case_add::run(p, member, rule, *private).await,
+            file,
+        } => case_add::run(p, member, rule, *private, file.as_ref()).await,
+        Request::CaseEvidence {
+            number,
+            links,
+            files,
+            note,
+        } => evidence::command(p, *number, links, files, note.as_deref()).await,
         Request::CaseView { number } => case_view::command(p, *number).await,
         Request::CaseList { member, rule } => {
             case_list::command(p, member.as_ref(), rule.as_ref()).await
@@ -47,6 +54,7 @@ pub(crate) async fn route(p: Pending<'_>) -> Finish {
         Request::Setup => setup::command(p).await,
         Request::AddCaseFromMessage { message } => add_menu::from_message(p, message).await,
         Request::AddCaseForMember { member } => add_menu::for_member(p, member).await,
+        Request::AddAsEvidence { message } => evidence::from_message(p, message).await,
         Request::Component { id, values, source } => component(p, *id, values, *source).await,
         Request::ModalSubmit { id, fields, source } => modal(p, *id, fields, *source).await,
         // A command Quack no longer registers (Go-era ones linger in
@@ -101,9 +109,20 @@ async fn component(
         CustomId::OpenCase(case) => case_view::open(p, case, source).await,
         CustomId::CasePicker => case_view::picked(p, values, source).await,
         CustomId::EditContext(case) => case_edit::open_context(p, case).await,
-        CustomId::AddEvidence(case) => case_edit::open_evidence(p, case).await,
-        CustomId::ViewEvidence { case, item } => {
-            case_edit::view_evidence(p, case, item, source).await
+        CustomId::AddEvidence(case) => evidence::open_modal(p, case).await,
+        CustomId::ViewEvidence { case, item } => evidence_view::view(p, case, item, source).await,
+        CustomId::EvidenceSurrounding(e) => evidence_view::surrounding(p, e, source).await,
+        CustomId::EvidenceVisibility { evidence, visible } => {
+            evidence_view::visibility(p, evidence, visible, source).await
+        }
+        CustomId::EditEvidenceNote(e) => evidence_view::open_note(p, e).await,
+        CustomId::RemoveEvidence(e) => evidence_view::ask_remove(p, e, source).await,
+        CustomId::ConfirmRemoveEvidence(e) => evidence_view::remove(p, e, source).await,
+        CustomId::AddAsEvidence { channel, message } => {
+            evidence::picked(p, channel, message, values, source).await
+        }
+        CustomId::AddAsEvidenceByNumber { channel, message } => {
+            evidence::open_number(p, channel, message).await
         }
         CustomId::VoidCase(case) => case_void::open(p, case).await,
         CustomId::History { member, page } => {
@@ -132,16 +151,8 @@ async fn component(
         CustomId::AppealsPage(page) => appeals::page(p, page, source).await,
         CustomId::RulesPage(page) => rules::page(p, page, source).await,
         CustomId::Setup(area, op) => setup::control(p, area, op, values, source).await,
-        // Evidence controls without a handler yet answer like an expired
-        // button, as does a modal's id on a button (nothing renders that).
-        CustomId::EvidenceSurrounding(_)
-        | CustomId::EvidenceVisibility { .. }
-        | CustomId::EditEvidenceNote(_)
-        | CustomId::RemoveEvidence(_)
-        | CustomId::ConfirmRemoveEvidence(_)
-        | CustomId::AddAsEvidence { .. }
-        | CustomId::AddAsEvidenceByNumber { .. }
-        | CustomId::EditContextModal { .. }
+        // A modal's id on a button: nothing current renders that.
+        CustomId::EditContextModal { .. }
         | CustomId::EvidenceNoteModal { .. }
         | CustomId::AddAsEvidenceModal { .. }
         | CustomId::AddEvidenceModal(_)
@@ -176,7 +187,13 @@ async fn modal(
         CustomId::EditContextModal { case, revision } => {
             case_edit::save_context(p, case, revision, fields, source).await
         }
-        CustomId::AddEvidenceModal(case) => case_edit::add_evidence(p, case, fields, source).await,
+        CustomId::AddEvidenceModal(case) => evidence::submit_modal(p, case, fields, source).await,
+        CustomId::EvidenceNoteModal { evidence, revision } => {
+            evidence_view::save_note(p, evidence, revision, fields, source).await
+        }
+        CustomId::AddAsEvidenceModal { channel, message } => {
+            evidence::submit_number(p, channel, message, fields, source).await
+        }
         CustomId::VoidCaseModal(case) => case_void::submit(p, case, fields, source).await,
         CustomId::DraftPageModal(page) => drafts::submit(p, page, fields, source).await,
         CustomId::AppealModal(case) => member_appeal::submit(p, case, fields, source).await,
@@ -199,7 +216,7 @@ pub(crate) fn text_of(fields: &[(InputId, FieldValue)], input: &InputId) -> Stri
         .find(|(id, _)| id == input)
         .and_then(|(_, v)| match v {
             FieldValue::Text(t) => Some(t.clone()),
-            FieldValue::YesNo(_) => None,
+            FieldValue::YesNo(_) | FieldValue::Files(_) => None,
         })
         .unwrap_or_default()
 }

@@ -26,11 +26,13 @@ function Extras() {
         </p>
       </Section>
 
-      <Section id="evidence" title="Evidence copies">
+      <Section id="evidence" title="Evidence channel">
         <p>
           Pick a staff-only channel where Quack keeps copies of evidence files, so they stay
-          viewable after the original message is deleted. Without it, Quack keeps each file's
-          details and a link to the original.
+          viewable after the original message is deleted. Files that staff upload as evidence are
+          kept only there, so uploading needs it: without one, Quack refuses uploads and keeps each
+          saved message's file details and a link to the original. Quack checks the channel is still
+          staff-only before every copy.
         </p>
       </Section>
 

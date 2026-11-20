@@ -4,7 +4,7 @@
 use quack_core::appeal::AppealState;
 use quack_core::case::VoidCause;
 use quack_core::dm::{DmFailure, DmState};
-use quack_core::evidence::{EvidenceFailure, EvidenceState, FileCopyState};
+use quack_core::evidence::{EvidenceFailure, EvidenceKind, EvidenceState, FileCopyState};
 use quack_core::ids::{AccountId, AppealId, ChannelId, EvidenceId, FileId, MessageId};
 use quack_core::modlog::{ModLogKind, ModLogResult};
 use quack_db::evidence::EmbedSummary;
@@ -41,7 +41,7 @@ pub(crate) struct Dm {
     pub(crate) settled_at: Option<OffsetDateTime>,
 }
 
-/// One file of a saved message.
+/// One file of an evidence item.
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct EvidenceFile {
     #[schema(value_type = uuid::Uuid)]
@@ -75,21 +75,75 @@ impl From<EmbedSummary> for Embed {
     }
 }
 
-/// One saved message, as staff see it.
+/// Who removed an evidence item, and when (§7.5).
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub(crate) struct EvidenceRemoved {
+    #[schema(value_type = schema::Snowflake)]
+    pub(crate) by: AccountId,
+    #[serde(with = "ts")]
+    #[schema(value_type = String, format = DateTime)]
+    pub(crate) at: OffsetDateTime,
+    /// "Removed by …" (`evidence.removed_by`).
+    pub(crate) text: String,
+}
+
+/// One message saved around a staff-added message (text only, §7.2).
+#[derive(Clone, Debug, Serialize, ToSchema)]
+pub(crate) struct SurroundingMessage {
+    #[schema(value_type = schema::Snowflake)]
+    pub(crate) message_id: MessageId,
+    /// Sent before the saved message (else after).
+    pub(crate) before: bool,
+    #[schema(value_type = schema::Snowflake)]
+    pub(crate) author_id: AccountId,
+    /// Its text, at most 500 characters.
+    pub(crate) content: Option<String>,
+    #[serde(with = "ts")]
+    #[schema(value_type = String, format = DateTime)]
+    pub(crate) created_at: OffsetDateTime,
+    /// How many files it had (never copied).
+    pub(crate) files: u32,
+}
+
+/// One evidence item as staff see it (§14.3): a saved message or uploaded
+/// files, with its note, whether the member sees it, the messages around
+/// it, and who removed it.
 #[derive(Clone, Debug, Serialize, ToSchema)]
 pub(crate) struct Evidence {
     #[schema(value_type = uuid::Uuid)]
     pub(crate) id: EvidenceId,
+    #[schema(value_type = schema::EvidenceKind)]
+    pub(crate) kind: EvidenceKind,
     #[schema(value_type = schema::EvidenceState)]
     pub(crate) state: EvidenceState,
     #[schema(value_type = Option<schema::EvidenceFailure>)]
     pub(crate) failure: Option<EvidenceFailure>,
     pub(crate) state_text: String,
-    #[schema(value_type = schema::Snowflake)]
-    pub(crate) channel_id: ChannelId,
-    #[schema(value_type = schema::Snowflake)]
-    pub(crate) message_id: MessageId,
-    pub(crate) url: String,
+    /// The message's channel; null for uploaded files.
+    #[schema(value_type = Option<schema::Snowflake>)]
+    pub(crate) channel_id: Option<ChannelId>,
+    /// The message; null for uploaded files.
+    #[schema(value_type = Option<schema::Snowflake>)]
+    pub(crate) message_id: Option<MessageId>,
+    /// The message's link; null for uploaded files.
+    pub(crate) url: Option<String>,
+    /// Whether the member sees it on their case page: always for a saved
+    /// message; uploaded files only once staff show them.
+    pub(crate) visible_to_member: bool,
+    /// The staff note (never shown to the member).
+    pub(crate) note: Option<String>,
+    /// Send back as `expected_note_revision` when editing the note.
+    pub(crate) note_revision: u32,
+    #[schema(value_type = Option<schema::Snowflake>)]
+    pub(crate) note_updated_by: Option<AccountId>,
+    #[serde(with = "ts::option")]
+    #[schema(value_type = Option<String>, format = DateTime)]
+    pub(crate) note_updated_at: Option<OffsetDateTime>,
+    /// Set once staff removed it; shown collapsed.
+    pub(crate) removed: Option<EvidenceRemoved>,
+    /// Messages around a staff-added message, oldest first; null when none
+    /// were saved.
+    pub(crate) surrounding: Option<Vec<SurroundingMessage>>,
     #[schema(value_type = Option<schema::Snowflake>)]
     pub(crate) author_id: Option<AccountId>,
     pub(crate) content: Option<String>,
@@ -109,26 +163,39 @@ pub(crate) struct Evidence {
     pub(crate) created_at: OffsetDateTime,
 }
 
-impl Evidence {
-    /// A saved message that isn't removed, as this wire type describes it;
-    /// `None` for uploaded files and removed items, which it can't
-    /// describe (they are listed once the wire type grows them, §14.3).
-    pub(crate) fn message(e: EvidenceItem) -> Option<Self> {
-        if e.removed.is_some() {
-            return None;
-        }
-        let (Some(channel_id), Some(message_id), Some(url)) = (e.channel_id, e.message_id, e.url)
-        else {
-            return None;
-        };
-        Some(Self {
+impl From<EvidenceItem> for Evidence {
+    fn from(e: EvidenceItem) -> Self {
+        Self {
             id: e.id,
+            kind: e.kind,
             state: e.state,
             failure: e.failure,
             state_text: e.state_text,
-            channel_id,
-            message_id,
-            url,
+            channel_id: e.channel_id,
+            message_id: e.message_id,
+            url: e.url,
+            visible_to_member: e.visible_to_member,
+            note: e.note,
+            note_revision: e.note_revision,
+            note_updated_by: e.note_updated_by,
+            note_updated_at: e.note_updated_at,
+            removed: e.removed.map(|r| EvidenceRemoved {
+                by: r.by,
+                at: r.at,
+                text: r.text,
+            }),
+            surrounding: e.surrounding.map(|list| {
+                list.into_iter()
+                    .map(|m| SurroundingMessage {
+                        message_id: m.message_id,
+                        before: m.before,
+                        author_id: m.author_id,
+                        content: m.content,
+                        created_at: m.created_at,
+                        files: m.files,
+                    })
+                    .collect()
+            }),
             author_id: e.author_id,
             content: e.content,
             message_created_at: e.message_created_at,
@@ -149,7 +216,7 @@ impl Evidence {
             files_not_saved: e.files_not_saved,
             added_by: e.added_by,
             created_at: e.created_at,
-        })
+        }
     }
 }
 

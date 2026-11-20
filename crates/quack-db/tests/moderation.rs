@@ -783,7 +783,7 @@ async fn uploads_notes_visibility_and_removal(
                     Some("https://cdn.discordapp.com/ephemeral-attachments/1/2/2.png"),
                 ),
             ],
-            staged: vec![(staged, vec![1, 2, 3])],
+            staged: vec![(staged, vec![1, 2, 3].into())],
         },
     )
     .await?;

@@ -26,8 +26,9 @@ pub enum UploadSource {
         /// The `cdn.discordapp.com/ephemeral-attachments/…` URL.
         url: String,
     },
-    /// Bytes the dashboard sent; staged in PostgreSQL until copied.
-    Bytes(Vec<u8>),
+    /// Bytes the dashboard sent; staged in PostgreSQL until copied. Shared,
+    /// so staging them copies nothing.
+    Bytes(bytes::Bytes),
 }
 
 impl std::fmt::Debug for UploadSource {
@@ -61,8 +62,9 @@ impl NewUpload {
     pub fn bytes(
         filename: impl Into<String>,
         content_type: Option<String>,
-        bytes: Vec<u8>,
+        bytes: impl Into<bytes::Bytes>,
     ) -> Self {
+        let bytes = bytes.into();
         Self {
             filename: filename.into(),
             content_type,
@@ -156,7 +158,8 @@ pub async fn check_uploads(
 }
 
 /// The rows an accepted upload becomes: one `saving` item, its files
-/// `pending` (in order), and the bytes of dashboard files.
+/// `pending` (in order), and the bytes of dashboard files (shared, not
+/// copied).
 pub(crate) fn upload_item(
     guild: GuildId,
     case: CaseId,

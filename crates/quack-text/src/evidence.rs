@@ -584,7 +584,7 @@ pub fn remove_confirm(case: CaseId, number: u64, evidence: EvidenceId, item: u32
 pub fn removed(number: u64, changed: bool) -> Text {
     Text::fixed(if changed {
         format!(
-            "Quack removed the evidence item from case #{number}. Adding the same message link again brings it back."
+            "Quack removed the evidence item from case #{number}. A removed message comes back when its link is added again; removed files have to be uploaded again."
         )
     } else {
         format!("That evidence item was already removed from case #{number}.")

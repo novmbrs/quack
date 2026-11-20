@@ -1,0 +1,15 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Messages around the evidence · case #1
+Saved when the message was added, text only. Only staff see them.
+A member (ID 40) · on [date]
+> before the scam
+
+The saved message from a member (ID 40).
+
+A member (ID 40) · on [date]
+> after the scam
+[Back to evidence] [Open case]

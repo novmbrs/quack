@@ -25,8 +25,8 @@ pub struct NewUploadItem {
     /// Its files (1–10), each `pending`.
     pub files: Vec<NewFile>,
     /// The bytes of files without an original URL (dashboard uploads), by
-    /// file.
-    pub staged: Vec<(FileId, Vec<u8>)>,
+    /// file (shared buffers, so building the item copies nothing).
+    pub staged: Vec<(FileId, bytes::Bytes)>,
 }
 
 /// Inserts an uploaded-files item (`saving`, staff-only), its files, and
@@ -64,7 +64,7 @@ pub async fn insert_upload(conn: &mut PgConnection, item: &NewUploadItem) -> Res
                 "INSERT INTO evidence_upload_bytes (file_id, guild_id, bytes) VALUES ($1, $2, $3)",
                 file.get(),
                 i64::from(item.guild),
-                bytes.as_slice(),
+                bytes.as_ref(),
             )
             .execute(&mut *conn),
         )

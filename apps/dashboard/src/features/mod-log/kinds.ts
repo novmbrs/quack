@@ -17,6 +17,8 @@ export const kindGroups: KindGroup[] = [
       { value: "case_voided", label: "Case voided" },
       { value: "case_context_edited", label: "Case context edited" },
       { value: "evidence_added", label: "Evidence added" },
+      { value: "evidence_removed", label: "Evidence removed" },
+      { value: "evidence_visibility_changed", label: "Evidence shown or hidden" },
     ],
   },
   {
@@ -117,7 +119,8 @@ export function iconFor(kind: ModLogKind, result: ModLogResult): QuackIconName {
   if (result === "refused") return "warn";
   if (kind === "case_voided") return "case_void";
   if (kind === "case_created") return "case_add";
-  if (kind === "evidence_added") return "evidence";
+  if (kind === "evidence_added" || kind === "evidence_visibility_changed") return "evidence";
+  if (kind === "evidence_removed") return "delete";
   if (kind.startsWith("case_")) return "case";
   if (kind === "action_retry_requested") return "retry";
   if (kind.startsWith("action_")) return "success";

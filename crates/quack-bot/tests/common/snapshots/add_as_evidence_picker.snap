@@ -1,0 +1,9 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[neutral]
+Add this message as evidence
+Choose a case about this message's author or one you added recently, or enter a case number.
+{select: Choose a case}
+[Enter a case number]

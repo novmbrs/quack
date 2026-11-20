@@ -72,7 +72,9 @@ src/
   `unwrap()` so failures become `ApiError`. Send writes with `write()`: it
   makes one `Idempotency-Key` per write the reader asked for and reuses it on
   automatic retries (network errors, 502, 503), so a retry never applies a
-  change twice; the client adds `X-CSRF-Token` from `GET /api/auth/me`. Reads
+  change twice; the client adds `X-CSRF-Token` from `GET /api/auth/me`.
+  File uploads use `upload()`, the same write over `XMLHttpRequest` so the
+  page can show how much has been sent. Reads
   are `queryOptions` factories in `src/api/queries.ts` keyed under `keys`, so
   a write can invalidate a whole area (`keys.cases(guildId)`). Route loaders
   call `ensureQueryData` so navigation (and hover preloading) has data

@@ -1,11 +1,12 @@
-//! Request limits (§14.8): the 256 KiB body cap, the 10 s deadline, and
+//! Request limits (§14.8): the 256 KiB body cap (the upload route's
+//! larger one), the 10 s deadline, and
 //! turning a panic into the error envelope. Each answers with the §14.6
 //! envelope, never a bare status.
 
 use std::any::Any;
 use std::time::Duration;
 
-use axum::extract::Request;
+use axum::extract::{MatchedPath, Request};
 use axum::http::{Method, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -19,16 +20,31 @@ pub(crate) const MAX_BODY: usize = quack_core::limits::MAX_BODY_BYTES;
 /// The request deadline.
 pub(crate) const DEADLINE: Duration = Duration::from_secs(10);
 
-/// Refuses a declared body over [`MAX_BODY`] before reading it; bodies
-/// without a length are capped by `DefaultBodyLimit` when an extractor
-/// reads them, which answers the same way.
+/// The largest upload request body (route 60).
+pub(crate) const MAX_UPLOAD_BODY: usize = quack_core::limits::MAX_UPLOAD_BODY_BYTES;
+
+/// The body cap of a request: the upload route's, else [`MAX_BODY`].
+fn cap(request: &Request) -> usize {
+    let upload = request.method() == Method::POST
+        && request
+            .extensions()
+            .get::<MatchedPath>()
+            .is_some_and(|m| m.as_str() == crate::routes::UPLOAD_ROUTE);
+    if upload { MAX_UPLOAD_BODY } else { MAX_BODY }
+}
+
+/// Refuses a declared body over the request's cap before reading it;
+/// bodies without a length are capped by `DefaultBodyLimit` when an
+/// extractor reads them, or by the upload route while it reads, which
+/// answer the same way.
 pub(crate) async fn body_limit(request: Request, next: Next) -> Response {
+    let max = cap(&request) as u64;
     let declared = request
         .headers()
         .get(header::CONTENT_LENGTH)
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u64>().ok());
-    if declared.is_some_and(|n| n > MAX_BODY as u64) {
+    if declared.is_some_and(|n| n > max) {
         return ApiError::api(ApiCode::BodyTooLarge).into_response();
     }
     next.run(request).await

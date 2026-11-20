@@ -41,6 +41,7 @@ const fn domain_reason(err: DomainError) -> Reason {
         DomainError::CaseNotFound
         | DomainError::RuleNotFound
         | DomainError::AppealNotFound
+        | DomainError::EvidenceNotFound
         | DomainError::TooManyLinks => Reason::Invalid,
         _ => Reason::Conflict,
     }

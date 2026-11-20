@@ -5,6 +5,7 @@ mod actions;
 mod appeals;
 mod auth;
 mod cases;
+pub(crate) use cases::{UPLOAD_BUDGET_BYTES, UploadBudget};
 mod directory;
 mod evidence;
 mod guilds;
@@ -33,6 +34,9 @@ const GET: Method = Method::GET;
 const POST: Method = Method::POST;
 const PUT: Method = Method::PUT;
 const PATCH: Method = Method::PATCH;
+
+/// Route 60, the one route whose body may be larger than 256 KiB (§14.8).
+pub(crate) const UPLOAD_ROUTE: &str = "/api/guilds/{guild_id}/cases/{case_ref}/evidence/uploads";
 
 /// Every route with its rate class (§14.2, §14.7). A test checks it lists
 /// exactly the OpenAPI document's operations.
@@ -88,6 +92,22 @@ static ROUTES: &[(Method, &str, RateClass)] = &[
         GET,
         "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{file_id}",
         Read,
+    ),
+    (POST, UPLOAD_ROUTE, Write),
+    (
+        PUT,
+        "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/note",
+        Write,
+    ),
+    (
+        PUT,
+        "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/visibility",
+        Write,
+    ),
+    (
+        POST,
+        "/api/guilds/{guild_id}/cases/{case_ref}/evidence/{evidence_id}/remove",
+        Write,
     ),
     (
         GET,

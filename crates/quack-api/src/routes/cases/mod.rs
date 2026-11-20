@@ -1,17 +1,21 @@
-//! Cases (routes 20–25, 58): list, preview, add, read, void, edit
-//! context, and add evidence. Every case is found inside the path's
-//! server, so another server's case is `404 not_found`.
+//! Cases (routes 20–25, 58, 60–63): list, preview, add, read, void, edit
+//! context, and evidence (add links, upload files, edit a note, show or
+//! hide uploads, remove). Every case is found inside the path's server, so
+//! another server's case is `404 not_found`.
 
 mod context;
+mod evidence;
 mod items;
 mod read;
 mod types;
+mod upload;
+mod upload_form;
 
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use quack_core::DomainError;
-use quack_core::ids::{CaseId, MemberId, RuleId};
+use quack_core::ids::{MemberId, RuleId};
 use quack_engine::CaseRef;
 use quack_engine::cases::{self, Actor, ApplyRule};
 use quack_text::error::Scene;
@@ -20,8 +24,9 @@ use utoipa::ToSchema;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use types::{Case, CaseVoided, EvidenceAdded};
+use types::{Case, CaseVoided};
 pub(crate) use types::{CaseSummary, TimelineText};
+pub(crate) use upload::{UPLOAD_BUDGET_BYTES, UploadBudget};
 
 use crate::error::{ApiError, ApiResult, ErrorEnvelope, Facts, map};
 use crate::extract::{Body, IdempotencyKey, Moderate, Staff, case_ref, snowflake, uuid_id};
@@ -36,7 +41,11 @@ pub(super) fn routes() -> OpenApiRouter<ApiState> {
         .routes(routes!(read::get_case))
         .routes(routes!(void_case))
         .routes(routes!(edit_context))
-        .routes(routes!(add_evidence))
+        .routes(routes!(evidence::add_evidence))
+        .routes(routes!(upload::upload_evidence))
+        .routes(routes!(evidence::set_note))
+        .routes(routes!(evidence::set_visibility))
+        .routes(routes!(evidence::remove))
 }
 
 pub(super) fn invalid(field: &str) -> ApiError {
@@ -47,7 +56,7 @@ pub(super) fn invalid(field: &str) -> ApiError {
     )
 }
 
-fn staff_facts() -> Facts {
+pub(super) fn staff_facts() -> Facts {
     Facts::scene(Scene::Dashboard)
 }
 
@@ -177,7 +186,11 @@ pub(crate) struct VoidCase {
 }
 
 /// The case's number, for messages that name it.
-async fn number_of(state: &ApiState, staff: &Staff<Moderate>, case: CaseRef) -> Option<u64> {
+pub(super) async fn number_of(
+    state: &ApiState,
+    staff: &Staff<Moderate>,
+    case: CaseRef,
+) -> Option<u64> {
     match case {
         CaseRef::Number(n) => Some(n),
         CaseRef::Id(id) => {
@@ -294,61 +307,4 @@ async fn edit_context(
     };
     let view = read(&state, &staff, CaseRef::Id(edited.case)).await?;
     Ok(Json(view.into()))
-}
-
-/// Route 25's body.
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct AddEvidence {
-    /// 1–10 message links in this server.
-    links: Vec<String>,
-}
-
-/// Saves more messages as a case's evidence.
-#[utoipa::path(post, path = "/api/guilds/{guild_id}/cases/{case_ref}/evidence", tag = "cases",
-    params(("guild_id" = String, Path), ("case_ref" = String, Path)), request_body = AddEvidence,
-    responses((status = 200, body = EvidenceAdded), (status = 400, body = ErrorEnvelope),
-              (status = 422, body = ErrorEnvelope)),
-    security(("session" = [], "csrf" = [])))]
-async fn add_evidence(
-    State(state): State<ApiState>,
-    staff: Staff<Moderate>,
-    key: IdempotencyKey,
-    Path(path): Path<(String, String)>,
-    Body(body): Body<AddEvidence>,
-) -> ApiResult<Json<EvidenceAdded>> {
-    let case = case_ref(&path.1)?;
-    if body.links.is_empty() {
-        return Err(invalid("links"));
-    }
-    let add = cases::AddEvidence::links(&body.links);
-    let added = cases::add_evidence(state.engine(), &staff.principal, case, &add, &key.0).await;
-    let added = match added {
-        Ok(a) => a,
-        Err(e) => {
-            let facts = Facts {
-                case_number: number_of(&state, &staff, case).await,
-                ..staff_facts()
-            };
-            return Err(map::case(e, &facts, ""));
-        }
-    };
-    let id: CaseId = added.case;
-    let view = read(&state, &staff, CaseRef::Id(id)).await?;
-    let message =
-        quack_text::render::plain(&quack_text::evidence::added(&quack_text::evidence::Added {
-            number: added.number,
-            new: added.new,
-            retrying: added.retrying,
-            restored: added.restored,
-            already_saved: added.already_saved,
-            files: added.files,
-        }));
-    Ok(Json(EvidenceAdded {
-        case: view.into(),
-        new: added.new,
-        retrying: added.retrying,
-        already_saved: added.already_saved,
-        message,
-    }))
 }

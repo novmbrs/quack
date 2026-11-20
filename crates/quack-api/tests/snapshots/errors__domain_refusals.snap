@@ -1,5 +1,6 @@
 ---
 source: crates/quack-api/tests/errors.rs
+assertion_line: 116
 expression: all
 ---
 [
@@ -645,6 +646,182 @@ expression: all
         }
       },
       "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "too_many_files",
+          "message": "Add at most 10 files at a time.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "too_many_files",
+          "message": "Add at most 10 files at a time.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "evidence_limit_reached",
+          "message": "No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "evidence_limit_reached",
+          "message": "No evidence was added. This case already keeps 95 files and can keep at most 100. Add fewer files, or remove evidence added by mistake.",
+          "trace_id": null
+        }
+      },
+      "status": 422
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "evidence_channel_unavailable",
+          "message": "No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "evidence_channel_unavailable",
+          "message": "No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "evidence_channel_unavailable",
+          "message": "No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "evidence_channel_unavailable",
+          "message": "No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "Quack couldn't find that evidence item on this case. Open the case again to see its evidence.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "not_found",
+          "message": "Quack couldn't find that evidence item on this case. Open the case again to see its evidence.",
+          "trace_id": null
+        }
+      },
+      "status": 404
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "evidence_removed",
+          "message": "That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "evidence_removed",
+          "message": "That evidence item was removed, so it can't be changed. Add the message link again to bring a removed message back.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "evidence_not_upload",
+          "message": "Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "evidence_not_upload",
+          "message": "Only uploaded files can be shown to or hidden from the member. The member always sees saved messages on their case page.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    }
+  },
+  {
+    "member": {
+      "envelope": {
+        "error": {
+          "code": "note_changed",
+          "message": "Someone else changed this note since you opened it. Open the evidence again to see their note before you save.",
+          "trace_id": null
+        }
+      },
+      "status": 409
+    },
+    "staff": {
+      "envelope": {
+        "error": {
+          "code": "note_changed",
+          "message": "Someone else changed this note since you opened it. Open the evidence again to see their note before you save.",
+          "trace_id": null
+        }
+      },
+      "status": 409
     }
   },
   {

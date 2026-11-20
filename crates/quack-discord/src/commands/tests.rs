@@ -89,7 +89,7 @@ fn the_registered_form_drops_defaults_twilight_fills_in() {
 #[test]
 fn every_command_is_guild_only_and_only_setup_needs_a_permission() {
     let local = local_json();
-    assert_eq!(local.len(), 7);
+    assert_eq!(local.len(), 8);
     for command in &local {
         assert_eq!(command["contexts"], json!([0]), "{}", command["name"]);
         assert_eq!(command["integration_types"], json!([0]));

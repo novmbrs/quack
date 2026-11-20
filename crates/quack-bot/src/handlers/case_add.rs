@@ -1,19 +1,23 @@
-//! `/case add member rule [private]` and its rule autocomplete (§11.1,
-//! §11.6).
+//! `/case add member rule [private] [file]` and its rule autocomplete
+//! (§11.1, §11.6). A `file` becomes an uploaded-files item of the case,
+//! refused before the case (or its draft) exists when Quack can't copy it.
 
 use quack_core::DomainError;
 use quack_core::ids::{CaseId, RuleId};
 use quack_core::permissions::Capability;
-use quack_discord::interaction::{AutocompleteFor, Person, RuleArg};
+use quack_discord::interaction::{AutocompleteFor, Person, RuleArg, Upload};
 use quack_discord::rest::AutocompleteChoice;
 use quack_engine::cache::{CachedRule, GuildRules};
 use quack_engine::cases::{Actor, ApplyRule, apply_rule};
 use quack_engine::drafts::{CommandDraft, page_fields, pages, start};
+use quack_engine::evidence::{UploadRefused, check_destination, check_files};
+use quack_engine::{Engine, Principal};
 use quack_text::actions::DraftPage;
 use quack_text::case::{FormField, form_modal, picker_fill_form};
 use quack_text::error::ErrorFacts;
 use quack_text::fmt;
 
+use super::evidence::{draft_file, new_upload};
 use super::outcome::{self, receipt};
 use super::{op_key, person};
 use crate::ack::{Acked, Failure, Finish, Pending};
@@ -22,6 +26,11 @@ use crate::errors;
 
 /// Most characters in an autocomplete label or value.
 const CHOICE_MAX: usize = 100;
+
+/// How much of the prefilled-modal deadline (§11.3) the evidence channel
+/// check may take before the draft is written; past it, the check is left
+/// to applying the draft.
+const DESTINATION_BUDGET: std::time::Duration = std::time::Duration::from_millis(150);
 
 /// Rule autocomplete (§11.1): from the rules cache only, and nothing for
 /// someone the payload shows without `moderate`.
@@ -84,6 +93,7 @@ pub(crate) async fn run(
     member: &Person,
     rule: &RuleArg,
     private: Option<bool>,
+    file: Option<&Upload>,
 ) -> Finish {
     let private = private.unwrap_or(false);
     let cached = p.rules().and_then(|r| find(&r, rule).cloned());
@@ -91,13 +101,13 @@ pub(crate) async fn run(
     if let (Some(rule), true) = (&cached, moderator)
         && rule.definition.context_fields().iter().any(|f| f.required)
     {
-        return open_form(p, member, rule, private).await;
+        return open_form(p, member, rule, private, file).await;
     }
     let a = match p.defer().await {
         Ok(a) => a,
         Err(finish) => return finish,
     };
-    let result = apply_now(&a, member, rule, private).await;
+    let result = apply_now(&a, member, rule, private, file).await;
     a.finish_opt(result).await
 }
 
@@ -105,8 +115,16 @@ pub(crate) async fn run(
 /// member, the rule version, and the receipt choice), so the page's
 /// submit always finds it, even after a restart. The write takes the
 /// prefilled-modal exception (§11.3): bounded to 300 ms, else the
-/// moderator is told Quack is busy and no form opens.
-async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: bool) -> Finish {
+/// moderator is told Quack is busy and no form opens. A `file` Quack can't
+/// copy is refused first, and the evidence channel is checked when that
+/// fits the deadline (§11.3); applying the draft always checks it again.
+async fn open_form(
+    p: Pending<'_>,
+    member: &Person,
+    rule: &CachedRule,
+    private: bool,
+    file: Option<&Upload>,
+) -> Finish {
     let draft = uuid::Uuid::now_v7();
     let at = page_at(CaseId::from_uuid(draft), rule, 1);
     let modal = form_modal(
@@ -119,6 +137,19 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
     p.prefilled_modal(|engine| async move {
         let principal = auth::principal(engine, ix).await?;
         let channel = ix.channel_id.ok_or_else(crate::router::expired)?;
+        if let Some(file) = file {
+            // Authorized first, so the channel check reveals nothing.
+            auth::require(engine, &principal, Capability::Moderate).await?;
+            destination(check_files(&[new_upload(file)]))?;
+            if let Ok(checked) = tokio::time::timeout(
+                DESTINATION_BUDGET,
+                check_destination(engine, principal.guild),
+            )
+            .await
+            {
+                destination(checked)?;
+            }
+        }
         let form = CommandDraft {
             draft,
             member: member.account.id.member(),
@@ -126,7 +157,7 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
             source: None,
             private,
             channel,
-            evidence_file: None,
+            evidence_file: file.map(draft_file),
         };
         start(engine, &principal, &form)
             .await
@@ -134,6 +165,37 @@ async fn open_form(p: Pending<'_>, member: &Person, rule: &CachedRule, private: 
         Ok(modal)
     })
     .await
+}
+
+/// The evidence channel check's answer: only a channel that isn't ready
+/// refuses; Discord not answering leaves it to the check when the case is
+/// applied.
+fn destination(checked: Result<(), UploadRefused>) -> Result<(), Failure> {
+    match checked {
+        Ok(()) | Err(UploadRefused::DiscordUnavailable) => Ok(()),
+        Err(refused) => Err(errors::case(
+            &quack_engine::cases::CaseError::from(refused),
+            &ErrorFacts::default(),
+        )),
+    }
+}
+
+/// Starts a draft for the form with its file, which is refused first, in
+/// §7.1's order, when Quack can't copy it or the evidence channel isn't
+/// ready.
+async fn start_form(
+    engine: &Engine,
+    principal: &Principal,
+    form: &CommandDraft,
+    file: Option<&Upload>,
+) -> Result<(), Failure> {
+    if let Some(file) = file {
+        destination(check_files(&[new_upload(file)]))?;
+        destination(check_destination(engine, principal.guild).await)?;
+    }
+    start(engine, principal, form)
+        .await
+        .map_err(|e| outcome::apply_failed(&e, None, None))
 }
 
 /// The rule's id: picked, or found by its exact name.
@@ -176,6 +238,7 @@ async fn apply_now(
     member: &Person,
     rule: &RuleArg,
     private: bool,
+    file: Option<&Upload>,
 ) -> Result<Option<quack_text::Msg>, Failure> {
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
@@ -194,11 +257,9 @@ async fn apply_now(
             source: None,
             private,
             channel,
-            evidence_file: None,
+            evidence_file: file.map(draft_file),
         };
-        start(engine, &principal, &form)
-            .await
-            .map_err(|e| outcome::apply_failed(&e, None, None))?;
+        start_form(engine, &principal, &form, file).await?;
         let first = page_at(CaseId::from_uuid(draft), found, 1);
         return Ok(Some(picker_fill_form(
             &found.definition.name,
@@ -215,7 +276,7 @@ async fn apply_now(
         pinned_version: None,
         context: Vec::new(),
         evidence_links: Vec::new(),
-        evidence_files: Vec::new(),
+        evidence_files: file.map(new_upload).into_iter().collect(),
         source_message: None,
         receipt: Some(receipt(a.ix, private, channel)),
         replaces: None,

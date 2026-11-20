@@ -182,6 +182,64 @@ export async function write<T>(
   }
 }
 
+/** UploadProgress is how much of an upload's body the browser has sent. */
+export type UploadProgress = { loaded: number; total: number };
+
+/**
+ * postForm sends a multipart form the way openapi-fetch sends JSON (CSRF
+ * token, Idempotency-Key, same origin), but over XMLHttpRequest, because
+ * fetch can't report upload progress. It settles like openapi-fetch: a
+ * network failure rejects, any answer resolves with its parsed body.
+ */
+function postForm<T>(
+  url: string,
+  form: FormData,
+  init: WriteInit,
+  onProgress?: (p: UploadProgress) => void,
+): Promise<Result<T>> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("Accept", "application/json");
+    if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
+    xhr.setRequestHeader("Idempotency-Key", init.headers["Idempotency-Key"]);
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress({ loaded: e.loaded, total: e.total });
+      };
+    }
+    xhr.onerror = () => reject(new TypeError("upload failed"));
+    xhr.onabort = () => reject(new TypeError("upload aborted"));
+    xhr.onload = () => {
+      let body: unknown;
+      try {
+        body = xhr.responseText ? JSON.parse(xhr.responseText) : undefined;
+      } catch {
+        body = undefined;
+      }
+      const headers = new Headers();
+      const retryAfter = xhr.getResponseHeader("Retry-After");
+      if (retryAfter) headers.set("Retry-After", retryAfter);
+      const response = new Response(null, { status: xhr.status, headers });
+      resolve(response.ok ? { data: body as T, response } : { error: body, response });
+    };
+    xhr.send(form);
+  });
+}
+
+/**
+ * upload sends one multipart write the reader asked for, with write()'s
+ * Idempotency-Key and retries, reporting how much of the body was sent.
+ */
+export function upload<T>(
+  url: string,
+  form: FormData,
+  onProgress?: (p: UploadProgress) => void,
+): Promise<T> {
+  return write<T>((init) => postForm<T>(url, form, init, onProgress));
+}
+
 /**
  * loginUrl starts Discord sign-in and comes back to redirectTo afterwards.
  * The backend keeps only the path of redirectTo, so it can't leave the site.

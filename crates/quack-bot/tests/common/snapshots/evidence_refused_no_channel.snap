@@ -1,0 +1,6 @@
+---
+source: crates/quack-bot/tests/common/mod.rs
+expression: text
+---
+[danger]
+No evidence was added. Quack saves uploaded files by copying them to the server's staff-only evidence channel, and none is set. Choose one in /setup, then try again.

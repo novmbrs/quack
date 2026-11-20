@@ -1267,7 +1267,7 @@ itself.
 | Command | Type | Options | Capability | Reply |
 | --- | --- | --- | --- | --- |
 | `/case add` | slash subcommand | `member` USER req.; `rule` STRING req., autocomplete, max 100; `private` BOOLEAN; `file` ATTACHMENT | `moderate` | Private: the private receipt (staff card). Otherwise an ephemeral confirmation with Add evidence, View evidence (when the case has any), and Open case (§11.7), and Quack posts the public receipt in the channel. A `file` becomes an uploaded-files item of the case (§4.2 step 4), refused before the case exists. |
-| `/case evidence` | slash subcommand | `number` INTEGER req., min 1; `link` STRING (max 4,000); `file`, `file2`, `file3` ATTACHMENT; `note` STRING (max 500) | `moderate` | At least one link or file (`error.no_links`). Ephemeral `evidence.added` with Add evidence and View evidence. |
+| `/case evidence` | slash subcommand | `number` INTEGER req., min 1; `link` STRING (max 4,000: one or more message links separated by spaces); `file`, `file2`, `file3` ATTACHMENT; `note` STRING (max 500) | `moderate` | At least one link or file (`error.no_links`). Ephemeral `evidence.added` with Add evidence and View evidence. |
 | `/case view` | slash subcommand | `number` INTEGER req., min 1 | `moderate` | Ephemeral case card (§11.7). |
 | `/case list` | slash subcommand | `member` USER; `rule` STRING, autocomplete (archived rules too) | `moderate` | Ephemeral list, 10 per page, newest first. |
 | `/case void` | slash subcommand | `number` INTEGER req., min 1; `reason` STRING req., 1–1,000 | `moderate` | Ephemeral result (§4.7). |
@@ -1326,10 +1326,17 @@ response must be immediate, and fully (with 2FA) before any write.
 | Modal submit | Deferred update when the modal came from an ephemeral message, else deferred ephemeral message. | Ephemeral. |
 
 - `/case add` with a `file` on a rule with a required field: under the
-  exception the draft (`drafts::start`) refuses a file Quack can't copy
-  (`FilesRefused`, no modal) and stores the attachment; the evidence
-  channel is checked (`evidence::check_destination`) only when it fits the
-  300 ms, and always again when the draft is applied (§4.2 step 4).
+  exception a file Quack can't copy is refused (`FilesRefused`, no modal,
+  no draft); the evidence channel is checked (`evidence::check_destination`)
+  when that fits in 150 ms of the 300 (a channel that isn't ready refuses;
+  no answer in time, or Discord not answering, leaves it to the apply);
+  then the draft (`drafts::start`) stores the attachment. The deferred
+  path (the rule's required fields learned late) checks both before it
+  writes the draft. Applying the draft always checks again (§4.2 step 4).
+- A slash command's ATTACHMENT option, or a File Upload id, that the
+  payload's `resolved.attachments` doesn't contain: a command is unreadable
+  (answered like an unregistered command), so no case or evidence is ever
+  added without a file it was sent with; a File Upload leaves the id out.
 - Up to 256 handlers run at once (§11.9); each acknowledges first, then
   waits for one of 64 work slots (`quack_bot::MAX_WORK`), so slow work
   never delays another interaction's ack until 256 are in flight.
@@ -1371,9 +1378,9 @@ authorizes the clicker.
 | `eam` | Modal | case | Add evidence (§7.1); at least one link or file. Inputs `links`, `files` (the resolved attachments), `note`. |
 | `ev` | Button View evidence, pager | case, item (1-based among items not removed) | Show one item (§11.7). |
 | `evs` | Button Messages around it | evidence | The messages saved around it (`evidence.surrounding`), Back to evidence. |
-| `evv` | Button Show to member / Hide from member | evidence, `1`/`0` | Set visibility (§7.5); re-render the item. |
-| `evn` / `evnm` | Button Edit note (Add note) / modal | evidence (, note revision) | Exception read: the note modal prefilled / save the note (§7.5). |
-| `evr` / `evrc` | Button Remove / "Yes, remove" | evidence | Ask to confirm (`evidence.remove.confirm`) / remove (§7.5), answer `evidence.removed`. |
+| `evv` | Button Show to member / Hide from member | evidence, `1`/`0` | Set visibility (§7.5); re-render the item with `evidence.visibility.*` under its heading. |
+| `evn` / `evnm` | Button Edit note (Add note) / modal | evidence (, note revision) | Exception read: the note modal prefilled / save the note (§7.5), re-render the item with `evidence.note.saved`/`cleared` under its heading. |
+| `evr` / `evrc` | Button Remove / "Yes, remove" | evidence | Ask to confirm (`evidence.remove.confirm`; `evidence.removed.already` if it is) / remove (§7.5), answer `evidence.removed` with View evidence and Open case. |
 | `exs` | Select of "Add as evidence" | channel, message; value: case | Add the message to that case. |
 | `exn` / `exm` | Button Enter a case number / modal | channel, message | The modal (case number, note) / add the message to that case (`error.case_number_invalid` for a bad number). |
 | `vd` / `vdm` | Button Void case / modal | case | Void modal / void (§4.7). |
@@ -2292,10 +2299,13 @@ Quack's access); module pages carry `version` and empty `problems`;
 `note_revision`, `note_updated_by`, `note_updated_at`; `removed` (`by`,
 `at`, `text` = `evidence.removed_by`) or null, shown collapsed;
 `surrounding` (oldest first: `message_id`, `before`, `author_id`,
-`content`, `created_at`, `files`) or null, shown collapsed. Until route 60
-ships, the wire type lists only saved messages that aren't removed.
-`MemberCase.evidence` lists only what `member_sees` allows (§7.4), with no
-note or surrounding field.
+`content`, `created_at`, `files`) or null, shown collapsed. Every item is
+listed, removed ones too. `EvidenceAdded` (routes 25, 60) carries `new`,
+`retrying`, `restored`, `already_saved`, and `files` with the sentence;
+`EvidenceEdited` (61–63) the case and the sentence; a note set while
+adding is revision 0. `MemberCase.evidence` lists only what `member_sees`
+allows (§7.4), with no kind, note, surrounding, removal, or visibility
+field.
 
 **Statistics** (route 8): `[from, to)`, default the last calendar month,
 1 s–366 days (else `api.range_invalid`); counted by current state per UTC
@@ -2415,9 +2425,24 @@ socket peer, or the n-th `X-Forwarded-For` entry from the right with
 
 ### 14.8 Limits, timeouts, headers
 
-Body ≤ 262,144 bytes (`413`), except route 60: ≤ 104,923,136 bytes,
-read part by part, a file over 10,485,760 bytes stopped while reading
-(`400 validation_failed`, `too_large`); a panic is `500`. `GET`/`HEAD` end at 10 s
+Body ≤ 262,144 bytes (`413`), except route 60: ≤ 104,923,136 bytes
+(a declared length over it is `413` before reading). Route 60 refuses
+what it can before reading the body (session, CSRF, capability, the case,
+the evidence channel, §7.1), then reads it part by part (`multer`) within
+the **upload budget**: 2 × 104,923,136 bytes across all uploads in
+flight, each reserving its declared length (the cap without one) and
+waiting at most 30 s for room (else `503 unavailable`). A file is kept
+only while it can be accepted: one over 10,485,760 bytes, of a type Quack
+doesn't copy, or past the tenth is read and dropped, every buffer is
+dropped once anything is refused, and the rest of the body is still read
+so the answer names every refused file (`400 validation_failed`, field
+`files`, `too_large` / `unsupported_type`; `422 too_many_files`). A
+`note` part over 4,096 bytes is `note_too_long`; another part or a second
+`note` is `validation_failed` on that field; no `files` part is
+`error.no_links` on `files`; an unreadable body is `400 invalid_json`;
+30 s without bytes is `503 unavailable`. The accepted bytes go to the
+engine and PostgreSQL as shared buffers (no copy), so an upload holds at
+most its body plus one joined file. A panic is `500`. `GET`/`HEAD` end at 10 s
 (`503 unavailable`); writes have no request deadline, so "nothing changed"
 is never said about a committed write. Header and keep-alive timeouts are
 axum's defaults. Statement timeout 5 s (2 s in case creation, §4.2). Every
@@ -3412,7 +3437,7 @@ Choices made without the owner; overrule by editing this document first.
 | 28 | Not imported: `case_events`, `ticket_events`, `staff_members`, `audit_mirror_deliveries`, `ticket_member_states`, `honeypot_warning_refreshes`, `v4_import_*`; uncertain in-flight effects become `unconfirmed`/`unknown`; pending honeypot hits fail. |
 | 29 | Sessions last as long as the Discord token (≤ 7 days), no sliding renewal, no logout-all. |
 | 30 | Sessions and idempotency are hand-written on Postgres. |
-| 31 | Direct dependencies beyond the original stack list: `aws-lc-rs`, `tower-http` (`fs`, `compression-gzip`), `futures-util`, `bytes`, `url`. |
+| 31 | Direct dependencies beyond the original stack list: `aws-lc-rs`, `tower-http` (`fs`, `compression-gzip`), `futures-util`, `bytes`, `url`, `multer` (route 60's streaming multipart reader). |
 | 32 | Extra configuration keys: `QUACK_DATABASE_MAX_CONNECTIONS`, `QUACK_DASHBOARD_DIR`, `QUACK_ENVIRONMENT`, `QUACK_TRUSTED_PROXY_HOPS`, `QUACK_IMPORT_SOURCE_URL`. |
 | 33 | The `Discord` port's implementation lives in the binary (`DiscordPort`). |
 | 34 | Module HTTP routes live in `quack-api`. |
@@ -3459,6 +3484,7 @@ Discord. Run it with a staging application before release and at cutover
 | Evidence | [ ] The Add evidence modal's File Upload (0–10 files) submits `resolved.attachments`; `/case add file` and `/case evidence` ATTACHMENT options; ephemeral attachment URLs download from `cdn.discordapp.com` within the job's first run and after a 15-minute draft. |
 | Evidence | [ ] A Media Gallery with `spoiler: true` items in an ephemeral V2 message shows copied images and videos blurred; `GET …/messages?after=` returns the messages right after one, in the order the engine assumes nothing about. |
 | Evidence | [ ] "Add as evidence" message command registers without a description; its select and case-number modal; dashboard upload of ten 10 MB files through the proxy. |
+| Evidence | [ ] Add evidence and View evidence on the `case.receipt.posted` confirmation: the modal submit's deferred update replaces that ephemeral message with `evidence.added`; Show to member, Edit note (prefilled within 300 ms), Messages around it, and Remove re-render the ephemeral View evidence message in place. |
 | Cases | [ ] A hand-applied ban and timeout survive voiding; a re-ban of a banned member: does Discord replace the stored reason (unban provenance reads the marker)? |
 | Cases | [ ] A ban retried after a lost answer sends `delete_message_seconds` 0. |
 | DMs | [ ] Discord answers 50278 for a DM with no mutual server. |
