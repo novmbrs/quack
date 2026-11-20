@@ -5,13 +5,15 @@
 //! and the server has loaded since the last `READY`; the member cache
 //! answers with event-fed entries under the same condition and with
 //! REST-fed entries for 5 minutes. "Absent" always comes from Discord and is
-//! never cached. These are the fact reads of the engine's `Discord` port.
+//! never cached. Accounts come from the account cache (for 24 hours after
+//! their last sighting), else REST. These are the fact reads of the engine's
+//! `Discord` port.
 
 use std::sync::{Arc, OnceLock};
 
 pub use quack_core::discord::{Fresh, Membership};
 use quack_core::ids::{AccountId, ChannelId, GuildId, MemberId};
-use quack_core::permissions::{ChannelFacts, GuildFacts, MemberFacts};
+use quack_core::permissions::{AccountFacts, ChannelFacts, GuildFacts, MemberFacts};
 use time::OffsetDateTime;
 
 use crate::cache::{GuildCache, MemberCache};
@@ -55,6 +57,37 @@ impl Facts {
             let _ = self.quack.set(me.id);
             me.id
         })
+    }
+
+    /// Accounts by id, in the order asked: the cached ones, and the rest
+    /// with one [`DiscordClient::accounts`] read, whose answers refresh the
+    /// cache unless a newer sighting arrived during the read. Unknown users are left out; any other failure is returned.
+    /// At most [`ACCOUNTS_MAX`](crate::rest::ACCOUNTS_MAX) uncached ids are
+    /// read.
+    pub async fn accounts(&self, ids: &[AccountId]) -> Outcome<Vec<AccountFacts>> {
+        let cache = self.members.accounts();
+        let mut found = Vec::with_capacity(ids.len());
+        let mut missing = Vec::new();
+        for id in ids {
+            match cache.get(*id) {
+                Some(account) => found.push(account),
+                None => missing.push(*id),
+            }
+        }
+        if !missing.is_empty() {
+            let started = std::time::Instant::now();
+            match self.client.accounts(&missing).await.into_result() {
+                Ok(read) => {
+                    for account in read {
+                        cache.put(account.clone(), started);
+                        found.push(account);
+                    }
+                }
+                Err(failure) => return failure,
+            }
+        }
+        found.sort_by_key(|a| ids.iter().position(|id| *id == a.id));
+        Outcome::Done(found)
     }
 
     /// A server's owner, MFA level, roles, and Quack's own member.
