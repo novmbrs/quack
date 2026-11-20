@@ -295,7 +295,7 @@ fn a_gallery_is_a_spoilered_media_gallery() {
 /// The add-evidence modal's file field is a File Upload in a Label.
 #[test]
 fn the_files_input_is_a_file_upload() {
-    let modal = render_modal(&quack_text::evidence::modal(case(4), 12));
+    let modal = render_modal(&quack_text::evidence::modal(case(4), 12, false));
     let wire = modal.wire_components();
     let upload = &wire[1]["component"];
     assert_eq!(upload["type"], 19, "{wire}");

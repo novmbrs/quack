@@ -110,13 +110,14 @@ export function uploadEvidence(
   caseRef: string,
   files: File[],
   note: string,
+  key: string,
   onProgress?: (p: UploadProgress) => void,
 ): Promise<EvidenceAdded> {
   const form = new FormData();
   for (const f of files) form.append("files", f, f.name);
   if (note.trim()) form.append("note", note.trim());
   const url = `/api/guilds/${encodeURIComponent(guildId)}/cases/${encodeURIComponent(caseRef)}/evidence/uploads`;
-  return upload<EvidenceAdded>(url, form, onProgress);
+  return upload<EvidenceAdded>(url, form, key, onProgress);
 }
 
 const itemPath = (guildId: string, caseRef: string, evidenceId: string) => ({

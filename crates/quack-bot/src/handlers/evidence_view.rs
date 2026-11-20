@@ -1,8 +1,8 @@
 //! Seeing and changing one evidence item from Discord (§7.4, §7.5,
 //! §11.7): View evidence (`ev`) with its spoilered gallery, Messages around
-//! it (`evs`), Show to member / Hide from member (`evv`), the note
-//! (`evn`/`evnm`), and Remove (`evr`/`evrc`). Removed items are never
-//! shown in Discord; every click is authorized again.
+//! it (`evs`) and back (`evb`), Show to member / Hide from member (`evv`),
+//! the note (`evn`/`evnm`), and Remove (`evr`/`evrc`). Removed items are
+//! never shown in Discord; every click is authorized again.
 
 use quack_core::DomainError;
 use quack_core::ids::{CaseId, ChannelId, EvidenceId};
@@ -108,7 +108,7 @@ async fn item_msg(engine: &Engine, principal: &Principal, v: &CaseView, item: u3
     let items = shown(v);
     let total = u32::try_from(items.len()).unwrap_or(u32::MAX);
     if total == 0 {
-        return Msg::text(Tone::Neutral, words::view_none(v.number));
+        return words::view_none_reply(v.id, v.number);
     }
     let item = item.clamp(1, total);
     let e = items[usize::try_from(item - 1).unwrap_or(0)];
@@ -183,6 +183,28 @@ const fn channel_ref(id: ChannelId) -> ChannelRef {
     ChannelRef { id, name: None }
 }
 
+/// Back to evidence (`evb`): the item where it is now among the items
+/// Discord shows (others may have been removed meanwhile), or
+/// `evidence.removed.already` once it is removed itself.
+pub(crate) async fn back(p: Pending<'_>, evidence: EvidenceId, source: Source) -> Finish {
+    let a = match p.defer_from(source).await {
+        Ok(a) => a,
+        Err(finish) => return finish,
+    };
+    let result = back_now(&a, evidence).await;
+    a.finish(result).await
+}
+
+async fn back_now(a: &Acked<'_>, evidence: EvidenceId) -> Result<Msg, Failure> {
+    let engine = a.engine();
+    let principal = auth::principal(engine, a.ix).await?;
+    let found = locate(engine, &principal, evidence).await?;
+    Ok(match found.position {
+        Some(item) => item_msg(engine, &principal, &found.view, item).await,
+        None => removed_msg(found.view.id, found.view.number, false),
+    })
+}
+
 /// Messages around it (`evs`): the messages saved around a saved message.
 pub(crate) async fn surrounding(p: Pending<'_>, evidence: EvidenceId, source: Source) -> Finish {
     let a = match p.defer_from(source).await {
@@ -197,12 +219,12 @@ async fn surrounding_now(a: &Acked<'_>, evidence: EvidenceId) -> Result<Msg, Fai
     let engine = a.engine();
     let principal = auth::principal(engine, a.ix).await?;
     let found = locate(engine, &principal, evidence).await?;
-    let Some(position) = found.position else {
+    if found.position.is_none() {
         return Err(errors::domain(
             DomainError::EvidenceRemoved,
             &ErrorFacts::default(),
         ));
-    };
+    }
     let lines = found
         .item
         .surrounding
@@ -219,7 +241,7 @@ async fn surrounding_now(a: &Acked<'_>, evidence: EvidenceId) -> Result<Msg, Fai
     Ok(words::surrounding(&Surrounding {
         case: found.view.id,
         number: found.view.number,
-        item: position,
+        evidence,
         author: found.item.author_id.map(Person::unnamed),
         lines,
     }))
@@ -360,7 +382,7 @@ async fn ask_remove_now(a: &Acked<'_>, evidence: EvidenceId) -> Result<Msg, Fail
     let found = locate(engine, &principal, evidence).await?;
     let (case, number) = (found.view.id, found.view.number);
     Ok(match found.position {
-        Some(item) => words::remove_confirm(case, number, evidence, item),
+        Some(_) => words::remove_confirm(number, evidence),
         None => removed_msg(case, number, false),
     })
 }
@@ -402,7 +424,7 @@ fn removed_msg(case: CaseId, number: u64, changed: bool) -> Msg {
         Tone::Neutral
     };
     Msg::text(tone, words::removed(number, changed)).buttons(vec![
-        words::view_button(case),
+        words::view_button(case, false),
         quack_text::word::open_case_button(case),
     ])
 }

@@ -550,3 +550,140 @@ async fn uploads_stream_over_a_real_connection() {
     assert_eq!(json["error"]["fields"][0]["code"], "too_large", "{json}");
     server.abort();
 }
+
+/// Review H: the first upload committed but its answer was lost, and the
+/// evidence channel went away since: the retry replays the stored result
+/// (with `Idempotency-Replayed`) instead of failing the channel check.
+#[tokio::test]
+async fn a_lost_upload_answer_replays_without_the_evidence_channel() {
+    let app = App::new().await;
+    case(&app).await;
+    evidence_channel(&app).await;
+    let moderator = app.login(MODERATOR, true).await;
+    let parts = [("files", Some("proof.png"), "image/png", b"png".as_slice())];
+    let send = || {
+        app.send(
+            app.post(&g("/cases/1/evidence/uploads"))
+                .by(&moderator)
+                .key("lost-answer-1")
+                .multipart(&parts),
+        )
+    };
+    let first = send().await;
+    assert_eq!(first.status, StatusCode::OK, "{}", first.json);
+    assert_eq!(first.header("idempotency-replayed"), None);
+    app.h
+        .db
+        .execute(&format!(
+            "UPDATE guild_settings SET evidence_channel_id = NULL WHERE guild_id = {GUILD}"
+        ))
+        .await
+        .unwrap();
+    let again = send().await;
+    assert_eq!(again.status, StatusCode::OK, "{}", again.json);
+    assert_eq!(again.header("idempotency-replayed"), Some("true"));
+    // A new request is still refused without a channel.
+    let fresh = app
+        .send(
+            app.post(&g("/cases/1/evidence/uploads"))
+                .by(&moderator)
+                .key("lost-answer-2")
+                .multipart(&parts),
+        )
+        .await;
+    assert_eq!(fresh.code(), Some("evidence_channel_unavailable"));
+}
+
+/// Review G: past the staging ceiling an upload is refused as busy,
+/// retryable, with nothing saved.
+#[tokio::test]
+async fn uploads_past_the_staging_ceiling_are_busy() {
+    let app = App::new().await;
+    case(&app).await;
+    evidence_channel(&app).await;
+    let moderator = app.login(MODERATOR, true).await;
+    app.h
+        .db
+        .execute(&format!(
+            "WITH e AS (
+               INSERT INTO evidence (id, guild_id, case_id, kind, added_by, visible_to_member)
+               SELECT gen_random_uuid(), {GUILD}, c.id, 'upload', {MODERATOR}, false
+               FROM cases c, generate_series(1, 3) RETURNING id, case_id),
+             f AS (
+               INSERT INTO evidence_files (id, guild_id, case_id, evidence_id, position, filename, size_bytes)
+               SELECT gen_random_uuid(), {GUILD}, e.case_id, e.id, i, 'big.png', 10485760
+               FROM e, generate_series(1, 9) AS i RETURNING id)
+             INSERT INTO evidence_upload_bytes (file_id, guild_id, bytes)
+             SELECT id, {GUILD}, decode(repeat('00', 10485760), 'hex') FROM f"
+        ))
+        .await
+        .unwrap();
+    let busy = upload(
+        &app,
+        &moderator,
+        &[("files", Some("a.png"), "image/png", b"x")],
+    )
+    .await;
+    assert_eq!(
+        busy.status,
+        StatusCode::SERVICE_UNAVAILABLE,
+        "{}",
+        busy.json
+    );
+    assert_eq!(busy.code(), Some("uploads_busy"));
+    assert_eq!(busy.header("retry-after"), Some("60"));
+    assert_eq!(busy.json["error"]["retry_after_seconds"], 60);
+}
+
+/// Review D: a moderator who loses their role while the body is still
+/// arriving can't add the upload: the session and capability are checked
+/// again once the body is read.
+#[tokio::test]
+async fn a_role_lost_mid_upload_refuses_it() {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    let app = App::new().await;
+    case(&app).await;
+    evidence_channel(&app).await;
+    let moderator = app.login(MODERATOR, true).await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = app.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await });
+    let (content_type, body) =
+        common::multipart(&[("files", Some("a.png"), "image/png", &[1u8; 4096])]);
+    let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+    let head = format!(
+        "POST /api/guilds/{GUILD}/cases/1/evidence/uploads HTTP/1.1\r\nhost: {addr}\r\n\
+         content-type: {content_type}\r\ncontent-length: {}\r\norigin: {}\r\n\
+         x-csrf-token: {}\r\nidempotency-key: mid-upload-1\r\n\
+         cookie: __Host-quack_session={}\r\nconnection: close\r\n\r\n",
+        body.len(),
+        common::PUBLIC,
+        moderator.csrf,
+        moderator.cookie
+    );
+    stream.write_all(head.as_bytes()).await.unwrap();
+    stream.write_all(&body[..100]).await.unwrap();
+    stream.flush().await.unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    // The role goes while the body is on its way.
+    let guild: GuildId = quack_testkit::sf(GUILD);
+    app.h.fake.world(|w| {
+        w.member_mut(guild, quack_testkit::sf(MODERATOR))
+            .unwrap()
+            .permissions = quack_core::permissions::Permissions::NONE;
+    });
+    stream.write_all(&body[100..]).await.unwrap();
+    let mut answer = String::new();
+    stream.read_to_string(&mut answer).await.unwrap();
+    assert!(answer.starts_with("HTTP/1.1 403"), "{answer}");
+    assert!(answer.contains("missing_capability"), "{answer}");
+    let uploads = app
+        .h
+        .db
+        .count("SELECT count(*) FROM evidence WHERE kind = 'upload'")
+        .await
+        .unwrap();
+    assert_eq!(uploads, 0, "nothing was staged");
+    server.abort();
+}

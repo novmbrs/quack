@@ -24,7 +24,9 @@ pub use files::{
     mark_saved, pending_files, release_upload, reserve_upload, save_snapshot, set_file_state,
     start_copy,
 };
-pub use uploads::{NewUploadItem, delete_staged, insert_upload, staged_bytes};
+pub use uploads::{
+    NewUploadItem, StagedTotals, delete_staged, insert_upload, lock_staged_totals, staged_bytes,
+};
 
 /// The summary kept of one embed.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -73,8 +75,12 @@ pub struct Evidence {
     pub channel: Option<ChannelId>,
     /// The message (`None` for uploaded files).
     pub message: Option<MessageId>,
-    /// Who added it; `None` = Quack.
+    /// Who first added it; `None` = Quack.
     pub added_by: Option<AccountId>,
+    /// Whose access the capture checks: the staff member whose request
+    /// last started it (adding it, or adding it again after it failed);
+    /// `None` = Quack. Use [`Evidence::capture_actor`].
+    pub capture_by: Option<AccountId>,
     /// Whether the case's member sees it (always for a saved message).
     pub visible_to_member: bool,
     /// The staff note (at most 500 characters).
@@ -121,6 +127,13 @@ impl Evidence {
     /// Whether staff removed it.
     pub const fn is_removed(&self) -> bool {
         self.removed.is_some()
+    }
+
+    /// The staff member whose access the capture checks (§7.2 step 3):
+    /// [`Evidence::capture_by`], else (rows from before it existed) the
+    /// adder; `None` = Quack.
+    pub fn capture_actor(&self) -> Option<AccountId> {
+        self.capture_by.or(self.added_by)
     }
 
     /// The saved message's location, for a message item.
@@ -206,8 +219,12 @@ impl Admission {
 
 /// Adds a message to a case's evidence, under the case lock (§7.1). A
 /// removed item comes back (and is captured again if its capture had
-/// failed); a failed one is captured again. `note` goes on a new item, and
-/// on an existing one only when it has none. The caller enqueues
+/// failed); a failed one is captured again. `added_by` is this request's
+/// actor: a new item records it as its adder, and any item captured (again)
+/// is captured under its access (`capture_by`), while an existing item
+/// keeps its original adder. The caller checks that actor's access before
+/// restoring or capturing an existing item again. `note` goes on a new
+/// item, and on an existing one only when it has none. The caller enqueues
 /// `capture_evidence` when [`Admission::needs_capture`].
 /// [`DbError::NotFound`] when the case is not in `guild`; another server's
 /// item is never read or changed.
@@ -224,15 +241,17 @@ pub async fn admit(
         Insert,
         "evidence",
         sqlx::query!(
-            r#"INSERT INTO evidence (id, guild_id, case_id, channel_id, message_id, added_by, note,
-                                     note_updated_by, note_updated_at)
-               SELECT $1, c.guild_id, c.id, $4, $5, $6::bigint, $7,
+            r#"INSERT INTO evidence (id, guild_id, case_id, channel_id, message_id, added_by, capture_by,
+                                     note, note_updated_by, note_updated_at)
+               SELECT $1, c.guild_id, c.id, $4, $5, $6::bigint, $6::bigint, $7,
                       CASE WHEN $7::text IS NULL THEN NULL ELSE $6::bigint END,
                       CASE WHEN $7::text IS NULL THEN NULL ELSE now() END
                FROM cases c WHERE c.guild_id = $2 AND c.id = $3
                ON CONFLICT (case_id, message_id) DO UPDATE SET
                  state = CASE WHEN evidence.state = 'failed' THEN 'saving' ELSE evidence.state END,
                  failure = CASE WHEN evidence.state = 'failed' THEN NULL ELSE evidence.failure END,
+                 capture_by = CASE WHEN evidence.state = 'failed' THEN EXCLUDED.capture_by
+                                   ELSE evidence.capture_by END,
                  removed_at = NULL,
                  removed_by = NULL,
                  note = COALESCE(evidence.note, EXCLUDED.note),
@@ -290,6 +309,38 @@ pub async fn admit(
     ))
 }
 
+/// Which of these messages may never be evidence (§7.1): any message in
+/// the server's evidence channel, and Quack's own copy posts wherever they
+/// are now (a former evidence channel's copies stay copies). Returns those
+/// messages.
+pub async fn evidence_copies(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    messages: &[(ChannelId, MessageId)],
+) -> Result<Vec<MessageId>, DbError> {
+    if messages.is_empty() {
+        return Ok(Vec::new());
+    }
+    let channels: Vec<i64> = messages.iter().map(|(c, _)| i64::from(*c)).collect();
+    let ids: Vec<i64> = messages.iter().map(|(_, m)| i64::from(*m)).collect();
+    let rows = obs::run(
+        Select,
+        "evidence_files",
+        sqlx::query_scalar!(
+            r#"SELECT l.m AS "message!" FROM unnest($2::bigint[], $3::bigint[]) AS l(c, m)
+               WHERE l.c = (SELECT s.evidence_channel_id FROM guild_settings s WHERE s.guild_id = $1)
+                  OR EXISTS (SELECT 1 FROM evidence_files f
+                             WHERE f.guild_id = $1 AND f.copy_message_id = l.m AND f.copy_channel_id = l.c)"#,
+            i64::from(guild),
+            &channels,
+            &ids,
+        )
+        .fetch_all(conn),
+    )
+    .await?;
+    rows.into_iter().map(id).collect()
+}
+
 /// Evidence items of a case that aren't removed (the 50-item cap, counted
 /// under the case lock).
 pub async fn count_for_case(
@@ -341,6 +392,7 @@ struct EvidenceRow {
     channel_id: Option<i64>,
     message_id: Option<i64>,
     added_by: Option<i64>,
+    capture_by: Option<i64>,
     visible_to_member: bool,
     note: Option<String>,
     note_revision: i32,
@@ -378,6 +430,7 @@ impl TryFrom<EvidenceRow> for Evidence {
             channel: opt_id(r.channel_id)?,
             message: opt_id(r.message_id)?,
             added_by: opt_id(r.added_by)?,
+            capture_by: opt_id(r.capture_by)?,
             visible_to_member: r.visible_to_member,
             note: r.note,
             note_revision: count(r.note_revision)?,
@@ -406,7 +459,8 @@ macro_rules! query_evidence {
     ($tail:literal $(, $arg:expr)* $(,)?) => {
         ::sqlx::sqlx_macros::expand_query!(
             record = EvidenceRow,
-            source = r#"SELECT id, guild_id, case_id, kind, channel_id, message_id, added_by, visible_to_member,
+            source = r#"SELECT id, guild_id, case_id, kind, channel_id, message_id, added_by, capture_by,
+                               visible_to_member,
                                note, note_revision, note_updated_by, note_updated_at, removed_at, removed_by,
                                surrounding AS "surrounding: Json<Vec<SurroundingMessage>>",
                                state, failure, author_id,

@@ -110,7 +110,7 @@ function LiveItem(props: Props) {
           <Visibility upload={upload} visible={visible} />
           {moderate && upload ? (
             <Switch
-              label={visible ? "Hide from member" : "Show to member"}
+              label="Visible to member"
               checked={visible}
               disabled={visibility.isPending}
               onChange={(v) => visibility.mutate(v)}
@@ -250,6 +250,9 @@ function Note({ guildId, caseNumber, evidence: e, moderate, onCase }: Props) {
   const length = noteLength(draft);
   const tooLong = length > NOTE_MAX;
   const conflict = error instanceof ApiError && error.code === "note_changed";
+  // After a conflict, the saved note is loadable once the refetch brought a
+  // newer revision than the one this draft was based on.
+  const fresh = e.note_revision !== revision;
 
   if (editing) {
     return (
@@ -283,8 +286,8 @@ function Note({ guildId, caseNumber, evidence: e, moderate, onCase }: Props) {
             Cancel
           </Button>
           {conflict ? (
-            <Button size="sm" variant="secondary" onClick={start}>
-              Load the saved note
+            <Button size="sm" variant="secondary" onClick={start} disabled={!fresh}>
+              {fresh ? "Load the saved note" : "Loading the saved note…"}
             </Button>
           ) : null}
           <Button size="sm" type="submit" disabled={tooLong} pending={save.isPending}>
@@ -345,6 +348,7 @@ function RemovedItem(props: Props) {
       </summary>
       <div className={s.removedBody}>
         <Body {...props} />
+        {e.surrounding?.length ? <Surrounding guildId={props.guildId} evidence={e} /> : null}
         {e.note ? <p className={s.noteText}>Staff note: {e.note}</p> : null}
       </div>
     </details>

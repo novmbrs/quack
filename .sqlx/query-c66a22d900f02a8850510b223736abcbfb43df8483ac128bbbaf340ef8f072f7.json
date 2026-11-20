@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, guild_id, case_id, kind, channel_id, message_id, added_by, visible_to_member,\n                               note, note_revision, note_updated_by, note_updated_at, removed_at, removed_by,\n                               surrounding AS \"surrounding: Json<Vec<SurroundingMessage>>\",\n                               state, failure, author_id,\n                               content, message_created_at, message_edited_at,\n                               embeds AS \"embeds: Json<Vec<EmbedSummary>>\", files_not_saved,\n                               copy_skipped_not_staff_only, created_at, saved_at\n                        FROM evidence WHERE guild_id = $1 AND id = $2",
+  "query": "SELECT id, guild_id, case_id, kind, channel_id, message_id, added_by, capture_by,\n                               visible_to_member,\n                               note, note_revision, note_updated_by, note_updated_at, removed_at, removed_by,\n                               surrounding AS \"surrounding: Json<Vec<SurroundingMessage>>\",\n                               state, failure, author_id,\n                               content, message_created_at, message_edited_at,\n                               embeds AS \"embeds: Json<Vec<EmbedSummary>>\", files_not_saved,\n                               copy_skipped_not_staff_only, created_at, saved_at\n                        FROM evidence WHERE guild_id = $1 AND id = $2 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -92,6 +92,17 @@
       },
       {
         "ordinal": 7,
+        "name": "capture_by",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "evidence",
+            "name": "capture_by"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "visible_to_member",
         "type_info": "Bool",
         "origin": {
@@ -102,7 +113,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "note",
         "type_info": "Text",
         "origin": {
@@ -113,7 +124,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "note_revision",
         "type_info": "Int4",
         "origin": {
@@ -124,7 +135,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "note_updated_by",
         "type_info": "Int8",
         "origin": {
@@ -135,7 +146,7 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "note_updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -146,7 +157,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "removed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -157,7 +168,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "removed_by",
         "type_info": "Int8",
         "origin": {
@@ -168,7 +179,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "surrounding: Json<Vec<SurroundingMessage>>",
         "type_info": "Jsonb",
         "origin": {
@@ -179,7 +190,7 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "state",
         "type_info": {
           "Custom": {
@@ -201,7 +212,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "failure",
         "type_info": {
           "Custom": {
@@ -213,7 +224,8 @@
                 "quack_no_access",
                 "other_server",
                 "discord_error",
-                "no_file_copied"
+                "no_file_copied",
+                "evidence_copy"
               ]
             }
           }
@@ -226,7 +238,7 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "author_id",
         "type_info": "Int8",
         "origin": {
@@ -237,7 +249,7 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "content",
         "type_info": "Text",
         "origin": {
@@ -248,7 +260,7 @@
         }
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "message_created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -259,7 +271,7 @@
         }
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "message_edited_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -270,7 +282,7 @@
         }
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "embeds: Json<Vec<EmbedSummary>>",
         "type_info": "Jsonb",
         "origin": {
@@ -281,7 +293,7 @@
         }
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "files_not_saved",
         "type_info": "Int4",
         "origin": {
@@ -292,7 +304,7 @@
         }
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "copy_skipped_not_staff_only",
         "type_info": "Bool",
         "origin": {
@@ -303,7 +315,7 @@
         }
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -314,7 +326,7 @@
         }
       },
       {
-        "ordinal": 25,
+        "ordinal": 26,
         "name": "saved_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -339,6 +351,7 @@
       true,
       true,
       true,
+      true,
       false,
       true,
       false,
@@ -360,5 +373,5 @@
       true
     ]
   },
-  "hash": "57fe8e4b69fa18f149bc476abb0f8e69d5c8c1c40f23881d9eccbb72a6a3f3cf"
+  "hash": "c66a22d900f02a8850510b223736abcbfb43df8483ac128bbbaf340ef8f072f7"
 }

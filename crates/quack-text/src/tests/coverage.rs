@@ -88,6 +88,7 @@ const fn domain_index(e: &DomainError) -> usize {
         DomainError::EvidenceRemoved => 31,
         DomainError::EvidenceNotUpload => 32,
         DomainError::NoteChanged => 33,
+        DomainError::UploadsBusy => 34,
     }
 }
 
@@ -96,7 +97,7 @@ fn every_domain_error_is_sampled() {
     let seen: BTreeSet<usize> = domain_errors().iter().map(domain_index).collect();
     assert_eq!(
         seen.len(),
-        34,
+        35,
         "add the new DomainError variant to the samples"
     );
 }

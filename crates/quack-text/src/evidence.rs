@@ -34,9 +34,11 @@ fn note_input(value: Option<&str>) -> Input {
 
 /// `evidence.modal.*`: the add-evidence modal: message links, files, and
 /// a note. At least one link or file is required (checked on submit).
-pub fn modal(case: CaseId, number: u64) -> Modal {
+/// `new_message`: it was opened from a card or `case.receipt.posted`, so
+/// its answer is a new message (§11.7).
+pub fn modal(case: CaseId, number: u64, new_message: bool) -> Modal {
     Modal {
-        action: ModalAction::AddEvidence(case),
+        action: ModalAction::AddEvidence { case, new_message },
         title: format!("Add evidence · case #{number}"),
         inputs: vec![
             Input {
@@ -130,28 +132,36 @@ pub fn added(a: &Added) -> Text {
     t
 }
 
-/// `button.add_evidence`.
-pub fn add_button(case: CaseId) -> Button {
+/// `button.add_evidence`. `new_message`: it answers in a new ephemeral
+/// message (on a card or `case.receipt.posted`, §11.7), else it updates
+/// the message it is on.
+pub fn add_button(case: CaseId, new_message: bool) -> Button {
     Button::new(
         "Add evidence",
         ButtonStyle::Secondary,
-        ButtonAction::AddEvidence(case),
+        ButtonAction::AddEvidence { case, new_message },
     )
 }
 
-/// `button.view_evidence`.
-pub fn view_button(case: CaseId) -> Button {
+/// `button.view_evidence`, opening the first item (`new_message` as for
+/// [`add_button`]).
+pub fn view_button(case: CaseId, new_message: bool) -> Button {
     Button::new(
         "View evidence",
         ButtonStyle::Secondary,
-        ButtonAction::ViewEvidence { case, item: 1 },
+        ButtonAction::ViewEvidence {
+            case,
+            item: 1,
+            new_message,
+        },
     )
 }
 
 /// The `evidence.added` reply with Add evidence and View evidence, so
 /// several things can be added in a row.
 pub fn added_reply(case: CaseId, a: &Added) -> Msg {
-    Msg::text(Tone::Success, added(a)).buttons(vec![add_button(case), view_button(case)])
+    Msg::text(Tone::Success, added(a))
+        .buttons(vec![add_button(case, false), view_button(case, false)])
 }
 
 /// `evidence.failure.*`: why an item couldn't be saved.
@@ -171,6 +181,9 @@ pub fn failure(f: EvidenceFailure) -> Text {
         }
         EvidenceFailure::DiscordError => {
             "Quack couldn't save this message. Add the link again to retry."
+        }
+        EvidenceFailure::EvidenceCopy => {
+            "Quack didn't save this message because it's in the evidence channel or is one of Quack's copies there. Add a link to the original message, or upload the file again."
         }
         EvidenceFailure::NoFileCopied => {
             return Text::fixed(
@@ -192,16 +205,23 @@ pub fn state_text(state: EvidenceState, f: Option<EvidenceFailure>) -> Text {
     }
 }
 
-/// `evidence.file.*`: one file and what happened to its copy.
-pub fn file(name: &str, state: FileCopyState) -> Text {
+/// `evidence.file.*`: one file of a saved message and what happened to
+/// its copy; `evidence.file.upload_failed` for an uploaded file whose copy
+/// failed (it has no original to fall back on).
+pub fn file(name: &str, kind: EvidenceKind, state: FileCopyState) -> Text {
     let t = Text::new().user(fmt::one_line(name)).s(" · ");
-    t.s(match state {
-        FileCopyState::Pending => "Copying file…",
-        FileCopyState::Copied => "Copy saved",
-        FileCopyState::LinkOnly => "Original link only. No evidence channel is set.",
-        FileCopyState::TooLarge => "Original link only. Quack copies files up to 10 MB.",
-        FileCopyState::UnsupportedType => "Original link only. Quack doesn't copy this file type.",
-        FileCopyState::CopyFailed => {
+    t.s(match (kind, state) {
+        (_, FileCopyState::Pending) => "Copying file…",
+        (_, FileCopyState::Copied) => "Copy saved",
+        (EvidenceKind::Upload, FileCopyState::CopyFailed) => {
+            "Quack couldn't copy this file, so it wasn't saved. Upload it again."
+        }
+        (_, FileCopyState::LinkOnly) => "Original link only. No evidence channel is set.",
+        (_, FileCopyState::TooLarge) => "Original link only. Quack copies files up to 10 MB.",
+        (_, FileCopyState::UnsupportedType) => {
+            "Original link only. Quack doesn't copy this file type."
+        }
+        (EvidenceKind::Message, FileCopyState::CopyFailed) => {
             "Quack couldn't copy this file. The original link may stop working."
         }
     })
@@ -323,7 +343,7 @@ fn saved_body(mut msg: Msg, e: &EvidenceItem) -> Msg {
         msg = msg.para(Text::fixed("Link previews: ").user(names.join(", ")));
     }
     for (name, state) in &e.files {
-        msg = msg.para(file(name, *state));
+        msg = msg.para(file(name, e.kind, *state));
     }
     if e.files_not_saved > 0 {
         msg = msg.para(Text::fixed(match e.files_not_saved {
@@ -356,6 +376,7 @@ fn view_buttons(e: &EvidenceItem) -> Vec<Button> {
             ButtonAction::ViewEvidence {
                 case,
                 item: e.item - 1,
+                new_message: false,
             },
         ));
     }
@@ -366,6 +387,7 @@ fn view_buttons(e: &EvidenceItem) -> Vec<Button> {
             ButtonAction::ViewEvidence {
                 case,
                 item: e.item + 1,
+                new_message: false,
             },
         ));
     }
@@ -435,7 +457,7 @@ pub fn view(e: &EvidenceItem) -> Msg {
     };
     if e.state == EvidenceState::Saving && e.kind == EvidenceKind::Upload {
         for (name, state) in &e.files {
-            msg = msg.para(file(name, *state));
+            msg = msg.para(file(name, e.kind, *state));
         }
     }
     if !e.gallery.is_empty() {
@@ -460,6 +482,15 @@ pub fn view_none(number: u64) -> Text {
     ))
 }
 
+/// `evidence.view.none` as View evidence shows it, with the Add evidence
+/// button its text names.
+pub fn view_none_reply(case: CaseId, number: u64) -> Msg {
+    Msg::text(Tone::Neutral, view_none(number)).buttons(vec![
+        add_button(case, false),
+        crate::word::open_case_button(case),
+    ])
+}
+
 /// One message saved around a linked message.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SurroundingLine {
@@ -482,8 +513,8 @@ pub struct Surrounding {
     pub case: CaseId,
     /// Its number.
     pub number: u64,
-    /// The item's position, for the way back.
-    pub item: u32,
+    /// The item, for the way back (its position is found on click).
+    pub evidence: EvidenceId,
     /// The saved message's author, once saved.
     pub author: Option<Person>,
     /// The messages, oldest first.
@@ -539,10 +570,7 @@ pub fn surrounding(s: &Surrounding) -> Msg {
         Button::new(
             "Back to evidence",
             ButtonStyle::Secondary,
-            ButtonAction::ViewEvidence {
-                case: s.case,
-                item: s.item,
-            },
+            ButtonAction::BackToEvidence(s.evidence),
         ),
         crate::word::open_case_button(s.case),
     ])
@@ -559,7 +587,7 @@ fn mark_saved(msg: Msg, s: &Surrounding) -> Msg {
 }
 
 /// `evidence.remove.confirm`: asks before removing an item.
-pub fn remove_confirm(case: CaseId, number: u64, evidence: EvidenceId, item: u32) -> Msg {
+pub fn remove_confirm(number: u64, evidence: EvidenceId) -> Msg {
     Msg::text(
         Tone::Warning,
         Text::fixed(format!(
@@ -575,7 +603,7 @@ pub fn remove_confirm(case: CaseId, number: u64, evidence: EvidenceId, item: u32
         Button::new(
             "Back",
             ButtonStyle::Secondary,
-            ButtonAction::ViewEvidence { case, item },
+            ButtonAction::BackToEvidence(evidence),
         ),
     ])
 }

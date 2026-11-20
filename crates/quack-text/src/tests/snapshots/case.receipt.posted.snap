@@ -9,7 +9,7 @@ model:   [Fixed("Case #12 is saved. Quack posted the receipt in this channel.")]
 tone: Success
 --- discord ---
 Case #12 is saved. Quack posted the receipt in this channel.
-buttons: [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Add evidence · Secondary] AddEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), new_message: true } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Case #12 is saved. Quack posted the receipt in this channel.
 --- model ---
@@ -19,7 +19,7 @@ Text [Fixed("Case #12 is saved. Quack posted the receipt in this channel.")]
 tone: Success
 --- discord ---
 Case #12 is saved. Quack posted the receipt in this channel.
-buttons: [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Add evidence · Secondary] AddEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), new_message: true } | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: true } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Case #12 is saved. Quack posted the receipt in this channel.
 --- model ---

@@ -8,7 +8,7 @@ use quack_core::ids::{EvidenceId, FileId, MemberId};
 use quack_core::limits::{MAX_FILES_PER_EVIDENCE, RECENT_CASES};
 use quack_core::permissions::Capability;
 
-use super::file::fresh_url;
+use super::file::copy_url;
 use crate::cases::{CaseError, CaseRef};
 use crate::{Engine, Principal, obs};
 
@@ -36,8 +36,9 @@ fn is_media(content_type: Option<&str>) -> bool {
 }
 
 /// Fresh URLs of an item's copied images and videos, in order, for the
-/// spoilered gallery of View evidence. Best effort: a file whose copy
-/// can't be read now is left out. A removed item has no gallery.
+/// spoilered gallery of View evidence: only copies in the evidence channel,
+/// never the source message's attachment (§7.4). Best effort: a file whose
+/// copy can't be read now is left out. A removed item has no gallery.
 pub async fn gallery(
     engine: &Engine,
     principal: &Principal,
@@ -70,7 +71,7 @@ pub async fn gallery(
                 && is_media(f.content_type.as_deref())
         });
         for f in media.take(MAX_FILES_PER_EVIDENCE as usize) {
-            if let Ok(url) = fresh_url(engine, f, item.source()).await {
+            if let Ok(Some(url)) = copy_url(engine, f).await {
                 out.push(GalleryFile {
                     id: f.id,
                     filename: f.filename.clone(),

@@ -153,6 +153,7 @@ pub fn for_domain(err: &DomainError, f: &ErrorFacts<'_>) -> Text {
         | DomainError::EvidenceFileLimitReached { .. }
         | DomainError::EvidenceChannelMissing
         | DomainError::EvidenceChannelNotStaffOnly
+        | DomainError::UploadsBusy
         | DomainError::EvidenceNotFound
         | DomainError::EvidenceRemoved
         | DomainError::EvidenceNotUpload
@@ -171,6 +172,7 @@ fn evidence(err: DomainError) -> Text {
         }
         DomainError::EvidenceChannelMissing => super::evidence_channel_missing(),
         DomainError::EvidenceChannelNotStaffOnly => super::evidence_channel_not_staff_only(),
+        DomainError::UploadsBusy => super::uploads_busy(),
         DomainError::EvidenceNotFound => super::evidence_not_found(),
         DomainError::EvidenceRemoved => super::evidence_removed(),
         DomainError::EvidenceNotUpload => super::evidence_not_upload(),

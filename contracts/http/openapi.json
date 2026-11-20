@@ -5931,7 +5931,8 @@
           "quack_no_access",
           "other_server",
           "discord_error",
-          "no_file_copied"
+          "no_file_copied",
+          "evidence_copy"
         ]
       },
       "EvidenceFile": {

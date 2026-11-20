@@ -52,6 +52,15 @@ fn draft_args(p: &DraftPage) -> String {
     )
 }
 
+/// `args`, then `:n` when the answer goes in a new message.
+fn with_new(args: String, new_message: bool) -> String {
+    if new_message {
+        format!("{args}:n")
+    } else {
+        args
+    }
+}
+
 /// Writes `1:<code>[:<arg>]…`.
 pub(super) fn encode(id: &CustomId) -> String {
     use CustomId as C;
@@ -60,9 +69,17 @@ pub(super) fn encode(id: &CustomId) -> String {
         C::CasePicker => ("cvs", String::new()),
         C::EditContext(c) => ("ce", c.to_u22()),
         C::EditContextModal { case, revision } => ("cem", format!("{}:{revision}", case.to_u22())),
-        C::AddEvidence(c) => ("ea", c.to_u22()),
-        C::AddEvidenceModal(c) => ("eam", c.to_u22()),
-        C::ViewEvidence { case, item } => ("ev", format!("{}:{item}", case.to_u22())),
+        C::AddEvidence { case, new_message } => ("ea", with_new(case.to_u22(), *new_message)),
+        C::AddEvidenceModal { case, new_message } => ("eam", with_new(case.to_u22(), *new_message)),
+        C::ViewEvidence {
+            case,
+            item,
+            new_message,
+        } => (
+            "ev",
+            with_new(format!("{}:{item}", case.to_u22()), *new_message),
+        ),
+        C::BackToEvidence(e) => ("evb", e.to_u22()),
         C::EvidenceSurrounding(e) => ("evs", e.to_u22()),
         C::EvidenceVisibility { evidence, visible } => (
             "evv",
@@ -142,11 +159,31 @@ pub(super) fn decode(rest: &str) -> Option<CustomId> {
             case: case(c)?,
             revision: number(r)?,
         },
-        ("ea", [c]) => C::AddEvidence(case(c)?),
-        ("eam", [c]) => C::AddEvidenceModal(case(c)?),
+        ("ea", [c]) => C::AddEvidence {
+            case: case(c)?,
+            new_message: false,
+        },
+        ("ea", [c, "n"]) => C::AddEvidence {
+            case: case(c)?,
+            new_message: true,
+        },
+        ("eam", [c]) => C::AddEvidenceModal {
+            case: case(c)?,
+            new_message: false,
+        },
+        ("eam", [c, "n"]) => C::AddEvidenceModal {
+            case: case(c)?,
+            new_message: true,
+        },
         ("ev", [c, i]) => C::ViewEvidence {
             case: case(c)?,
             item: number(i)?,
+            new_message: false,
+        },
+        ("ev", [c, i, "n"]) => C::ViewEvidence {
+            case: case(c)?,
+            item: number(i)?,
+            new_message: true,
         },
         ("vd", [c]) => C::VoidCase(case(c)?),
         ("vdm", [c]) => C::VoidCaseModal(case(c)?),
@@ -213,6 +250,7 @@ fn decode_evidence(code: &str, args: &[&str]) -> Option<CustomId> {
     let evidence = |s: &str| EvidenceId::from_u22(s).ok();
     Some(match (code, args) {
         ("evs", [e]) => C::EvidenceSurrounding(evidence(e)?),
+        ("evb", [e]) => C::BackToEvidence(evidence(e)?),
         ("evv", [e, v]) => C::EvidenceVisibility {
             evidence: evidence(e)?,
             visible: match *v {

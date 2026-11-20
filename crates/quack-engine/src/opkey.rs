@@ -93,6 +93,27 @@ pub async fn begin_keyed(db: &Db, key: &OperationKey, hash: &[u8; 32]) -> Result
     Err(KeyError::Db(DbError::Stale))
 }
 
+/// The stored result of a request that already ran with this key and the
+/// same hash; `None` when the key is new; [`KeyError::Reused`] when it ran
+/// with another request. Lets a use case replay before checks that depend
+/// on outside state (§4.3), which a replay never repeats.
+pub(crate) async fn replay_of(
+    db: &Db,
+    key: &OperationKey,
+    hash: &[u8; 32],
+) -> Result<Option<serde_json::Value>, KeyError> {
+    match lookup(db, key).await? {
+        Some(stored) if stored.request_hash == *hash => Ok(Some(stored.response)),
+        Some(_) => Err(KeyError::Reused),
+        None => Ok(None),
+    }
+}
+
+/// Whether a request already completed with this key (whatever its hash).
+pub(crate) async fn is_stored(db: &Db, key: &OperationKey) -> Result<bool, DbError> {
+    Ok(lookup(db, key).await?.is_some())
+}
+
 async fn lookup(
     db: &Db,
     key: &OperationKey,

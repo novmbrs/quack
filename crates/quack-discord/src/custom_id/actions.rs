@@ -12,8 +12,17 @@ impl From<&ButtonAction> for CustomId {
         match *action {
             B::OpenCase(c) => Self::OpenCase(c),
             B::EditContext(c) => Self::EditContext(c),
-            B::AddEvidence(c) => Self::AddEvidence(c),
-            B::ViewEvidence { case, item } => Self::ViewEvidence { case, item },
+            B::AddEvidence { case, new_message } => Self::AddEvidence { case, new_message },
+            B::ViewEvidence {
+                case,
+                item,
+                new_message,
+            } => Self::ViewEvidence {
+                case,
+                item,
+                new_message,
+            },
+            B::BackToEvidence(e) => Self::BackToEvidence(e),
             B::EvidenceSurrounding(e) => Self::EvidenceSurrounding(e),
             B::EvidenceVisibility { evidence, visible } => {
                 Self::EvidenceVisibility { evidence, visible }
@@ -67,7 +76,7 @@ impl From<&ModalAction> for CustomId {
         use ModalAction as M;
         match *action {
             M::EditContext { case, revision } => Self::EditContextModal { case, revision },
-            M::AddEvidence(c) => Self::AddEvidenceModal(c),
+            M::AddEvidence { case, new_message } => Self::AddEvidenceModal { case, new_message },
             M::EvidenceNote { evidence, revision } => {
                 Self::EvidenceNoteModal { evidence, revision }
             }

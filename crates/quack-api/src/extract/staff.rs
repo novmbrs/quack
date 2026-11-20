@@ -98,6 +98,49 @@ impl<R> Staff<R> {
     }
 }
 
+impl<R: Requirement> Staff<R> {
+    /// The same checks again from current state: the request's session
+    /// (still live, still this account), membership, and the capability
+    /// with the 2FA rule. For a request whose body took long to read, so a
+    /// sign-out or a lost role meanwhile still refuses it (route 60).
+    pub(crate) async fn again(
+        &self,
+        state: &ApiState,
+        headers: &axum::http::HeaderMap,
+    ) -> Result<Self, ApiError> {
+        let lookup = crate::auth::session::lookup(state, headers).await?;
+        let live = lookup.require()?.clone();
+        if live.account != self.session.account {
+            return Err(ApiError::api(ApiCode::SessionExpired));
+        }
+        let session = SessionAccount {
+            account: live.account,
+            expires_at: live.expires_at,
+            session: live,
+        };
+        let principal = principal(state, self.guild(), session.account).await?;
+        let capabilities = {
+            let mut conn = state.engine().db().conn().await?;
+            principal.current_capabilities(&mut conn).await?
+        };
+        R::check(capabilities).map_err(|err| {
+            ApiError::domain(
+                &err,
+                &ErrorFacts {
+                    scene: Scene::Dashboard,
+                    ..ErrorFacts::default()
+                },
+            )
+        })?;
+        Ok(Self {
+            principal,
+            capabilities,
+            session,
+            _requirement: PhantomData,
+        })
+    }
+}
+
 /// The `{guild_id}` of the request's path.
 pub(crate) async fn path_guild(parts: &mut Parts) -> Result<GuildId, ApiError> {
     let params = RawPathParams::from_request_parts(parts, &())

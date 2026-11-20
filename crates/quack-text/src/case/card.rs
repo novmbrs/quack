@@ -227,10 +227,15 @@ fn buttons(c: &CaseCard) -> Vec<Button> {
         ButtonStyle::Secondary,
         ButtonAction::EditContext(c.case),
     ));
+    // A card may be a private receipt, which its sync keeps rewriting:
+    // evidence answers in a message of its own (§11.7).
     b.push(Button::new(
         "Add evidence",
         ButtonStyle::Secondary,
-        ButtonAction::AddEvidence(c.case),
+        ButtonAction::AddEvidence {
+            case: c.case,
+            new_message: true,
+        },
     ));
     if c.evidence.any() {
         b.push(Button::new(
@@ -239,6 +244,7 @@ fn buttons(c: &CaseCard) -> Vec<Button> {
             ButtonAction::ViewEvidence {
                 case: c.case,
                 item: 1,
+                new_message: true,
             },
         ));
     }

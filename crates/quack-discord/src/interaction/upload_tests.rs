@@ -211,7 +211,13 @@ fn a_modal_file_upload_reads_its_resolved_attachments_in_order() {
     let Request::ModalSubmit { id, fields, .. } = &i.request else {
         panic!("expected a modal submit, got {:?}", i.request);
     };
-    assert_eq!(*id, ComponentId::Current(CustomId::AddEvidenceModal(case)));
+    assert_eq!(
+        *id,
+        ComponentId::Current(CustomId::AddEvidenceModal {
+            case,
+            new_message: false
+        })
+    );
     assert_eq!(
         *fields,
         vec![

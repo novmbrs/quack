@@ -75,6 +75,9 @@ pub struct ApiError {
     retry_after: Option<u64>,
 }
 
+/// The `Retry-After` of `503 uploads_busy`, in seconds.
+pub(crate) const UPLOADS_RETRY_AFTER: u64 = 60;
+
 /// The HTTP status of a transport-level code (§14.6).
 pub(crate) const fn status_of(code: ApiCode) -> StatusCode {
     match code {
@@ -128,13 +131,15 @@ impl ApiError {
             }],
             _ => Vec::new(),
         };
+        // Staged uploads drain as their copies finish: try again shortly.
+        let retry_after = matches!(err, DomainError::UploadsBusy).then_some(UPLOADS_RETRY_AFTER);
         Self {
             status,
             code: err.code(),
             message,
             fields,
             problems: Vec::new(),
-            retry_after: None,
+            retry_after,
         }
     }
 

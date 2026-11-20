@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT l.m AS \"message!\" FROM unnest($2::bigint[], $3::bigint[]) AS l(c, m)\n               WHERE l.c = (SELECT s.evidence_channel_id FROM guild_settings s WHERE s.guild_id = $1)\n                  OR EXISTS (SELECT 1 FROM evidence_files f\n                             WHERE f.guild_id = $1 AND f.copy_message_id = l.m AND f.copy_channel_id = l.c)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b69f548c917e31311b332144e94e09fbfccc63391be1b1e2cb190f57288ae14b"
+}

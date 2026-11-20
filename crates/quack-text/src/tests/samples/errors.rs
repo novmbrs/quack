@@ -82,6 +82,7 @@ pub fn domain_errors() -> Vec<DomainError> {
         DomainError::EvidenceFileLimitReached { count: 95 },
         DomainError::EvidenceChannelMissing,
         DomainError::EvidenceChannelNotStaffOnly,
+        DomainError::UploadsBusy,
         DomainError::EvidenceNotFound,
         DomainError::EvidenceRemoved,
         DomainError::EvidenceNotUpload,
@@ -171,6 +172,7 @@ pub fn samples() -> Vec<Sample> {
         "",
         error::evidence_channel_not_staff_only(),
     ));
+    v.push(text("error.uploads_busy", "", error::uploads_busy()));
     {
         use quack_core::evidence::{FileRefusal, RefusedFile};
         let refused = |name: &str, why| RefusedFile {

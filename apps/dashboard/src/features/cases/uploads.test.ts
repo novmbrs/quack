@@ -6,7 +6,6 @@ import {
   fileProgress,
   noteLength,
   refusal,
-  sameFile,
   uploadProblem,
 } from "./uploads";
 
@@ -64,15 +63,5 @@ describe("fileProgress", () => {
     expect(fileProgress([200, 200], 500, 500)).toEqual([1, 1]);
     expect(fileProgress([0], 10, 10)).toEqual([1]);
     expect(fileProgress([5], 0, 0)).toEqual([0]);
-  });
-});
-
-describe("sameFile", () => {
-  it("spots a file staged twice", () => {
-    const a = new File(["x"], "a.png", { type: "image/png", lastModified: 1 });
-    const b = new File(["x"], "a.png", { type: "image/png", lastModified: 1 });
-    const c = new File(["xy"], "a.png", { type: "image/png", lastModified: 1 });
-    expect(sameFile(a, b)).toBe(true);
-    expect(sameFile(a, c)).toBe(false);
   });
 });

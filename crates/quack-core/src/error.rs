@@ -128,6 +128,10 @@ pub enum DomainError {
     /// Uploading needs a staff-only evidence channel, and this one isn't.
     #[error("evidence channel not staff-only")]
     EvidenceChannelNotStaffOnly,
+    /// Dashboard uploads waiting for their copy already hold as many bytes
+    /// as the server, or the whole service, may stage (§7.1); retry later.
+    #[error("uploads busy")]
+    UploadsBusy,
     /// No such evidence item on this case.
     #[error("evidence not found")]
     EvidenceNotFound,
@@ -183,6 +187,7 @@ impl DomainError {
             Self::EvidenceChannelMissing | Self::EvidenceChannelNotStaffOnly => {
                 "evidence_channel_unavailable"
             }
+            Self::UploadsBusy => "uploads_busy",
             Self::EvidenceRemoved => "evidence_removed",
             Self::EvidenceNotUpload => "evidence_not_upload",
             Self::NoteChanged => "note_changed",
@@ -207,6 +212,7 @@ impl DomainError {
             | Self::EvidenceFileLimitReached { .. }
             | Self::TooManyLinks
             | Self::TooManyFiles => 422,
+            Self::UploadsBusy => 503,
             _ => 409,
         }
     }
@@ -256,6 +262,7 @@ mod tests {
                 "evidence_channel_unavailable",
                 409,
             ),
+            (DomainError::UploadsBusy, "uploads_busy", 503),
             (DomainError::EvidenceNotFound, "not_found", 404),
             (DomainError::EvidenceRemoved, "evidence_removed", 409),
             (DomainError::EvidenceNotUpload, "evidence_not_upload", 409),

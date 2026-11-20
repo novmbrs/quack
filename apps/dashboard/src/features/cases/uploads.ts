@@ -103,10 +103,3 @@ export function pastedFiles(data: DataTransfer | null): File[] {
 export function hasFiles(data: DataTransfer | null): boolean {
   return Boolean(data && Array.from(data.types ?? []).includes("Files"));
 }
-
-/** sameFile says whether two staged files are the same one, staged twice. */
-export function sameFile(a: File, b: File): boolean {
-  return (
-    a.name === b.name && a.size === b.size && a.lastModified === b.lastModified && a.type === b.type
-  );
-}

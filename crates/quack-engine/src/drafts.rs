@@ -107,25 +107,18 @@ pub async fn save_page(
         if let Some(case) = applied_case(engine, principal, submit.draft).await? {
             return Ok(PageSaved::Applied(Applied::Replayed(case)));
         }
+        // The draft was written before its first page opened (§11.6): a
+        // missing one expired (housekeeping deleted it) or became a case
+        // meanwhile. It is never written again here, which would drop what
+        // only the first write holds (the `/case add` file).
         let mut tx = engine.db().begin().await?;
-        drafts::create(
-            &mut tx,
-            &NewDraft {
-                id: submit.draft,
-                guild,
-                actor: principal.account,
-                member: submit.member,
-                rule: Some((submit.rule, submit.version)),
-                private: submit.private,
-                receipt_channel: submit.channel,
-                source: None,
-                evidence_file: None,
-            },
-        )
-        .await?;
         let Some(draft) = drafts::lock(&mut tx, guild, principal.account, submit.draft).await?
         else {
-            return Ok(PageSaved::Expired);
+            drop(tx);
+            return Ok(match applied_case(engine, principal, submit.draft).await? {
+                Some(case) => PageSaved::Applied(Applied::Replayed(case)),
+                None => PageSaved::Expired,
+            });
         };
         if draft.rule != Some((submit.rule, submit.version)) {
             drafts::delete(&mut tx, guild, principal.account, draft.id).await?;

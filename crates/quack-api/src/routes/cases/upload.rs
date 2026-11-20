@@ -1,18 +1,21 @@
 //! Uploading files as evidence (route 60, §7.1, §14.8). Everything that
 //! can refuse the upload without its bytes runs first (the session, CSRF,
-//! the capability, the case, the evidence channel); then the body is read
-//! part by part within the upload memory budget, and the files go to the
-//! same `add_evidence` Discord uses, as one uploaded-files item.
+//! the capability, the case, the evidence channel unless the request
+//! already ran); then the body is read part by part within the upload
+//! memory budget and an overall deadline, the session and capability are
+//! checked again, and the files go to the same `add_evidence` Discord
+//! uses, as one uploaded-files item.
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use axum::Json;
 use axum::extract::{Path, Request, State};
 use axum::http::header;
+use axum::response::Response;
 use quack_core::DomainError;
 use quack_core::limits::MAX_UPLOAD_BODY_BYTES;
 use quack_engine::CaseRef;
+use quack_engine::OpKey;
 use quack_engine::cases::{self, CaseError};
 use quack_engine::evidence::check_destination;
 use quack_text::api::ApiCode;
@@ -77,8 +80,15 @@ pub(crate) struct UploadEvidence {
     note: Option<String>,
 }
 
-/// Checks the case and the evidence channel before reading any bytes.
-async fn precheck(state: &ApiState, staff: &Staff<Moderate>, case: CaseRef) -> ApiResult<()> {
+/// Checks the case and the evidence channel before reading any bytes. A
+/// request that already ran skips the channel: its replay must not depend
+/// on it (§4.3); `add_evidence` checks the hash before replaying.
+async fn precheck(
+    state: &ApiState,
+    staff: &Staff<Moderate>,
+    case: CaseRef,
+    key: &OpKey,
+) -> ApiResult<()> {
     let found = {
         let mut conn = state.engine().db().conn().await?;
         match case {
@@ -98,6 +108,12 @@ async fn precheck(state: &ApiState, staff: &Staff<Moderate>, case: CaseRef) -> A
         };
         return Err(facts.domain(DomainError::CaseNotFound));
     };
+    let ran = cases::add_evidence_ran(state.engine(), &staff.principal, key)
+        .await
+        .map_err(|e| map::case(e, &staff_facts(), ""))?;
+    if ran {
+        return Ok(());
+    }
     if let Err(e) = check_destination(state.engine(), staff.guild()).await {
         let facts = Facts {
             case_number: Some(found.number),
@@ -126,9 +142,9 @@ pub(super) async fn upload_evidence(
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
     request: Request,
-) -> ApiResult<Json<EvidenceAdded>> {
+) -> ApiResult<Response> {
     let case = case_ref(&path.1)?;
-    let headers = request.headers();
+    let headers = request.headers().clone();
     let content_type = headers
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok());
@@ -139,12 +155,15 @@ pub(super) async fn upload_evidence(
         .get(header::CONTENT_LENGTH)
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.parse::<u64>().ok());
-    precheck(&state, &staff, case).await?;
+    precheck(&state, &staff, case, &key.0).await?;
     let room = state.uploads().reserve(declared).await?;
     let form = match upload_form::read(request.into_body(), &boundary).await {
         Ok(form) => form,
         Err(e) => return Err(form_refused(&state, &staff, case, e).await),
     };
+    // Reading may have taken minutes: whoever is signed in must still be
+    // allowed to add evidence before anything is staged.
+    let staff = staff.again(&state, &headers).await?;
     if form.files.is_empty() {
         return Err(ApiError::field(
             "files",

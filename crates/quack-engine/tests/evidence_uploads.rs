@@ -621,3 +621,125 @@ async fn a_draft_keeps_its_file_until_the_case_is_applied() -> Result<()> {
     );
     Ok(())
 }
+
+/// Review L: a page never writes its draft again, so a draft's file can't
+/// be lost: two pages with a file and Try again keep it; a draft deleted
+/// between the read and the save (housekeeping) answers expired, and one
+/// that became a case answers with that case.
+#[tokio::test]
+#[allow(clippy::too_many_lines, reason = "one scenario, top to bottom")]
+async fn a_drafts_file_survives_its_pages_and_a_lost_draft_is_never_rebuilt() -> Result<()> {
+    use quack_core::rule::{Field, FieldKey, FieldKind};
+    use quack_engine::drafts::{
+        CommandDraft, DraftFile, PageSaved, PageSubmit, apply, save_page, start,
+    };
+    let h = Harness::new().await?;
+    let (_, channel, _) = setup(&h, true).await?;
+    let mut def = levels("Harassment", &[None], false);
+    def.fields = (0..7)
+        .map(|i| Field {
+            key: FieldKey(format!("f{i}")),
+            label: format!("Field {i}"),
+            kind: FieldKind::ShortText,
+            required: true,
+        })
+        .collect();
+    let rule = h.rule(def).await?;
+    let file = || {
+        let NewUpload {
+            source: UploadSource::Discord { attachment_id, url },
+            size_bytes,
+            ..
+        } = discord_file(&h, "proof.png", "image/png", vec![1, 2])
+        else {
+            unreachable!("a Discord file")
+        };
+        DraftFile {
+            attachment_id,
+            filename: "proof.png".to_owned(),
+            content_type: Some("image/png".to_owned()),
+            size_bytes,
+            url,
+        }
+    };
+    let page = |draft, page: u8, keys: std::ops::Range<u32>| PageSubmit {
+        draft,
+        member: sf(MEMBER),
+        rule,
+        version: 1,
+        page,
+        values: keys
+            .map(|i| (format!("f{i}"), format!("answer {i}")))
+            .collect(),
+        private: true,
+        channel,
+    };
+    let form = |draft| CommandDraft {
+        draft,
+        member: sf(MEMBER),
+        rule: Some((rule, 1)),
+        source: None,
+        private: true,
+        channel,
+        evidence_file: Some(file()),
+    };
+    let p = h.moderator();
+
+    // Two pages with a file; the second page has a problem first, then
+    // Try again applies the draft: the case still takes the file.
+    let one = uuid::Uuid::now_v7();
+    start(&h.engine, &p, &form(one)).await?;
+    assert_eq!(
+        save_page(&h.engine, &p, &page(one, 1, 0..5), None).await?,
+        PageSaved::Next { page: 2, pages: 2 }
+    );
+    let mut empty = page(one, 2, 5..7);
+    empty.values[0].1 = String::new();
+    assert!(matches!(
+        save_page(&h.engine, &p, &empty, None).await?,
+        PageSaved::Invalid(_)
+    ));
+    // Saving the last page fails to apply (no answer from Discord), so the
+    // moderator selects Try again.
+    h.fake.script(Call::GuildFacts, Script::Unknown);
+    assert!(
+        save_page(&h.engine, &p, &page(one, 2, 5..7), None)
+            .await
+            .is_err()
+    );
+    let PageSaved::Applied(applied) = apply(&h.engine, &p, one, None).await? else {
+        anyhow::bail!("expected the case");
+    };
+    h.settle().await?;
+    let saved = items(&h, applied.case_id()).await?;
+    assert_eq!(
+        saved.iter().map(|e| (e.kind, e.state)).collect::<Vec<_>>(),
+        vec![(EvidenceKind::Upload, EvidenceState::Saved)],
+        "the draft's file came with the case"
+    );
+    // The last page submitted again answers with that case.
+    assert_eq!(
+        save_page(&h.engine, &p, &page(one, 2, 5..7), None).await?,
+        PageSaved::Applied(quack_engine::cases::Applied::Replayed(applied.case_id()))
+    );
+
+    // Housekeeping deleted the draft between the form's read and the save:
+    // the page says it expired, and no draft (without its file) comes back.
+    let two = uuid::Uuid::now_v7();
+    start(&h.engine, &p, &form(two)).await?;
+    h.db.execute(&format!("DELETE FROM case_drafts WHERE id = '{two}'"))
+        .await?;
+    assert_eq!(
+        save_page(&h.engine, &p, &page(two, 1, 0..5), None).await?,
+        PageSaved::Expired
+    );
+    assert_eq!(
+        h.db.count(&format!(
+            "SELECT count(*) FROM case_drafts WHERE id = '{two}'"
+        ))
+        .await?,
+        0,
+        "the draft isn't written again"
+    );
+    Ok(())
+}

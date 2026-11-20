@@ -41,16 +41,32 @@ pub enum CustomId {
         revision: u32,
     },
     /// `ea`: open the add-evidence modal.
-    AddEvidence(CaseId),
+    AddEvidence {
+        /// The case.
+        case: CaseId,
+        /// `n`: answer in a new ephemeral message, never updating the
+        /// message the button is on (a card or `case.receipt.posted`,
+        /// which a receipt's sync owns, §11.7).
+        new_message: bool,
+    },
     /// `eam`: the add-evidence modal.
-    AddEvidenceModal(CaseId),
+    AddEvidenceModal {
+        /// The case.
+        case: CaseId,
+        /// `n`: answer in a new ephemeral message.
+        new_message: bool,
+    },
     /// `ev`: show one evidence item (1-based).
     ViewEvidence {
         /// The case.
         case: CaseId,
         /// Which item.
         item: u32,
+        /// `n`: answer in a new ephemeral message.
+        new_message: bool,
     },
+    /// `evb`: back to an evidence item, found by id on click.
+    BackToEvidence(EvidenceId),
     /// `evs`: the messages saved around an item's message.
     EvidenceSurrounding(EvidenceId),
     /// `evv`: show an uploaded-files item to the member (`1`) or hide it

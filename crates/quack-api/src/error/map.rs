@@ -3,7 +3,7 @@
 
 use quack_core::DomainError;
 use quack_core::action::ActionKind;
-use quack_core::case::{ContextProblem, ContextProblemCode, LinkProblem};
+use quack_core::case::{ContextProblem, LinkProblem};
 use quack_core::modules::{ModuleName, ModuleProblem};
 use quack_core::permissions::ChannelProblem;
 use quack_core::rule::{Field, RuleFileError, RuleProblem};
@@ -125,10 +125,7 @@ fn link_fields(prefix: &str, problems: &[(usize, LinkProblem)]) -> Vec<FieldErro
     problems
         .iter()
         .map(|(index, problem)| {
-            let code = match problem {
-                LinkProblem::NotAMessageLink => ContextProblemCode::NotAMessageLink,
-                LinkProblem::OtherServer => ContextProblemCode::OtherServer,
-            };
+            let code = problem.context_code();
             let as_context = ContextProblem {
                 key: format!("{prefix}[{index}]"),
                 code,

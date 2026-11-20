@@ -4,6 +4,7 @@
 
 use axum::Json;
 use axum::extract::{Path, State};
+use axum::response::{IntoResponse, Response};
 use quack_core::evidence::clean_note;
 use quack_core::ids::EvidenceId;
 use quack_engine::CaseRef;
@@ -44,12 +45,13 @@ pub(super) async fn refused(
     map::case(error, &facts, "")
 }
 
-/// The answer to an add: the case and the bot's sentence.
+/// The answer to an add: the case and the bot's sentence; a replay says so
+/// (`Idempotency-Replayed: true`, §4.3).
 pub(super) async fn added(
     state: &ApiState,
     staff: &Staff<Moderate>,
     added: cases::EvidenceAdded,
-) -> ApiResult<Json<EvidenceAdded>> {
+) -> ApiResult<Response> {
     let view = read(state, staff, CaseRef::Id(added.case)).await?;
     let message = plain(&quack_text::evidence::added(&quack_text::evidence::Added {
         number: added.number,
@@ -59,7 +61,7 @@ pub(super) async fn added(
         already_saved: added.already_saved,
         files: added.files,
     }));
-    Ok(Json(EvidenceAdded {
+    let body = Json(EvidenceAdded {
         case: view.into(),
         new: added.new,
         retrying: added.retrying,
@@ -67,8 +69,16 @@ pub(super) async fn added(
         already_saved: added.already_saved,
         files: added.files,
         message,
-    }))
+    });
+    Ok(if added.replayed {
+        ([(REPLAYED_HEADER, "true")], body).into_response()
+    } else {
+        body.into_response()
+    })
 }
+
+/// Marks an answer that replays a stored result (§4.3).
+pub(super) const REPLAYED_HEADER: &str = "idempotency-replayed";
 
 /// Saves more messages as a case's evidence.
 #[utoipa::path(post, path = "/api/guilds/{guild_id}/cases/{case_ref}/evidence", tag = "cases",
@@ -82,7 +92,7 @@ pub(super) async fn add_evidence(
     key: IdempotencyKey,
     Path(path): Path<(String, String)>,
     Body(body): Body<AddEvidence>,
-) -> ApiResult<Json<EvidenceAdded>> {
+) -> ApiResult<Response> {
     let case = case_ref(&path.1)?;
     if body.links.is_empty() {
         return Err(invalid("links"));

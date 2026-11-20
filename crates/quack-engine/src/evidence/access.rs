@@ -14,10 +14,10 @@ const THREAD_TYPES: [u8; 3] = [10, 11, 12];
 const PRIVATE_THREAD: u8 = 12;
 
 /// Facts were unavailable; try again later.
-pub(super) struct Unavailable;
+pub(crate) struct Unavailable;
 
 /// Whether `account` can read `channel` in `guild` now.
-pub(super) async fn can_read(
+pub(crate) async fn can_read(
     engine: &Engine,
     guild: GuildId,
     channel: ChannelId,

@@ -184,9 +184,7 @@ pub async fn health(engine: &Engine, principal: &Principal) -> Result<Health, Se
                     (
                         "evidence_channel_id",
                         s.evidence_channel,
-                        Permission::ViewChannel
-                            | Permission::SendMessages
-                            | Permission::AttachFiles,
+                        crate::evidence::DESTINATION,
                     ),
                 ]
             });

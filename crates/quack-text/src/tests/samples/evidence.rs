@@ -210,6 +210,19 @@ fn view_samples(v: &mut Vec<Sample>) {
             ..upload()
         })),
     ));
+    v.push(covering(
+        "evidence.view",
+        &["evidence.file.upload_failed"],
+        "uploaded files, one not copied",
+        Out::Msg(evidence::view(&EvidenceItem {
+            files: vec![
+                ("report.png".to_owned(), FileCopyState::Copied),
+                ("clip.mp4".to_owned(), FileCopyState::CopyFailed),
+            ],
+            gallery: Vec::new(),
+            ..upload()
+        })),
+    ));
     v.push(sample(
         "evidence.view",
         "one file not saved",
@@ -248,6 +261,7 @@ fn view_samples(v: &mut Vec<Sample>) {
                 "evidence.failure.other_server",
                 "evidence.failure.discord_error",
                 "evidence.failure.no_file_copied",
+                "evidence.failure.evidence_copy",
             ],
             format!("{f:?}"),
             Out::Msg(evidence::view(&EvidenceItem {
@@ -259,6 +273,11 @@ fn view_samples(v: &mut Vec<Sample>) {
         ));
     }
     v.push(text("evidence.view.none", "", evidence::view_none(12)));
+    v.push(msg(
+        "evidence.view.none",
+        "with Add evidence",
+        evidence::view_none_reply(case_id(), 12),
+    ));
     for s in EvidenceState::ALL {
         v.push(text(
             "evidence.state_text",
@@ -279,7 +298,7 @@ fn surrounding_samples(v: &mut Vec<Sample>) {
     let around = Surrounding {
         case: case_id(),
         number: 12,
-        item: 2,
+        evidence: evidence_id(),
         author: Some(sam()),
         lines: vec![
             line(true, Some("anyone want free nitro?"), 0),
@@ -328,7 +347,7 @@ fn edit_samples(v: &mut Vec<Sample>) {
     v.push(msg(
         "evidence.remove.confirm",
         "",
-        evidence::remove_confirm(case_id(), 12, evidence_id(), 2),
+        evidence::remove_confirm(12, evidence_id()),
     ));
     v.push(covering(
         "evidence.removed",
@@ -449,7 +468,7 @@ pub fn samples() -> Vec<Sample> {
             "evidence.modal.note",
         ],
         "",
-        Out::Modal(evidence::modal(case_id(), 12)),
+        Out::Modal(evidence::modal(case_id(), 12, false)),
     ));
     added_samples(&mut v);
     view_samples(&mut v);

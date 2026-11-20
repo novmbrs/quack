@@ -8,6 +8,7 @@ use super::NewFile;
 use super::files::insert_files;
 use crate::DbError;
 use crate::obs::{self, Delete, Insert, Select};
+use crate::pg::count;
 
 /// A new uploaded-files item.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,9 +38,9 @@ pub async fn insert_upload(conn: &mut PgConnection, item: &NewUploadItem) -> Res
         Insert,
         "evidence",
         sqlx::query!(
-            "INSERT INTO evidence (id, guild_id, case_id, kind, added_by, visible_to_member, note,
-                                   note_updated_by, note_updated_at)
-             SELECT $1, c.guild_id, c.id, 'upload', $4::bigint, false, $5,
+            "INSERT INTO evidence (id, guild_id, case_id, kind, added_by, capture_by, visible_to_member,
+                                   note, note_updated_by, note_updated_at)
+             SELECT $1, c.guild_id, c.id, 'upload', $4::bigint, $4::bigint, false, $5,
                     CASE WHEN $5::text IS NULL THEN NULL ELSE $4::bigint END,
                     CASE WHEN $5::text IS NULL THEN NULL ELSE now() END
              FROM cases c WHERE c.guild_id = $2 AND c.id = $3",
@@ -71,6 +72,48 @@ pub async fn insert_upload(conn: &mut PgConnection, item: &NewUploadItem) -> Res
         .await?;
     }
     Ok(())
+}
+
+/// Bytes already staged, for the staging ceilings (§7.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StagedTotals {
+    /// Staged by this server.
+    pub guild: u64,
+    /// Staged by every server.
+    pub total: u64,
+}
+
+/// Serializes staging across the service for the rest of the transaction
+/// (one transaction-scoped advisory lock), then sums the bytes already
+/// staged, so the caller's check and its insert see every committed
+/// upload and no concurrent one.
+pub async fn lock_staged_totals(
+    conn: &mut PgConnection,
+    guild: GuildId,
+) -> Result<StagedTotals, DbError> {
+    obs::run(
+        Select,
+        "pg_advisory_xact_lock",
+        sqlx::query!("SELECT pg_advisory_xact_lock(hashtextextended('evidence_upload_bytes', 0))")
+            .execute(&mut *conn),
+    )
+    .await?;
+    let row = obs::run(
+        Select,
+        "evidence_upload_bytes",
+        sqlx::query!(
+            r#"SELECT COALESCE(sum(octet_length(bytes)) FILTER (WHERE guild_id = $1), 0)::bigint AS "guild!",
+                      COALESCE(sum(octet_length(bytes)), 0)::bigint AS "total!"
+               FROM evidence_upload_bytes"#,
+            i64::from(guild),
+        )
+        .fetch_one(conn),
+    )
+    .await?;
+    Ok(StagedTotals {
+        guild: count(row.guild)?,
+        total: count(row.total)?,
+    })
 }
 
 /// The staged bytes of a dashboard upload, while they are kept.

@@ -79,7 +79,14 @@ pub enum ButtonAction {
     /// Open the edit-context modal (`ce`).
     EditContext(CaseId),
     /// Open the add-evidence modal (`ea`).
-    AddEvidence(CaseId),
+    AddEvidence {
+        /// The case.
+        case: CaseId,
+        /// Answer in a new ephemeral message instead of updating the one
+        /// the button is on: set on a card and on `case.receipt.posted`,
+        /// whose message a receipt's sync owns (§11.7).
+        new_message: bool,
+    },
     /// Show one evidence item, 1-based among items that aren't removed
     /// (`ev`).
     ViewEvidence {
@@ -87,7 +94,13 @@ pub enum ButtonAction {
         case: CaseId,
         /// Which item.
         item: u32,
+        /// Answer in a new ephemeral message (see
+        /// [`ButtonAction::AddEvidence`]).
+        new_message: bool,
     },
+    /// Back to an evidence item from its surrounding messages or its
+    /// remove confirmation (`evb`): its position is found on click.
+    BackToEvidence(EvidenceId),
     /// Show the messages saved around an item's message (`evs`).
     EvidenceSurrounding(EvidenceId),
     /// Show an uploaded-files item to the member, or hide it (`evv`).
@@ -223,7 +236,13 @@ pub enum ModalAction {
         revision: u32,
     },
     /// Add evidence: links, files, and a note (`eam`).
-    AddEvidence(CaseId),
+    AddEvidence {
+        /// The case.
+        case: CaseId,
+        /// Answer in a new ephemeral message: the modal opened from a card
+        /// or `case.receipt.posted` (see [`ButtonAction::AddEvidence`]).
+        new_message: bool,
+    },
     /// Save an item's note (`evnm`).
     EvidenceNote {
         /// The item.

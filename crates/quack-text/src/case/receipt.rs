@@ -116,14 +116,16 @@ pub fn receipt_posted(number: u64) -> Text {
 
 /// The `case.receipt.posted` reply with Add evidence, View evidence (when
 /// the case has any), and Open case, so evidence can follow the case at once.
+/// The receipt's sync writes this message, so the evidence buttons answer
+/// in messages of their own (§11.7).
 pub fn receipt_posted_reply(
     case: quack_core::ids::CaseId,
     number: u64,
     has_evidence: bool,
 ) -> crate::model::Msg {
-    let mut buttons = vec![crate::evidence::add_button(case)];
+    let mut buttons = vec![crate::evidence::add_button(case, true)];
     if has_evidence {
-        buttons.push(crate::evidence::view_button(case));
+        buttons.push(crate::evidence::view_button(case, true));
     }
     buttons.push(crate::word::open_case_button(case));
     crate::model::Msg::text(crate::model::Tone::Success, receipt_posted(number)).buttons(buttons)

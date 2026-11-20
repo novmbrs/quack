@@ -180,6 +180,9 @@ function CasePage() {
           </section>
 
           <EvidenceSection
+            // A new case gets a new section, so staged files, drafts, and
+            // pending writes never follow the reader to another case.
+            key={`${guildId}:${c.id}`}
             guildId={guildId}
             value={c}
             moderate={moderate}

@@ -1,6 +1,7 @@
 //! The `capture_evidence` handler (§7.2): for a message, check the channel
-//! is this server's and the adder's access, fetch the message and the
-//! messages around it, and store the snapshot once under the case lock;
+//! is this server's, that it is no evidence copy, and the access of the
+//! staff member whose request started the capture, fetch the message and
+//! the messages around it, and store the snapshot once under the case lock;
 //! for either kind, copy files one per transaction, and settle. Uploaded
 //! files have no snapshot: they go straight to the copy.
 
@@ -58,14 +59,14 @@ pub async fn capture(engine: &Engine, job: &ClaimedJob) -> Result<Handled, DbErr
     .await
 }
 
-/// Steps 2–5: the channel's server, access check, fetch, and the
-/// snapshot. `Some` when the run ends here.
+/// Steps 2–6: the channel's server, no evidence copy, the access check,
+/// the fetch, and the snapshot. `Some` when the run ends here.
 async fn snapshot(
     engine: &Engine,
     job: &ClaimedJob,
     item: &Evidence,
 ) -> Result<Option<Handled>, DbError> {
-    let Some((channel, _)) = item.source() else {
+    let Some((channel, message)) = item.source() else {
         return Ok(Some(dead("message_item_without_message")));
     };
     // A fetched message names no server: its channel's server decides.
@@ -83,7 +84,20 @@ async fn snapshot(
         };
         return fail(engine, job, item, failure).await.map(Some);
     }
-    if let Some(staff) = item.added_by {
+    // A message in the evidence channel, or one of Quack's copies, would
+    // show a staff-only or removed file as a saved message (§7.1).
+    let copies = {
+        let mut conn = engine.db().conn().await?;
+        evidence::evidence_copies(&mut conn, item.guild, &[(channel, message)]).await?
+    };
+    if !copies.is_empty() {
+        return fail(engine, job, item, EvidenceFailure::EvidenceCopy)
+            .await
+            .map(Some);
+    }
+    // The staff member whose request started this capture, not whoever
+    // first added the item (§7.1).
+    if let Some(staff) = item.capture_actor() {
         match can_read(engine, item.guild, channel, staff).await {
             Ok(true) => {}
             Ok(false) => {

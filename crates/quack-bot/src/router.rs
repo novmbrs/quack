@@ -109,8 +109,15 @@ async fn component(
         CustomId::OpenCase(case) => case_view::open(p, case, source).await,
         CustomId::CasePicker => case_view::picked(p, values, source).await,
         CustomId::EditContext(case) => case_edit::open_context(p, case).await,
-        CustomId::AddEvidence(case) => evidence::open_modal(p, case).await,
-        CustomId::ViewEvidence { case, item } => evidence_view::view(p, case, item, source).await,
+        CustomId::AddEvidence { case, new_message } => {
+            evidence::open_modal(p, case, new_message).await
+        }
+        CustomId::ViewEvidence {
+            case,
+            item,
+            new_message,
+        } => evidence_view::view(p, case, item, answer_in(source, new_message)).await,
+        CustomId::BackToEvidence(e) => evidence_view::back(p, e, source).await,
         CustomId::EvidenceSurrounding(e) => evidence_view::surrounding(p, e, source).await,
         CustomId::EvidenceVisibility { evidence, visible } => {
             evidence_view::visibility(p, evidence, visible, source).await
@@ -155,7 +162,7 @@ async fn component(
         CustomId::EditContextModal { .. }
         | CustomId::EvidenceNoteModal { .. }
         | CustomId::AddAsEvidenceModal { .. }
-        | CustomId::AddEvidenceModal(_)
+        | CustomId::AddEvidenceModal { .. }
         | CustomId::VoidCaseModal(_)
         | CustomId::DraftPageModal(_)
         | CustomId::AppealModal(_)
@@ -187,7 +194,9 @@ async fn modal(
         CustomId::EditContextModal { case, revision } => {
             case_edit::save_context(p, case, revision, fields, source).await
         }
-        CustomId::AddEvidenceModal(case) => evidence::submit_modal(p, case, fields, source).await,
+        CustomId::AddEvidenceModal { case, new_message } => {
+            evidence::submit_modal(p, case, fields, answer_in(source, new_message)).await
+        }
         CustomId::EvidenceNoteModal { evidence, revision } => {
             evidence_view::save_note(p, evidence, revision, fields, source).await
         }
@@ -206,6 +215,20 @@ async fn modal(
         CustomId::SetupInviteModal => setup::save_invite(p, fields, source).await,
         CustomId::SetupWarningModal => setup::save_warning(p, fields, source).await,
         _ => p.fail(expired()).await,
+    }
+}
+
+/// Where an evidence interaction answers: a new ephemeral message when its
+/// id says so (it came from a card or `case.receipt.posted`, whose message
+/// a receipt's sync rewrites, §11.7), else as §11.3 says for `source`.
+const fn answer_in(source: Source, new_message: bool) -> Source {
+    if new_message {
+        Source {
+            ephemeral: false,
+            ..source
+        }
+    } else {
+        source
     }
 }
 

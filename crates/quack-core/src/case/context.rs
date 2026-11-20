@@ -169,6 +169,11 @@ str_enum! {
         NotAMessageLink = "not_a_message_link",
         /// A message link points into another server.
         OtherServer = "other_server",
+        /// A message link points into the evidence channel, or at one of
+        /// Quack's copies there.
+        EvidenceChannel = "evidence_channel",
+        /// A message link points into a channel the actor can't read.
+        NoAccess = "no_access",
     }
 }
 
@@ -325,10 +330,19 @@ fn validate_one(
             let text = text.ok_or(P::NotAMessageLink)?;
             MessageLink::parse_in(text, guild)
                 .map(|l| ContextValue::Text(l.to_url()))
-                .map_err(|e| match e {
-                    LinkProblem::NotAMessageLink => P::NotAMessageLink,
-                    LinkProblem::OtherServer => P::OtherServer,
-                })
+                .map_err(LinkProblem::context_code)
+        }
+    }
+}
+
+impl LinkProblem {
+    /// The context problem code that reports this link problem.
+    pub const fn context_code(self) -> ContextProblemCode {
+        match self {
+            Self::NotAMessageLink => ContextProblemCode::NotAMessageLink,
+            Self::OtherServer => ContextProblemCode::OtherServer,
+            Self::EvidenceChannel => ContextProblemCode::EvidenceChannel,
+            Self::NoAccess => ContextProblemCode::NoAccess,
         }
     }
 }

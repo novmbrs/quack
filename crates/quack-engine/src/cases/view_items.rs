@@ -302,7 +302,11 @@ pub(super) fn evidence_item(r: &CaseRecords, e: &quack_db::evidence::Evidence) -
                 content_type: f.content_type.clone(),
                 size_bytes: f.size_bytes,
                 copy_state: f.copy_state,
-                state_text: plain(&quack_text::evidence::file(&f.filename, f.copy_state)),
+                state_text: plain(&quack_text::evidence::file(
+                    &f.filename,
+                    e.kind,
+                    f.copy_state,
+                )),
             })
             .collect(),
         files_not_saved: e.files_not_saved,

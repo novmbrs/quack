@@ -72,6 +72,7 @@ pub async fn edit_context(
         let fields = def.context_fields();
         let values =
             validate_context(&fields, guild, context).map_err(CaseError::ContextInvalid)?;
+        refuse_copies(engine, principal, found.id, &fields, &values).await?;
         let key = op_key.scoped(Some(guild), Some(principal.account));
         let hash = request_hash(&EditRequest {
             case: found.id,
@@ -152,6 +153,33 @@ fn no_fields() -> RuleDefinition {
         counting_window_days: None,
         fields: Vec::new(),
         levels: Vec::new(),
+    }
+}
+
+/// A new `message_link` answer becomes evidence, so it may not point into
+/// the evidence channel or at one of Quack's copies (§7.1); messages
+/// already on the case become nothing new.
+async fn refuse_copies(
+    engine: &Engine,
+    principal: &Principal,
+    case: CaseId,
+    fields: &[quack_core::rule::Field],
+    values: &quack_core::case::ContextValues,
+) -> Result<(), CaseError> {
+    let on_case: std::collections::HashSet<_> = {
+        let mut conn = engine.db().conn().await?;
+        evidence::for_case(&mut conn, principal.guild, case)
+            .await?
+            .into_iter()
+            .filter_map(|e| e.message)
+            .collect()
+    };
+    let copies =
+        crate::evidence::context_copies(engine, principal.guild, fields, values, &on_case).await?;
+    if copies.is_empty() {
+        Ok(())
+    } else {
+        Err(CaseError::ContextInvalid(copies))
     }
 }
 

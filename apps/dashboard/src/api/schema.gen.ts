@@ -1713,7 +1713,7 @@ export interface components {
             message: string;
         };
         /** @enum {string} */
-        EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error" | "no_file_copied";
+        EvidenceFailure: "message_deleted" | "moderator_no_access" | "quack_no_access" | "other_server" | "discord_error" | "no_file_copied" | "evidence_copy";
         /** @description One file of an evidence item. */
         EvidenceFile: {
             content_type?: string | null;

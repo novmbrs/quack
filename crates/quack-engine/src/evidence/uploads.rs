@@ -7,7 +7,7 @@ use quack_core::evidence::{
     FileCopyState, OfferedFile, RefusedFile, check_upload_count, refused_uploads, upload_filename,
 };
 use quack_core::ids::{AccountId, AttachmentId, CaseId, EvidenceId, FileId, GuildId};
-use quack_core::permissions::Permission;
+use quack_core::permissions::{Permission, Permissions};
 use quack_db::evidence::{NewFile, NewUploadItem};
 use serde::Serialize;
 
@@ -113,10 +113,20 @@ pub fn check_files(files: &[NewUpload]) -> Result<(), UploadRefused> {
     }
 }
 
+/// What Quack needs in the evidence channel (§7.3): post a copy (View
+/// Channel, Send Messages, Attach Files) and read it back later for a fresh
+/// URL (Read Message History); without the last, a copy saves but can
+/// never be opened.
+pub(crate) const DESTINATION: Permissions = Permissions(
+    Permission::ViewChannel.bit()
+        | Permission::SendMessages.bit()
+        | Permission::AttachFiles.bit()
+        | Permission::ReadMessageHistory.bit(),
+);
+
 /// Whether uploads can be copied now (§7.1): an evidence channel is set
 /// and passes the staff-only check (§13.1.3) with View Channel, Send
-/// Messages, and Attach Files for Quack. The capture job checks again
-/// before every upload (§7.3).
+/// Messages, Attach Files, and Read Message History for Quack. The capture job checks again before every upload (§7.3).
 pub async fn check_destination(engine: &Engine, guild: GuildId) -> Result<(), UploadRefused> {
     let channel = {
         let mut conn = engine
@@ -132,8 +142,7 @@ pub async fn check_destination(engine: &Engine, guild: GuildId) -> Result<(), Up
     let Some(channel) = channel else {
         return Err(UploadRefused::Domain(DomainError::EvidenceChannelMissing));
     };
-    let needs = Permission::ViewChannel | Permission::SendMessages | Permission::AttachFiles;
-    match staff_channel(engine, guild, channel, needs).await {
+    match staff_channel(engine, guild, channel, DESTINATION).await {
         ChannelCheck::Ok => Ok(()),
         ChannelCheck::Missing => Err(UploadRefused::Domain(DomainError::EvidenceChannelMissing)),
         ChannelCheck::Problems(_) => Err(UploadRefused::Domain(

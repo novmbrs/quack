@@ -2,7 +2,8 @@
 //! copy message when the file was copied, else (or when the copy is gone)
 //! the source message, and find the attachment by its ID. The member gets
 //! only files of items they see (§7.4): never a removed item's or a
-//! staff-only upload's.
+//! staff-only upload's, checked again after Discord answered, so a change
+//! made meanwhile is never undone by a fresh URL.
 
 use quack_core::DomainError;
 use quack_core::evidence::{FileCopyState, member_sees};
@@ -72,14 +73,36 @@ pub async fn resolve_file(
             quack_db::evidence::file(&mut conn, case.guild, case.id, file).await?
         };
         let (file, item) = found.ok_or(FileError::NotFound)?;
-        if matches!(viewer, FileViewer::Member { .. })
-            && !member_sees(item.kind, item.visible_to_member, item.is_removed())
-        {
+        let member = matches!(viewer, FileViewer::Member { .. });
+        if member && !member_sees(item.kind, item.visible_to_member, item.is_removed()) {
             return Err(FileError::NotFound);
         }
-        fresh_url(engine, &file, item.source()).await
+        let url = fresh_url(engine, &file, item.source()).await?;
+        // Staff may have hidden or removed the item while Discord answered.
+        if member {
+            let mut conn = engine.db().conn().await?;
+            let now = quack_db::evidence::get(&mut conn, case.guild, item.id).await?;
+            if !now.is_some_and(|e| member_sees(e.kind, e.visible_to_member, e.is_removed())) {
+                return Err(FileError::NotFound);
+            }
+        }
+        Ok(url)
     })
     .await
+}
+
+/// A fresh URL of a file's copy in the evidence channel; `None` when it
+/// has none or the copy is gone. The gallery uses only this (§7.4).
+pub(crate) async fn copy_url(
+    engine: &Engine,
+    file: &quack_db::evidence::EvidenceFile,
+) -> Result<Option<String>, FileError> {
+    match (file.copy_state, file.copy) {
+        (FileCopyState::Copied, Some((channel, message, attachment))) => {
+            locate(engine, channel, message, attachment).await
+        }
+        _ => Ok(None),
+    }
 }
 
 /// A fresh URL for a file: its copy, else the source message's attachment
@@ -90,10 +113,7 @@ pub(crate) async fn fresh_url(
     file: &quack_db::evidence::EvidenceFile,
     source: Option<(ChannelId, MessageId)>,
 ) -> Result<String, FileError> {
-    if file.copy_state == FileCopyState::Copied
-        && let Some((channel, message, attachment)) = file.copy
-        && let Some(url) = locate(engine, channel, message, attachment).await?
-    {
+    if let Some(url) = copy_url(engine, file).await? {
         return Ok(url);
     }
     match (file.attachment_id, source) {

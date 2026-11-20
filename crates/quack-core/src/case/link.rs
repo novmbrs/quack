@@ -68,6 +68,14 @@ pub enum LinkProblem {
     /// A message link into another server.
     #[error("message link into another server")]
     OtherServer,
+    /// A message in the evidence channel, or one of Quack's copies there:
+    /// never an evidence source (§7.1).
+    #[error("message in the evidence channel")]
+    EvidenceChannel,
+    /// A message the actor can't read now, whose item adding it again would
+    /// restore or capture again (§7.1).
+    #[error("message the actor can't read")]
+    NoAccess,
 }
 
 impl MessageLink {

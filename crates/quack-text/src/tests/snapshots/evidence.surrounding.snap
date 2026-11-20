@@ -13,7 +13,7 @@ tone: Neutral
 The saved message from <@222>.
 <@222> · <t:1794924309:R>
 > \@everyone check my profile
-buttons: [Back to evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Messages around the evidence · case #12
 Saved when the message was added, text only. Only staff see them.
@@ -47,7 +47,7 @@ tone: Neutral
 <@222> · <t:1794924309:R>
 > hi
 The saved message.
-buttons: [Back to evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Messages around the evidence · case #12
 Saved when the message was added, text only. Only staff see them.
@@ -71,7 +71,7 @@ tone: Neutral
 ### Messages around the evidence · case #12
 -# Saved when the message was added, text only. Only staff see them.
 There were no other messages around it when Quack saved it.
-buttons: [Back to evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Messages around the evidence · case #12
 Saved when the message was added, text only. Only staff see them.
@@ -107,7 +107,7 @@ The saved message from <@222>.
 <@222> · <t:1794924309:R> · 10 files
 > Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long text with \*stars\* and \<\@1\> mentions. Long te…
 Quack shortened this message to fit in Discord.
-buttons: [Back to evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 2 } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+buttons: [Back to evidence · Secondary] BackToEvidence(EvidenceId(00000000-0000-0000-0000-000000001234)) | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
 --- plain ---
 Messages around the evidence · case #12
 Saved when the message was added, text only. Only staff see them.

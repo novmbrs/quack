@@ -2,13 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { FileText, Upload, X } from "lucide-react";
 import { type DragEvent, useEffect, useRef, useState } from "react";
 
-import { ApiError } from "~/api/client";
+import { ApiError, newKey } from "~/api/client";
 import type { Case } from "~/api/types";
 import { bytes, plural } from "~/lib/format";
 import { Button } from "~/ui/Button";
 import { Field, TextArea } from "~/ui/Field";
 import { Heading } from "~/ui/Page";
-import { InlineError } from "~/ui/States";
+import { InlineError, errorMessage } from "~/ui/States";
 import { toast } from "~/ui/Toast";
 
 import { AddEvidenceDialog } from "./CaseEdits";
@@ -24,7 +24,6 @@ import {
   pastedFiles,
   refusal,
   refusalText,
-  sameFile,
   uploadProblem,
 } from "./uploads";
 import { uploadEvidence } from "./writes";
@@ -56,7 +55,7 @@ export function EvidenceSection({
 
   const stage = (files: File[]) => {
     if (files.length === 0) return;
-    setStaged((now) => [...now, ...files.filter((f) => !now.some((n) => sameFile(n, f)))]);
+    setStaged((now) => [...now, ...files]);
   };
 
   // Pasting files anywhere on the case page stages them, unless a dialog
@@ -202,6 +201,20 @@ export function EvidenceSection({
   );
 }
 
+/** Staged files' list keys: two files can share a name, size, and date. */
+const stagedIds = new WeakMap<File, string>();
+function stagedId(f: File): string {
+  let id = stagedIds.get(f);
+  if (!id) {
+    id = newKey();
+    stagedIds.set(f, id);
+  }
+  return id;
+}
+
+/** Whether a failed upload may have been saved anyway (no answer, or a server fault). */
+const ambiguous = (e: unknown) => !(e instanceof ApiError) || e.status === 0 || e.status >= 500;
+
 /**
  * UploadTray lists the staged files with what's wrong with any of them, an
  * optional note, and each file's progress while the upload is sent.
@@ -225,26 +238,52 @@ function UploadTray({
   // Each sent file's share sent so far, by file, while an upload is out.
   const [progress, setProgress] = useState<Map<File, number> | null>(null);
   const [error, setError] = useState<unknown>(null);
+  // The key of an upload whose outcome isn't known, with what it sent: the
+  // same files and note go out again under the same key, so a retry by hand
+  // can't save them twice.
+  const unsettled = useRef<{ key: string; batch: File[]; note: string } | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const send = useMutation({
-    mutationFn: (batch: File[]) =>
-      uploadEvidence(guildId, String(caseNumber), batch, note, (p) => {
+    mutationFn: (batch: File[]) => {
+      const last = unsettled.current;
+      const same =
+        last !== null &&
+        last.note === note.trim() &&
+        last.batch.length === batch.length &&
+        last.batch.every((f, i) => f === batch[i]);
+      const key = same ? last.key : newKey();
+      unsettled.current = { key, batch, note: note.trim() };
+      return uploadEvidence(guildId, String(caseNumber), batch, note, key, (p) => {
         const done = fileProgress(
           batch.map((f) => f.size),
           p.loaded,
           p.total,
         );
         setProgress(new Map(batch.map((f, i) => [f, done[i] ?? 0])));
-      }),
+      });
+    },
     onSuccess: (added, batch) => {
+      unsettled.current = null;
       toast.success(added.message);
       setNote("");
       setProgress(null);
       onDone(added.case, batch);
     },
     onError: (e) => {
+      if (!ambiguous(e)) unsettled.current = null;
       setProgress(null);
       setError(e);
+      // The reader left the page: the tray can't show it, so say it here.
+      if (!mounted.current) {
+        toast.error(`Quack couldn't upload the files for case #${caseNumber}. ${errorMessage(e)}`);
+      }
     },
   });
 
@@ -273,11 +312,7 @@ function UploadTray({
           const p = progress?.get(f) ?? 0;
           const out = sending && progress?.has(f);
           return (
-            <li
-              key={`${f.name}-${f.size}-${f.lastModified}`}
-              className={s.file}
-              data-refused={why ? true : undefined}
-            >
+            <li key={stagedId(f)} className={s.file} data-refused={why ? true : undefined}>
               <FileText size={20} className={s.fileIcon} />
               <span className={s.fileText}>
                 <span className={s.fileName}>{f.name}</span>
@@ -344,6 +379,9 @@ function UploadTray({
       ) : error && !noteError ? (
         <InlineError error={error} />
       ) : null}
+      <p className={s.status} role="status" aria-live="polite">
+        {sending ? (sent ? "Files sent. Quack is saving them…" : "Uploading files…") : ""}
+      </p>
       <div className={s.trayBar}>
         <span className={s.count}>
           {plural(files.length, "file")} of {MAX_FILES} · one evidence item

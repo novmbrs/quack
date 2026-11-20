@@ -40,6 +40,9 @@ str_enum! {
         DiscordError = "discord_error",
         /// Uploaded files only: none of them ended up copied.
         NoFileCopied = "no_file_copied",
+        /// The message is in the evidence channel, or is one of Quack's
+        /// copies there: never a source (§7.1).
+        EvidenceCopy = "evidence_copy",
     }
 }
 
@@ -322,7 +325,8 @@ mod tests {
                 "quack_no_access",
                 "other_server",
                 "discord_error",
-                "no_file_copied"
+                "no_file_copied",
+                "evidence_copy"
             ]
         );
         let names: Vec<&str> = EvidenceKind::ALL.iter().map(|s| s.as_str()).collect();

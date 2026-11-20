@@ -5,8 +5,11 @@
 
 CREATE TYPE evidence_kind AS ENUM ('message', 'upload');
 
--- An uploaded-files item where no file ended up copied (§7.2).
+-- An uploaded-files item where no file ended up copied (§7.2), and a
+-- message in the evidence channel or one of Quack's copies there, which is
+-- never a source (§7.1).
 ALTER TYPE evidence_failure ADD VALUE 'no_file_copied';
+ALTER TYPE evidence_failure ADD VALUE 'evidence_copy';
 
 -- Removal and visibility changes are recorded, not posted (§9.2).
 ALTER TYPE mod_log_kind ADD VALUE 'evidence_removed';
@@ -27,6 +30,11 @@ ALTER TABLE evidence
   -- NULL when none were saved (Quack's own items, a failed fetch, older rows).
   ADD COLUMN surrounding        jsonb NULL
                                 CHECK (jsonb_typeof(surrounding) = 'array' AND jsonb_array_length(surrounding) <= 10),
+  -- Whose access the capture checks: the staff member whose request last
+  -- started it (a new item, or one captured again); `added_by` keeps who
+  -- first added it. NULL = Quack, and rows from before this migration,
+  -- which fall back to `added_by`.
+  ADD COLUMN capture_by         bigint NULL,
   ALTER COLUMN channel_id DROP NOT NULL,
   ALTER COLUMN message_id DROP NOT NULL,
   ADD CONSTRAINT evidence_source CHECK (
@@ -43,6 +51,11 @@ ALTER TABLE evidence
 ALTER TABLE evidence_files
   ALTER COLUMN original_url DROP NOT NULL,
   ADD CONSTRAINT evidence_files_guild_id UNIQUE (guild_id, id);
+
+-- Finds Quack's own copy posts, in whichever channel they are, so they are
+-- never saved as evidence (§7.1).
+CREATE INDEX evidence_files_copy_message ON evidence_files (guild_id, copy_message_id)
+  WHERE copy_message_id IS NOT NULL;
 
 -- Bytes of a dashboard upload until the capture job copies the file to the
 -- evidence channel (§7.3). Deleted when the file stops being pending, and by

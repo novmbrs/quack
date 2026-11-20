@@ -257,6 +257,14 @@ pub fn evidence_channel_not_staff_only() -> Text {
     .s(", then try again.")
 }
 
+/// `error.uploads_busy`: dashboard uploads waiting for their copy already
+/// hold as much as Quack keeps at once; nothing was saved.
+pub fn uploads_busy() -> Text {
+    Text::fixed(
+        "No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.",
+    )
+}
+
 /// `error.files_not_allowed`: files Quack can't copy, by name.
 pub fn files_not_allowed(files: &[quack_core::evidence::RefusedFile]) -> Text {
     let mut t = Text::fixed("No evidence was added. Quack can't save ");

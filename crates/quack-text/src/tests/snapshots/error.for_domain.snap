@@ -751,6 +751,31 @@ discord: No evidence was added. The evidence channel is visible outside staff, s
 plain:   No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in /setup, then try again.
 model:   [Fixed("No evidence was added. The evidence channel is visible outside staff, so Quack won't copy files there. Fix its View Channel permissions or choose another evidence channel in "), Command(Setup), Fixed(", then try again.")]
 
+## UploadsBusy · staff · all facts
+discord: No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+plain:   No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+model:   [Fixed("No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.")]
+
+## UploadsBusy · adding a case · all facts
+discord: No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+plain:   No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+model:   [Fixed("No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.")]
+
+## UploadsBusy · editing a rule · all facts
+discord: No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+plain:   No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+model:   [Fixed("No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.")]
+
+## UploadsBusy · member · all facts
+discord: No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+plain:   No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+model:   [Fixed("No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.")]
+
+## UploadsBusy · no facts
+discord: No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+plain:   No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.
+model:   [Fixed("No evidence was added. Quack is still copying earlier uploads to the evidence channel. Try again in a few minutes.")]
+
 ## EvidenceNotFound · staff · all facts
 discord: Quack couldn't find that evidence item on this case. Open the case again to see its evidence.
 plain:   Quack couldn't find that evidence item on this case. Open the case again to see its evidence.

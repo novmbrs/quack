@@ -37,6 +37,7 @@ fn evidence_id() -> impl Strategy<Value = CustomId> {
     };
     prop_oneof![
         evidence().prop_map(CustomId::EvidenceSurrounding),
+        evidence().prop_map(CustomId::BackToEvidence),
         (evidence(), any::<bool>())
             .prop_map(|(evidence, visible)| CustomId::EvidenceVisibility { evidence, visible }),
         evidence().prop_map(CustomId::EditEvidenceNote),
@@ -65,9 +66,17 @@ fn base_id() -> impl Strategy<Value = CustomId> {
         case().prop_map(CustomId::EditContext),
         (case(), any::<u32>())
             .prop_map(|(case, revision)| CustomId::EditContextModal { case, revision }),
-        case().prop_map(CustomId::AddEvidence),
-        case().prop_map(CustomId::AddEvidenceModal),
-        (case(), any::<u32>()).prop_map(|(case, item)| CustomId::ViewEvidence { case, item }),
+        (case(), any::<bool>())
+            .prop_map(|(case, new_message)| CustomId::AddEvidence { case, new_message }),
+        (case(), any::<bool>())
+            .prop_map(|(case, new_message)| CustomId::AddEvidenceModal { case, new_message }),
+        (case(), any::<u32>(), any::<bool>()).prop_map(|(case, item, new_message)| {
+            CustomId::ViewEvidence {
+                case,
+                item,
+                new_message,
+            }
+        }),
         case().prop_map(CustomId::VoidCase),
         case().prop_map(CustomId::VoidCaseModal),
         (snowflake(), any::<u32>()).prop_map(|(member, page)| CustomId::History { member, page }),

@@ -10,7 +10,6 @@ use std::time::Duration;
 use quack_core::evidence::FileCopyState;
 use quack_core::ids::ChannelId;
 use quack_core::limits::MAX_COPY_BYTES;
-use quack_core::permissions::Permission;
 use quack_db::evidence::{self, Evidence, EvidenceFile};
 use quack_db::jobs::{ClaimedJob, Handled, JobResult, fence};
 use quack_db::{DbError, cases, settings};
@@ -85,9 +84,8 @@ async fn destination(engine: &Engine, item: &Evidence) -> Result<Destination, Db
     let Some(channel) = channel else {
         return Ok(Destination::Missing);
     };
-    let needs = Permission::ViewChannel | Permission::SendMessages | Permission::AttachFiles;
     Ok(
-        match staff_channel(engine, item.guild, channel, needs).await {
+        match staff_channel(engine, item.guild, channel, super::uploads::DESTINATION).await {
             ChannelCheck::Ok => Destination::Ok(channel),
             ChannelCheck::Problems(_) => Destination::NotStaffOnly,
             ChannelCheck::Missing => Destination::Missing,
@@ -177,10 +175,21 @@ async fn reserve(
     Ok(reserved)
 }
 
-/// Gives back a reserved try that never reached Discord.
-async fn release(engine: &Engine, item: &Evidence, file: &EvidenceFile) -> Result<(), DbError> {
-    let mut conn = engine.db().conn().await?;
-    evidence::release_upload(&mut conn, item.guild, file.id).await
+/// Gives back a reserved try that never reached Discord, in the same lock
+/// order as the reservation and with the job's fence, so a worker that
+/// lost its lease can't give back a newer worker's try.
+async fn release(
+    engine: &Engine,
+    job: &ClaimedJob,
+    item: &Evidence,
+    file: &EvidenceFile,
+) -> Result<(), DbError> {
+    let mut tx = engine.db().begin().await?;
+    cases::lock(&mut tx, item.guild, item.case).await?;
+    evidence::lock(&mut tx, item.guild, item.id).await?;
+    evidence::release_upload(&mut tx, item.guild, file.id).await?;
+    fence(&mut tx, job).await?;
+    tx.commit().await
 }
 
 /// Where a file's bytes come from.
@@ -238,7 +247,9 @@ async fn get_bytes(
 /// spoilered attachment. Every upload is preceded by a fresh destination
 /// check and a durably reserved try (three per file); a rate limit stops
 /// the run with its delay; a run never starts a call it has no time to
-/// finish. Only Discord's CDN hosts are downloaded from.
+/// finish. A run that ends because a download failed costs the job a
+/// counted attempt, so a download that keeps failing settles the file
+/// through the job's budget. Only Discord's CDN hosts are downloaded from.
 async fn copy_one(
     engine: &Engine,
     job: &ClaimedJob,
@@ -253,11 +264,20 @@ async fn copy_one(
     let discord = engine.discord();
     let nonce = Nonce::new(file.id.to_u22());
     let empty = Msg::default();
-    let continue_later = || One::Stop(Handled::Settle(JobResult::Continue));
+    // Out of time: start again in a new run, which is free after progress
+    // and counted after a failed download (else it never runs out).
+    let out_of_time = |download_failed: bool| {
+        One::Stop(Handled::Settle(if download_failed {
+            retry(job, "download_failed")
+        } else {
+            JobResult::Continue
+        }))
+    };
     let mut downloads = 0;
+    let mut download_failed = false;
     loop {
         if job.time_left() < DOWNLOAD_ROOM + CHECK_ROOM + UPLOAD_ROOM + MARGIN {
-            return Ok(continue_later());
+            return Ok(out_of_time(download_failed));
         }
         if downloads == DOWNLOAD_TRIES {
             return Ok(One::Failed);
@@ -266,10 +286,14 @@ async fn copy_one(
         let bytes = match get_bytes(engine, job, item, file, &source).await? {
             Got::Bytes(bytes) => bytes,
             Got::Stop(one) => return Ok(one),
-            Got::Again => continue,
+            Got::Again => {
+                download_failed = true;
+                continue;
+            }
         };
+        download_failed = false;
         if job.time_left() < CHECK_ROOM + UPLOAD_ROOM + MARGIN {
-            return Ok(continue_later());
+            return Ok(out_of_time(false));
         }
         let channel = match destination(engine, item).await? {
             Destination::Ok(channel) => channel,
@@ -298,10 +322,10 @@ async fn copy_one(
             }
             Outcome::Refused(_) => return Ok(One::Failed),
             Outcome::RetryAfter(d) => {
-                release(engine, item, file).await?;
+                release(engine, job, item, file).await?;
                 return Ok(One::Stop(Handled::Settle(retry_in(job, d))));
             }
-            Outcome::NotSent(_) => release(engine, item, file).await?,
+            Outcome::NotSent(_) => release(engine, job, item, file).await?,
             // May have created the copy: the try stays counted, and the
             // next one reuses the nonce while the window lasts.
             Outcome::Unknown(_) => {}

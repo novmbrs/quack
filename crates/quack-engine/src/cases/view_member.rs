@@ -5,7 +5,7 @@
 
 use quack_core::DomainError;
 use quack_core::appeal::{AppealEventKind, AppealState, EligibilityFacts, eligibility};
-use quack_core::evidence::member_sees;
+use quack_core::evidence::{EvidenceKind, FileCopyState, member_sees};
 use quack_core::ids::{AccountId, AppealId, CaseId, EvidenceId, FileId, GuildId};
 use quack_core::rule::FieldKind;
 use quack_db::{cases, guilds};
@@ -241,11 +241,18 @@ fn context(r: &CaseRecords) -> Vec<MemberContextLine> {
 }
 
 /// Only what the member sees (§7.4): no removed item, no staff-only
-/// upload, never notes or surrounding messages.
+/// upload, never notes or surrounding messages. An uploaded file is listed
+/// once its copy exists, since only the copy serves it; uploaded files with
+/// no copy yet aren't listed at all.
 fn evidence(r: &CaseRecords) -> Vec<MemberEvidence> {
+    let served = |e: &quack_db::evidence::Evidence, f: &quack_db::evidence::EvidenceFile| {
+        f.evidence == e.id
+            && (e.kind == EvidenceKind::Message || f.copy_state == FileCopyState::Copied)
+    };
     r.evidence
         .iter()
         .filter(|e| member_sees(e.kind, e.visible_to_member, e.is_removed()))
+        .filter(|e| e.kind == EvidenceKind::Message || r.files.iter().any(|f| served(e, f)))
         .map(|e| MemberEvidence {
             id: e.id,
             content: e.content.clone(),
@@ -260,7 +267,7 @@ fn evidence(r: &CaseRecords) -> Vec<MemberEvidence> {
             files: r
                 .files
                 .iter()
-                .filter(|f| f.evidence == e.id)
+                .filter(|f| served(e, f))
                 .map(|f| MemberEvidenceFile {
                     id: f.id,
                     filename: f.filename.clone(),

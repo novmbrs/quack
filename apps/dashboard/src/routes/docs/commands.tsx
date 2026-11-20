@@ -41,8 +41,8 @@ function Commands() {
         <p>
           The case card from <b>/case view</b> has buttons to retry or dismiss a failed action,
           remove a timeout, unban, edit the case context, add or view evidence, and void the case.
-          After <b>/case add</b>, the private confirmation has <b>Add evidence</b> and{" "}
-          <b>View evidence</b> too, so you can add links and files right away.
+          After <b>/case add</b>, the private confirmation has <b>Add evidence</b> too, so you can
+          add links and files right away, and <b>View evidence</b> once the case has evidence.
         </p>
         <p>
           <b>Add evidence</b> opens a form for message links, up to 10 files, and a staff note.{" "}

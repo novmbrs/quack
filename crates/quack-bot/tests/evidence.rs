@@ -766,3 +766,262 @@ async fn messages_around_it_and_removal() -> Result {
     snapshot("evidence_not_found", &w.answer());
     Ok(())
 }
+
+/// The ids of a message's action buttons.
+fn actions(msg: &quack_text::Msg) -> Vec<quack_text::actions::ButtonAction> {
+    msg.rows
+        .iter()
+        .flat_map(|row| match row {
+            quack_text::model::Row::Buttons(b) => b.clone(),
+            quack_text::model::Row::Select(_) => Vec::new(),
+        })
+        .filter_map(|b| match b.target {
+            quack_text::model::ButtonTarget::Action(a) => Some(a),
+            quack_text::model::ButtonTarget::Link(_) => None,
+        })
+        .collect()
+}
+
+/// Review M: evidence opened from a private receipt (the card its sync
+/// keeps rewriting) answers in a message of its own, so the sync never
+/// overwrites the reply; from that reply on, buttons update in place.
+#[tokio::test]
+async fn evidence_from_a_private_receipt_answers_in_its_own_message() -> Result {
+    use quack_text::actions::ButtonAction;
+    let w = World::new().await?;
+    let rule = w.h.rule(warning("Spam")).await?;
+    w.send(&interaction(
+        2,
+        moderator(),
+        w.channel,
+        &payload::case_add(MEMBER, rule, Some(true)),
+    ))
+    .await;
+    w.h.settle().await?;
+    let case: CaseId = {
+        let mut conn = w.h.db.db.conn().await?;
+        quack_db::cases::get_by_number(&mut conn, w.h.guild, 1)
+            .await?
+            .unwrap()
+            .id
+    };
+    let receipt =
+        w.h.fake
+            .world(|world| world.interaction_edits.last().map(|(_, m)| m.clone()))
+            .expect("the private receipt");
+    assert!(
+        actions(&receipt).contains(&ButtonAction::AddEvidence {
+            case,
+            new_message: true
+        }),
+        "{receipt:?}"
+    );
+
+    // Add evidence on the card: the modal keeps the flag, and its submit
+    // defers a new message instead of updating the receipt.
+    w.send(&button(
+        &w,
+        moderator(),
+        &format!("1:ea:{}:n", case.to_u22()),
+    ))
+    .await;
+    let modal = w.modal().expect("the modal");
+    assert_eq!(
+        modal.action,
+        quack_text::ModalAction::AddEvidence {
+            case,
+            new_message: true
+        }
+    );
+    let (_, link) = posted(&w, "free nitro");
+    let mut submit = evidence_modal(case, &link, &[], "");
+    submit["custom_id"] = json!(format!("1:eam:{}:n", case.to_u22()));
+    let sent = w.send(&on_ephemeral(&w, moderator(), 5, &submit)).await;
+    w.assert_acked_first();
+    assert_eq!(sent.first(), Some(&Sent::Defer { ephemeral: true }));
+    assert!(w.answer().plain().contains("is saving"), "{:?}", w.answer());
+    let edits = w.h.fake.world(|world| world.interaction_edits.len());
+    // The capture bumps the receipt; its sync edits the card through the
+    // receipt's own token, never the reply's.
+    w.h.settle().await?;
+    let after = w.h.fake.world(|world| world.interaction_edits.clone());
+    assert!(after.len() > edits, "the receipt was synced");
+
+    // View evidence on the card: a new message too.
+    let sent = w
+        .send(&button(
+            &w,
+            moderator(),
+            &format!("1:ev:{}:1:n", case.to_u22()),
+        ))
+        .await;
+    assert_eq!(sent.first(), Some(&Sent::Defer { ephemeral: true }));
+    // Its own buttons update it in place.
+    assert!(actions(&w.answer()).iter().all(|a| !matches!(
+        a,
+        ButtonAction::ViewEvidence {
+            new_message: true,
+            ..
+        }
+    )),);
+    let sent = w
+        .send(&button(
+            &w,
+            moderator(),
+            &format!("1:ev:{}:1", case.to_u22()),
+        ))
+        .await;
+    assert_eq!(sent.first(), Some(&Sent::DeferUpdate));
+    Ok(())
+}
+
+/// Review O: Back carries the item, not its position, so it opens the same
+/// item after another one was removed; an empty case offers Add evidence.
+#[tokio::test]
+async fn back_opens_the_same_item_after_a_removal() -> Result {
+    use quack_text::actions::ButtonAction;
+    let w = World::new().await?;
+    let (case, message, upload) = case_with_items(&w).await?;
+    // Messages around the saved message (item 1), then the item before it
+    // goes: Back must still open the saved message.
+    w.send(&button(
+        &w,
+        moderator(),
+        &format!("1:evs:{}", message.to_u22()),
+    ))
+    .await;
+    assert!(actions(&w.answer()).contains(&ButtonAction::BackToEvidence(message)));
+    w.send(&button(
+        &w,
+        moderator(),
+        &format!("1:evr:{}", upload.to_u22()),
+    ))
+    .await;
+    assert!(actions(&w.answer()).contains(&ButtonAction::BackToEvidence(upload)));
+    // The upload is item 1, the saved message item 2.
+    assert_eq!(items(&w, case).await?[0].id, upload);
+    quack_engine::evidence::remove_evidence(
+        &w.h.engine,
+        &w.h.moderator(),
+        None,
+        upload,
+        &w.h.key("evrc"),
+    )
+    .await?;
+    w.send(&button(
+        &w,
+        moderator(),
+        &format!("1:evb:{}", message.to_u22()),
+    ))
+    .await;
+    w.assert_acked_first();
+    let shown = w.answer();
+    assert!(shown.plain().contains("Evidence 1 of 1"), "{shown:?}");
+    assert!(actions(&shown).contains(&ButtonAction::EvidenceSurrounding(message)));
+    // The upload's own Back, now that it is removed, says so.
+    w.send(&button(
+        &w,
+        moderator(),
+        &format!("1:evb:{}", upload.to_u22()),
+    ))
+    .await;
+    assert!(w.answer().plain().contains("already removed"));
+
+    // No evidence left: View evidence offers Add evidence.
+    let other = w.h.rule(warning("Other")).await?;
+    let empty = w.h.apply(MEMBER, other).await?.case.id;
+    w.send(&button(
+        &w,
+        moderator(),
+        &format!("1:ev:{}:1", empty.to_u22()),
+    ))
+    .await;
+    assert!(actions(&w.answer()).contains(&ButtonAction::AddEvidence {
+        case: empty,
+        new_message: false
+    }));
+    Ok(())
+}
+
+/// Review B through Discord: after the moderator lost access to the
+/// channel, neither "Add as evidence" path nor Add evidence restores the
+/// removed message.
+#[tokio::test]
+async fn quick_add_and_add_evidence_need_access_to_restore() -> Result {
+    use quack_core::permissions::{Overwrite, OverwriteTarget, Permission, Permissions};
+    let w = World::new().await?;
+    let case = spam_case(&w).await?;
+    let (message, link) = posted(&w, "free nitro");
+    w.send(&on_ephemeral(
+        &w,
+        moderator(),
+        5,
+        &evidence_modal(case, &link, &[], ""),
+    ))
+    .await;
+    w.h.settle().await?;
+    let id = items(&w, case).await?[0].id;
+    quack_engine::evidence::remove_evidence(
+        &w.h.engine,
+        &w.h.moderator(),
+        None,
+        id,
+        &w.h.key("evrc"),
+    )
+    .await?;
+    w.h.fake.world(|world| {
+        let c = world
+            .guilds
+            .get_mut(&w.h.guild)
+            .and_then(|g| g.channels.get_mut(&w.channel))
+            .unwrap();
+        c.overwrites.push(Overwrite {
+            target: OverwriteTarget::Role(w.h.guild.everyone_role()),
+            allow: Permissions::NONE,
+            deny: Permission::ViewChannel.into(),
+        });
+    });
+    let still_removed =
+        || async { anyhow::Ok(items(&w, case).await?.iter().all(Evidence::is_removed)) };
+    // The case select.
+    let select = payload::component(
+        &format!("1:exs:{}:{message}", w.channel),
+        3,
+        &[case.to_u22()],
+    );
+    w.send(&on_ephemeral(&w, moderator(), 3, &select)).await;
+    w.assert_acked_first();
+    assert!(
+        w.answer().plain().contains("can't read"),
+        "{:?}",
+        w.answer()
+    );
+    assert!(still_removed().await?);
+    // The case number modal.
+    let number = payload::modal(
+        &format!("1:exm:{}:{message}", w.channel),
+        &[("case", "#1"), ("note", "")],
+    );
+    w.send(&on_ephemeral(&w, moderator(), 5, &number)).await;
+    assert!(
+        w.answer().plain().contains("can't read"),
+        "{:?}",
+        w.answer()
+    );
+    assert!(still_removed().await?);
+    // Plain Add evidence.
+    w.send(&on_ephemeral(
+        &w,
+        moderator(),
+        5,
+        &evidence_modal(case, &link, &[], ""),
+    ))
+    .await;
+    assert!(
+        w.answer().plain().contains("can't read"),
+        "{:?}",
+        w.answer()
+    );
+    assert!(still_removed().await?);
+    Ok(())
+}

@@ -35,7 +35,7 @@ pub use action_list::{ListedAction, action, actions};
 pub use apply::apply_rule;
 pub(crate) use card::{card, receipt};
 pub use edit::{ContextEdited, edit_context};
-pub use evidence_add::{AddEvidence, EvidenceAdded, add_evidence};
+pub use evidence_add::{AddEvidence, EvidenceAdded, add_evidence, add_evidence_ran};
 pub use list::{CasePreview, list, member_cases, member_summary, preview};
 pub(crate) use records::CaseRecords;
 pub use view::{

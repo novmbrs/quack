@@ -229,15 +229,18 @@ function postForm<T>(
 }
 
 /**
- * upload sends one multipart write the reader asked for, with write()'s
- * Idempotency-Key and retries, reporting how much of the body was sent.
+ * upload sends one multipart write the reader asked for under `key`, with
+ * write()'s retries, reporting how much of the body was sent. The caller
+ * keeps the key while the outcome is unknown, so sending the same form
+ * again never saves it twice.
  */
 export function upload<T>(
   url: string,
   form: FormData,
+  key: string,
   onProgress?: (p: UploadProgress) => void,
 ): Promise<T> {
-  return write<T>((init) => postForm<T>(url, form, init, onProgress));
+  return write<T>((init) => postForm<T>(url, form, init, onProgress), { key });
 }
 
 /**

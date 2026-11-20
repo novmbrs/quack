@@ -388,6 +388,16 @@ pub fn samples() -> Vec<Sample> {
             FieldKind::MessageLink,
         ),
         (
+            "context.evidence_channel",
+            ContextProblemCode::EvidenceChannel,
+            FieldKind::MessageLink,
+        ),
+        (
+            "context.no_access",
+            ContextProblemCode::NoAccess,
+            FieldKind::MessageLink,
+        ),
+        (
             "context.unknown_field",
             ContextProblemCode::UnknownField,
             FieldKind::ShortText,

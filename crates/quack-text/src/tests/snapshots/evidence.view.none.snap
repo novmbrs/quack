@@ -4,3 +4,13 @@ source: crates/quack-text/src/tests/snapshots.rs
 discord: Case #12 has no evidence yet. Use Add evidence to add message links or files.
 plain:   Case #12 has no evidence yet. Use Add evidence to add message links or files.
 model:   [Fixed("Case #12 has no evidence yet. Use Add evidence to add message links or files.")]
+
+## with Add evidence
+tone: Neutral
+--- discord ---
+Case #12 has no evidence yet. Use Add evidence to add message links or files.
+buttons: [Add evidence · Secondary] AddEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), new_message: false } | [Open case · Secondary] OpenCase(CaseId(01930000-0000-7000-8000-000000000001))
+--- plain ---
+Case #12 has no evidence yet. Use Add evidence to add message links or files.
+--- model ---
+Text [Fixed("Case #12 has no evidence yet. Use Add evidence to add message links or files.")]

@@ -52,8 +52,9 @@ pub(crate) fn draft_file(u: &Upload) -> DraftFile {
 
 /// Add evidence (`ea`): the modal (links, files, note). Its title names
 /// the case number, which the custom id doesn't carry, so the number is
-/// read under the prefilled-modal deadline (§11.3).
-pub(crate) async fn open_modal(p: Pending<'_>, case: CaseId) -> Finish {
+/// read under the prefilled-modal deadline (§11.3). `new_message` carries
+/// over to the modal, so its answer goes where the button's would.
+pub(crate) async fn open_modal(p: Pending<'_>, case: CaseId, new_message: bool) -> Finish {
     let ix = p.ix;
     p.prefilled_modal(|engine| async move {
         let principal = auth::principal(engine, ix).await?;
@@ -67,7 +68,7 @@ pub(crate) async fn open_modal(p: Pending<'_>, case: CaseId) -> Finish {
         };
         let number = number
             .ok_or_else(|| errors::domain(DomainError::CaseNotFound, &ErrorFacts::default()))?;
-        Ok(quack_text::evidence::modal(case, number))
+        Ok(quack_text::evidence::modal(case, number, new_message))
     })
     .await
 }
@@ -158,11 +159,15 @@ async fn add(a: &Acked<'_>, case: CaseRef, request: &AddEvidence) -> Result<Msg,
     )
     .await
     .map_err(|e| match e {
-        CaseError::LinksInvalid(_) => Failure::refused(
+        CaseError::LinksInvalid(problems) => Failure::refused(
             quack_text::case::context_problem(
                 &ContextProblem {
                     key: String::new(),
-                    code: ContextProblemCode::NotAMessageLink,
+                    code: problems
+                        .first()
+                        .map_or(ContextProblemCode::NotAMessageLink, |(_, p)| {
+                            p.context_code()
+                        }),
                 },
                 Some("Message links"),
                 None,

@@ -55,7 +55,7 @@ model:   [Fixed("2 messages that had been removed are back. 1 message was alread
 tone: Success
 --- discord ---
 Quack is saving 1 message as evidence for case #12. Quack is copying 2 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
-buttons: [Add evidence · Secondary] AddEvidence(CaseId(01930000-0000-7000-8000-000000000001)) | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1 }
+buttons: [Add evidence · Secondary] AddEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), new_message: false } | [View evidence · Secondary] ViewEvidence { case: CaseId(01930000-0000-7000-8000-000000000001), item: 1, new_message: false }
 --- plain ---
 Quack is saving 1 message as evidence for case #12. Quack is copying 2 files to the evidence channel for case #12. Only staff see them until someone selects Show to member. Select View evidence to see the outcome.
 --- model ---

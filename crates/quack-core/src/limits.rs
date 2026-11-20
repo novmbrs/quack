@@ -135,6 +135,12 @@ pub const EVIDENCE_FILENAME_CHARS: usize = 255;
 /// Largest dashboard upload request body: ten 10 MiB files and 64 KiB for
 /// the note and multipart framing.
 pub const MAX_UPLOAD_BODY_BYTES: usize = 10 * 10_485_760 + 65_536;
+/// Most dashboard-upload bytes one server may have staged in PostgreSQL
+/// at once, waiting for their copy (256 MiB, about two and a half full
+/// uploads); a new upload past it is refused as `uploads_busy` (§7.1).
+pub const MAX_STAGED_BYTES_PER_GUILD: u64 = 256 * 1_048_576;
+/// Most dashboard-upload bytes staged at once across every server (1 GiB).
+pub const MAX_STAGED_BYTES_TOTAL: u64 = 1_024 * 1_048_576;
 /// How long dashboard-uploaded bytes may wait in PostgreSQL for their copy
 /// before housekeeping deletes them (§7.3).
 pub const STAGED_UPLOAD_TTL: Duration = Duration::hours(24);

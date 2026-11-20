@@ -9,6 +9,7 @@ mod capture;
 mod copy;
 mod edits;
 mod file;
+mod sources;
 mod surrounding;
 mod uploads;
 mod view;
@@ -29,7 +30,8 @@ use crate::obs::{event, kv};
 pub use capture::{capture, finalize};
 pub use edits::{EvidenceEdited, remove_evidence, set_note, set_visibility};
 pub use file::{FileError, FileViewer, resolve_file};
-pub(crate) use uploads::{FileForHash, files_for_hash, upload_item};
+pub(crate) use sources::{context_copies, evidence_copies, unreadable};
+pub(crate) use uploads::{DESTINATION, FileForHash, files_for_hash, upload_item};
 pub use uploads::{
     NewUpload, UploadRefused, UploadSource, check_destination, check_files, check_uploads,
 };
