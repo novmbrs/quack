@@ -300,9 +300,15 @@ function Note({ guildId, caseNumber, evidence: e, moderate, onCase }: Props) {
   }
   if (!e.note) {
     return moderate ? (
-      <button type="button" className={s.addNote} onClick={start}>
-        <QuackIcon name="note" size={14} /> Add a staff note
-      </button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className={s.addNote}
+        icon={<QuackIcon name="note" size={14} />}
+        onClick={start}
+      >
+        Add a staff note
+      </Button>
     ) : null;
   }
   return (

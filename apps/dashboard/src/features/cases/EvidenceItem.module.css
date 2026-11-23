@@ -186,23 +186,7 @@ details[open] > .summary .chevron {
 }
 
 .addNote {
-  display: inline-flex;
   align-self: flex-start;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  transition:
-    background-color var(--fast) var(--ease),
-    color var(--fast) var(--ease);
-}
-
-.addNote:hover {
-  background: var(--hover);
-  color: var(--text-strong);
 }
 
 .noteForm {
