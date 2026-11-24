@@ -230,6 +230,9 @@ pub fn samples() -> Vec<Sample> {
     ));
     let rows: Vec<AppealRow> = (0..10)
         .map(|i| AppealRow {
+            appeal: quack_core::ids::AppealId::from_uuid(uuid::Uuid::from_u128(
+                0x0193_0000_0000_7000_8000_0000_0000_0100 + u128::from(i),
+            )),
             number: 9_007_199_254_740_991 - i,
             rule: long(100),
             ..row.clone()

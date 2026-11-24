@@ -245,6 +245,20 @@ pub async fn day(conn: &mut PgConnection) -> Result<Day, DbError> {
     })
 }
 
+/// Members across the installed servers whose count is known.
+pub async fn total_members(conn: &mut PgConnection) -> Result<u64, DbError> {
+    let n = obs::run(
+        Select,
+        "guilds",
+        sqlx::query_scalar!(
+            r#"SELECT coalesce(sum(member_count), 0)::bigint AS "n!" FROM guilds WHERE installed"#
+        )
+        .fetch_one(conn),
+    )
+    .await?;
+    count(n)
+}
+
 /// Cases created on each of the last `days` UTC days, oldest first (today
 /// last, so far).
 pub async fn daily_cases(conn: &mut PgConnection, days: u16) -> Result<Vec<u64>, DbError> {
@@ -335,21 +349,34 @@ pub async fn ranked_servers(
     let rows = obs::run(
         Select,
         "guilds",
+        // Only the 30-day window is aggregated across servers (for the
+        // Cases order); lifetime counts are read for the page alone.
         sqlx::query!(
-            r#"SELECT g.guild_id, g.name, g.member_count, g.first_joined_at,
-                      coalesce(c.month, 0) AS "month!", coalesce(c.total, 0) AS "total!"
-               FROM guilds g
-               LEFT JOIN (SELECT guild_id,
-                                 count(*) FILTER (WHERE created_at > now() - interval '30 days') AS month,
-                                 count(*) AS total
-                          FROM cases GROUP BY guild_id) c USING (guild_id)
-               WHERE g.installed
+            r#"WITH month AS (
+                 SELECT guild_id, count(*) AS n FROM cases
+                 WHERE $1 = 'cases' AND created_at > now() - interval '30 days'
+                 GROUP BY guild_id),
+               page AS (
+                 SELECT g.guild_id, g.name, g.member_count, g.first_joined_at,
+                        coalesce(m.n, 0) AS ranked_month
+                 FROM guilds g LEFT JOIN month m USING (guild_id)
+                 WHERE g.installed
+                 ORDER BY
+                   CASE WHEN $1 = 'members' THEN g.member_count END DESC NULLS LAST,
+                   CASE WHEN $1 = 'cases' THEN coalesce(m.n, 0) END DESC NULLS LAST,
+                   CASE WHEN $1 = 'newest' THEN g.first_joined_at END DESC NULLS LAST,
+                   g.guild_id
+                 OFFSET $2 LIMIT $3)
+               SELECT p.guild_id, p.name, p.member_count, p.first_joined_at,
+                      (SELECT count(*) FROM cases c WHERE c.guild_id = p.guild_id
+                         AND c.created_at > now() - interval '30 days') AS "month!",
+                      (SELECT count(*) FROM cases c WHERE c.guild_id = p.guild_id) AS "total!"
+               FROM page p
                ORDER BY
-                 CASE WHEN $1 = 'members' THEN g.member_count END DESC NULLS LAST,
-                 CASE WHEN $1 = 'cases' THEN coalesce(c.month, 0) END DESC NULLS LAST,
-                 CASE WHEN $1 = 'newest' THEN g.first_joined_at END DESC NULLS LAST,
-                 g.guild_id
-               OFFSET $2 LIMIT $3"#,
+                 CASE WHEN $1 = 'members' THEN p.member_count END DESC NULLS LAST,
+                 CASE WHEN $1 = 'cases' THEN p.ranked_month END DESC NULLS LAST,
+                 CASE WHEN $1 = 'newest' THEN p.first_joined_at END DESC NULLS LAST,
+                 p.guild_id"#,
             sort.as_str(),
             i64::from(offset),
             i64::from(limit)

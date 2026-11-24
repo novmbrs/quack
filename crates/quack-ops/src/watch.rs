@@ -76,6 +76,7 @@ async fn run(ops: Ops) {
         ticks = ticks.wrapping_add(1);
         tick(&ops).await;
         if ticks.is_multiple_of(BOARD_EVERY) {
+            recheck(&ops).await;
             if let Err(error) = status::update(&ops).await {
                 tracing::warn!(%error, "couldn't update the ops status board");
             }
@@ -101,6 +102,16 @@ async fn setup(ops: &Ops) {
             Err(why) => tracing::debug!(%why, "the ops channels still aren't ready"),
         }
         tokio::time::sleep(SETUP_RETRY).await;
+    }
+}
+
+/// Checks the channels again (every 10 minutes): one whose overwrites now
+/// let anyone else see it stops getting posts, and a deleted one is made
+/// again. When Discord can't answer, the channels stay as they were.
+async fn recheck(ops: &Ops) {
+    match channels::ensure(ops).await {
+        Ok(found) => ops.set_channels(found),
+        Err(why) => tracing::debug!(%why, "couldn't check the ops channels again"),
     }
 }
 

@@ -558,6 +558,8 @@ pub struct Server {
     pub first_joined_at: OffsetDateTime,
     /// When Quack left, while not installed.
     pub left_at: Option<OffsetDateTime>,
+    /// Its members as last known (`None`: not known yet).
+    pub members: Option<u64>,
     /// Cases, voided included.
     pub cases: u64,
     /// Voided cases.
@@ -614,6 +616,14 @@ pub fn server(s: &Server) -> Msg {
                 .s(" (")
                 .push(Inline::Code(s.owner.to_string()))
                 .s(")"),
+        })
+        .block(Block::Field {
+            label: "Members".to_owned(),
+            value: Text::fixed(match (s.members, s.installed) {
+                (None, _) => "not known yet".to_owned(),
+                (Some(n), true) => fmt::count(n),
+                (Some(n), false) => format!("{} (when Quack left)", fmt::count(n)),
+            }),
         })
         .block(Block::Field {
             label: "Cases".to_owned(),

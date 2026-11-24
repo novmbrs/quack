@@ -95,13 +95,45 @@ async fn an_adopted_public_channel_is_never_posted_to() -> Result<()> {
             deny: Permissions::NONE,
         }];
     });
+    // Hidden from @everyone, but a role may see it: not private either.
+    h.fake.world(|w| {
+        let category = w.guilds[&h.guild]
+            .channels
+            .values()
+            .find(|c| c.kind == 4)
+            .map(|c| c.id)
+            .unwrap();
+        let shared = w.add_text_channel(h.guild, false);
+        let c = w
+            .guilds
+            .get_mut(&h.guild)
+            .unwrap()
+            .channels
+            .get_mut(&shared)
+            .unwrap();
+        c.name = "ops-installs".to_owned();
+        c.parent_id = Some(category);
+        c.overwrites = vec![
+            Overwrite {
+                target: OverwriteTarget::Role(sf(h.guild.get())),
+                allow: Permissions::NONE,
+                deny: Permission::ViewChannel.into(),
+            },
+            Overwrite {
+                target: OverwriteTarget::Role(sf(777)),
+                allow: Permission::ViewChannel.into(),
+                deny: Permissions::NONE,
+            },
+        ];
+    });
     let channels = new_ops(&h).prepare_channels().await.unwrap();
     assert_eq!(channels.alerts, None);
+    assert_eq!(channels.installs, None, "a role can see it");
     assert!(channels.deploys.is_some());
     assert_eq!(
         h.fake.count(Call::CreateChannel),
-        4,
-        "only the missing four"
+        3,
+        "only the missing three"
     );
     Ok(())
 }
@@ -312,7 +344,7 @@ async fn installs_post_members_and_how_long_quack_stayed() -> Result<()> {
     let channels = ops.prepare_channels().await.unwrap();
     let id = h.guild.get();
     h.db.execute(&format!(
-        "UPDATE guilds SET member_count = 1234 WHERE guild_id = {id}"
+        "UPDATE guilds SET member_count = 1234, member_count_at = now() WHERE guild_id = {id}"
     ))
     .await?;
     ops.server_joined(h.guild, false).await;
@@ -344,7 +376,7 @@ async fn metrics_count_the_fleet() -> Result<()> {
     let ops = new_ops(&h);
     let id = h.guild.get();
     h.db.execute(&format!(
-        "UPDATE guilds SET member_count = 250 WHERE guild_id = {id}"
+        "UPDATE guilds SET member_count = 250, member_count_at = now() WHERE guild_id = {id}"
     ))
     .await?;
     let rule = h.rule(one("Spam", BAN, false)).await?;

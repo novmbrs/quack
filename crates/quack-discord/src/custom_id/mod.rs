@@ -216,6 +216,8 @@ pub enum CustomId {
     OpsJobsPage(u32),
     /// `op:sv`: a `/ops metrics servers` page in an order.
     OpsServersPage(quack_text::ops::ServerSort, u32),
+    /// `op:so`: `/ops metrics servers` from page 1 in an order.
+    OpsServersSort(quack_text::ops::ServerSort),
 }
 
 /// What a received custom id means.

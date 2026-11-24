@@ -71,7 +71,7 @@ pub struct Status {
     pub open_tickets: u64,
     /// Database connections in use.
     pub pool_used: u32,
-    /// Database connections open.
+    /// The most connections the pool may open.
     pub pool_size: u32,
     /// When this was read.
     pub updated_at: OffsetDateTime,

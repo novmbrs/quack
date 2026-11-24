@@ -187,42 +187,25 @@ pub async fn get_many(conn: &mut PgConnection, guilds: &[GuildId]) -> Result<Vec
     rows.into_iter().map(Guild::try_from).collect()
 }
 
-/// Sets a server's member count from its `GUILD_CREATE` (§21.6).
+/// Stores a server's member count as the gateway read it at `at`
+/// (§21.6). A count read before the stored one is ignored, so writes
+/// handled out of order keep the newest.
 pub async fn set_member_count(
     conn: &mut PgConnection,
     guild: GuildId,
     members: u64,
+    at: OffsetDateTime,
 ) -> Result<(), DbError> {
     let members = i32::try_from(members).unwrap_or(i32::MAX);
     obs::run(
         Update,
         "guilds",
         sqlx::query!(
-            "UPDATE guilds SET member_count = $2 WHERE guild_id = $1 AND member_count IS DISTINCT FROM $2",
+            "UPDATE guilds SET member_count = $2, member_count_at = $3
+             WHERE guild_id = $1 AND (member_count_at IS NULL OR member_count_at <= $3)",
             i64::from(guild),
-            members
-        )
-        .execute(conn),
-    )
-    .await?;
-    Ok(())
-}
-
-/// Moves a known member count by one join (`+1`) or leave (`-1`); a server
-/// whose count isn't known yet keeps none.
-pub async fn add_members(
-    conn: &mut PgConnection,
-    guild: GuildId,
-    delta: i32,
-) -> Result<(), DbError> {
-    obs::run(
-        Update,
-        "guilds",
-        sqlx::query!(
-            "UPDATE guilds SET member_count = greatest(member_count + $2, 0)
-             WHERE guild_id = $1 AND member_count IS NOT NULL",
-            i64::from(guild),
-            delta
+            members,
+            at
         )
         .execute(conn),
     )

@@ -74,7 +74,7 @@ pub(crate) async fn install(ops: &Ops, guild: GuildId, rejoined: Option<bool>) {
             return Ok(());
         };
         let servers = db::installed_count(&mut conn).await?;
-        let day = quack_db::fleet::day(&mut conn).await?;
+        let total_members = quack_db::fleet::total_members(&mut conn).await?;
         let left = rejoined.is_none();
         let (since, counts) = if left {
             let since = quack_db::fleet::last_joined_at(&mut conn, guild)
@@ -99,7 +99,7 @@ pub(crate) async fn install(ops: &Ops, guild: GuildId, rejoined: Option<bool>) {
             owner_id: stored.owner_id,
             servers,
             members: stored.member_count,
-            total_members: Some(day.members),
+            total_members: Some(total_members),
             since,
             left_at: if left { stored.left_at } else { None },
             cases: counts.map(|c| c.cases),

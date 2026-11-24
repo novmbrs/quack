@@ -86,6 +86,7 @@ fn server(installed: bool) -> Server {
         installed,
         first_joined_at: t0(),
         left_at: (!installed).then(later),
+        members: Some(if installed { 12_480 } else { 12_401 }),
         cases: 120,
         voided_cases: 4,
         active_rules: 6,
@@ -450,6 +451,11 @@ pub fn samples() -> Vec<Sample> {
             1,
             1_204,
         ),
+    ));
+    v.push(msg(
+        "ops.metrics_servers",
+        "second page",
+        ops::metrics_servers(&[ranked(11)], ServerSort::Members, 2, 11),
     ));
     v.push(msg(
         "ops.metrics_servers",

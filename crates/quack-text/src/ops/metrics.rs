@@ -314,7 +314,7 @@ pub fn metrics_servers(servers: &[RankedServer], sort: ServerSort, page: u32, to
                 } else {
                     ButtonStyle::Secondary
                 },
-                ButtonAction::OpsServersPage(o, 1),
+                ButtonAction::OpsServersSort(o),
             )
         })
         .collect();
@@ -505,7 +505,7 @@ fn failed_section(msg: Msg, failed: &[FailedReason]) -> Msg {
 pub fn metrics_jobs(m: &MetricsJobs) -> Msg {
     let runs: u64 = m.runs.iter().map(|r| r.runs).sum();
     let failures: u64 = m.runs.iter().map(|r| r.retries + r.dead).sum();
-    let window = if m.runs_cover.as_secs() >= 86_400 - 3_600 {
+    let window = if m.runs_cover.as_secs() >= 86_400 {
         "the last 24 hours".to_owned()
     } else {
         format!(

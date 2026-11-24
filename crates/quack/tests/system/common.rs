@@ -353,7 +353,7 @@ impl System {
             },
             channel_ids: channels,
             thread_ids: Vec::new(),
-            member_count: None,
+            members: None,
         })
         .await;
         self.warm().await

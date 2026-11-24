@@ -140,6 +140,7 @@ pub(super) fn encode(id: &CustomId) -> String {
         C::OpsDismissJob(j) => ("op", format!("dm:{}", j.to_u22())),
         C::OpsJobsPage(p) => ("op", format!("jp:{p}")),
         C::OpsServersPage(sort, p) => ("op", format!("sv:{}:{p}", server_sort_code(*sort))),
+        C::OpsServersSort(sort) => ("op", format!("so:{}", server_sort_code(*sort))),
     };
     if args.is_empty() {
         format!("1:{code}")
@@ -260,6 +261,7 @@ fn decode_ops(args: &[&str]) -> Option<CustomId> {
         ["dm", j] => C::OpsDismissJob(JobId::from_u22(j).ok()?),
         ["jp", p] => C::OpsJobsPage(number(p)?),
         ["sv", s, p] => C::OpsServersPage(server_sort(s)?, number(p)?),
+        ["so", s] => C::OpsServersSort(server_sort(s)?),
         _ => return None,
     })
 }

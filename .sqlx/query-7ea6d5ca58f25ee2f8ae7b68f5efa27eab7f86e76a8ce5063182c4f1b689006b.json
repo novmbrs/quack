@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH month AS (\n                 SELECT guild_id, count(*) AS n FROM cases\n                 WHERE $1 = 'cases' AND created_at > now() - interval '30 days'\n                 GROUP BY guild_id),\n               page AS (\n                 SELECT g.guild_id, g.name, g.member_count, g.first_joined_at,\n                        coalesce(m.n, 0) AS ranked_month\n                 FROM guilds g LEFT JOIN month m USING (guild_id)\n                 WHERE g.installed\n                 ORDER BY\n                   CASE WHEN $1 = 'members' THEN g.member_count END DESC NULLS LAST,\n                   CASE WHEN $1 = 'cases' THEN coalesce(m.n, 0) END DESC NULLS LAST,\n                   CASE WHEN $1 = 'newest' THEN g.first_joined_at END DESC NULLS LAST,\n                   g.guild_id\n                 OFFSET $2 LIMIT $3)\n               SELECT p.guild_id, p.name, p.member_count, p.first_joined_at,\n                      (SELECT count(*) FROM cases c WHERE c.guild_id = p.guild_id\n                         AND c.created_at > now() - interval '30 days') AS \"month!\",\n                      (SELECT count(*) FROM cases c WHERE c.guild_id = p.guild_id) AS \"total!\"\n               FROM page p\n               ORDER BY\n                 CASE WHEN $1 = 'members' THEN p.member_count END DESC NULLS LAST,\n                 CASE WHEN $1 = 'cases' THEN p.ranked_month END DESC NULLS LAST,\n                 CASE WHEN $1 = 'newest' THEN p.first_joined_at END DESC NULLS LAST,\n                 p.guild_id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "guild_id",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "guild_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "member_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "member_count"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "first_joined_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "first_joined_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "month!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "7ea6d5ca58f25ee2f8ae7b68f5efa27eab7f86e76a8ce5063182c4f1b689006b"
+}

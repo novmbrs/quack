@@ -26,7 +26,10 @@ pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
     let day = quack_db::fleet::day(&mut conn).await?;
     drop(conn);
     let runs = quack_telemetry::metrics().jobs.tally().read();
-    let pool_size = db.pool().size();
+    // Capacity, not the connections open now: a pool that opened 2 of
+    // its 20 isn't full when both are busy.
+    let pool_size = db.pool().options().get_max_connections();
+    let open = db.pool().size();
     let idle = u32::try_from(db.pool().num_idle()).unwrap_or(u32::MAX);
     let gateway = ops.gateway().unwrap_or_default();
     Ok(text::Status {
@@ -62,7 +65,7 @@ pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
         failed_actions,
         open_appeals,
         open_tickets,
-        pool_used: pool_size.saturating_sub(idle),
+        pool_used: open.saturating_sub(idle),
         pool_size,
         updated_at: OffsetDateTime::now_utc(),
     })

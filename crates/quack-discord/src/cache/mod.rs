@@ -35,6 +35,28 @@ pub(crate) fn member_update(update: &MemberUpdate) -> Option<Member> {
     })
 }
 
+/// Moves the guild cache's member count for a join or leave. Runs before
+/// [`feed_members`]: a join for a member the member cache already holds
+/// from the gateway is a repeat and moves nothing.
+pub(crate) fn count_members(guilds: &GuildCache, members: &MemberCache, event: &Event) {
+    match event {
+        Event::MemberAdd(add) => {
+            if let (Some(guild), Some(member)) =
+                (convert::id(add.guild_id), convert::id(add.member.user.id))
+                && !members.holds_from_event(guild, member)
+            {
+                guilds.count_member(guild, true);
+            }
+        }
+        Event::MemberRemove(remove) => {
+            if let Some(guild) = convert::id(remove.guild_id) {
+                guilds.count_member(guild, false);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Feeds the member cache, and through it the account cache, from a
 /// gateway event. Interaction and message authors refresh their accounts.
 pub(crate) fn feed_members(members: &MemberCache, event: &Event) {

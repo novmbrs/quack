@@ -37,6 +37,11 @@ impl<K: Hash + Eq + Clone, V> Lru<K, V> {
         self.entries.get(key).map(|(v, _)| v)
     }
 
+    /// Looks up an entry without marking it used.
+    pub(crate) fn peek(&self, key: &K) -> Option<&V> {
+        self.entries.get(key).map(|(v, _)| v)
+    }
+
     /// Inserts or replaces an entry; returns how many entries were evicted.
     pub(crate) fn insert(&mut self, key: K, value: V) -> usize {
         let tick = self.next_tick();

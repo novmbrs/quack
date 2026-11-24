@@ -163,6 +163,7 @@ async fn component(
         CustomId::OpsRefresh => ops::refresh(p).await,
         CustomId::OpsJobsPage(page) => ops::page(p, page, source).await,
         CustomId::OpsServersPage(sort, page) => ops::servers_page(p, sort, page, source).await,
+        CustomId::OpsServersSort(sort) => ops::servers_page(p, sort, 1, source).await,
         CustomId::OpsRequeueJob(job) => ops::job(p, job, JobControl::Requeue, source).await,
         CustomId::OpsDismissJob(job) => ops::job(p, job, JobControl::Dismiss, source).await,
         // A modal's id on a button: nothing current renders that.

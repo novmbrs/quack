@@ -1,6 +1,7 @@
 //! An in-process tally of job runs over the last 24 hours, for the ops
 //! metrics (§21.8). OpenTelemetry instruments can't be read back, so this
-//! keeps its own small counts: one bucket per hour, one row per kind. It
+//! keeps its own small counts: one bucket per 10 minutes, one row per
+//! kind, and reads a whole day plus the bucket in progress. It
 //! starts empty with each process.
 
 use std::sync::{Mutex, PoisonError};
@@ -8,8 +9,12 @@ use std::time::{Duration, Instant};
 
 use crate::labels::{JobKind, JobOutcome};
 
-const HOURS: usize = 24;
-const HOUR: u64 = 3_600;
+/// One bucket's length.
+const BUCKET: u64 = 600;
+/// A day of buckets.
+const DAY: u64 = 86_400 / BUCKET;
+/// Slots: a whole day before the bucket in progress, and that bucket.
+const SLOTS: usize = 145;
 
 /// Runs of one job kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,8 +63,9 @@ impl KindRuns {
     }
 }
 
-/// What the tally read: the kinds that ran, and how long it covers (the
-/// last 24 hours, or less when the process is younger).
+/// What the tally read: the kinds that ran, and how long it covers: since
+/// start while the process is younger than a day, else the last 24 hours
+/// and the part of the 10 minutes before them still in their bucket.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TallyRead {
     /// How far back the counts go.
@@ -70,20 +76,20 @@ pub struct TallyRead {
 
 #[derive(Clone)]
 struct Bucket {
-    hour: u64,
+    index: u64,
     kinds: Vec<KindRuns>,
 }
 
 impl Bucket {
-    fn new(hour: u64) -> Self {
+    fn new(index: u64) -> Self {
         Self {
-            hour,
+            index,
             kinds: JobKind::ALL.iter().copied().map(KindRuns::empty).collect(),
         }
     }
 }
 
-/// Job runs per hour over the last 24 hours of this process.
+/// Job runs per 10 minutes over the last day of this process.
 pub struct JobTally {
     started: Instant,
     buckets: Mutex<Vec<Bucket>>,
@@ -110,19 +116,19 @@ impl JobTally {
     }
 
     fn record_at(&self, elapsed: Duration, kind: JobKind, outcome: JobOutcome, took: Duration) {
-        let hour = elapsed.as_secs() / HOUR;
-        let Some(index) = JobKind::ALL.iter().position(|k| *k == kind) else {
+        let index = elapsed.as_secs() / BUCKET;
+        let Some(row) = JobKind::ALL.iter().position(|k| *k == kind) else {
             return;
         };
         let mut buckets = self.buckets.lock().unwrap_or_else(PoisonError::into_inner);
-        let slot = usize::try_from(hour).unwrap_or(0) % HOURS;
+        let slot = usize::try_from(index % SLOTS as u64).unwrap_or(0);
         if buckets.len() <= slot {
             buckets.resize_with(slot + 1, || Bucket::new(u64::MAX));
         }
-        if buckets[slot].hour != hour {
-            buckets[slot] = Bucket::new(hour);
+        if buckets[slot].index != index {
+            buckets[slot] = Bucket::new(index);
         }
-        let row = &mut buckets[slot].kinds[index];
+        let row = &mut buckets[slot].kinds[row];
         row.runs += 1;
         match outcome {
             JobOutcome::Retry | JobOutcome::LostLease | JobOutcome::TimedOut => row.retries += 1,
@@ -143,21 +149,19 @@ impl JobTally {
     }
 
     fn read_at(&self, elapsed: Duration) -> TallyRead {
-        let hour = elapsed.as_secs() / HOUR;
-        let oldest = hour.saturating_sub(u64::try_from(HOURS).unwrap_or(24) - 1);
+        let index = elapsed.as_secs() / BUCKET;
+        let oldest = index.saturating_sub(DAY);
         let mut kinds: Vec<KindRuns> = JobKind::ALL.iter().copied().map(KindRuns::empty).collect();
         let buckets = self.buckets.lock().unwrap_or_else(PoisonError::into_inner);
         for bucket in buckets
             .iter()
-            .filter(|b| b.hour >= oldest && b.hour <= hour)
+            .filter(|b| b.index >= oldest && b.index <= index)
         {
             for (total, row) in kinds.iter_mut().zip(&bucket.kinds) {
                 total.add(row);
             }
         }
-        // The oldest bucket may hold up to an hour more than 24 hours ago,
-        // so the window is whole hours.
-        let covers = Duration::from_secs((hour - oldest) * HOUR + elapsed.as_secs() % HOUR);
+        let covers = elapsed.saturating_sub(Duration::from_secs(oldest * BUCKET));
         TallyRead {
             covers,
             kinds: kinds.into_iter().filter(|k| k.runs > 0).collect(),
@@ -170,7 +174,7 @@ mod tests {
     use super::*;
 
     const fn at(hours: u64, secs: u64) -> Duration {
-        Duration::from_secs(hours * HOUR + secs)
+        Duration::from_secs(hours * 3_600 + secs)
     }
 
     #[test]
@@ -182,7 +186,7 @@ mod tests {
         tally.record_at(at(1, 0), JobKind::SendDm, JobOutcome::Dead, ms(200));
         tally.record_at(at(1, 1), JobKind::RunAction, JobOutcome::TimedOut, ms(50));
         let read = tally.read_at(at(1, 30));
-        assert_eq!(read.covers, at(1, 30));
+        assert_eq!(read.covers, at(1, 30), "since start");
         assert_eq!(read.kinds.len(), 2);
         let dm = read
             .kinds
@@ -197,16 +201,32 @@ mod tests {
     }
 
     #[test]
-    fn forgets_runs_older_than_a_day() {
+    fn keeps_a_whole_day() {
         let tally = JobTally::new();
-        tally.record_at(at(0, 0), JobKind::SendDm, JobOutcome::Done, Duration::ZERO);
+        // Near the end of the first bucket.
+        tally.record_at(
+            at(0, 590),
+            JobKind::SendDm,
+            JobOutcome::Done,
+            Duration::ZERO,
+        );
         tally.record_at(at(10, 0), JobKind::SendDm, JobOutcome::Done, Duration::ZERO);
-        assert_eq!(tally.read_at(at(23, 59)).kinds[0].runs, 2);
-        assert_eq!(tally.read_at(at(24, 0)).kinds[0].runs, 1);
-        // The same slot a day later starts over.
-        tally.record_at(at(24, 1), JobKind::SendDm, JobOutcome::Done, Duration::ZERO);
-        let read = tally.read_at(at(24, 2));
+        // A day after it, the run is still counted and the window is at
+        // least 24 hours.
+        let read = tally.read_at(at(24, 590));
         assert_eq!(read.kinds[0].runs, 2);
-        assert_eq!(read.covers, at(23, 2));
+        assert!(read.covers >= at(24, 0), "{:?}", read.covers);
+        // Once its bucket is more than a day old, it's gone.
+        let read = tally.read_at(at(24, 600));
+        assert_eq!(read.kinds[0].runs, 1);
+        assert!(read.covers >= at(24, 0) && read.covers <= at(24, 600));
+        // Its slot starts over when reused.
+        tally.record_at(
+            at(24, 1_300),
+            JobKind::SendDm,
+            JobOutcome::Done,
+            Duration::ZERO,
+        );
+        assert_eq!(tally.read_at(at(24, 1_300)).kinds[0].runs, 2);
     }
 }

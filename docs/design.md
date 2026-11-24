@@ -1454,7 +1454,7 @@ authorizes the clicker.
 | `al` / `rl` | Pager | page | `/appeals` / `/rules` page. |
 | `su` | Setup control | area, operation | §11.8. |
 | `to` / `tc` / `tf` | Button Open a ticket / Close ticket / Restore private access | — / ticket / ticket | §13.2. |
-| `op` | Ops buttons | `st`; `rq` or `dm`, job; `jp`, page; `sv`, order (`m`, `c`, `n`), page | Refresh the status board; requeue or dismiss a dead job; a `/ops jobs` page; a `/ops metrics servers` page in an order (§21.8). |
+| `op` | Ops buttons | `st`; `rq` or `dm`, job; `jp`, page; `sv`, order (`m`, `c`, `n`), page; `so`, order | Refresh the status board; requeue or dismiss a dead job; a `/ops jobs` page; a `/ops metrics servers` page in an order; that list from page 1 in an order (§21.8). |
 
 **Legacy ids** (Go-era messages stay in Discord). Each supported shape is
 decoded exactly; the ULID is mapped with §19.3 and must name a record of
@@ -1608,14 +1608,14 @@ updates the guild and member caches in the shard loop.
 | --- | --- |
 | `READY` | Mark connected; record Quack's own account id; clear the member cache; mark every server unloaded until its `GUILD_CREATE`. Installed servers missing from the list are treated as left (logged and skipped on error, the pass goes on). After an invalid session, every `open` ticket gets `journal_gaps`. |
 | `RESUMED` | Mark connected; nothing was missed. |
-| `GUILD_CREATE` | Guild cache; seed members; bootstrap the server (§17.5); set `guilds.member_count` from the event (§21.6); reconcile channel settings (§13.1.5); warm rules and config caches; mark loaded. |
+| `GUILD_CREATE` | Guild cache (with the event's member count); seed members; bootstrap the server (§17.5); store the member count (§21.6); reconcile channel settings (§13.1.5); warm rules and config caches; mark loaded. |
 | `GUILD_UPDATE` | Update `guilds` (name, icon, owner, MFA level); activity `server_changed`. |
 | `GUILD_DELETE` | `unavailable` → mark unloaded (outage); else Quack left (§17.5). |
 | `GUILD_ROLE_*` | Guild cache only; deleted roles are ignored as staff roles. |
 | `CHANNEL_CREATE/UPDATE` | Guild cache; activity `channel_changed`. |
 | `CHANNEL_DELETE` | Guild cache; clear settings pointing at it (§13.1.5); activity. |
 | `THREAD_DELETE` | A ticket thread (`opening`/`open`) → close the ticket (§13.2.4). |
-| `GUILD_MEMBER_ADD/UPDATE/REMOVE` | Member cache; activity `member_joined` / `member_left`; add and remove move a known `guilds.member_count` by one (a dropped event leaves it off until the next `GUILD_CREATE`). |
+| `GUILD_MEMBER_ADD/UPDATE/REMOVE` | Member cache; activity `member_joined` / `member_left`. Add and remove move the guild cache's member count by one in the shard loop (a join for a member the member cache already holds from the gateway moves nothing), and the event carries the absolute count and when it was read; the handler stores it in `guilds.member_count` unless a newer one is stored (§21.6). Between `GUILD_CREATE`s it is an estimate. |
 | `MESSAGE_CREATE` | Activity message cache; ticket journal; honeypot hit. |
 | `MESSAGE_UPDATE` | Activity `message_edited`. |
 | `MESSAGE_DELETE`, `MESSAGE_DELETE_BULK` | Activity; a deleted tracked message is handled by `messages::message_deleted` (§10.3). |
@@ -2656,8 +2656,9 @@ from `0008`. A test checks these lines against the `quack-core` enums.
 ### 15.2 Servers, accounts, sessions
 
 - `guilds`: every server ever joined, never deleted (`installed`), with
-  its `member_count` for the ops metrics (§21.6; NULL until a
-  `GUILD_CREATE` sets it, then moved by member joins and leaves).
+  its `member_count` and `member_count_at` for the ops metrics (§21.6,
+  §11.9: NULL until a `GUILD_CREATE` sets them; a write read before the
+  stored `member_count_at` is ignored).
 - `case_counters`: per-server case number; its row lock serializes case
   creation.
 - `discord_accounts`: signed-in accounts and their last 2FA reading (§2.2).
@@ -2770,9 +2771,10 @@ Each hot-path read has an index declared with its table (escalation:
   nullable `evidence_files.original_url` and `UNIQUE (guild_id, id)`;
   `evidence_upload_bytes`; `case_drafts.evidence_file`. Existing items are
   saved messages, visible to the member, not removed.
-- `0009`: `guilds.member_count` (§21.6), and the cross-server time indexes
-  the ops metrics read: `cases (created_at)` and `mod_log (created_at,
-  kind)` for `quack_joined` and `quack_left`.
+- `0009`: `guilds.member_count` and `member_count_at` (§21.6), and the
+  cross-server time indexes the ops metrics read: `created_at` on
+  `cases`, `appeals`, and `tickets`, and `mod_log (created_at, kind)` for
+  `quack_joined` and `quack_left`.
 
 
 ## 16. Job queue
@@ -3652,14 +3654,17 @@ and counts of cases, rules, appeals, tickets, failed actions, and actions
 done (per server, or summed across servers). Never case
 contents, reasons, context, evidence, appeals, member names, messages, or
 DMs. The error feed carries log lines, which §18.5 already keeps free of
-member and staff text and secrets.
+member and staff text and secrets. Discord itself lets the ops server's
+owner and anyone with Administrator see every channel, so the ops server
+should have no one in those places who isn't an operator.
 
 ### 21.2 Channels
 
 After the gateway is ready, `quack_ops::start` makes sure the ops server
 has a category named `Ops` holding five text channels, and repeats every
 5 minutes until it succeeds (a missing install or permission is logged
-once at `warn`):
+once at `warn`), then checks again every 10 minutes (a deleted channel
+is made again; when Discord can't answer, nothing changes):
 
 | Channel | Gets |
 | --- | --- |
@@ -3674,9 +3679,10 @@ channels with exactly these names are adopted; anything missing is
 created. Created ones get: @everyone deny View Channel; Quack (member
 overwrite) allow View Channel, Send Messages, Read Message History, Embed
 Links; each operator (member overwrite) allow View Channel, Send Messages,
-Read Message History. An adopted channel whose own overwrites don't deny
-@everyone View Channel is never posted to (`warn`, once per start), so an
-ops feed can't leak into a public channel.
+Read Message History. An adopted channel is posted to only while its own
+overwrites deny @everyone View Channel and grant View Channel to no role
+and to no member but Quack and the operators; otherwise it gets nothing
+(`warn` at each check), so an ops feed can't leak to anyone else.
 
 ### 21.3 Posts and lifecycle
 
@@ -3756,7 +3762,7 @@ marked green, amber, or red where it can be:
 - **Queue**: jobs ready and the oldest wait by kind (non-zero kinds only);
   dead jobs.
 - **Waiting for staff**: failed actions, open appeals, open tickets.
-- **Database**: pool use.
+- **Database**: connections in use of the pool's maximum.
 
 A board Discord no longer has (404) is posted again. `/ops status`
 answers the same message privately.
@@ -3777,18 +3783,22 @@ Best effort: a restart or a Discord failure loses the minute.
 | Command | Answer (ephemeral) |
 | --- | --- |
 | `/ops status` | The status board. |
-| `/ops server id:<server id>` | `ops.server`: §21.1's metadata and counts for any stored server, plus Quack's missing permissions there when Discord answers; `ops.server_unknown` otherwise. |
+| `/ops server id:<server id>` | `ops.server`: §21.1's metadata and counts for any stored server (its member count as last stored, marked as of leaving for a server Quack left), plus Quack's missing permissions there when Discord answers; `ops.server_unknown` otherwise. |
 | `/ops jobs` | `ops.jobs`: dead jobs, newest first, 5 per page, each with **Requeue** and **Dismiss**. |
 | `/ops metrics overview` | `ops.metrics_overview`: servers, members, and the median server's members; a sparkline of cases per UTC day over 14 days (today and the peak); a table of cases, voided cases, appeals, tickets, actions done, actions failed (not dismissed), joins, and leaves over 24 hours, 7 days, 30 days, and all time; servers by size (under 100, 1,000, 10,000, 100,000 members, and larger) and by module on, as bars. Read on demand. |
 | `/ops metrics servers` | `ops.metrics_servers`: installed servers, 10 per page, by members (default), by cases in the last 30 days, or newest first install; each with its name, id, members, cases in 30 days and all time, and first install date. **Members**, **Cases**, and **Newest** switch the order (page 1); the pager pages. |
 | `/ops metrics jobs` | `ops.metrics_jobs`: job runs by kind (runs, retried, dead, mean time) over the last 24 hours of this process, the queue by kind now (ready, waiting for later, running, dead) with the oldest ready wait, and undismissed failed actions by kind and reason with how many servers. |
 
 Job runs come from an in-process tally beside the job metrics
-(`quack_telemetry`'s `JobTally`: per-hour buckets per kind, the last 24
-hours kept). OpenTelemetry can't be read back, and finished jobs are
-deleted, so a restart starts it empty; Grafana keeps the history.
+(`quack_telemetry`'s `JobTally`: 10-minute buckets per kind, read as the
+last 24 hours plus the part of the bucket before them, or since start
+while the process is younger). OpenTelemetry can't be read back, and
+finished jobs are deleted, so a restart starts it empty; Grafana keeps
+the history. The ranking pages the servers first and counts cases only
+for that page (the Cases order aggregates the 30-day window alone).
 
 Custom ids (§11.5): `op:st` refresh the board; `op:rq:<job>` and
 `op:dm:<job>` requeue and dismiss; `op:jp:<page>` a `/ops jobs` page;
 `op:sv:<order>:<page>` a `/ops metrics servers` page (`m` members, `c`
-cases, `n` newest). A non-operator gets `ops.not_allowed`.
+cases, `n` newest) and `op:so:<order>` its order buttons (page 1; apart
+from the pager's ids, since a message's components can't share one). A non-operator gets `ops.not_allowed`.

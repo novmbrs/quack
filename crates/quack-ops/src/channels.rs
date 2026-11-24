@@ -153,15 +153,25 @@ fn overwrites(ops: &Ops, quack: MemberId) -> Vec<Overwrite> {
     list
 }
 
-/// Whether a channel's own overwrites hide it from @everyone.
-fn is_private(ops: &Ops, channel: &ChannelFacts) -> bool {
+/// Whether a channel's own overwrites keep it to Quack and the operators:
+/// @everyone is denied View Channel, and no overwrite grants it to a role
+/// or to any other member. (Discord's server owner and Administrator
+/// still see every channel; §21.1.)
+fn is_private(ops: &Ops, channel: &ChannelFacts, quack: MemberId) -> bool {
     let Some(everyone) = RoleId::new(ops.guild().get()) else {
         return false;
     };
-    channel.overwrites.iter().any(|o| {
+    let allowed =
+        |m: MemberId| m == quack || ops.config().operators.iter().any(|op| op.get() == m.get());
+    let hidden = channel.overwrites.iter().any(|o| {
         o.target == OverwriteTarget::Role(everyone)
             && o.deny.contains(Permission::ViewChannel.into())
-    })
+    });
+    let no_one_else = channel.overwrites.iter().all(|o| {
+        !o.allow.contains(Permission::ViewChannel.into())
+            || matches!(o.target, OverwriteTarget::Member(m) if allowed(m))
+    });
+    hidden && no_one_else
 }
 
 /// Finds or creates the category and its channels.
@@ -202,12 +212,12 @@ pub(crate) async fn ensure(ops: &Ops) -> Result<Channels, NotReady> {
             c.kind == TEXT_CHANNEL && c.name == slot.name() && c.parent_id == Some(category)
         });
         let id = match found {
-            Some(c) if is_private(ops, c) => Some(c.id),
+            Some(c) if is_private(ops, c, quack) => Some(c.id),
             Some(c) => {
                 tracing::warn!(
                     channel_id = c.id.get(),
                     channel = slot.name(),
-                    "an ops channel is visible to everyone; Quack won't post there"
+                    "an ops channel is visible to people who aren't operators; Quack won't post there"
                 );
                 None
             }

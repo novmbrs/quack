@@ -36,6 +36,9 @@ struct State {
     loaded: HashSet<GuildId>,
     quack_id: Option<AccountId>,
     quack_members: HashMap<GuildId, Member>,
+    /// Each server's member count: `GUILD_CREATE`'s, then moved by joins
+    /// and leaves in gateway order (§21.6).
+    member_counts: HashMap<GuildId, u64>,
 }
 
 /// The guild cache.
@@ -102,6 +105,7 @@ impl GuildCache {
                 state.quack_id = convert::id(ready.user.id);
                 state.loaded.clear();
                 state.quack_members.clear();
+                state.member_counts.clear();
             }
             Event::Resumed => state.connected = !state.tainted,
             Event::GatewayClose(_)
@@ -123,6 +127,9 @@ impl GuildCache {
                     {
                         state.quack_members.insert(id, member);
                     }
+                    if let Some(count) = guild.member_count {
+                        state.member_counts.insert(id, count);
+                    }
                     state.loaded.insert(id);
                 }
                 GuildCreate::Unavailable(guild) => {
@@ -140,6 +147,7 @@ impl GuildCache {
                 if let Some(id) = convert::id(delete.id) {
                     state.loaded.remove(&id);
                     state.quack_members.remove(&id);
+                    state.member_counts.remove(&id);
                 }
             }
             Event::MemberAdd(add) if convert::id(add.member.user.id) == state.quack_id => {
@@ -158,6 +166,25 @@ impl GuildCache {
             }
             _ => {}
         }
+    }
+
+    /// Moves a server's known member count by one join or leave.
+    pub(crate) fn count_member(&self, guild: GuildId, joined: bool) {
+        let mut state = self.write();
+        if let Some(count) = state.member_counts.get_mut(&guild) {
+            *count = if joined {
+                count.saturating_add(1)
+            } else {
+                count.saturating_sub(1)
+            };
+        }
+    }
+
+    /// A server's member count, when a `GUILD_CREATE` gave one this
+    /// session. An estimate between `GUILD_CREATE`s: a dropped or
+    /// repeated join or leave moves it by one.
+    pub fn member_count(&self, guild: GuildId) -> Option<u64> {
+        self.read().member_counts.get(&guild).copied()
     }
 
     /// Stops trusting the cache: until a resume (the connection broke or
