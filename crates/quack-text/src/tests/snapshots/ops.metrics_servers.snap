@@ -1,0 +1,112 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## first page
+tone: Neutral
+--- discord ---
+### 🏆 Servers by members
+-# 1,204 servers · Page 1 of 121
+**1.** **Pond 1** `1005778938108325971`
+-# 150,000 members · 40 cases in 30 days, 900 in all · since <t:1794924309:d>
+**2.** **Pond 2** `1005778938108325972`
+-# 75,000 members · 20 cases in 30 days, 450 in all · since <t:1794924309:d>
+**3.** **Pond 3** `1005778938108325973`
+-# members unknown · 13 cases in 30 days, 300 in all · since <t:1794924309:d>
+**4.** **Pond 4** `1005778938108325974`
+-# 37,500 members · 10 cases in 30 days, 225 in all · since <t:1794924309:d>
+**5.** **Pond 5** `1005778938108325975`
+-# 30,000 members · 8 cases in 30 days, 180 in all · since <t:1794924309:d>
+**6.** **Pond 6** `1005778938108325976`
+-# 25,000 members · 6 cases in 30 days, 150 in all · since <t:1794924309:d>
+**7.** **Pond 7** `1005778938108325977`
+-# 21,428 members · 5 cases in 30 days, 128 in all · since <t:1794924309:d>
+**8.** **Pond 8** `1005778938108325978`
+-# 18,750 members · 5 cases in 30 days, 112 in all · since <t:1794924309:d>
+**9.** **Pond 9** `1005778938108325979`
+-# 16,666 members · 4 cases in 30 days, 100 in all · since <t:1794924309:d>
+**10.** **Pond 10** `1005778938108325980`
+-# 15,000 members · 4 cases in 30 days, 90 in all · since <t:1794924309:d>
+buttons: [Members · Primary] OpsServersPage(Members, 1) | [Cases · Secondary] OpsServersPage(Cases, 1) | [Newest · Secondary] OpsServersPage(Newest, 1)
+buttons: [Next · Secondary] OpsServersPage(Members, 2)
+--- plain ---
+🏆 Servers by members
+1,204 servers · Page 1 of 121
+1. Pond 1 1005778938108325971
+150,000 members · 40 cases in 30 days, 900 in all · since 17 Nov 2026
+2. Pond 2 1005778938108325972
+75,000 members · 20 cases in 30 days, 450 in all · since 17 Nov 2026
+3. Pond 3 1005778938108325973
+members unknown · 13 cases in 30 days, 300 in all · since 17 Nov 2026
+4. Pond 4 1005778938108325974
+37,500 members · 10 cases in 30 days, 225 in all · since 17 Nov 2026
+5. Pond 5 1005778938108325975
+30,000 members · 8 cases in 30 days, 180 in all · since 17 Nov 2026
+6. Pond 6 1005778938108325976
+25,000 members · 6 cases in 30 days, 150 in all · since 17 Nov 2026
+7. Pond 7 1005778938108325977
+21,428 members · 5 cases in 30 days, 128 in all · since 17 Nov 2026
+8. Pond 8 1005778938108325978
+18,750 members · 5 cases in 30 days, 112 in all · since 17 Nov 2026
+9. Pond 9 1005778938108325979
+16,666 members · 4 cases in 30 days, 100 in all · since 17 Nov 2026
+10. Pond 10 1005778938108325980
+15,000 members · 4 cases in 30 days, 90 in all · since 17 Nov 2026
+--- model ---
+Heading [Fixed("🏆 Servers by members")]
+Subtext [Fixed("1,204 servers · Page 1 of 121")]
+Text [Bold([Fixed("1.")]), Fixed(" "), Bold([User("Pond 1")]), Fixed(" "), Code("1005778938108325971")]
+Subtext [Fixed("150,000 members · 40 cases in 30 days, 900 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("2.")]), Fixed(" "), Bold([User("Pond 2")]), Fixed(" "), Code("1005778938108325972")]
+Subtext [Fixed("75,000 members · 20 cases in 30 days, 450 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("3.")]), Fixed(" "), Bold([User("Pond 3")]), Fixed(" "), Code("1005778938108325973")]
+Subtext [Fixed("members unknown · 13 cases in 30 days, 300 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("4.")]), Fixed(" "), Bold([User("Pond 4")]), Fixed(" "), Code("1005778938108325974")]
+Subtext [Fixed("37,500 members · 10 cases in 30 days, 225 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("5.")]), Fixed(" "), Bold([User("Pond 5")]), Fixed(" "), Code("1005778938108325975")]
+Subtext [Fixed("30,000 members · 8 cases in 30 days, 180 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("6.")]), Fixed(" "), Bold([User("Pond 6")]), Fixed(" "), Code("1005778938108325976")]
+Subtext [Fixed("25,000 members · 6 cases in 30 days, 150 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("7.")]), Fixed(" "), Bold([User("Pond 7")]), Fixed(" "), Code("1005778938108325977")]
+Subtext [Fixed("21,428 members · 5 cases in 30 days, 128 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("8.")]), Fixed(" "), Bold([User("Pond 8")]), Fixed(" "), Code("1005778938108325978")]
+Subtext [Fixed("18,750 members · 5 cases in 30 days, 112 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("9.")]), Fixed(" "), Bold([User("Pond 9")]), Fixed(" "), Code("1005778938108325979")]
+Subtext [Fixed("16,666 members · 4 cases in 30 days, 100 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Text [Bold([Fixed("10.")]), Fixed(" "), Bold([User("Pond 10")]), Fixed(" "), Code("1005778938108325980")]
+Subtext [Fixed("15,000 members · 4 cases in 30 days, 90 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+
+## last page by cases
+tone: Neutral
+--- discord ---
+### 🏆 Servers by cases in the last 30 days
+-# 1,201 servers · Page 121 of 121
+**1201.** **Pond 4** `1005778938108325974`
+-# 37,500 members · 10 cases in 30 days, 225 in all · since <t:1794924309:d>
+buttons: [Members · Secondary] OpsServersPage(Members, 1) | [Cases · Primary] OpsServersPage(Cases, 1) | [Newest · Secondary] OpsServersPage(Newest, 1)
+buttons: [Previous · Secondary] OpsServersPage(Cases, 120)
+--- plain ---
+🏆 Servers by cases in the last 30 days
+1,201 servers · Page 121 of 121
+1201. Pond 4 1005778938108325974
+37,500 members · 10 cases in 30 days, 225 in all · since 17 Nov 2026
+--- model ---
+Heading [Fixed("🏆 Servers by cases in the last 30 days")]
+Subtext [Fixed("1,201 servers · Page 121 of 121")]
+Text [Bold([Fixed("1201.")]), Fixed(" "), Bold([User("Pond 4")]), Fixed(" "), Code("1005778938108325974")]
+Subtext [Fixed("37,500 members · 10 cases in 30 days, 225 in all · since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+
+## empty
+tone: Neutral
+--- discord ---
+### 🏆 Newest servers
+-# 0 servers · Page 1 of 1
+No servers on this page.
+buttons: [Members · Secondary] OpsServersPage(Members, 1) | [Cases · Secondary] OpsServersPage(Cases, 1) | [Newest · Primary] OpsServersPage(Newest, 1)
+--- plain ---
+🏆 Newest servers
+0 servers · Page 1 of 1
+No servers on this page.
+--- model ---
+Heading [Fixed("🏆 Newest servers")]
+Subtext [Fixed("0 servers · Page 1 of 1")]
+Text [Fixed("No servers on this page.")]

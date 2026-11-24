@@ -64,19 +64,30 @@ pub(crate) async fn started(
     enqueue(ops, Feed::Deploys, &body).await
 }
 
-/// Posts a join (`Some(rejoined)`) or a leave (`None`) of `guild`.
+/// Posts a join (`Some(rejoined)`) or a leave (`None`) of `guild`: its
+/// members, and on a leave how long Quack stayed and what it leaves
+/// behind (§21.4).
 pub(crate) async fn install(ops: &Ops, guild: GuildId, rejoined: Option<bool>) {
     let result = async {
-        let (stored, servers) = {
-            let mut conn = ops.engine().db().conn().await?;
-            (
-                quack_db::guilds::get(&mut conn, guild).await?,
-                db::installed_count(&mut conn).await?,
-            )
-        };
-        let Some(stored) = stored else {
+        let mut conn = ops.engine().db().conn().await?;
+        let Some(stored) = quack_db::guilds::get(&mut conn, guild).await? else {
             return Ok(());
         };
+        let servers = db::installed_count(&mut conn).await?;
+        let day = quack_db::fleet::day(&mut conn).await?;
+        let left = rejoined.is_none();
+        let (since, counts) = if left {
+            let since = quack_db::fleet::last_joined_at(&mut conn, guild)
+                .await?
+                .unwrap_or(stored.first_joined_at);
+            (
+                Some(since),
+                Some(db::server_counts(&mut conn, guild).await?),
+            )
+        } else {
+            (None, None)
+        };
+        drop(conn);
         let body = Body::Install {
             change: match rejoined {
                 Some(false) => Change::Joined,
@@ -87,6 +98,12 @@ pub(crate) async fn install(ops: &Ops, guild: GuildId, rejoined: Option<bool>) {
             guild_id: guild,
             owner_id: stored.owner_id,
             servers,
+            members: stored.member_count,
+            total_members: Some(day.members),
+            since,
+            left_at: if left { stored.left_at } else { None },
+            cases: counts.map(|c| c.cases),
+            rules: counts.map(|c| c.active_rules),
         };
         enqueue(ops, Feed::Installs, &body).await
     }

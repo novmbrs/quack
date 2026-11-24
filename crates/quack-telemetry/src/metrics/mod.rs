@@ -17,6 +17,7 @@ mod modules;
 mod observe;
 mod process;
 mod runtime;
+mod tally;
 
 use std::sync::OnceLock;
 
@@ -36,6 +37,7 @@ pub use moderation::{
 };
 pub use modules::{ActivityLogMetrics, HoneypotMetrics, TicketMetrics};
 pub use runtime::RuntimeMetrics;
+pub use tally::{JobTally, KindRuns, TallyRead};
 
 /// The instrumentation scope name for every Quack instrument.
 pub const SCOPE: &str = "quack";

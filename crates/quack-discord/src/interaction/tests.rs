@@ -400,3 +400,30 @@ fn an_interaction_with_unreadable_data_is_still_answerable() {
     );
     assert!(decode_json(r#"{"type": 2}"#).is_none(), "no id or token");
 }
+
+#[test]
+fn ops_subcommands_and_the_metrics_group_parse() {
+    let request = |options: Value| decoded(2, &slash("ops", &options)).request;
+    assert_eq!(
+        request(json!([{"name": "status", "type": 1, "options": []}])),
+        Request::Ops(OpsRequest::Status)
+    );
+    for (sub, want) in [
+        ("overview", OpsRequest::MetricsOverview),
+        ("servers", OpsRequest::MetricsServers),
+        ("jobs", OpsRequest::MetricsJobs),
+    ] {
+        assert_eq!(
+            request(json!([{"name": "metrics", "type": 2, "options": [
+                {"name": sub, "type": 1, "options": []}
+            ]}])),
+            Request::Ops(want)
+        );
+    }
+    assert_eq!(
+        request(json!([{"name": "metrics", "type": 2, "options": [
+            {"name": "nope", "type": 1, "options": []}
+        ]}])),
+        Request::Unknown(UnknownReason::UnknownCommand)
+    );
+}

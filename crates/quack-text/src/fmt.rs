@@ -126,6 +126,35 @@ pub fn count(n: impl Into<u128>) -> String {
     out
 }
 
+/// A count shortened for a glance: "950", "18.4K", "2.31M" (three
+/// significant digits from 1,000 up, trailing zeros dropped).
+pub fn compact(n: u64) -> String {
+    const UNITS: [(u64, &str); 3] = [(1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")];
+    let Some((size, unit)) = UNITS.iter().find(|(size, _)| n >= *size) else {
+        return n.to_string();
+    };
+    let whole = n / size;
+    let decimals = match whole {
+        0..=9 => 2,
+        10..=99 => 1,
+        _ => 0,
+    };
+    let scale = 10_u64.pow(decimals);
+    // Truncated, so 999,999 reads "999K", never a rounded-up "1000K".
+    let fraction = n % size * scale / size;
+    let mut out = whole.to_string();
+    if fraction > 0 {
+        let digits = format!(
+            "{fraction:0width$}",
+            width = usize::try_from(decimals).unwrap_or(0)
+        );
+        out.push('.');
+        out.push_str(digits.trim_end_matches('0'));
+    }
+    out.push_str(unit);
+    out
+}
+
 /// "1 item" or "3 items": the count, then the right form of the noun.
 pub fn plural(n: u64, one: &str, other: &str) -> String {
     format!("{} {}", count(n), if n == 1 { one } else { other })
@@ -294,6 +323,18 @@ mod tests {
         assert_eq!(last(3_600), "hour");
         assert_eq!(last(604_800), "7 days");
         assert_eq!(last(5_400), "1 hour 30 minutes");
+    }
+
+    #[test]
+    fn compact_counts() {
+        assert_eq!(compact(0), "0");
+        assert_eq!(compact(950), "950");
+        assert_eq!(compact(1_000), "1K");
+        assert_eq!(compact(1_234), "1.23K");
+        assert_eq!(compact(18_400), "18.4K");
+        assert_eq!(compact(999_999), "999K");
+        assert_eq!(compact(2_310_000), "2.31M");
+        assert_eq!(compact(1_050_000_000), "1.05B");
     }
 
     #[test]

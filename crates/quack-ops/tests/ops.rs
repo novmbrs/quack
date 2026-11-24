@@ -4,11 +4,14 @@
 
 #![allow(clippy::unwrap_used, reason = "tests")]
 
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Result;
 use quack_core::discord::RefusalKind;
 use quack_core::ids::{AccountId, ChannelId, GuildId, JobId};
 use quack_core::permissions::{Overwrite, OverwriteTarget, Permission, Permissions};
-use quack_ops::{Ops, OpsConfig, StopReason};
+use quack_ops::{GatewaySnapshot, Ops, OpsConfig, StopReason};
 use quack_telemetry::errors::{ErrorEvent, push};
 use quack_testkit::fake::{Call, Recorded, Script};
 use quack_testkit::rules_for_tests::{BAN, one};
@@ -250,12 +253,18 @@ async fn the_board_is_edited_in_place_and_posted_again_when_gone() -> Result<()>
     let h = Harness::new().await?;
     let ops = new_ops(&h);
     let channels = ops.prepare_channels().await.unwrap();
+    ops.set_gateway(Arc::new(|| GatewaySnapshot {
+        connected: true,
+        latency: Some(Duration::from_millis(40)),
+        ..GatewaySnapshot::default()
+    }));
     ops.update_board().await?;
     ops.update_board().await?;
     assert_eq!(sent_to(&h, channels.status).len(), 1);
     assert_eq!(h.fake.count(Call::Edit), 1);
     let board = sent_to(&h, channels.status).remove(0);
-    assert!(board.contains("Quack status"), "{board}");
+    assert!(board.contains("All systems normal"), "{board}");
+    assert!(board.contains("Connected · 40 ms heartbeat"), "{board}");
     assert!(board.contains("9.9.9"), "{board}");
 
     h.fake.world(|w| w.messages.clear());
@@ -293,6 +302,94 @@ async fn errors_are_grouped_into_one_post() -> Result<()> {
         discord.contains("https://grafana.test/trace/abc123"),
         "{discord}"
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn installs_post_members_and_how_long_quack_stayed() -> Result<()> {
+    let h = Harness::new().await?;
+    let ops = new_ops(&h);
+    let channels = ops.prepare_channels().await.unwrap();
+    let id = h.guild.get();
+    h.db.execute(&format!(
+        "UPDATE guilds SET member_count = 1234 WHERE guild_id = {id}"
+    ))
+    .await?;
+    ops.server_joined(h.guild, false).await;
+    h.settle().await?;
+    let joined = sent_to(&h, channels.installs).remove(0);
+    assert!(joined.contains("Members: 1,234"), "{joined}");
+    assert!(
+        joined.contains("Quack is in 1 server now, with 1.23K members."),
+        "{joined}"
+    );
+
+    let rule = h.rule(one("Spam", BAN, false)).await?;
+    h.apply(MEMBER, rule).await?;
+    quack_engine::guilds::left(&h.engine, h.guild).await?;
+    ops.server_left(h.guild).await;
+    h.settle().await?;
+    let left = sent_to(&h, channels.installs).remove(1);
+    assert!(left.contains("Quack left a server"), "{left}");
+    assert!(left.contains("Members: 1,234 (last known)"), "{left}");
+    assert!(left.contains("Installed for: "), "{left}");
+    assert!(left.contains("Left behind: 1 case"), "{left}");
+    assert!(left.contains("Quack is in 0 servers now"), "{left}");
+    Ok(())
+}
+
+#[tokio::test]
+async fn metrics_count_the_fleet() -> Result<()> {
+    let h = Harness::new().await?;
+    let ops = new_ops(&h);
+    let id = h.guild.get();
+    h.db.execute(&format!(
+        "UPDATE guilds SET member_count = 250 WHERE guild_id = {id}"
+    ))
+    .await?;
+    let rule = h.rule(one("Spam", BAN, false)).await?;
+    h.apply(MEMBER, rule).await?;
+    h.settle().await?;
+
+    let overview = ops.metrics_overview().await?.plain();
+    assert!(
+        overview.contains("1 server · 250 members · median 250"),
+        "{overview}"
+    );
+    assert!(overview.contains("today 1 · peak 1 a day"), "{overview}");
+    let cases = overview
+        .lines()
+        .find(|l| l.starts_with("Cases "))
+        .unwrap_or_default();
+    assert_eq!(
+        cases.split_whitespace().collect::<Vec<_>>(),
+        ["Cases", "1", "1", "1", "1"],
+        "{overview}"
+    );
+    assert!(overview.contains("100–999"), "{overview}");
+
+    let servers = ops
+        .metrics_servers(quack_text::ops::ServerSort::Cases, 1)
+        .await?
+        .plain();
+    assert!(servers.contains(&id.to_string()), "{servers}");
+    assert!(
+        servers.contains("250 members · 1 case in 30 days, 1 in all"),
+        "{servers}"
+    );
+    let empty = ops
+        .metrics_servers(quack_text::ops::ServerSort::Members, 9)
+        .await?
+        .plain();
+    assert!(empty.contains("No servers on this page."), "{empty}");
+
+    let jobs = ops.metrics_jobs().await?.plain();
+    assert!(jobs.contains("Runs by kind"), "{jobs}");
+    assert!(jobs.contains("Failed actions waiting for staff"), "{jobs}");
+
+    let board = ops.status().await?.plain();
+    assert!(board.contains("1 server · 250 members"), "{board}");
+    assert!(board.contains("1 case · 0 appeals · 0 tickets"), "{board}");
     Ok(())
 }
 

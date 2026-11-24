@@ -30,8 +30,13 @@ pub(crate) async fn handle(shared: &Shared, event: &Event) {
     let result = match event {
         Event::Ready { guild_ids, .. } => ready(shared, guild_ids).await,
         Event::GuildCreate {
-            guild, channel_ids, ..
-        } => guild_create(shared, guild, channel_ids).await,
+            guild,
+            channel_ids,
+            member_count,
+            ..
+        } => guild_create(shared, guild, channel_ids, *member_count).await,
+        Event::MemberAdd { guild_id, .. } => members_moved(shared, *guild_id, 1).await,
+        Event::MemberRemove { guild_id, .. } => members_moved(shared, *guild_id, -1).await,
         Event::GuildUpdate { guild } => bootstrap(engine, &facts(guild), None).await.map(|_| ()),
         Event::GuildDelete {
             guild_id,
@@ -84,15 +89,33 @@ async fn ready(shared: &Shared, present: &[GuildId]) -> Result<(), quack_db::DbE
     failed.map_or(Ok(()), Err)
 }
 
-/// `GUILD_CREATE`: bootstrap the server, reconcile its channel settings,
-/// and warm its config cache (bootstrap reloads its rules).
+/// A member joined (`+1`) or left (`-1`): moves the server's member count
+/// for the ops metrics (§21.6).
+async fn members_moved(
+    shared: &Shared,
+    guild: GuildId,
+    delta: i32,
+) -> Result<(), quack_db::DbError> {
+    let mut conn = shared.engine.db().conn().await?;
+    quack_db::guilds::add_members(&mut conn, guild, delta).await
+}
+
+/// `GUILD_CREATE`: bootstrap the server, keep its member count, reconcile
+/// its channel settings, and warm its config cache (bootstrap reloads its
+/// rules).
 async fn guild_create(
     shared: &Shared,
     guild: &Guild,
     channels: &[quack_core::ids::ChannelId],
+    members: Option<u64>,
 ) -> Result<(), quack_db::DbError> {
     let engine = &shared.engine;
     let done = bootstrap(engine, &facts(guild), Some(channels)).await?;
+    if let Some(members) = members {
+        // Before the install post, which reads it.
+        let mut conn = engine.db().conn().await?;
+        quack_db::guilds::set_member_count(&mut conn, guild.id, members).await?;
+    }
     if done.first_join {
         tracing::info!(guild = guild.id.get(), "joined a new server");
     }

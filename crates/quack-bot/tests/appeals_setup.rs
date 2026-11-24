@@ -8,7 +8,9 @@ mod common;
 use common::payload::{self, admin, interaction, member, moderator};
 use common::{Sent, World, snapshot};
 use quack_core::ids::{AppealId, ChannelId, GuildId};
-use quack_core::permissions::{ChannelFacts, Overwrite, OverwriteTarget, Permission, Permissions};
+use quack_core::permissions::{
+    AccountFacts, ChannelFacts, Overwrite, OverwriteTarget, Permission, Permissions,
+};
 use quack_discord::gateway::Event;
 use quack_discord::model::{Channel, Guild};
 use quack_engine::{OpKey, Origin};
@@ -261,6 +263,43 @@ fn guild(id: u64) -> Guild {
     }
 }
 
+/// The member count is set by `GUILD_CREATE` and moved by leaves (§21.6).
+#[tokio::test]
+async fn member_counts_follow_the_gateway() -> Result {
+    let w = World::new().await?;
+    let new: GuildId = sf(2002);
+    w.bot
+        .on_event(Event::GuildCreate {
+            guild: guild(2002),
+            channel_ids: Vec::new(),
+            thread_ids: Vec::new(),
+            member_count: Some(41),
+        })
+        .await;
+    let leaver = AccountFacts {
+        id: sf(9_001),
+        username: "leaver".to_owned(),
+        global_name: None,
+        avatar_hash: None,
+        bot: false,
+    };
+    for _ in 0..2 {
+        w.bot
+            .on_event(Event::MemberRemove {
+                guild_id: new,
+                account: leaver.clone(),
+            })
+            .await;
+    }
+    assert_eq!(
+        w.h.db
+            .count("SELECT member_count::bigint FROM guilds WHERE guild_id = 2002")
+            .await?,
+        39
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn gateway_bootstraps_repairs_and_leaves_servers() -> Result {
     let w = World::new().await?;
@@ -270,8 +309,10 @@ async fn gateway_bootstraps_repairs_and_leaves_servers() -> Result {
             guild: guild(2002),
             channel_ids: Vec::new(),
             thread_ids: Vec::new(),
+            member_count: None,
         })
         .await;
+
     let rules =
         w.h.db
             .count("SELECT count(*) FROM rules WHERE guild_id = 2002")

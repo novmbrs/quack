@@ -18,7 +18,7 @@ use twilight_model::guild::Permissions;
 use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::{
     AttachmentBuilder, BooleanBuilder, CommandBuilder, IntegerBuilder, StringBuilder,
-    SubCommandBuilder, UserBuilder,
+    SubCommandBuilder, SubCommandGroupBuilder, UserBuilder,
 };
 
 pub use sync::{Scope, SyncError, SyncReport, canonical, command_ids, for_scope, sync};
@@ -147,6 +147,14 @@ pub fn ops_definitions() -> Vec<Command> {
                 ),
             )
             .option(sub(text::OPS_JOBS))
+            .option(
+                SubCommandGroupBuilder::new(text::OPS_METRICS.name, text::OPS_METRICS.description)
+                    .subcommands([
+                        sub(text::OPS_METRICS_OVERVIEW),
+                        sub(text::OPS_METRICS_SERVERS),
+                        sub(text::OPS_METRICS_JOBS),
+                    ]),
+            )
             .build(),
     ]
 }

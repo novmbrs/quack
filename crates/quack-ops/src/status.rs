@@ -5,7 +5,7 @@ use quack_core::discord::RefusalKind;
 use quack_db::DbError;
 use quack_engine::port::{FileEdit, Nonce, Outcome};
 use quack_text::Msg;
-use quack_text::ops::{self as text, Backlog};
+use quack_text::ops::{self as text, Backlog, Trend};
 use time::OffsetDateTime;
 
 use crate::Ops;
@@ -23,18 +23,32 @@ pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
         .sum();
     let open_appeals = quack_db::appeals::count_open(&mut conn).await?;
     let open_tickets = quack_db::tickets::count_open(&mut conn, None).await?;
+    let day = quack_db::fleet::day(&mut conn).await?;
     drop(conn);
+    let runs = quack_telemetry::metrics().jobs.tally().read();
     let pool_size = db.pool().size();
     let idle = u32::try_from(db.pool().num_idle()).unwrap_or(u32::MAX);
     let gateway = ops.gateway().unwrap_or_default();
     Ok(text::Status {
         version: ops.config().version.clone(),
+        commit: ops.config().commit.clone(),
         started_at: ops.inner.started_at,
         gateway_connected: gateway.connected,
         latency_ms: gateway
             .latency
             .map(|l| u64::try_from(l.as_millis()).unwrap_or(u64::MAX)),
         servers,
+        members: day.members,
+        trend: Trend {
+            cases: day.cases,
+            appeals: day.appeals,
+            tickets: day.tickets,
+            joins: day.joins,
+            leaves: day.leaves,
+            job_runs: runs.kinds.iter().map(|k| k.runs).sum(),
+            job_failures: runs.kinds.iter().map(|k| k.retries + k.dead).sum(),
+            runs_seconds: runs.covers.as_secs(),
+        },
         dead_jobs: backlog.iter().map(|b| b.dead).sum(),
         backlog: backlog
             .iter()

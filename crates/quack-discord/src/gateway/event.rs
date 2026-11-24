@@ -46,6 +46,9 @@ pub enum Event {
         channel_ids: Vec<ChannelId>,
         /// Its active threads.
         thread_ids: Vec<ChannelId>,
+        /// Its member count, when Discord sent one (it does on every
+        /// available `GUILD_CREATE`).
+        member_count: Option<u64>,
     },
     /// Name, icon, owner, MFA level, or roles changed.
     GuildUpdate {
@@ -194,6 +197,7 @@ fn guild_create(guild: &twilight_model::guild::Guild) -> Option<Event> {
             .iter()
             .filter_map(|c| convert::id(c.id))
             .collect(),
+        member_count: guild.member_count,
     })
 }
 

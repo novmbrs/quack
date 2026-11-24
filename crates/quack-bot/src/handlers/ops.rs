@@ -8,6 +8,7 @@ use quack_engine::port::{FileEdit, Outcome};
 use quack_ops::{Answer, Ops};
 use quack_telemetry::labels::Reason;
 use quack_text::Msg;
+use quack_text::ops::ServerSort;
 
 use crate::ack::{Failure, Finish, Pending};
 use crate::errors;
@@ -35,7 +36,7 @@ fn read(result: Result<Msg, DbError>) -> Result<Msg, Failure> {
     result.map_err(|e| errors::db(&e))
 }
 
-/// `/ops status`, `/ops server`, `/ops jobs`.
+/// `/ops status`, `/ops server`, `/ops jobs`, and `/ops metrics …`.
 pub(crate) async fn command(p: Pending<'_>, request: &OpsRequest) -> Finish {
     let Some(ops) = operator(&p) else {
         return p.fail(not_allowed()).await;
@@ -48,6 +49,9 @@ pub(crate) async fn command(p: Pending<'_>, request: &OpsRequest) -> Finish {
         OpsRequest::Status => read(ops.status().await),
         OpsRequest::Server(id) => answered(ops.server(id).await),
         OpsRequest::Jobs => read(ops.dead_jobs(1).await),
+        OpsRequest::MetricsOverview => read(ops.metrics_overview().await),
+        OpsRequest::MetricsServers => read(ops.metrics_servers(ServerSort::default(), 1).await),
+        OpsRequest::MetricsJobs => read(ops.metrics_jobs().await),
     };
     a.finish(result).await
 }
@@ -75,6 +79,24 @@ pub(crate) async fn page(p: Pending<'_>, page: u32, source: Source) -> Finish {
         Err(finish) => return finish,
     };
     let result = read(ops.dead_jobs(page).await);
+    a.finish(result).await
+}
+
+/// A `/ops metrics servers` page or order, re-rendered in place.
+pub(crate) async fn servers_page(
+    p: Pending<'_>,
+    sort: ServerSort,
+    page: u32,
+    source: Source,
+) -> Finish {
+    let Some(ops) = operator(&p) else {
+        return p.fail(not_allowed()).await;
+    };
+    let a = match p.defer_from(source).await {
+        Ok(a) => a,
+        Err(finish) => return finish,
+    };
+    let result = read(ops.metrics_servers(sort, page).await);
     a.finish(result).await
 }
 

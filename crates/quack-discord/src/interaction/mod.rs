@@ -113,6 +113,12 @@ pub enum OpsRequest {
     Server(String),
     /// `/ops jobs`.
     Jobs,
+    /// `/ops metrics overview`.
+    MetricsOverview,
+    /// `/ops metrics servers`.
+    MetricsServers,
+    /// `/ops metrics jobs`.
+    MetricsJobs,
 }
 
 /// One chosen value of a select, read with its select's custom id.
@@ -351,6 +357,9 @@ impl Interaction {
             Request::Ops(OpsRequest::Status) => "ops status",
             Request::Ops(OpsRequest::Server(_)) => "ops server",
             Request::Ops(OpsRequest::Jobs) => "ops jobs",
+            Request::Ops(OpsRequest::MetricsOverview) => "ops metrics overview",
+            Request::Ops(OpsRequest::MetricsServers) => "ops metrics servers",
+            Request::Ops(OpsRequest::MetricsJobs) => "ops metrics jobs",
             Request::AddCaseFromMessage { .. } | Request::AddCaseForMember { .. } => "Add case",
             Request::AddAsEvidence { .. } => "Add as evidence",
             Request::Component { .. } => "component",

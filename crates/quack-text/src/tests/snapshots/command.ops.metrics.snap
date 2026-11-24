@@ -1,0 +1,4 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+metrics — See counts across every server Quack is in.

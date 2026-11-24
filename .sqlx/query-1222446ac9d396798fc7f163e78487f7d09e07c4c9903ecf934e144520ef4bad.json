@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(c.id) AS \"n!\"\n               FROM generate_series(0, $1::int) AS d(back)\n               LEFT JOIN cases c\n                 ON c.created_at >= (current_date - d.back)::timestamp AT TIME ZONE 'UTC'\n                AND c.created_at < (current_date - d.back + 1)::timestamp AT TIME ZONE 'UTC'\n               GROUP BY d.back\n               ORDER BY d.back DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1222446ac9d396798fc7f163e78487f7d09e07c4c9903ecf934e144520ef4bad"
+}

@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"servers!\",\n                      count(g.member_count) AS \"counted!\",\n                      coalesce(sum(g.member_count), 0)::bigint AS \"members!\",\n                      percentile_disc(0.5) WITHIN GROUP (ORDER BY g.member_count) AS \"median\",\n                      count(*) FILTER (WHERE g.member_count < 100) AS \"s0!\",\n                      count(*) FILTER (WHERE g.member_count >= 100 AND g.member_count < 1000) AS \"s1!\",\n                      count(*) FILTER (WHERE g.member_count >= 1000 AND g.member_count < 10000) AS \"s2!\",\n                      count(*) FILTER (WHERE g.member_count >= 10000 AND g.member_count < 100000) AS \"s3!\",\n                      count(*) FILTER (WHERE g.member_count >= 100000) AS \"s4!\",\n                      count(*) FILTER (WHERE t.enabled) AS \"tickets!\",\n                      count(*) FILTER (WHERE a.enabled) AS \"activity!\",\n                      count(*) FILTER (WHERE h.enabled) AS \"honeypot!\"\n               FROM guilds g\n               LEFT JOIN ticket_settings t USING (guild_id)\n               LEFT JOIN activity_log_settings a USING (guild_id)\n               LEFT JOIN honeypot_settings h USING (guild_id)\n               WHERE g.installed",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "servers!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "counted!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "members!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "median",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "s0!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "s1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "s2!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "s3!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "s4!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "tickets!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "activity!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "honeypot!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "2d7bfca9760208cd8ebd6bbd9a4ce8efc84ba78cdeb03e75297e223b60d2f984"
+}

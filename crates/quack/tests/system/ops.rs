@@ -44,7 +44,7 @@ pub(crate) async fn ops_posts_installs_and_answers_only_operators() -> Result<()
         "{sent:?}"
     );
     let board = plain_msg(&sys.answer());
-    assert!(board.contains("Quack status"), "{board}");
+    assert!(board.contains("Last 24 hours"), "{board}");
     sys.send(&ix(2, moderator(), sys.channel, &ops_command("status")))
         .await;
     let refused = plain_msg(&sys.answer());

@@ -67,6 +67,7 @@ fn guild_lifecycle() {
         guild,
         channel_ids,
         thread_ids,
+        member_count,
     } = &create
     else {
         panic!("expected GUILD_CREATE, got {create:?}");
@@ -75,6 +76,7 @@ fn guild_lifecycle() {
     assert!(guild.mfa_required);
     assert_eq!(*channel_ids, vec![ChannelId::new(30).unwrap()]);
     assert_eq!(*thread_ids, Vec::<ChannelId>::new());
+    assert_eq!(*member_count, Some(1));
     assert_eq!(
         event("GUILD_CREATE", &json!({"id": "2", "unavailable": true})),
         None

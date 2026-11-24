@@ -200,6 +200,8 @@ pub enum ButtonAction {
     OpsDismissJob(JobId),
     /// Show a `/ops jobs` page (`op:jp`).
     OpsJobsPage(u32),
+    /// Show a `/ops metrics servers` page (1-based) in an order (`op:sv`).
+    OpsServersPage(crate::ops::ServerSort, u32),
 }
 
 /// What choosing in a select does.

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guilds SET member_count = greatest(member_count + $2, 0)\n             WHERE guild_id = $1 AND member_count IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5089f9a3c532f081549d59a27ef65212ad8beff2db7af55b364db663a9b0c724"
+}

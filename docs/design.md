@@ -1322,7 +1322,7 @@ itself.
 | `/rules` | slash | — | `moderate` or `manage_rules` | Ephemeral active rules with a dashboard link each, 10 per page. |
 | `/setup` | slash | — | `manage_settings` | Ephemeral guided setup panel (§11.8). |
 | `/help` | slash | `topic` STRING, choices `cases`, `rules`, `appeals`, `setup` | none | Ephemeral help (§12.12). |
-| `/ops status`, `/ops server`, `/ops jobs` | slash subcommands, ops server only (§21.8) | `server` STRING req. (a server id) for `/ops server` | operator (§21.1) | Ephemeral; §21.8. |
+| `/ops status`, `/ops server`, `/ops jobs`, `/ops metrics overview`, `/ops metrics servers`, `/ops metrics jobs` | slash subcommands (`metrics` a subcommand group), ops server only (§21.8) | `server` STRING req. (a server id) for `/ops server` | operator (§21.1) | Ephemeral; §21.8. |
 | Add case | message command | (the message) | `moderate` | Rule picker, then the private receipt. The message becomes evidence. |
 | Add as evidence | message command | (the message) | `moderate` | Ephemeral picker (`evidence.picker`): a select of the message author's cases in this server and the actor's own recently added cases (`evidence::recent_cases`: each side newest 25 by number, merged newest first, without repeats, at most 25; voided ones included and marked) and **Enter a case number** (modal: number, note). Choosing adds the message (`add_evidence`) and answers `evidence.added` with Add evidence and View evidence. |
 | Add case | member command | (the member) | `moderate` | Rule picker, then an ephemeral confirmation and the public receipt. |
@@ -1454,7 +1454,7 @@ authorizes the clicker.
 | `al` / `rl` | Pager | page | `/appeals` / `/rules` page. |
 | `su` | Setup control | area, operation | §11.8. |
 | `to` / `tc` / `tf` | Button Open a ticket / Close ticket / Restore private access | — / ticket / ticket | §13.2. |
-| `op` | Ops buttons | `st`; `rq` or `dm`, job; `jp`, page | Refresh the status board; requeue or dismiss a dead job; a `/ops jobs` page (§21.8). |
+| `op` | Ops buttons | `st`; `rq` or `dm`, job; `jp`, page; `sv`, order (`m`, `c`, `n`), page | Refresh the status board; requeue or dismiss a dead job; a `/ops jobs` page; a `/ops metrics servers` page in an order (§21.8). |
 
 **Legacy ids** (Go-era messages stay in Discord). Each supported shape is
 decoded exactly; the ULID is mapped with §19.3 and must name a record of
@@ -1608,14 +1608,14 @@ updates the guild and member caches in the shard loop.
 | --- | --- |
 | `READY` | Mark connected; record Quack's own account id; clear the member cache; mark every server unloaded until its `GUILD_CREATE`. Installed servers missing from the list are treated as left (logged and skipped on error, the pass goes on). After an invalid session, every `open` ticket gets `journal_gaps`. |
 | `RESUMED` | Mark connected; nothing was missed. |
-| `GUILD_CREATE` | Guild cache; seed members; bootstrap the server (§17.5); reconcile channel settings (§13.1.5); warm rules and config caches; mark loaded. |
+| `GUILD_CREATE` | Guild cache; seed members; bootstrap the server (§17.5); set `guilds.member_count` from the event (§21.6); reconcile channel settings (§13.1.5); warm rules and config caches; mark loaded. |
 | `GUILD_UPDATE` | Update `guilds` (name, icon, owner, MFA level); activity `server_changed`. |
 | `GUILD_DELETE` | `unavailable` → mark unloaded (outage); else Quack left (§17.5). |
 | `GUILD_ROLE_*` | Guild cache only; deleted roles are ignored as staff roles. |
 | `CHANNEL_CREATE/UPDATE` | Guild cache; activity `channel_changed`. |
 | `CHANNEL_DELETE` | Guild cache; clear settings pointing at it (§13.1.5); activity. |
 | `THREAD_DELETE` | A ticket thread (`opening`/`open`) → close the ticket (§13.2.4). |
-| `GUILD_MEMBER_ADD/UPDATE/REMOVE` | Member cache; activity `member_joined` / `member_left`. |
+| `GUILD_MEMBER_ADD/UPDATE/REMOVE` | Member cache; activity `member_joined` / `member_left`; add and remove move a known `guilds.member_count` by one (a dropped event leaves it off until the next `GUILD_CREATE`). |
 | `MESSAGE_CREATE` | Activity message cache; ticket journal; honeypot hit. |
 | `MESSAGE_UPDATE` | Activity `message_edited`. |
 | `MESSAGE_DELETE`, `MESSAGE_DELETE_BULK` | Activity; a deleted tracked message is handled by `messages::message_deleted` (§10.3). |
@@ -1686,7 +1686,8 @@ first session logs "connected to the gateway".
 
 `quack_discord::render` turns `quack-text`'s neutral `Msg` into one
 Components V2 Container (no `content`, no embeds): consecutive text blocks
-become one Text Display, Divider a Separator, File a File component,
+become one Text Display (a Code block as a fenced code block of Quack's
+own text, backticks swapped out), Divider a Separator, File a File component,
 Gallery a Media Gallery (`https://` URLs only, at most 10, each item
 spoilered as the model says; evidence always is), rows Action Rows; a
 modal's Files input is a File Upload (type 19, `min_values`/`max_values`,
@@ -1694,7 +1695,7 @@ at most 10) in a Label, and its submit's attachments come from the modal
 data's `resolved.attachments`; `Msg::tone` sets the accent (green done, amber in progress,
 red failed). `quack_text::budget` keeps every message within 40 components
 and 4,000 characters: `budget::fit` drops subtext, cuts the longest quote
-or text, then trailing fields, and appends the message's own note or
+or text, then trailing fields and code blocks, and appends the message's own note or
 `render.trimmed`; lists are paged first (10 rows). Typed text is escaped;
 mentions never ping except the ticket welcome's. Labels: buttons ≤ 80,
 select options ≤ 100, modal titles and labels ≤ 45. Channel message edits
@@ -1892,7 +1893,10 @@ Operator-only (§21): `ops.started`, `ops.gateway`, `ops.install`,
 `ops.dead_job`, `ops.dead_job_handled`, `ops.dead_jobs_more`,
 `ops.failed_actions`, `ops.errors`, `ops.status`, `ops.server`,
 `ops.server_unknown`, `ops.jobs`, `ops.job_gone`, `ops.not_allowed`,
-`command.ops.*`.
+`ops.metrics_overview`, `ops.metrics_servers`, `ops.metrics_jobs`,
+`command.ops.*`. Ops messages may draw aligned tables, bars, and
+sparklines in a code block (the model's `Code` block: Quack's own text
+only, never anything a person typed).
 
 ## 13. Settings and optional modules
 
@@ -2651,7 +2655,9 @@ from `0008`. A test checks these lines against the `quack-core` enums.
 
 ### 15.2 Servers, accounts, sessions
 
-- `guilds`: every server ever joined, never deleted (`installed`).
+- `guilds`: every server ever joined, never deleted (`installed`), with
+  its `member_count` for the ops metrics (§21.6; NULL until a
+  `GUILD_CREATE` sets it, then moved by member joins and leaves).
 - `case_counters`: per-server case number; its row lock serializes case
   creation.
 - `discord_accounts`: signed-in accounts and their last 2FA reading (§2.2).
@@ -2764,6 +2770,9 @@ Each hot-path read has an index declared with its table (escalation:
   nullable `evidence_files.original_url` and `UNIQUE (guild_id, id)`;
   `evidence_upload_bytes`; `case_drafts.evidence_file`. Existing items are
   saved messages, visible to the member, not removed.
+- `0009`: `guilds.member_count` (§21.6), and the cross-server time indexes
+  the ops metrics read: `cases (created_at)` and `mod_log (created_at,
+  kind)` for `quack_joined` and `quack_left`.
 
 
 ## 16. Job queue
@@ -2896,7 +2905,7 @@ public surfaces in rustdoc (`cargo doc --workspace --no-deps`).
 | --- | --- | --- |
 | `quack-core` | The pure domain: ids, rules and escalation, permissions, state machines, moderation log kinds, limits, domain errors, Discord call outcomes. No I/O. | — |
 | `quack-text` | Every string a person reads, as a neutral message model; snapshot-tested. | core |
-| `quack-telemetry` | OpenTelemetry setup and the typed instrument catalog (`METRICS.md`). | — |
+| `quack-telemetry` | OpenTelemetry setup, the typed instrument catalog (`METRICS.md`), and the in-process job tally ops reads. | — |
 | `quack-db` | PostgreSQL: migrations, every query (sqlx, offline data in `.sqlx/`), the job queue and runner, sessions, the singleton fence. | core, telemetry |
 | `quack-discord` | Twilight: gateway, caches, REST with typed outcomes, rendering, custom ids, commands. | core, text, telemetry |
 | `quack-engine` | Use cases and job handlers; defines the `Discord` port. | core, text, db, telemetry |
@@ -3638,8 +3647,9 @@ registered in the ops server only, with default member permissions `0`.
 
 This is the one place data crosses servers (§1.1 principle 5). It is
 limited to **server metadata and counts**: a server's id, name, owner id,
-install dates, enabled modules, Quack's missing permissions, and counts of
-cases, rules, appeals, failed actions, and open tickets. Never case
+install dates, member count, enabled modules, Quack's missing permissions,
+and counts of cases, rules, appeals, tickets, failed actions, and actions
+done (per server, or summed across servers). Never case
 contents, reasons, context, evidence, appeals, member names, messages, or
 DMs. The error feed carries log lines, which §18.5 already keeps free of
 member and staff text and secrets.
@@ -3696,8 +3706,13 @@ as one `ops.gateway` summary per 10 minutes that had any.
 After `GUILD_CREATE` bootstraps a first join or a return, and after a
 server is marked left (`GUILD_DELETE` or missing from `READY`),
 `#ops-installs` gets `ops.install`: joined, rejoined, or left; the
-server's name and id, owner id, and how many servers Quack is now in.
-Startup's `GUILD_CREATE` for servers already installed posts nothing.
+server's name and id, owner id, its member count (the event's on a join,
+the last known on a leave), and how many servers and members Quack is now
+in. A leave also says how long Quack was installed (since its latest
+`quack_joined` entry, else `first_joined_at`) and what the server leaves
+behind (cases, voided included, and active rules). Startup's
+`GUILD_CREATE` for servers already installed posts nothing. A post saved
+before these facts existed renders without them.
 
 ### 21.5 Alerts
 
@@ -3726,12 +3741,25 @@ they need a click, not a page.
 ### 21.6 Status board
 
 One message in `#ops-status` (its id in `ops_state`), edited every 10
-minutes and by its **Refresh** button: version, uptime, gateway connection
-and heartbeat latency, servers, jobs ready and the oldest wait by kind
-(non-zero kinds only), dead jobs, failed actions, open appeals, open
-tickets, database pool use, and when it was updated. A board Discord no
-longer has (404) is posted again. `/ops status` answers the same message
-privately.
+minutes and by its **Refresh** button. It opens with a one-line verdict
+that sets its tone: red when the gateway isn't connected; amber, naming
+each concern, for dead jobs, failed actions, a ready job waiting a minute
+or more, or a full database pool; green otherwise. Under it: version,
+commit, uptime, and when it was updated; then short sections, each line
+marked green, amber, or red where it can be:
+
+- **Discord**: connection and heartbeat latency; servers and members
+  (the sum of the known `member_count`s).
+- **Last 24 hours**: cases, appeals, and tickets created; servers joined
+  and left (`quack_joined` and `quack_left` entries); job runs and failed
+  runs from this process's tally (§21.8; "since start" when younger).
+- **Queue**: jobs ready and the oldest wait by kind (non-zero kinds only);
+  dead jobs.
+- **Waiting for staff**: failed actions, open appeals, open tickets.
+- **Database**: pool use.
+
+A board Discord no longer has (404) is posted again. `/ops status`
+answers the same message privately.
 
 ### 21.7 Error feed
 
@@ -3751,7 +3779,16 @@ Best effort: a restart or a Discord failure loses the minute.
 | `/ops status` | The status board. |
 | `/ops server id:<server id>` | `ops.server`: §21.1's metadata and counts for any stored server, plus Quack's missing permissions there when Discord answers; `ops.server_unknown` otherwise. |
 | `/ops jobs` | `ops.jobs`: dead jobs, newest first, 5 per page, each with **Requeue** and **Dismiss**. |
+| `/ops metrics overview` | `ops.metrics_overview`: servers, members, and the median server's members; a sparkline of cases per UTC day over 14 days (today and the peak); a table of cases, voided cases, appeals, tickets, actions done, actions failed (not dismissed), joins, and leaves over 24 hours, 7 days, 30 days, and all time; servers by size (under 100, 1,000, 10,000, 100,000 members, and larger) and by module on, as bars. Read on demand. |
+| `/ops metrics servers` | `ops.metrics_servers`: installed servers, 10 per page, by members (default), by cases in the last 30 days, or newest first install; each with its name, id, members, cases in 30 days and all time, and first install date. **Members**, **Cases**, and **Newest** switch the order (page 1); the pager pages. |
+| `/ops metrics jobs` | `ops.metrics_jobs`: job runs by kind (runs, retried, dead, mean time) over the last 24 hours of this process, the queue by kind now (ready, waiting for later, running, dead) with the oldest ready wait, and undismissed failed actions by kind and reason with how many servers. |
+
+Job runs come from an in-process tally beside the job metrics
+(`quack_telemetry`'s `JobTally`: per-hour buckets per kind, the last 24
+hours kept). OpenTelemetry can't be read back, and finished jobs are
+deleted, so a restart starts it empty; Grafana keeps the history.
 
 Custom ids (§11.5): `op:st` refresh the board; `op:rq:<job>` and
-`op:dm:<job>` requeue and dismiss; `op:jp:<page>` a `/ops jobs` page. A
-non-operator gets `ops.not_allowed`.
+`op:dm:<job>` requeue and dismiss; `op:jp:<page>` a `/ops jobs` page;
+`op:sv:<order>:<page>` a `/ops metrics servers` page (`m` members, `c`
+cases, `n` newest). A non-operator gets `ops.not_allowed`.

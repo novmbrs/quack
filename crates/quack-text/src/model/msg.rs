@@ -39,6 +39,9 @@ pub enum Block {
     },
     /// Small grey text (`-# text`).
     Subtext(Text),
+    /// Monospace lines of Quack's own text (an aligned table, bars), in a
+    /// code block on Discord. Never anything a person typed.
+    Code(String),
     /// A separator line.
     Divider,
     /// A file sent with the message, by its attachment name.
