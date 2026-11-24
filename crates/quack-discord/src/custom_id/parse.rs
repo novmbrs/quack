@@ -4,6 +4,7 @@ use quack_core::ids::{
     ActionId, AppealId, CaseId, ChannelId, EvidenceId, JobId, MemberId, MessageId, RuleId, TicketId,
 };
 use quack_text::actions::DraftPage;
+use quack_text::ops::ServerSort;
 
 use super::CustomId;
 use super::setup::{area, area_code, op, op_code};
@@ -138,6 +139,8 @@ pub(super) fn encode(id: &CustomId) -> String {
         C::OpsRequeueJob(j) => ("op", format!("rq:{}", j.to_u22())),
         C::OpsDismissJob(j) => ("op", format!("dm:{}", j.to_u22())),
         C::OpsJobsPage(p) => ("op", format!("jp:{p}")),
+        C::OpsServersPage(sort, p) => ("op", format!("sv:{}:{p}", server_sort_code(*sort))),
+        C::OpsServersSort(sort) => ("op", format!("so:{}", server_sort_code(*sort))),
     };
     if args.is_empty() {
         format!("1:{code}")
@@ -257,8 +260,25 @@ fn decode_ops(args: &[&str]) -> Option<CustomId> {
         ["rq", j] => C::OpsRequeueJob(JobId::from_u22(j).ok()?),
         ["dm", j] => C::OpsDismissJob(JobId::from_u22(j).ok()?),
         ["jp", p] => C::OpsJobsPage(number(p)?),
+        ["sv", s, p] => C::OpsServersPage(server_sort(s)?, number(p)?),
+        ["so", s] => C::OpsServersSort(server_sort(s)?),
         _ => return None,
     })
+}
+
+/// A server order's one-letter code in `op:sv`.
+const fn server_sort_code(sort: ServerSort) -> &'static str {
+    match sort {
+        ServerSort::Members => "m",
+        ServerSort::Cases => "c",
+        ServerSort::Newest => "n",
+    }
+}
+
+fn server_sort(code: &str) -> Option<ServerSort> {
+    ServerSort::ALL
+        .into_iter()
+        .find(|s| server_sort_code(*s) == code)
 }
 
 /// The evidence ids (`evs` … `exm`).

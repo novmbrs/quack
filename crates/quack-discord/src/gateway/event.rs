@@ -12,7 +12,7 @@ use twilight_model::guild::audit_log::AuditLogEventType;
 use crate::cache::member_update;
 use crate::convert;
 use crate::interaction::{self, Interaction};
-use crate::model::{Channel, Guild, Member, Message};
+use crate::model::{Channel, Guild, Member, MemberCount, Message};
 
 /// A ban or unban someone placed or lifted (from the audit log, §11.9).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,6 +46,9 @@ pub enum Event {
         channel_ids: Vec<ChannelId>,
         /// Its active threads.
         thread_ids: Vec<ChannelId>,
+        /// Its member count, when Discord sent one (it does on every
+        /// available `GUILD_CREATE`).
+        members: Option<MemberCount>,
     },
     /// Name, icon, owner, MFA level, or roles changed.
     GuildUpdate {
@@ -80,6 +83,8 @@ pub enum Event {
         guild_id: GuildId,
         /// The member.
         member: Member,
+        /// The server's member count after the join, when known.
+        members: Option<MemberCount>,
     },
     /// A member changed (roles, nickname, timeout).
     MemberUpdate {
@@ -94,6 +99,8 @@ pub enum Event {
         guild_id: GuildId,
         /// Their account.
         account: AccountFacts,
+        /// The server's member count after the leave, when known.
+        members: Option<MemberCount>,
     },
     /// A message was posted.
     MessageCreate(Message),
@@ -136,6 +143,19 @@ pub enum Event {
 }
 
 impl Event {
+    /// Attaches the gateway's member count to a `GUILD_CREATE`, a join, or
+    /// a leave (the shard loop reads it right after updating its caches).
+    #[must_use]
+    pub(crate) fn with_members(mut self, count: Option<MemberCount>) -> Self {
+        if let Self::GuildCreate { members, .. }
+        | Self::MemberAdd { members, .. }
+        | Self::MemberRemove { members, .. } = &mut self
+        {
+            *members = count;
+        }
+        self
+    }
+
     /// The server the event belongs to, for queue choice and spans.
     pub fn guild_id(&self) -> Option<GuildId> {
         match self {
@@ -194,6 +214,7 @@ fn guild_create(guild: &twilight_model::guild::Guild) -> Option<Event> {
             .iter()
             .filter_map(|c| convert::id(c.id))
             .collect(),
+        members: None,
     })
 }
 
@@ -259,6 +280,7 @@ pub(crate) fn map(raw: &Raw, sessions_before: u32) -> Option<Event> {
         Raw::MemberAdd(add) => Some(Event::MemberAdd {
             guild_id: convert::id(add.guild_id)?,
             member: convert::member(&add.member)?,
+            members: None,
         }),
         Raw::MemberUpdate(update) => Some(Event::MemberUpdate {
             guild_id: convert::id(update.guild_id)?,
@@ -267,6 +289,7 @@ pub(crate) fn map(raw: &Raw, sessions_before: u32) -> Option<Event> {
         Raw::MemberRemove(remove) => Some(Event::MemberRemove {
             guild_id: convert::id(remove.guild_id)?,
             account: convert::user(&remove.user)?,
+            members: None,
         }),
         Raw::MessageCreate(m) => convert::message(m).map(Event::MessageCreate),
         Raw::MessageUpdate(m) => convert::message(m).map(Event::MessageUpdate),

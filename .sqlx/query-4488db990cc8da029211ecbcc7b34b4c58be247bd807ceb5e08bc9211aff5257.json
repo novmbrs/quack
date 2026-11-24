@@ -1,0 +1,87 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind,\n                 count(*) FILTER (WHERE dead_at IS NULL AND locked_until IS NULL AND run_at <= now()) AS \"ready!\",\n                 count(*) FILTER (WHERE dead_at IS NULL AND locked_until IS NULL AND run_at > now()) AS \"scheduled!\",\n                 count(*) FILTER (WHERE locked_until IS NOT NULL) AS \"running!\",\n                 count(*) FILTER (WHERE dead_at IS NULL AND attempts > 0) AS \"retrying!\",\n                 count(*) FILTER (WHERE dead_at IS NOT NULL) AS \"dead!\",\n                 EXTRACT(EPOCH FROM now() - min(run_at)\n                   FILTER (WHERE dead_at IS NULL AND locked_until IS NULL AND run_at <= now()))::float8 AS \"age\"\n               FROM jobs GROUP BY kind",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "job_kind",
+            "kind": {
+              "Enum": [
+                "run_action",
+                "send_dm",
+                "sync_message",
+                "post_mod_log",
+                "capture_evidence",
+                "honeypot_case",
+                "honeypot_cleanup",
+                "open_ticket",
+                "close_ticket",
+                "housekeeping",
+                "post_ops"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "jobs",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ready!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "scheduled!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "running!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "retrying!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "dead!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "age",
+        "type_info": "Float8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "4488db990cc8da029211ecbcc7b34b4c58be247bd807ceb5e08bc9211aff5257"
+}

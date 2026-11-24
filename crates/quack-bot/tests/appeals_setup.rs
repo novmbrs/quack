@@ -8,9 +8,11 @@ mod common;
 use common::payload::{self, admin, interaction, member, moderator};
 use common::{Sent, World, snapshot};
 use quack_core::ids::{AppealId, ChannelId, GuildId};
-use quack_core::permissions::{ChannelFacts, Overwrite, OverwriteTarget, Permission, Permissions};
+use quack_core::permissions::{
+    AccountFacts, ChannelFacts, Overwrite, OverwriteTarget, Permission, Permissions,
+};
 use quack_discord::gateway::Event;
-use quack_discord::model::{Channel, Guild};
+use quack_discord::model::{Channel, Guild, MemberCount};
 use quack_engine::{OpKey, Origin};
 use quack_testkit::rules_for_tests::warning;
 use quack_testkit::{MEMBER, OWNER, sf};
@@ -261,6 +263,62 @@ fn guild(id: u64) -> Guild {
     }
 }
 
+/// The member count follows the counts the gateway sends, newest first:
+/// one read earlier than the stored one never moves it back (§21.6).
+#[tokio::test]
+async fn member_counts_keep_the_newest() -> Result {
+    let w = World::new().await?;
+    let new: GuildId = sf(2002);
+    let t0 = time::OffsetDateTime::now_utc();
+    let at = |secs: i64| t0 + time::Duration::seconds(secs);
+    w.bot
+        .on_event(Event::GuildCreate {
+            guild: guild(2002),
+            channel_ids: Vec::new(),
+            thread_ids: Vec::new(),
+            members: Some(MemberCount {
+                members: 41,
+                at: at(1),
+            }),
+        })
+        .await;
+    let leaver = AccountFacts {
+        id: sf(9_001),
+        username: "leaver".to_owned(),
+        global_name: None,
+        avatar_hash: None,
+        bot: false,
+    };
+    w.bot
+        .on_event(Event::MemberRemove {
+            guild_id: new,
+            account: leaver.clone(),
+            members: Some(MemberCount {
+                members: 40,
+                at: at(3),
+            }),
+        })
+        .await;
+    // A count read before the stored one, handled late.
+    w.bot
+        .on_event(Event::MemberRemove {
+            guild_id: new,
+            account: leaver,
+            members: Some(MemberCount {
+                members: 99,
+                at: at(2),
+            }),
+        })
+        .await;
+    assert_eq!(
+        w.h.db
+            .count("SELECT member_count::bigint FROM guilds WHERE guild_id = 2002")
+            .await?,
+        40
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn gateway_bootstraps_repairs_and_leaves_servers() -> Result {
     let w = World::new().await?;
@@ -270,8 +328,10 @@ async fn gateway_bootstraps_repairs_and_leaves_servers() -> Result {
             guild: guild(2002),
             channel_ids: Vec::new(),
             thread_ids: Vec::new(),
+            members: None,
         })
         .await;
+
     let rules =
         w.h.db
             .count("SELECT count(*) FROM rules WHERE guild_id = 2002")

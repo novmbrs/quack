@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE guilds SET member_count = $2, member_count_at = $3\n             WHERE guild_id = $1 AND (member_count_at IS NULL OR member_count_at <= $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0daceb552ddc21e5387e8df5250ab838fda7b66f677a9486f44e3c1d3e870d29"
+}

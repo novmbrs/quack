@@ -110,6 +110,30 @@ fn every_message_fits_discord_limits() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
+/// Discord refuses a message whose components share a custom id, so no
+/// two buttons of a message may do the same thing.
+#[test]
+fn no_message_repeats_a_button_action() {
+    let mut failures = Vec::new();
+    for s in all() {
+        let Out::Msg(m) = &s.out else { continue };
+        let mut seen = Vec::new();
+        for row in &m.rows {
+            if let Row::Buttons(buttons) = row {
+                for b in buttons {
+                    if let ButtonTarget::Action(a) = &b.target {
+                        if seen.contains(a) {
+                            failures.push(format!("{} [{}]: {a:?} twice", s.id, s.variant));
+                        }
+                        seen.push(a.clone());
+                    }
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
 #[test]
 fn command_texts_fit() {
     for c in crate::command::ALL.iter().chain(&crate::command::OPS_ALL) {

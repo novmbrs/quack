@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT coalesce(sum(member_count), 0)::bigint AS \"n!\" FROM guilds WHERE installed",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "afc31372f09eacc5fb12dc0ead2b7309c287a56b38a80c962a4e08a8673bc490"
+}

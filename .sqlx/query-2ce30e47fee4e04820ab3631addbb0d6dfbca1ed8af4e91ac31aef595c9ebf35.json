@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT kind, failure_reason AS \"reason!\", count(*) AS \"n!\",\n                      count(DISTINCT guild_id) AS \"servers!\"\n               FROM actions\n               WHERE state = 'failed' AND dismissed_at IS NULL AND failure_reason IS NOT NULL\n               GROUP BY kind, failure_reason\n               ORDER BY count(*) DESC, kind, failure_reason",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind",
+        "type_info": {
+          "Custom": {
+            "name": "action_kind",
+            "kind": {
+              "Enum": [
+                "timeout",
+                "kick",
+                "ban",
+                "remove_timeout",
+                "unban"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "reason!",
+        "type_info": {
+          "Custom": {
+            "name": "action_failure",
+            "kind": {
+              "Enum": [
+                "quack_not_in_server",
+                "quack_missing_permission",
+                "quack_role_too_low",
+                "member_is_owner",
+                "member_not_in_server",
+                "member_is_administrator",
+                "timeout_window_passed",
+                "discord_refused",
+                "retries_exhausted",
+                "unconfirmed",
+                "original_unconfirmed"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "actions",
+            "name": "failure_reason"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "servers!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "2ce30e47fee4e04820ab3631addbb0d6dfbca1ed8af4e91ac31aef595c9ebf35"
+}

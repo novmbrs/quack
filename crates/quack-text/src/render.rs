@@ -192,6 +192,8 @@ fn block_to(block: &Block, surface: Surface<'_>) -> Option<String> {
         Block::Text(t) | Block::Subtext(t) => text(t, surface),
         Block::Quote(t) => quote(&text(t, surface)),
         Block::Field { label, value } => field(label, &text(value, surface), discord),
+        Block::Code(body) if discord => format!("```\n{}\n```", body.replace('`', "ˋ")),
+        Block::Code(body) => body.clone(),
         Block::Divider | Block::File(_) | Block::Gallery(_) => return None,
     })
 }

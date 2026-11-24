@@ -64,6 +64,17 @@ pub struct Guild {
     pub roles: Vec<RoleFacts>,
 }
 
+/// A server's member count as the gateway knew it at one moment: set by
+/// `GUILD_CREATE`, moved by member joins and leaves in gateway order. The
+/// time orders writes that are handled out of order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MemberCount {
+    /// Members.
+    pub members: u64,
+    /// When the shard loop read it.
+    pub at: OffsetDateTime,
+}
+
 /// Thread-only state.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ThreadState {

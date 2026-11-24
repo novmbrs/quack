@@ -1,0 +1,91 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## busy
+tone: Danger
+--- discord ---
+### ⚙️ Jobs
+**18,996** runs in the last 24 hours, **16** failed
+**Runs by kind**
+```
+kind               runs  retry  dead   mean
+run_action          412      3     0  210ms
+send_dm             380     12     1   1.4s
+capture_evidence  18.2K      0     0   85ms
+```
+**Queue now**
+```
+kind          ready  later  run  dead
+send_dm           4     12    1     1
+housekeeping      0      1    0     0
+```
+Oldest ready job: `send_dm`, waiting 14 seconds.
+**Failed actions waiting for staff**
+12 × ban `quack_role_too_low` in 3 servers
+1 × timeout `quack_missing_permission` in 1 server
+-# Runs count this process only; Grafana has the history. Read <t:1795014309:R>.
+--- plain ---
+⚙️ Jobs
+18,996 runs in the last 24 hours, 16 failed
+
+Runs by kind
+kind               runs  retry  dead   mean
+run_action          412      3     0  210ms
+send_dm             380     12     1   1.4s
+capture_evidence  18.2K      0     0   85ms
+Queue now
+kind          ready  later  run  dead
+send_dm           4     12    1     1
+housekeeping      0      1    0     0
+Oldest ready job: send_dm, waiting 14 seconds.
+Failed actions waiting for staff
+12 × ban quack_role_too_low in 3 servers
+1 × timeout quack_missing_permission in 1 server
+Runs count this process only; Grafana has the history. Read on 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("⚙\u{fe0f} Jobs")]
+Text [Bold([Fixed("18,996")]), Fixed(" runs in the last 24 hours, "), Bold([Fixed("16")]), Fixed(" failed")]
+Divider
+Text [Bold([Fixed("Runs by kind")])]
+Code "kind               runs  retry  dead   mean\nrun_action          412      3     0  210ms\nsend_dm             380     12     1   1.4s\ncapture_evidence  18.2K      0     0   85ms"
+Text [Bold([Fixed("Queue now")])]
+Code "kind          ready  later  run  dead\nsend_dm           4     12    1     1\nhousekeeping      0      1    0     0"
+Text [Fixed("Oldest ready job: "), Code("send_dm"), Fixed(", waiting 14 seconds.")]
+Text [Bold([Fixed("Failed actions waiting for staff")])]
+Text [Fixed("12 × ban "), Code("quack_role_too_low"), Fixed(" in 3 servers\n1 × timeout "), Code("quack_missing_permission"), Fixed(" in 1 server")]
+Subtext [Fixed("Runs count this process only; Grafana has the history. Read "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## quiet, since start
+tone: Success
+--- discord ---
+### ⚙️ Jobs
+**0** runs in the 1 hour 6 minutes since this run started, **0** failed
+**Runs by kind**
+No runs yet.
+**Queue now**
+🟢 Nothing queued.
+**Failed actions waiting for staff**
+🟢 None.
+-# Runs count this process only; Grafana has the history. Read <t:1795014309:R>.
+--- plain ---
+⚙️ Jobs
+0 runs in the 1 hour 6 minutes since this run started, 0 failed
+
+Runs by kind
+No runs yet.
+Queue now
+🟢 Nothing queued.
+Failed actions waiting for staff
+🟢 None.
+Runs count this process only; Grafana has the history. Read on 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("⚙\u{fe0f} Jobs")]
+Text [Bold([Fixed("0")]), Fixed(" runs in the 1 hour 6 minutes since this run started, "), Bold([Fixed("0")]), Fixed(" failed")]
+Divider
+Text [Bold([Fixed("Runs by kind")])]
+Text [Fixed("No runs yet.")]
+Text [Bold([Fixed("Queue now")])]
+Text [Fixed("🟢 Nothing queued.")]
+Text [Bold([Fixed("Failed actions waiting for staff")])]
+Text [Fixed("🟢 None.")]
+Subtext [Fixed("Runs count this process only; Grafana has the history. Read "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]

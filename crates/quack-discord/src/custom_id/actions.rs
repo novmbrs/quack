@@ -58,6 +58,8 @@ impl From<&ButtonAction> for CustomId {
             B::OpsRequeueJob(j) => Self::OpsRequeueJob(j),
             B::OpsDismissJob(j) => Self::OpsDismissJob(j),
             B::OpsJobsPage(p) => Self::OpsJobsPage(p),
+            B::OpsServersPage(sort, p) => Self::OpsServersPage(sort, p),
+            B::OpsServersSort(sort) => Self::OpsServersSort(sort),
         }
     }
 }

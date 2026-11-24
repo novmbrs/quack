@@ -36,7 +36,7 @@ dependencies in the root `Cargo.toml`), one binary, `quack`.
 | --- | --- | --- |
 | `quack-core` | The pure domain: ids, rules and escalation, permissions, state machines, moderation log kinds, limits, domain errors. No I/O. | — |
 | `quack-text` | Every string a person reads, as a neutral message model; snapshot-tested. | core |
-| `quack-telemetry` | OpenTelemetry setup and the typed instrument catalog (`METRICS.md`). | — |
+| `quack-telemetry` | OpenTelemetry setup, the typed instrument catalog (`METRICS.md`), and the in-process job tally ops reads. | — |
 | `quack-db` | PostgreSQL: migrations, every query (sqlx, offline data in `.sqlx/`), the job queue, sessions. | core, telemetry |
 | `quack-discord` | Twilight: gateway, caches, REST with typed outcomes, rendering, custom ids, commands. | core, text, telemetry |
 | `quack-engine` | Use cases and job handlers; defines the `Discord` port. | core, text, db, telemetry |

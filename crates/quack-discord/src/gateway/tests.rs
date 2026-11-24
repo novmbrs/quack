@@ -23,6 +23,7 @@ fn member_remove(guild: u64, user: u64) -> Event {
         guild_id: g(guild),
         account: crate::convert::user(&serde_json::from_value(fixtures::user(user, "u")).unwrap())
             .unwrap(),
+        members: None,
     }
 }
 
@@ -67,6 +68,7 @@ fn guild_lifecycle() {
         guild,
         channel_ids,
         thread_ids,
+        members,
     } = &create
     else {
         panic!("expected GUILD_CREATE, got {create:?}");
@@ -75,6 +77,7 @@ fn guild_lifecycle() {
     assert!(guild.mfa_required);
     assert_eq!(*channel_ids, vec![ChannelId::new(30).unwrap()]);
     assert_eq!(*thread_ids, Vec::<ChannelId>::new());
+    assert_eq!(*members, None, "the shard loop attaches the count");
     assert_eq!(
         event("GUILD_CREATE", &json!({"id": "2", "unavailable": true})),
         None
@@ -132,7 +135,7 @@ fn channels_threads_and_members() {
     added["guild_id"] = json!("1");
     assert!(matches!(
         event("GUILD_MEMBER_ADD", &added),
-        Some(Event::MemberAdd { guild_id, member }) if guild_id == g(1) && member.role_ids.len() == 1
+        Some(Event::MemberAdd { guild_id, member, .. }) if guild_id == g(1) && member.role_ids.len() == 1
     ));
     let updated = json!({
         "guild_id": "1",

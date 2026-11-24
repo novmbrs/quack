@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at\n             FROM guilds WHERE guild_id = ANY($1)",
+  "query": "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at, member_count\n             FROM guilds WHERE guild_id = $1",
   "describe": {
     "columns": [
       {
@@ -90,11 +90,22 @@
             "name": "left_at"
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "member_count",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "guilds",
+            "name": "member_count"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
-        "Int8Array"
+        "Int8"
       ]
     },
     "nullable": [
@@ -105,8 +116,9 @@
       false,
       false,
       false,
+      true,
       true
     ]
   },
-  "hash": "2535331e6a4bf13ac25ca25830a74789aeac5e425ec1070768913539255b1ca0"
+  "hash": "c0f1b6672bbb7dc6fd257c4b4d132a12ac16c26083701eccd38bab6a1761a33f"
 }

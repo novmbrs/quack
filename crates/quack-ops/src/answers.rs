@@ -67,6 +67,7 @@ impl Ops {
             installed: stored.installed,
             first_joined_at: stored.first_joined_at,
             left_at: stored.left_at,
+            members: stored.member_count,
             cases: counts.cases,
             voided_cases: counts.voided_cases,
             active_rules: counts.active_rules,

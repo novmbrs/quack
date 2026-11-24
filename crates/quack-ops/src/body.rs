@@ -34,13 +34,26 @@ pub(crate) enum Body {
         invalid_sessions: u64,
         connected_now: bool,
     },
-    /// `ops.install`.
+    /// `ops.install`. The fields after `servers` came later, so a post
+    /// saved before them still reads (as unknown).
     Install {
         change: Change,
         name: String,
         guild_id: GuildId,
         owner_id: AccountId,
         servers: u64,
+        #[serde(default)]
+        members: Option<u64>,
+        #[serde(default)]
+        total_members: Option<u64>,
+        #[serde(default, with = "time::serde::rfc3339::option")]
+        since: Option<OffsetDateTime>,
+        #[serde(default, with = "time::serde::rfc3339::option")]
+        left_at: Option<OffsetDateTime>,
+        #[serde(default)]
+        cases: Option<u64>,
+        #[serde(default)]
+        rules: Option<u64>,
     },
     /// `ops.dead_job`.
     DeadJob(DeadJob),
@@ -189,6 +202,12 @@ impl Body {
                 guild_id,
                 owner_id,
                 servers,
+                members,
+                total_members,
+                since,
+                left_at,
+                cases,
+                rules,
             } => text::install(&text::Install {
                 change: match change {
                     Change::Joined => InstallChange::Joined,
@@ -199,6 +218,12 @@ impl Body {
                 guild: *guild_id,
                 owner: *owner_id,
                 servers: *servers,
+                members: *members,
+                total_members: *total_members,
+                since: *since,
+                left_at: *left_at,
+                cases: *cases,
+                rules: *rules,
             }),
             Self::DeadJob(job) => text::dead_job(&job.view()),
             Self::DeadJobsMore { more } => text::dead_jobs_more(*more),
@@ -251,11 +276,40 @@ mod tests {
                 hidden_groups: 0,
             },
             Body::DeadJobsMore { more: 3 },
+            Body::Install {
+                change: Change::Left,
+                name: "Pond".to_owned(),
+                guild_id: GuildId::new(5).unwrap(),
+                owner_id: AccountId::new(6).unwrap(),
+                servers: 2,
+                members: Some(40),
+                total_members: Some(900),
+                since: Some(at),
+                left_at: Some(at),
+                cases: Some(3),
+                rules: Some(1),
+            },
         ];
         for body in bodies {
             let json = serde_json::to_value(&body).unwrap();
             assert_eq!(serde_json::from_value::<Body>(json).unwrap(), body);
         }
+    }
+
+    #[test]
+    fn an_install_saved_before_member_counts_still_reads() {
+        let old = serde_json::json!({
+            "kind": "install",
+            "change": "joined",
+            "name": "Pond",
+            "guild_id": "5",
+            "owner_id": "6",
+            "servers": 2
+        });
+        let body: Body = serde_json::from_value(old).unwrap();
+        let text = body.render().plain();
+        assert!(text.contains("Quack is in 2 servers now."), "{text}");
+        assert!(!text.contains("Members"), "{text}");
     }
 
     #[test]

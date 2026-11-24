@@ -11,6 +11,8 @@
 //! - [`Ops::status`], [`Ops::server`], [`Ops::dead_jobs`], [`Ops::requeue`],
 //!   and [`Ops::dismiss`] answer `/ops` and the ops buttons (§21.8); the
 //!   bot checks [`Ops::is_operator`] first.
+//! - [`Ops::metrics_overview`], [`Ops::metrics_servers`], and
+//!   [`Ops::metrics_jobs`] answer `/ops metrics` (§21.8).
 //!
 //! Only server metadata and counts cross servers here (§21.1).
 
@@ -18,6 +20,7 @@ mod answers;
 mod body;
 mod channels;
 mod errors;
+mod metrics;
 mod post;
 mod status;
 mod watch;

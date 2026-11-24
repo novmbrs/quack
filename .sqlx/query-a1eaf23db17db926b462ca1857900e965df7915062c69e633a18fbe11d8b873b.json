@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT max(created_at) AS \"at\" FROM mod_log\n               WHERE guild_id = $1 AND kind = 'quack_joined'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a1eaf23db17db926b462ca1857900e965df7915062c69e633a18fbe11d8b873b"
+}

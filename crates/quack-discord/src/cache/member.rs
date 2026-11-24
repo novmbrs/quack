@@ -150,6 +150,15 @@ impl MemberCache {
         }
     }
 
+    /// Whether a gateway event already put this member in the cache (a
+    /// join for them is then a repeat). Not a lookup: not counted.
+    pub(crate) fn holds_from_event(&self, guild: GuildId, member: MemberId) -> bool {
+        self.lock()
+            .lru
+            .peek(&(guild, member))
+            .is_some_and(|e| matches!(e.fed, Fed::Event))
+    }
+
     /// Stores a member from a gateway event.
     pub fn put_event(&self, guild: GuildId, member: Member) {
         let mut entries = self.lock();

@@ -6,6 +6,16 @@ use quack_core::action::{ActionFailure, ActionKind};
 use quack_core::ids::{AccountId, GuildId, JobId};
 use time::OffsetDateTime;
 
+mod board;
+mod chart;
+mod metrics;
+
+pub use board::{Backlog, Status, Trend, status};
+pub use metrics::{
+    FailedReason, Fleet, JobRuns, KindQueue, MetricsJobs, MetricsOverview, RankedServer,
+    SERVERS_PER_PAGE, ServerSort, Window, metrics_jobs, metrics_overview, metrics_servers,
+};
+
 use crate::actions::ButtonAction;
 use crate::fmt;
 use crate::model::{Block, Button, ButtonStyle, Inline, Msg, Person, Text, TimeStyle, Tone};
@@ -209,20 +219,33 @@ pub struct Install {
     pub owner: AccountId,
     /// Servers Quack is in now.
     pub servers: u64,
+    /// The server's members (the last known count when Quack left).
+    pub members: Option<u64>,
+    /// Members across every server Quack is in now (where known).
+    pub total_members: Option<u64>,
+    /// On a leave: when Quack last joined it.
+    pub since: Option<OffsetDateTime>,
+    /// On a leave: when Quack left (to measure the stay).
+    pub left_at: Option<OffsetDateTime>,
+    /// On a leave: the server's cases, voided included.
+    pub cases: Option<u64>,
+    /// On a leave: its active rules.
+    pub rules: Option<u64>,
 }
 
 /// `ops.install`: Quack joined, rejoined, or left a server.
 pub fn install(i: &Install) -> Msg {
     let (tone, heading, verb) = match i.change {
-        InstallChange::Joined => (Tone::Success, "Quack joined a server", "was added to"),
+        InstallChange::Joined => (Tone::Success, "📥 Quack joined a server", "was added to"),
         InstallChange::Rejoined => (
             Tone::Success,
-            "Quack rejoined a server",
+            "🔁 Quack rejoined a server",
             "was added again to",
         ),
-        InstallChange::Left => (Tone::Warning, "Quack left a server", "was removed from"),
+        InstallChange::Left => (Tone::Warning, "📤 Quack left a server", "was removed from"),
     };
-    Msg::new(tone)
+    let left = i.change == InstallChange::Left;
+    let mut msg = Msg::new(tone)
         .block(Block::Heading(Text::fixed(heading)))
         .para(
             Text::fixed(format!("Quack {verb} "))
@@ -234,11 +257,53 @@ pub fn install(i: &Install) -> Msg {
         .block(Block::Field {
             label: "Owner".to_owned(),
             value: Text::new().person(&Person::unnamed(i.owner)),
-        })
-        .block(Block::Subtext(Text::fixed(format!(
-            "Quack is in {} now.",
-            fmt::plural(i.servers, "server", "servers")
-        ))))
+        });
+    if let Some(members) = i.members {
+        msg = msg.block(Block::Field {
+            label: "Members".to_owned(),
+            value: Text::fixed(if left {
+                format!("{} (last known)", fmt::count(members))
+            } else {
+                fmt::count(members)
+            }),
+        });
+    }
+    if let Some(since) = i.since {
+        let stayed = i
+            .left_at
+            .map_or(0, |at| (at - since).whole_seconds().max(0));
+        msg = msg.block(Block::Field {
+            label: "Installed for".to_owned(),
+            value: Text::fixed(format!(
+                "{}, since ",
+                fmt::duration(u64::try_from(stayed).unwrap_or(0).max(1))
+            ))
+            .time(since, TimeStyle::Date),
+        });
+    }
+    if let (Some(cases), Some(rules)) = (i.cases, i.rules) {
+        msg = msg.block(Block::Field {
+            label: "Left behind".to_owned(),
+            value: Text::fixed(format!(
+                "{} · {}",
+                fmt::plural(cases, "case", "cases"),
+                fmt::plural(rules, "active rule", "active rules")
+            )),
+        });
+    }
+    let mut now = format!(
+        "Quack is in {} now",
+        fmt::plural(i.servers, "server", "servers")
+    );
+    if let Some(total) = i.total_members {
+        now = format!(
+            "{now}, with {} {}",
+            fmt::compact(total),
+            if total == 1 { "member" } else { "members" }
+        );
+    }
+    now.push('.');
+    msg.block(Block::Subtext(Text::fixed(now)))
 }
 
 /// A dead job as ops shows it.
@@ -478,137 +543,6 @@ pub fn errors(groups: &[ErrorGroup], dropped: u64) -> Msg {
     msg
 }
 
-/// One job kind with work waiting.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Backlog {
-    /// The kind's name.
-    pub kind: &'static str,
-    /// Jobs ready to run.
-    pub ready: u64,
-    /// The oldest ready job's wait, in seconds.
-    pub oldest_seconds: u64,
-}
-
-/// What the status board shows (§21.6).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Status {
-    /// The version.
-    pub version: String,
-    /// When this run started.
-    pub started_at: OffsetDateTime,
-    /// Whether the gateway is connected.
-    pub gateway_connected: bool,
-    /// The last heartbeat round trip, in milliseconds.
-    pub latency_ms: Option<u64>,
-    /// Servers Quack is in.
-    pub servers: u64,
-    /// Job kinds with work waiting.
-    pub backlog: Vec<Backlog>,
-    /// Dead jobs.
-    pub dead_jobs: u64,
-    /// Failed actions waiting for staff.
-    pub failed_actions: u64,
-    /// Appeals waiting for staff.
-    pub open_appeals: u64,
-    /// Open tickets.
-    pub open_tickets: u64,
-    /// Database connections in use.
-    pub pool_used: u32,
-    /// Database connections open.
-    pub pool_size: u32,
-    /// When this was read.
-    pub updated_at: OffsetDateTime,
-}
-
-/// `ops.status`: the status board, with **Refresh** when `refresh`.
-pub fn status(s: &Status, refresh: bool) -> Msg {
-    let healthy = s.gateway_connected && s.dead_jobs == 0;
-    let mut msg = Msg::new(if healthy {
-        Tone::Success
-    } else {
-        Tone::Warning
-    })
-    .block(Block::Heading(Text::fixed("Quack status")))
-    .block(Block::Field {
-        label: "Version".to_owned(),
-        value: Text::new()
-            .push(Inline::Code(s.version.clone()))
-            .s(", started ")
-            .time(s.started_at, TimeStyle::Relative),
-    })
-    .block(Block::Field {
-        label: "Gateway".to_owned(),
-        value: Text::fixed(match (s.gateway_connected, s.latency_ms) {
-            (true, Some(ms)) => format!("connected, {ms} ms heartbeat"),
-            (true, None) => "connected".to_owned(),
-            (false, _) => "not connected".to_owned(),
-        }),
-    })
-    .block(Block::Field {
-        label: "Servers".to_owned(),
-        value: Text::fixed(fmt::count(s.servers)),
-    });
-    let jobs = if s.backlog.is_empty() {
-        Text::fixed("nothing waiting")
-    } else {
-        let parts: Vec<String> = s
-            .backlog
-            .iter()
-            .map(|b| {
-                format!(
-                    "{} {} (oldest {})",
-                    fmt::count(b.ready),
-                    b.kind,
-                    fmt::duration(b.oldest_seconds.max(1))
-                )
-            })
-            .collect();
-        Text::fixed(parts.join(", "))
-    };
-    msg = msg
-        .block(Block::Field {
-            label: "Jobs ready".to_owned(),
-            value: jobs,
-        })
-        .block(Block::Field {
-            label: "Dead jobs".to_owned(),
-            value: Text::fixed(fmt::count(s.dead_jobs)),
-        })
-        .block(Block::Field {
-            label: "Failed actions".to_owned(),
-            value: Text::fixed(fmt::count(s.failed_actions)),
-        })
-        .block(Block::Field {
-            label: "Open appeals".to_owned(),
-            value: Text::fixed(fmt::count(s.open_appeals)),
-        })
-        .block(Block::Field {
-            label: "Open tickets".to_owned(),
-            value: Text::fixed(fmt::count(s.open_tickets)),
-        })
-        .block(Block::Field {
-            label: "Database".to_owned(),
-            value: Text::fixed(format!(
-                "{} of {} connections in use",
-                fmt::count(s.pool_used),
-                fmt::count(s.pool_size)
-            )),
-        })
-        .block(Block::Subtext(
-            Text::fixed("Updated ")
-                .time(s.updated_at, TimeStyle::Relative)
-                .s("."),
-        ));
-    if refresh {
-        msg = msg.buttons(vec![Button::new(
-            "Refresh",
-            ButtonStyle::Secondary,
-            ButtonAction::OpsRefresh,
-        )]);
-    }
-    msg
-}
-
 /// What `/ops server` shows (§21.1): metadata and counts only.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Server {
@@ -624,6 +558,8 @@ pub struct Server {
     pub first_joined_at: OffsetDateTime,
     /// When Quack left, while not installed.
     pub left_at: Option<OffsetDateTime>,
+    /// Its members as last known (`None`: not known yet).
+    pub members: Option<u64>,
     /// Cases, voided included.
     pub cases: u64,
     /// Voided cases.
@@ -680,6 +616,14 @@ pub fn server(s: &Server) -> Msg {
                 .s(" (")
                 .push(Inline::Code(s.owner.to_string()))
                 .s(")"),
+        })
+        .block(Block::Field {
+            label: "Members".to_owned(),
+            value: Text::fixed(match (s.members, s.installed) {
+                (None, _) => "not known yet".to_owned(),
+                (Some(n), true) => fmt::count(n),
+                (Some(n), false) => format!("{} (when Quack left)", fmt::count(n)),
+            }),
         })
         .block(Block::Field {
             label: "Cases".to_owned(),

@@ -21,6 +21,7 @@ use std::time::{Duration, Instant};
 
 use quack_telemetry::labels::GatewayConnectionEvent;
 use quack_telemetry::metrics;
+use time::OffsetDateTime;
 use tokio_util::sync::CancellationToken;
 use twilight_gateway::{
     CloseFrame, Config, Event as Raw, EventTypeFlags, Intents, Shard, ShardId, StreamExt as _,
@@ -28,7 +29,8 @@ use twilight_gateway::{
 
 use twilight_gateway::error::ReceiveMessageErrorType;
 
-use crate::cache::{GuildCache, MemberCache, feed_members};
+use crate::cache::{GuildCache, MemberCache, count_members, feed_members};
+use crate::model::MemberCount;
 use crate::rest::{DiscordClient, Outcome};
 use link::{Change, Link};
 
@@ -431,6 +433,8 @@ impl Gateway {
                 break Ok(());
             }
             if let Some(event) = event::map(&raw, sessions) {
+                let count = self.member_count(&event);
+                let event = event.with_members(count);
                 if matches!(event, Event::Ready { .. }) {
                     sessions += 1;
                 }
@@ -496,9 +500,25 @@ impl Gateway {
         }
     }
 
+    /// The member count to send with an event of `guild`, read now.
+    fn member_count(&self, event: &Event) -> Option<MemberCount> {
+        if !matches!(
+            event,
+            Event::GuildCreate { .. } | Event::MemberAdd { .. } | Event::MemberRemove { .. }
+        ) {
+            return None;
+        }
+        let guild = event.guild_id()?;
+        self.guilds.member_count(guild).map(|members| MemberCount {
+            members,
+            at: OffsetDateTime::now_utc(),
+        })
+    }
+
     /// Updates the caches and the connection state for one event.
     fn track(&self, raw: &Raw) {
         self.guilds.update(raw);
+        count_members(&self.guilds, &self.members, raw);
         feed_members(&self.members, raw);
         let gateway = &metrics().gateway;
         match raw {

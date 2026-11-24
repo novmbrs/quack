@@ -1,0 +1,161 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+tone: Neutral
+--- discord ---
+### 📊 Quack at a glance
+**1,204** servers · **2.31M** members · median **212**
+**Cases, last 14 days**
+```
+▄▅▆▄▁▂▇██▆▆▇█▄
+today 31 · peak 95 a day
+```
+**Activity**
+```
+         24h   7d    30d    all
+Cases     88  528  2,200    36K
+Voided     3   18     75  1,230
+Appeals    4   24    100  1,640
+Tickets   17  102    425  6,970
+Actions   61  366  1,525    25K
+Failed     1    6     25    410
+Joined     6   36    150  2,460
+Left       1    6     25    410
+```
+**Server sizes (members)**
+```
+< 100    ████████████  412
+100–999  ███████████▌  398
+1K–9.9K  ██████▍░░░░░  220
+10K–99K  █▍░░░░░░░░░░   48
+100K+    ▏░░░░░░░░░░░    2
+```
+**Modules on**
+```
+Tickets              █▋░░░░░░░░  17%  210
+Server activity log  ██▊░░░░░░░  28%  340
+Honeypot             ▍░░░░░░░░░   5%   55
+```
+-# Counts across every server Quack is in, read <t:1795014309:R>.
+--- plain ---
+📊 Quack at a glance
+1,204 servers · 2.31M members · median 212
+
+Cases, last 14 days
+▄▅▆▄▁▂▇██▆▆▇█▄
+today 31 · peak 95 a day
+Activity
+         24h   7d    30d    all
+Cases     88  528  2,200    36K
+Voided     3   18     75  1,230
+Appeals    4   24    100  1,640
+Tickets   17  102    425  6,970
+Actions   61  366  1,525    25K
+Failed     1    6     25    410
+Joined     6   36    150  2,460
+Left       1    6     25    410
+Server sizes (members)
+< 100    ████████████  412
+100–999  ███████████▌  398
+1K–9.9K  ██████▍░░░░░  220
+10K–99K  █▍░░░░░░░░░░   48
+100K+    ▏░░░░░░░░░░░    2
+Modules on
+Tickets              █▋░░░░░░░░  17%  210
+Server activity log  ██▊░░░░░░░  28%  340
+Honeypot             ▍░░░░░░░░░   5%   55
+Counts across every server Quack is in, read on 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("📊 Quack at a glance")]
+Text [Bold([Fixed("1,204")]), Fixed(" servers · "), Bold([Fixed("2.31M")]), Fixed(" members · median "), Bold([Fixed("212")])]
+Divider
+Text [Bold([Fixed("Cases, last 14 days")])]
+Code "▄▅▆▄▁▂▇██▆▆▇█▄\ntoday 31 · peak 95 a day"
+Text [Bold([Fixed("Activity")])]
+Code "         24h   7d    30d    all\nCases     88  528  2,200    36K\nVoided     3   18     75  1,230\nAppeals    4   24    100  1,640\nTickets   17  102    425  6,970\nActions   61  366  1,525    25K\nFailed     1    6     25    410\nJoined     6   36    150  2,460\nLeft       1    6     25    410"
+Text [Bold([Fixed("Server sizes (members)")])]
+Code "< 100    ████████████  412\n100–999  ███████████▌  398\n1K–9.9K  ██████▍░░░░░  220\n10K–99K  █▍░░░░░░░░░░   48\n100K+    ▏░░░░░░░░░░░    2"
+Text [Bold([Fixed("Modules on")])]
+Code "Tickets              █▋░░░░░░░░  17%  210\nServer activity log  ██▊░░░░░░░  28%  340\nHoneypot             ▍░░░░░░░░░   5%   55"
+Subtext [Fixed("Counts across every server Quack is in, read "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]
+
+## some counts unknown
+tone: Neutral
+--- discord ---
+### 📊 Quack at a glance
+**1,204** servers · **2.31M** members · median **212**
+Member counts are known for 1,100 of them so far.
+**Cases, last 14 days**
+```
+▄▅▆▄▁▂▇██▆▆▇█▄
+today 31 · peak 95 a day
+```
+**Activity**
+```
+         24h   7d    30d    all
+Cases     88  528  2,200    36K
+Voided     3   18     75  1,230
+Appeals    4   24    100  1,640
+Tickets   17  102    425  6,970
+Actions   61  366  1,525    25K
+Failed     1    6     25    410
+Joined     6   36    150  2,460
+Left       1    6     25    410
+```
+**Server sizes (members)**
+```
+< 100    ████████████  412
+100–999  ███████████▌  398
+1K–9.9K  ██████▍░░░░░  220
+10K–99K  █▍░░░░░░░░░░   48
+100K+    ▏░░░░░░░░░░░    2
+```
+**Modules on**
+```
+Tickets              █▋░░░░░░░░  17%  210
+Server activity log  ██▊░░░░░░░  28%  340
+Honeypot             ▍░░░░░░░░░   5%   55
+```
+-# Counts across every server Quack is in, read <t:1795014309:R>.
+--- plain ---
+📊 Quack at a glance
+1,204 servers · 2.31M members · median 212
+Member counts are known for 1,100 of them so far.
+
+Cases, last 14 days
+▄▅▆▄▁▂▇██▆▆▇█▄
+today 31 · peak 95 a day
+Activity
+         24h   7d    30d    all
+Cases     88  528  2,200    36K
+Voided     3   18     75  1,230
+Appeals    4   24    100  1,640
+Tickets   17  102    425  6,970
+Actions   61  366  1,525    25K
+Failed     1    6     25    410
+Joined     6   36    150  2,460
+Left       1    6     25    410
+Server sizes (members)
+< 100    ████████████  412
+100–999  ███████████▌  398
+1K–9.9K  ██████▍░░░░░  220
+10K–99K  █▍░░░░░░░░░░   48
+100K+    ▏░░░░░░░░░░░    2
+Modules on
+Tickets              █▋░░░░░░░░  17%  210
+Server activity log  ██▊░░░░░░░  28%  340
+Honeypot             ▍░░░░░░░░░   5%   55
+Counts across every server Quack is in, read on 18 Nov 2026 at 15:05 UTC.
+--- model ---
+Heading [Fixed("📊 Quack at a glance")]
+Text [Bold([Fixed("1,204")]), Fixed(" servers · "), Bold([Fixed("2.31M")]), Fixed(" members · median "), Bold([Fixed("212")]), Fixed("\nMember counts are known for 1,100 of them so far.")]
+Divider
+Text [Bold([Fixed("Cases, last 14 days")])]
+Code "▄▅▆▄▁▂▇██▆▆▇█▄\ntoday 31 · peak 95 a day"
+Text [Bold([Fixed("Activity")])]
+Code "         24h   7d    30d    all\nCases     88  528  2,200    36K\nVoided     3   18     75  1,230\nAppeals    4   24    100  1,640\nTickets   17  102    425  6,970\nActions   61  366  1,525    25K\nFailed     1    6     25    410\nJoined     6   36    150  2,460\nLeft       1    6     25    410"
+Text [Bold([Fixed("Server sizes (members)")])]
+Code "< 100    ████████████  412\n100–999  ███████████▌  398\n1K–9.9K  ██████▍░░░░░  220\n10K–99K  █▍░░░░░░░░░░   48\n100K+    ▏░░░░░░░░░░░    2"
+Text [Bold([Fixed("Modules on")])]
+Code "Tickets              █▋░░░░░░░░  17%  210\nServer activity log  ██▊░░░░░░░  28%  340\nHoneypot             ▍░░░░░░░░░   5%   55"
+Subtext [Fixed("Counts across every server Quack is in, read "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(".")]

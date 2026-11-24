@@ -253,6 +253,34 @@ fn the_member_cache_follows_events() {
 }
 
 #[test]
+fn member_counts_follow_joins_and_leaves_once() {
+    let (cache, members) = loaded();
+    assert_eq!(cache.member_count(g(1)), Some(2), "GUILD_CREATE's count");
+    let joined = |id: u64| {
+        let mut m = fixtures::member(id, &[]);
+        m["guild_id"] = json!("1");
+        fixtures::dispatch("GUILD_MEMBER_ADD", &m)
+    };
+    let step = |event: &Event| {
+        count_members(&cache, &members, event);
+        feed(&cache, &members, std::slice::from_ref(event));
+    };
+    step(&joined(9));
+    assert_eq!(cache.member_count(g(1)), Some(3));
+    step(&joined(9));
+    assert_eq!(cache.member_count(g(1)), Some(3), "a repeated join");
+    step(&joined(7));
+    assert_eq!(cache.member_count(g(1)), Some(3), "already in GUILD_CREATE");
+    step(&fixtures::dispatch(
+        "GUILD_MEMBER_REMOVE",
+        &json!({"guild_id": "1", "user": fixtures::user(9, "u")}),
+    ));
+    assert_eq!(cache.member_count(g(1)), Some(2));
+    step(&ready());
+    assert_eq!(cache.member_count(g(1)), None, "READY starts from scratch");
+}
+
+#[test]
 fn members_interaction_authors_and_message_authors_refresh_accounts() {
     let (_, members) = loaded();
     let accounts = members.accounts();

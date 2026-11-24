@@ -1,0 +1,238 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH\n               c AS (SELECT count(*) FILTER (WHERE created_at > now() - interval '1 day') AS c1,\n                            count(*) FILTER (WHERE created_at > now() - interval '7 days') AS c7,\n                            count(*) FILTER (WHERE created_at > now() - interval '30 days') AS c30,\n                            count(*) AS call,\n                            count(*) FILTER (WHERE voided_at > now() - interval '1 day') AS v1,\n                            count(*) FILTER (WHERE voided_at > now() - interval '7 days') AS v7,\n                            count(*) FILTER (WHERE voided_at > now() - interval '30 days') AS v30,\n                            count(voided_at) AS vall\n                     FROM cases),\n               ap AS (SELECT count(*) FILTER (WHERE created_at > now() - interval '1 day') AS a1,\n                             count(*) FILTER (WHERE created_at > now() - interval '7 days') AS a7,\n                             count(*) FILTER (WHERE created_at > now() - interval '30 days') AS a30,\n                             count(*) AS aall\n                      FROM appeals),\n               t AS (SELECT count(*) FILTER (WHERE created_at > now() - interval '1 day') AS t1,\n                            count(*) FILTER (WHERE created_at > now() - interval '7 days') AS t7,\n                            count(*) FILTER (WHERE created_at > now() - interval '30 days') AS t30,\n                            count(*) AS tall\n                     FROM tickets),\n               i AS (SELECT count(*) FILTER (WHERE kind = 'quack_joined' AND created_at > now() - interval '1 day') AS j1,\n                            count(*) FILTER (WHERE kind = 'quack_joined' AND created_at > now() - interval '7 days') AS j7,\n                            count(*) FILTER (WHERE kind = 'quack_joined' AND created_at > now() - interval '30 days') AS j30,\n                            count(*) FILTER (WHERE kind = 'quack_joined') AS jall,\n                            count(*) FILTER (WHERE kind = 'quack_left' AND created_at > now() - interval '1 day') AS l1,\n                            count(*) FILTER (WHERE kind = 'quack_left' AND created_at > now() - interval '7 days') AS l7,\n                            count(*) FILTER (WHERE kind = 'quack_left' AND created_at > now() - interval '30 days') AS l30,\n                            count(*) FILTER (WHERE kind = 'quack_left') AS lall\n                     FROM mod_log WHERE kind IN ('quack_joined', 'quack_left')),\n               x AS (SELECT count(*) FILTER (WHERE state = 'done' AND done_at > now() - interval '1 day') AS d1,\n                            count(*) FILTER (WHERE state = 'done' AND done_at > now() - interval '7 days') AS d7,\n                            count(*) FILTER (WHERE state = 'done' AND done_at > now() - interval '30 days') AS d30,\n                            count(*) FILTER (WHERE state = 'done') AS dall,\n                            count(*) FILTER (WHERE state = 'failed' AND dismissed_at IS NULL AND updated_at > now() - interval '1 day') AS f1,\n                            count(*) FILTER (WHERE state = 'failed' AND dismissed_at IS NULL AND updated_at > now() - interval '7 days') AS f7,\n                            count(*) FILTER (WHERE state = 'failed' AND dismissed_at IS NULL AND updated_at > now() - interval '30 days') AS f30,\n                            count(*) FILTER (WHERE state = 'failed' AND dismissed_at IS NULL) AS fall\n                     FROM actions)\n               SELECT c1 AS \"c1!\", c7 AS \"c7!\", c30 AS \"c30!\", call AS \"call!\",\n                      v1 AS \"v1!\", v7 AS \"v7!\", v30 AS \"v30!\", vall AS \"vall!\",\n                      a1 AS \"a1!\", a7 AS \"a7!\", a30 AS \"a30!\", aall AS \"aall!\",\n                      t1 AS \"t1!\", t7 AS \"t7!\", t30 AS \"t30!\", tall AS \"tall!\",\n                      j1 AS \"j1!\", j7 AS \"j7!\", j30 AS \"j30!\", jall AS \"jall!\",\n                      l1 AS \"l1!\", l7 AS \"l7!\", l30 AS \"l30!\", lall AS \"lall!\",\n                      d1 AS \"d1!\", d7 AS \"d7!\", d30 AS \"d30!\", dall AS \"dall!\",\n                      f1 AS \"f1!\", f7 AS \"f7!\", f30 AS \"f30!\", fall AS \"fall!\"\n               FROM c, ap, t, i, x",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "c1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "c7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "c30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "call!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "v1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "v7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "v30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "vall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "a1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "a7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "a30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "aall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "t1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "t7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "t30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "tall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "j1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "j7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "j30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "jall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "l1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "l7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "l30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 23,
+        "name": "lall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 24,
+        "name": "d1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 25,
+        "name": "d7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 26,
+        "name": "d30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 27,
+        "name": "dall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 28,
+        "name": "f1!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 29,
+        "name": "f7!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 30,
+        "name": "f30!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 31,
+        "name": "fall!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "074a2d9c380685cc911cc3cc5d65a879daa7e9bf8b44ab200e804ef2a8b92b13"
+}

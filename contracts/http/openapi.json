@@ -3,7 +3,7 @@
   "info": {
     "title": "Quack",
     "description": "The API of Quack's dashboard. Same-origin only: sign in with Discord (session cookie); every POST, PUT, PATCH, and DELETE also sends `X-CSRF-Token` (from `GET /api/auth/me`) and, under `/api/guilds` and `/api/me`, an `Idempotency-Key`. Errors use one envelope, `{ \"error\": ErrorBody }`.",
-    "version": "0.1.0"
+    "version": "5.3.0"
   },
   "paths": {
     "/api/auth/callback": {

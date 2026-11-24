@@ -27,6 +27,7 @@ pub mod cases;
 pub mod dms;
 pub mod drafts;
 pub mod evidence;
+pub mod fleet;
 pub mod guilds;
 pub mod honeypot;
 pub mod housekeeping;

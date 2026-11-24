@@ -1,10 +1,11 @@
-//! Job queue metrics.
+//! Job queue metrics, and the in-process tally the ops metrics read.
 
 use std::time::Duration;
 
 use opentelemetry::metrics::{Counter, Histogram, Meter, ObservableGauge};
 
 use super::observe::{Source, counter, f64_gauge, histogram, u64_gauge};
+use super::tally::JobTally;
 use crate::catalog;
 use crate::labels::{Attribute, JobKind, JobOutcome};
 
@@ -31,6 +32,7 @@ pub struct JobMetrics {
     queue_wait: Histogram<f64>,
     lease_expired: Counter<u64>,
     backlog: Source<Vec<JobQueueSample>>,
+    tally: JobTally,
     _ready: ObservableGauge<u64>,
     _oldest: ObservableGauge<f64>,
     _dead: ObservableGauge<u64>,
@@ -64,6 +66,7 @@ impl JobMetrics {
             queue_wait: histogram(meter, &catalog::JOB_QUEUE_WAIT),
             lease_expired: counter(meter, &catalog::JOB_LEASE_EXPIRED),
             backlog,
+            tally: JobTally::new(),
             _ready: ready,
             _oldest: oldest,
             _dead: dead,
@@ -87,6 +90,12 @@ impl JobMetrics {
     pub fn finished(&self, kind: JobKind, outcome: JobOutcome, duration: Duration) {
         self.duration
             .record(duration.as_secs_f64(), &[kind.kv(), outcome.kv()]);
+        self.tally.record(kind, outcome, duration);
+    }
+
+    /// This process's job runs over the last 24 hours, for the ops metrics.
+    pub const fn tally(&self) -> &JobTally {
+        &self.tally
     }
 
     /// Counts a claimed job whose lease expired before its run settled it.

@@ -178,11 +178,22 @@ fn case(data: &CommandData, autocomplete_request: bool) -> Request {
 }
 
 fn ops(data: &CommandData) -> Option<Request> {
-    let (sub, options) = data.options.first().and_then(|o| match &o.value {
-        CommandOptionValue::SubCommand(options) => Some((o.name.as_str(), options.as_slice())),
-        _ => None,
-    })?;
-    Some(Request::Ops(match sub {
+    let first = data.options.first()?;
+    if let CommandOptionValue::SubCommandGroup(subs) = &first.value {
+        let sub = subs.first()?;
+        return Some(Request::Ops(
+            match (first.name.as_str(), sub.name.as_str()) {
+                ("metrics", "overview") => OpsRequest::MetricsOverview,
+                ("metrics", "servers") => OpsRequest::MetricsServers,
+                ("metrics", "jobs") => OpsRequest::MetricsJobs,
+                _ => return None,
+            },
+        ));
+    }
+    let CommandOptionValue::SubCommand(options) = &first.value else {
+        return None;
+    };
+    Some(Request::Ops(match first.name.as_str() {
         "status" => OpsRequest::Status,
         "server" => OpsRequest::Server(string_option(options, "id")?),
         "jobs" => OpsRequest::Jobs,

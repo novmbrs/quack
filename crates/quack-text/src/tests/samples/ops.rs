@@ -8,8 +8,9 @@ use super::{Out, Sample, label, msg, sample, text};
 use crate::budget::COMMAND_DESCRIPTION;
 use crate::command;
 use crate::ops::{
-    self, Backlog, DeadJob, ErrorGroup, FailedGroup, Gateway, Handled, Install, InstallChange,
-    Previous, Server, Started, Status, StopReason,
+    self, Backlog, DeadJob, ErrorGroup, FailedGroup, FailedReason, Fleet, Gateway, Handled,
+    Install, InstallChange, JobRuns, KindQueue, MetricsJobs, MetricsOverview, Previous,
+    RankedServer, Server, ServerSort, Started, Status, StopReason, Trend, Window,
 };
 use crate::tests::fixtures::*;
 
@@ -46,10 +47,22 @@ fn started(previous: Previous, commit: Option<&str>) -> Started {
 fn status() -> Status {
     Status {
         version: "0.1.0".to_owned(),
+        commit: Some("a762256d1f".to_owned()),
         started_at: t0(),
         gateway_connected: true,
         latency_ms: Some(42),
         servers: 1_204,
+        members: 2_318_440,
+        trend: Trend {
+            cases: 88,
+            appeals: 4,
+            tickets: 17,
+            joins: 6,
+            leaves: 1,
+            job_runs: 1_920,
+            job_failures: 3,
+            runs_seconds: 86_400,
+        },
         backlog: vec![Backlog {
             kind: "run_action",
             ready: 3,
@@ -73,6 +86,7 @@ fn server(installed: bool) -> Server {
         installed,
         first_joined_at: t0(),
         left_at: (!installed).then(later),
+        members: Some(if installed { 12_480 } else { 12_401 }),
         cases: 120,
         voided_cases: 4,
         active_rules: 6,
@@ -88,6 +102,143 @@ fn server(installed: bool) -> Server {
     }
 }
 
+fn install(change: InstallChange) -> Install {
+    let left = change == InstallChange::Left;
+    Install {
+        change,
+        name: "Quack *Pond*".to_owned(),
+        guild: guild(),
+        owner: account(444),
+        servers: 1_205,
+        members: Some(12_480),
+        total_members: Some(2_318_440),
+        since: left.then(t0),
+        left_at: left.then(later),
+        cases: left.then_some(341),
+        rules: left.then_some(4),
+    }
+}
+
+fn window(day: u64) -> Window {
+    Window {
+        day,
+        week: day * 6,
+        month: day * 25,
+        all: day * 410,
+    }
+}
+
+fn overview(counted: u64) -> MetricsOverview {
+    MetricsOverview {
+        fleet: Fleet {
+            servers: 1_204,
+            counted,
+            members: 2_318_440,
+            median_members: Some(212),
+            sizes: [412, 398, 220, 48, 2],
+            tickets_on: 210,
+            activity_log_on: 340,
+            honeypot_on: 55,
+        },
+        cases: window(88),
+        voided: window(3),
+        appeals: window(4),
+        tickets: window(17),
+        actions_done: window(61),
+        actions_failed: window(1),
+        joins: window(6),
+        leaves: window(1),
+        daily_cases: vec![40, 52, 61, 38, 0, 12, 70, 88, 91, 64, 59, 80, 95, 31],
+        updated_at: later(),
+    }
+}
+
+fn ranked(n: u64) -> RankedServer {
+    RankedServer {
+        guild: GuildId::new(1_005_778_938_108_325_970 + n).unwrap(),
+        name: format!("Pond {n}"),
+        members: (n != 3).then(|| 150_000 / n),
+        cases_month: 40 / n,
+        cases: 900 / n,
+        first_joined_at: t0(),
+    }
+}
+
+fn jobs_metrics(busy: bool) -> MetricsJobs {
+    let ms = std::time::Duration::from_millis;
+    MetricsJobs {
+        runs: if busy {
+            vec![
+                JobRuns {
+                    kind: "run_action",
+                    runs: 412,
+                    retries: 3,
+                    dead: 0,
+                    mean: ms(210),
+                },
+                JobRuns {
+                    kind: "send_dm",
+                    runs: 380,
+                    retries: 12,
+                    dead: 1,
+                    mean: ms(1_420),
+                },
+                JobRuns {
+                    kind: "capture_evidence",
+                    runs: 18_204,
+                    retries: 0,
+                    dead: 0,
+                    mean: ms(85),
+                },
+            ]
+        } else {
+            Vec::new()
+        },
+        runs_cover: std::time::Duration::from_secs(if busy { 86_400 } else { 4_000 }),
+        queue: if busy {
+            vec![
+                KindQueue {
+                    kind: "send_dm",
+                    ready: 4,
+                    scheduled: 12,
+                    running: 1,
+                    dead: 1,
+                    oldest_ready: ms(14_000),
+                },
+                KindQueue {
+                    kind: "housekeeping",
+                    ready: 0,
+                    scheduled: 1,
+                    running: 0,
+                    dead: 0,
+                    oldest_ready: ms(0),
+                },
+            ]
+        } else {
+            Vec::new()
+        },
+        failed: if busy {
+            vec![
+                FailedReason {
+                    kind: ActionKind::Ban,
+                    reason: ActionFailure::QuackRoleTooLow,
+                    count: 12,
+                    servers: 3,
+                },
+                FailedReason {
+                    kind: ActionKind::Timeout,
+                    reason: ActionFailure::QuackMissingPermission,
+                    count: 1,
+                    servers: 1,
+                },
+            ]
+        } else {
+            Vec::new()
+        },
+        updated_at: later(),
+    }
+}
+
 pub fn samples() -> Vec<Sample> {
     let mut v = Vec::new();
     for (id, c) in [
@@ -96,6 +247,10 @@ pub fn samples() -> Vec<Sample> {
         "command.ops.server",
         "command.ops.server.id",
         "command.ops.jobs",
+        "command.ops.metrics",
+        "command.ops.metrics.overview",
+        "command.ops.metrics.servers",
+        "command.ops.metrics.jobs",
     ]
     .into_iter()
     .zip(command::OPS_ALL)
@@ -167,17 +322,7 @@ pub fn samples() -> Vec<Sample> {
         ("rejoined", InstallChange::Rejoined),
         ("left", InstallChange::Left),
     ] {
-        v.push(msg(
-            "ops.install",
-            variant,
-            ops::install(&Install {
-                change,
-                name: "Quack *Pond*".to_owned(),
-                guild: guild(),
-                owner: account(444),
-                servers: 1_205,
-            }),
-        ));
+        v.push(msg("ops.install", variant, ops::install(&install(change))));
     }
     v.push(msg("ops.dead_job", "", ops::dead_job(&job(1))));
     v.push(msg(
@@ -264,6 +409,73 @@ pub fn samples() -> Vec<Sample> {
             },
             false,
         ),
+    ));
+    v.push(msg(
+        "ops.status",
+        "needs a look, since start",
+        ops::status(
+            &Status {
+                failed_actions: 0,
+                backlog: vec![Backlog {
+                    kind: "send_dm",
+                    ready: 40,
+                    oldest_seconds: 95,
+                }],
+                trend: Trend {
+                    runs_seconds: 3_700,
+                    job_failures: 0,
+                    ..status().trend
+                },
+                pool_used: 20,
+                ..status()
+            },
+            true,
+        ),
+    ));
+    v.push(msg(
+        "ops.metrics_overview",
+        "",
+        ops::metrics_overview(&overview(1_204)),
+    ));
+    v.push(msg(
+        "ops.metrics_overview",
+        "some counts unknown",
+        ops::metrics_overview(&overview(1_100)),
+    ));
+    v.push(msg(
+        "ops.metrics_servers",
+        "first page",
+        ops::metrics_servers(
+            &(1..=10).map(ranked).collect::<Vec<_>>(),
+            ServerSort::Members,
+            1,
+            1_204,
+        ),
+    ));
+    v.push(msg(
+        "ops.metrics_servers",
+        "second page",
+        ops::metrics_servers(&[ranked(11)], ServerSort::Members, 2, 11),
+    ));
+    v.push(msg(
+        "ops.metrics_servers",
+        "last page by cases",
+        ops::metrics_servers(&[ranked(4)], ServerSort::Cases, 121, 1_201),
+    ));
+    v.push(msg(
+        "ops.metrics_servers",
+        "empty",
+        ops::metrics_servers(&[], ServerSort::Newest, 1, 0),
+    ));
+    v.push(msg(
+        "ops.metrics_jobs",
+        "busy",
+        ops::metrics_jobs(&jobs_metrics(true)),
+    ));
+    v.push(msg(
+        "ops.metrics_jobs",
+        "quiet, since start",
+        ops::metrics_jobs(&jobs_metrics(false)),
     ));
     v.push(msg("ops.server", "installed", ops::server(&server(true))));
     v.push(msg(

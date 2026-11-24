@@ -8,7 +8,7 @@
 
 use quack_core::ids::GuildId;
 use quack_discord::gateway::Event;
-use quack_discord::model::Guild;
+use quack_discord::model::{Guild, MemberCount};
 use quack_engine::guilds::{bootstrap, channel_deleted, left};
 
 use crate::bot::Shared;
@@ -30,8 +30,21 @@ pub(crate) async fn handle(shared: &Shared, event: &Event) {
     let result = match event {
         Event::Ready { guild_ids, .. } => ready(shared, guild_ids).await,
         Event::GuildCreate {
-            guild, channel_ids, ..
-        } => guild_create(shared, guild, channel_ids).await,
+            guild,
+            channel_ids,
+            members,
+            ..
+        } => guild_create(shared, guild, channel_ids, *members).await,
+        Event::MemberAdd {
+            guild_id,
+            members: Some(count),
+            ..
+        }
+        | Event::MemberRemove {
+            guild_id,
+            members: Some(count),
+            ..
+        } => member_count(shared, *guild_id, *count).await,
         Event::GuildUpdate { guild } => bootstrap(engine, &facts(guild), None).await.map(|_| ()),
         Event::GuildDelete {
             guild_id,
@@ -84,15 +97,32 @@ async fn ready(shared: &Shared, present: &[GuildId]) -> Result<(), quack_db::DbE
     failed.map_or(Ok(()), Err)
 }
 
-/// `GUILD_CREATE`: bootstrap the server, reconcile its channel settings,
-/// and warm its config cache (bootstrap reloads its rules).
+/// Stores the member count a join, leave, or `GUILD_CREATE` carried for
+/// the ops metrics (§21.6); an older count than the stored one is ignored.
+async fn member_count(
+    shared: &Shared,
+    guild: GuildId,
+    count: MemberCount,
+) -> Result<(), quack_db::DbError> {
+    let mut conn = shared.engine.db().conn().await?;
+    quack_db::guilds::set_member_count(&mut conn, guild, count.members, count.at).await
+}
+
+/// `GUILD_CREATE`: bootstrap the server, keep its member count, reconcile
+/// its channel settings, and warm its config cache (bootstrap reloads its
+/// rules).
 async fn guild_create(
     shared: &Shared,
     guild: &Guild,
     channels: &[quack_core::ids::ChannelId],
+    members: Option<MemberCount>,
 ) -> Result<(), quack_db::DbError> {
     let engine = &shared.engine;
     let done = bootstrap(engine, &facts(guild), Some(channels)).await?;
+    if let Some(count) = members {
+        // Before the install post, which reads it.
+        member_count(shared, guild.id, count).await?;
+    }
     if done.first_join {
         tracing::info!(guild = guild.id.get(), "joined a new server");
     }

@@ -66,6 +66,7 @@ fn model(m: &Msg, out: &mut String) {
             Block::Divider => writeln!(out, "Divider"),
             Block::File(name) => writeln!(out, "File {name:?}"),
             Block::Gallery(items) => writeln!(out, "Gallery {items:?}"),
+            Block::Code(body) => writeln!(out, "Code {body:?}"),
         };
     }
 }

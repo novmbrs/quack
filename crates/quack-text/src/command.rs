@@ -199,8 +199,38 @@ pub const OPS_JOBS: Named = Named {
     name: "jobs",
     description: "List dead jobs to requeue or dismiss.",
 };
+/// `command.ops.metrics`: the metrics group.
+pub const OPS_METRICS: Named = Named {
+    name: "metrics",
+    description: "See counts across every server Quack is in.",
+};
+/// `command.ops.metrics.overview`.
+pub const OPS_METRICS_OVERVIEW: Named = Named {
+    name: "overview",
+    description: "Servers, members, cases, and modules at a glance.",
+};
+/// `command.ops.metrics.servers`.
+pub const OPS_METRICS_SERVERS: Named = Named {
+    name: "servers",
+    description: "Rank the servers by members, recent cases, or newest.",
+};
+/// `command.ops.metrics.jobs`.
+pub const OPS_METRICS_JOBS: Named = Named {
+    name: "jobs",
+    description: "Job runs, the queue, and failed actions.",
+};
 /// Every `/ops` name and description, for limit checks.
-pub const OPS_ALL: [Named; 5] = [OPS, OPS_STATUS, OPS_SERVER, OPS_SERVER_ID, OPS_JOBS];
+pub const OPS_ALL: [Named; 9] = [
+    OPS,
+    OPS_STATUS,
+    OPS_SERVER,
+    OPS_SERVER_ID,
+    OPS_JOBS,
+    OPS_METRICS,
+    OPS_METRICS_OVERVIEW,
+    OPS_METRICS_SERVERS,
+    OPS_METRICS_JOBS,
+];
 
 /// Every name and description above, for limit checks.
 pub const ALL: [Named; 26] = [

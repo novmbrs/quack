@@ -4,53 +4,68 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## joined
 tone: Success
 --- discord ---
-### Quack joined a server
+### 📥 Quack joined a server
 Quack was added to **Quack \*Pond\*** (`1005778938108325970`).
 **Owner:** <@444>
--# Quack is in 1,205 servers now.
+**Members:** 12,480
+-# Quack is in 1,205 servers now, with 2.31M members.
 --- plain ---
-Quack joined a server
+📥 Quack joined a server
 Quack was added to Quack *Pond* (1005778938108325970).
 Owner: A member (ID 444)
-Quack is in 1,205 servers now.
+Members: 12,480
+Quack is in 1,205 servers now, with 2.31M members.
 --- model ---
-Heading [Fixed("Quack joined a server")]
+Heading [Fixed("📥 Quack joined a server")]
 Text [Fixed("Quack was added to "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
 Field "Owner" [Person(Person { id: AccountId(444), name: None })]
-Subtext [Fixed("Quack is in 1,205 servers now.")]
+Field "Members" [Fixed("12,480")]
+Subtext [Fixed("Quack is in 1,205 servers now, with 2.31M members.")]
 
 ## rejoined
 tone: Success
 --- discord ---
-### Quack rejoined a server
+### 🔁 Quack rejoined a server
 Quack was added again to **Quack \*Pond\*** (`1005778938108325970`).
 **Owner:** <@444>
--# Quack is in 1,205 servers now.
+**Members:** 12,480
+-# Quack is in 1,205 servers now, with 2.31M members.
 --- plain ---
-Quack rejoined a server
+🔁 Quack rejoined a server
 Quack was added again to Quack *Pond* (1005778938108325970).
 Owner: A member (ID 444)
-Quack is in 1,205 servers now.
+Members: 12,480
+Quack is in 1,205 servers now, with 2.31M members.
 --- model ---
-Heading [Fixed("Quack rejoined a server")]
+Heading [Fixed("🔁 Quack rejoined a server")]
 Text [Fixed("Quack was added again to "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
 Field "Owner" [Person(Person { id: AccountId(444), name: None })]
-Subtext [Fixed("Quack is in 1,205 servers now.")]
+Field "Members" [Fixed("12,480")]
+Subtext [Fixed("Quack is in 1,205 servers now, with 2.31M members.")]
 
 ## left
 tone: Warning
 --- discord ---
-### Quack left a server
+### 📤 Quack left a server
 Quack was removed from **Quack \*Pond\*** (`1005778938108325970`).
 **Owner:** <@444>
--# Quack is in 1,205 servers now.
+**Members:** 12,480 (last known)
+**Installed for:** 1 day 1 hour, since <t:1794924309:d>
+**Left behind:** 341 cases · 4 active rules
+-# Quack is in 1,205 servers now, with 2.31M members.
 --- plain ---
-Quack left a server
+📤 Quack left a server
 Quack was removed from Quack *Pond* (1005778938108325970).
 Owner: A member (ID 444)
-Quack is in 1,205 servers now.
+Members: 12,480 (last known)
+Installed for: 1 day 1 hour, since 17 Nov 2026
+Left behind: 341 cases · 4 active rules
+Quack is in 1,205 servers now, with 2.31M members.
 --- model ---
-Heading [Fixed("Quack left a server")]
+Heading [Fixed("📤 Quack left a server")]
 Text [Fixed("Quack was removed from "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
 Field "Owner" [Person(Person { id: AccountId(444), name: None })]
-Subtext [Fixed("Quack is in 1,205 servers now.")]
+Field "Members" [Fixed("12,480 (last known)")]
+Field "Installed for" [Fixed("1 day 1 hour, since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
+Field "Left behind" [Fixed("341 cases · 4 active rules")]
+Subtext [Fixed("Quack is in 1,205 servers now, with 2.31M members.")]

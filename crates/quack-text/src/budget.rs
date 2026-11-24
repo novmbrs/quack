@@ -298,7 +298,10 @@ pub fn fit(msg: &mut Msg) {
             }
             _ => {
                 let last = msg.blocks.iter().rposition(|b| {
-                    matches!(b, Block::Field { .. } | Block::Text(_) | Block::Quote(_))
+                    matches!(
+                        b,
+                        Block::Field { .. } | Block::Text(_) | Block::Quote(_) | Block::Code(_)
+                    )
                 });
                 match last {
                     Some(i) => {

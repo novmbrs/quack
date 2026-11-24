@@ -123,6 +123,13 @@ fn base_id() -> impl Strategy<Value = CustomId> {
         uuid().prop_map(|j| CustomId::OpsRequeueJob(JobId::from_uuid(j))),
         uuid().prop_map(|j| CustomId::OpsDismissJob(JobId::from_uuid(j))),
         any::<u32>().prop_map(CustomId::OpsJobsPage),
+        (
+            prop::sample::select(quack_text::ops::ServerSort::ALL.to_vec()),
+            any::<u32>()
+        )
+            .prop_map(|(s, p)| CustomId::OpsServersPage(s, p)),
+        prop::sample::select(quack_text::ops::ServerSort::ALL.to_vec())
+            .prop_map(CustomId::OpsServersSort),
     ]
 }
 

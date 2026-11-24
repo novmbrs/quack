@@ -27,6 +27,9 @@ pub struct Guild {
     pub first_joined_at: OffsetDateTime,
     /// When Quack last left, while not installed.
     pub left_at: Option<OffsetDateTime>,
+    /// Members as of the last `GUILD_CREATE` and the joins and leaves since
+    /// (`None` until Quack has seen it since the count was kept).
+    pub member_count: Option<u64>,
 }
 
 /// The facts a `GUILD_CREATE` carries.
@@ -127,6 +130,7 @@ struct GuildRow {
     installed: bool,
     first_joined_at: OffsetDateTime,
     left_at: Option<OffsetDateTime>,
+    member_count: Option<i32>,
 }
 
 impl TryFrom<GuildRow> for Guild {
@@ -142,6 +146,7 @@ impl TryFrom<GuildRow> for Guild {
             installed: r.installed,
             first_joined_at: r.first_joined_at,
             left_at: r.left_at,
+            member_count: r.member_count.map(count).transpose()?,
         })
     }
 }
@@ -153,7 +158,7 @@ pub async fn get(conn: &mut PgConnection, guild: GuildId) -> Result<Option<Guild
         "guilds",
         sqlx::query_as!(
             GuildRow,
-            "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at
+            "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at, member_count
              FROM guilds WHERE guild_id = $1",
             i64::from(guild)
         )
@@ -172,7 +177,7 @@ pub async fn get_many(conn: &mut PgConnection, guilds: &[GuildId]) -> Result<Vec
         "guilds",
         sqlx::query_as!(
             GuildRow,
-            "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at
+            "SELECT guild_id, name, icon_hash, owner_id, mfa_required, installed, first_joined_at, left_at, member_count
              FROM guilds WHERE guild_id = ANY($1)",
             &ids
         )
@@ -180,6 +185,32 @@ pub async fn get_many(conn: &mut PgConnection, guilds: &[GuildId]) -> Result<Vec
     )
     .await?;
     rows.into_iter().map(Guild::try_from).collect()
+}
+
+/// Stores a server's member count as the gateway read it at `at`
+/// (§21.6). A count read before the stored one is ignored, so writes
+/// handled out of order keep the newest.
+pub async fn set_member_count(
+    conn: &mut PgConnection,
+    guild: GuildId,
+    members: u64,
+    at: OffsetDateTime,
+) -> Result<(), DbError> {
+    let members = i32::try_from(members).unwrap_or(i32::MAX);
+    obs::run(
+        Update,
+        "guilds",
+        sqlx::query!(
+            "UPDATE guilds SET member_count = $2, member_count_at = $3
+             WHERE guild_id = $1 AND (member_count_at IS NULL OR member_count_at <= $3)",
+            i64::from(guild),
+            members,
+            at
+        )
+        .execute(conn),
+    )
+    .await?;
+    Ok(())
 }
 
 /// Every server Quack is installed in (startup cache loads).

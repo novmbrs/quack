@@ -150,7 +150,9 @@ impl Activity {
                 channel_id,
                 message_ids,
             } => log.on_messages_bulk_deleted(*guild, *channel_id, message_ids),
-            Event::MemberAdd { guild_id, member } => log.on_member_joined(&MemberJoined {
+            Event::MemberAdd {
+                guild_id, member, ..
+            } => log.on_member_joined(&MemberJoined {
                 guild: *guild_id,
                 member: Person::new(
                     member.id.account(),
@@ -161,7 +163,9 @@ impl Activity {
                 ),
                 account_created: created_at(member.id.account()),
             }),
-            Event::MemberRemove { guild_id, account } => log.on_member_left(&MemberLeft {
+            Event::MemberRemove {
+                guild_id, account, ..
+            } => log.on_member_left(&MemberLeft {
                 guild: *guild_id,
                 username: account.username.clone(),
                 id: account.id,
