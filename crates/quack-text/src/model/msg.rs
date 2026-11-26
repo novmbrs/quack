@@ -46,6 +46,14 @@ pub enum Block {
     Divider,
     /// A file sent with the message, by its attachment name.
     File(String),
+    /// An image sent with the message, shown inline: its attachment name
+    /// and a description for screen readers and plain text.
+    Image {
+        /// The attachment's name.
+        name: String,
+        /// What the image shows.
+        alt: String,
+    },
     /// Up to 10 images or videos shown inline from their URLs (fresh CDN
     /// URLs of evidence copies). Evidence galleries are always spoilered.
     Gallery(Vec<GalleryItem>),

@@ -10,10 +10,14 @@ mod board;
 mod chart;
 mod metrics;
 
-pub use board::{Backlog, Status, Trend, status};
+pub use board::{
+    Backlog, PUBLIC_IMAGE, STATUS_IMAGE, Status, Trend, public_card, public_status, status,
+    status_card,
+};
 pub use metrics::{
-    FailedReason, Fleet, JobRuns, KindQueue, MetricsJobs, MetricsOverview, RankedServer,
-    SERVERS_PER_PAGE, ServerSort, Window, metrics_jobs, metrics_overview, metrics_servers,
+    FailedReason, Fleet, JobRuns, KindQueue, MetricsJobs, MetricsOverview, OVERVIEW_IMAGE,
+    RankedServer, SERVERS_PER_PAGE, ServerSort, Window, metrics_jobs, metrics_overview,
+    metrics_overview_card, metrics_servers,
 };
 
 use crate::actions::ButtonAction;
@@ -70,17 +74,31 @@ pub struct Started {
 
 /// `ops.started`: a new run is ready.
 pub fn started(s: &Started) -> Msg {
-    let mut version = Text::new().push(Inline::Code(s.version.clone()));
+    let mut facts = Text::new().push(Inline::Code(s.version.clone()));
     if let Some(commit) = &s.commit {
-        version = version
-            .s(" (")
-            .push(Inline::Code(fmt::cut(commit, 12)))
-            .s(")");
+        facts = facts.s(" ").push(Inline::Code(fmt::cut(commit, 12)));
     }
+    let migrations = u64::try_from(s.migrations_applied).unwrap_or(0);
+    facts = facts
+        .s(" · ready in ")
+        .bold(fmt::duration(s.ready_in_seconds.max(1)))
+        .s(" · ")
+        .bold(fmt::count(migrations))
+        .s(if migrations == 1 {
+            " migration · "
+        } else {
+            " migrations · "
+        })
+        .bold(fmt::count(s.servers))
+        .s(if s.servers == 1 {
+            " server"
+        } else {
+            " servers"
+        });
     let (tone, previous) = match s.previous {
         Previous::None => (
             Tone::Success,
-            Text::fixed("This is the first run ops knows about."),
+            Block::Subtext(Text::fixed("This is the first run ops knows about.")),
         ),
         Previous::Stopped { at, reason } => (
             if reason == StopReason::Signal {
@@ -88,48 +106,34 @@ pub fn started(s: &Started) -> Msg {
             } else {
                 Tone::Warning
             },
-            Text::fixed("The run before stopped cleanly ")
-                .time(at, TimeStyle::Relative)
-                .s(match reason {
-                    StopReason::Signal => " (a restart or deploy).",
-                    StopReason::GatewayClosed => " because Discord's gateway closed for good.",
-                }),
+            Block::Subtext(
+                Text::fixed("The run before stopped cleanly ")
+                    .time(at, TimeStyle::Relative)
+                    .s(match reason {
+                        StopReason::Signal => " (a restart or deploy).",
+                        StopReason::GatewayClosed => " because Discord's gateway closed for good.",
+                    }),
+            ),
         ),
         Previous::Ended { seen_at } => {
             let down = (s.started_at - seen_at).whole_seconds().max(0);
             let down = u64::try_from(down).unwrap_or(0);
             (
                 Tone::Warning,
-                Text::fixed(
-                    "The run before ended without stopping (a crash or a kill). It was last seen ",
-                )
-                .time(seen_at, TimeStyle::Relative)
-                .s(format!(
-                    ", so Quack was down for about {}.",
-                    fmt::duration(down.max(1))
-                )),
+                Block::Text(
+                    Text::fixed("⚠️ The run before ended without stopping (a crash or a kill). It was last seen ")
+                        .time(seen_at, TimeStyle::Relative)
+                        .s(", so Quack was down for about ")
+                        .bold(fmt::duration(down.max(1)))
+                        .s("."),
+                ),
             )
         }
     };
     Msg::new(tone)
-        .block(Block::Heading(Text::fixed("Quack started")))
-        .block(Block::Field {
-            label: "Version".to_owned(),
-            value: version,
-        })
-        .block(Block::Field {
-            label: "Ready in".to_owned(),
-            value: Text::fixed(fmt::duration(s.ready_in_seconds.max(1))),
-        })
-        .block(Block::Field {
-            label: "Migrations applied".to_owned(),
-            value: Text::fixed(fmt::count(u64::try_from(s.migrations_applied).unwrap_or(0))),
-        })
-        .block(Block::Field {
-            label: "Servers".to_owned(),
-            value: Text::fixed(fmt::count(s.servers)),
-        })
-        .para(previous)
+        .block(Block::Heading(Text::fixed("🚀 Quack is up")))
+        .para(facts)
+        .block(previous)
 }
 
 /// Gateway trouble over one window (§21.3).
@@ -151,14 +155,17 @@ pub struct Gateway {
 
 /// `ops.gateway`: what the gateway did in the last 10 minutes.
 pub fn gateway(g: &Gateway) -> Msg {
-    let mut parts = Vec::new();
+    let mut line = Text::new();
+    let mut first = true;
     let mut add = |n: u64, one: &str, many: &str| {
         if n > 0 {
-            parts.push(format!(
-                "{} {}",
-                fmt::count(n),
-                if n == 1 { one } else { many }
-            ));
+            if !first {
+                line = std::mem::take(&mut line).s(" · ");
+            }
+            first = false;
+            line = std::mem::take(&mut line)
+                .bold(fmt::count(n))
+                .s(format!(" {}", if n == 1 { one } else { many }));
         }
     };
     add(g.drops, "dropped connection", "dropped connections");
@@ -170,29 +177,20 @@ pub fn gateway(g: &Gateway) -> Msg {
         "invalidated session",
         "invalidated sessions",
     );
-    let summary = if parts.is_empty() {
-        "Nothing changed.".to_owned()
-    } else {
-        format!("{}.", capitalize(&fmt::list(&parts, "and")))
-    };
+    if first {
+        line = Text::fixed("Nothing changed.");
+    }
     let (tone, now) = if g.connected_now {
-        (Tone::Warning, "Quack is connected now.")
+        (Tone::Warning, "🟢 Quack is connected now.")
     } else {
-        (Tone::Danger, "Quack is not connected right now.")
+        (Tone::Danger, "🔴 Quack is not connected right now.")
     };
     Msg::new(tone)
         .block(Block::Heading(Text::fixed(
-            "Gateway trouble in the last 10 minutes",
+            "📡 Gateway trouble in the last 10 minutes",
         )))
-        .para(Text::fixed(summary))
+        .para(line)
         .para(Text::fixed(now))
-}
-
-fn capitalize(s: &str) -> String {
-    let mut chars = s.chars();
-    chars.next().map_or_else(String::new, |c| {
-        c.to_uppercase().collect::<String>() + chars.as_str()
-    })
 }
 
 /// What happened to Quack's membership of a server.
@@ -235,75 +233,73 @@ pub struct Install {
 
 /// `ops.install`: Quack joined, rejoined, or left a server.
 pub fn install(i: &Install) -> Msg {
-    let (tone, heading, verb) = match i.change {
-        InstallChange::Joined => (Tone::Success, "📥 Quack joined a server", "was added to"),
-        InstallChange::Rejoined => (
-            Tone::Success,
-            "🔁 Quack rejoined a server",
-            "was added again to",
-        ),
-        InstallChange::Left => (Tone::Warning, "📤 Quack left a server", "was removed from"),
+    let (tone, icon, verb) = match i.change {
+        InstallChange::Joined => (Tone::Success, "📥", "Joined "),
+        InstallChange::Rejoined => (Tone::Success, "🔁", "Rejoined "),
+        InstallChange::Left => (Tone::Warning, "📤", "Left "),
     };
     let left = i.change == InstallChange::Left;
-    let mut msg = Msg::new(tone)
-        .block(Block::Heading(Text::fixed(heading)))
-        .para(
-            Text::fixed(format!("Quack {verb} "))
-                .bold_user(&i.name)
-                .s(" (")
-                .push(Inline::Code(i.guild.to_string()))
-                .s(")."),
-        )
-        .block(Block::Field {
-            label: "Owner".to_owned(),
-            value: Text::new().person(&Person::unnamed(i.owner)),
-        });
+    let mut facts = Text::new();
     if let Some(members) = i.members {
-        msg = msg.block(Block::Field {
-            label: "Members".to_owned(),
-            value: Text::fixed(if left {
-                format!("{} (last known)", fmt::count(members))
-            } else {
-                fmt::count(members)
-            }),
-        });
+        facts = facts
+            .bold(fmt::count(members))
+            .s(if members == 1 { " member" } else { " members" })
+            .s(if left { " (last known) · " } else { " · " });
     }
+    facts = facts
+        .s("owner ")
+        .person(&Person::unnamed(i.owner))
+        .s(" · ")
+        .push(Inline::Code(i.guild.to_string()));
+    let mut msg = Msg::new(tone)
+        .block(Block::Heading(
+            Text::fixed(format!("{icon} {verb}")).user(&i.name),
+        ))
+        .para(facts);
+    let mut stay = Text::new();
     if let Some(since) = i.since {
         let stayed = i
             .left_at
             .map_or(0, |at| (at - since).whole_seconds().max(0));
-        msg = msg.block(Block::Field {
-            label: "Installed for".to_owned(),
-            value: Text::fixed(format!(
-                "{}, since ",
-                fmt::duration(u64::try_from(stayed).unwrap_or(0).max(1))
-            ))
-            .time(since, TimeStyle::Date),
-        });
+        stay = stay
+            .s("Installed for ")
+            .bold(fmt::duration(u64::try_from(stayed).unwrap_or(0).max(1)))
+            .s(", since ")
+            .time(since, TimeStyle::Date);
     }
     if let (Some(cases), Some(rules)) = (i.cases, i.rules) {
-        msg = msg.block(Block::Field {
-            label: "Left behind".to_owned(),
-            value: Text::fixed(format!(
-                "{} · {}",
-                fmt::plural(cases, "case", "cases"),
-                fmt::plural(rules, "active rule", "active rules")
-            )),
+        if !stay.0.is_empty() {
+            stay = stay.s(" · ");
+        }
+        stay = stay
+            .s("left behind ")
+            .bold(fmt::count(cases))
+            .s(if cases == 1 { " case, " } else { " cases, " })
+            .bold(fmt::count(rules))
+            .s(if rules == 1 {
+                " active rule"
+            } else {
+                " active rules"
+            });
+    }
+    if !stay.0.is_empty() {
+        msg = msg.para(stay);
+    }
+    let mut now = Text::fixed("Quack is in ")
+        .bold(fmt::count(i.servers))
+        .s(if i.servers == 1 {
+            " server"
+        } else {
+            " servers"
+        });
+    if let Some(total) = i.total_members {
+        now = now.s(" with ").bold(fmt::compact(total)).s(if total == 1 {
+            " member"
+        } else {
+            " members"
         });
     }
-    let mut now = format!(
-        "Quack is in {} now",
-        fmt::plural(i.servers, "server", "servers")
-    );
-    if let Some(total) = i.total_members {
-        now = format!(
-            "{now}, with {} {}",
-            fmt::compact(total),
-            if total == 1 { "member" } else { "members" }
-        );
-    }
-    now.push('.');
-    msg.block(Block::Subtext(Text::fixed(now)))
+    msg.block(Block::Subtext(now.s(" now.")))
 }
 
 /// A dead job as ops shows it.
@@ -326,34 +322,33 @@ pub struct DeadJob {
 }
 
 fn job_fields(msg: Msg, j: &DeadJob) -> Msg {
-    let msg = msg
-        .block(Block::Field {
-            label: "Key".to_owned(),
-            value: Text::new().push(Inline::Code(j.key.clone())),
-        })
-        .block(Block::Field {
-            label: "Server".to_owned(),
-            value: j.guild.map_or_else(
-                || Text::fixed("none"),
-                |g| Text::new().push(Inline::Code(g.to_string())),
-            ),
-        })
-        .block(Block::Field {
-            label: "Runs".to_owned(),
-            value: Text::fixed(fmt::count(j.attempts)),
-        });
-    let msg = match &j.error {
-        Some(e) => msg.block(Block::Field {
-            label: "Last error".to_owned(),
-            value: Text::new().push(Inline::Code(fmt::cut(&fmt::one_line(e), 200))),
-        }),
-        None => msg,
+    let mut facts = Text::new().push(Inline::Code(j.key.clone())).s(" · ");
+    facts = match j.guild {
+        Some(g) => facts.s("server ").push(Inline::Code(g.to_string())),
+        None => facts.s("no server"),
     };
+    facts = facts
+        .s(" · ")
+        .bold(fmt::count(j.attempts))
+        .s(if j.attempts == 1 { " run" } else { " runs" });
+    let mut msg = msg.para(facts);
+    if let Some(e) = &j.error {
+        msg = msg
+            .para(Text::fixed("Last error: ").push(Inline::Code(fmt::cut(&fmt::one_line(e), 200))));
+    }
     msg.block(Block::Subtext(
         Text::fixed("Died ")
             .time(j.dead_at, TimeStyle::FullRelative)
             .s("."),
     ))
+}
+
+fn job_heading(j: &DeadJob) -> Block {
+    Block::Heading(
+        Text::fixed("💀 A ")
+            .push(Inline::Code(j.kind.to_owned()))
+            .s(" job died"),
+    )
 }
 
 fn job_buttons(j: &DeadJob) -> Vec<Button> {
@@ -373,15 +368,7 @@ fn job_buttons(j: &DeadJob) -> Vec<Button> {
 
 /// `ops.dead_job`: a job ran out of attempts.
 pub fn dead_job(j: &DeadJob) -> Msg {
-    job_fields(
-        Msg::new(Tone::Danger).block(Block::Heading(
-            Text::fixed("A ")
-                .push(Inline::Code(j.kind.to_owned()))
-                .s(" job died"),
-        )),
-        j,
-    )
-    .buttons(job_buttons(j))
+    job_fields(Msg::new(Tone::Danger).block(job_heading(j)), j).buttons(job_buttons(j))
 }
 
 /// What an operator did with a dead job.
@@ -399,15 +386,8 @@ pub fn dead_job_handled(j: &DeadJob, how: Handled, by: AccountId) -> Msg {
         Handled::Requeued => (Tone::Success, " requeued it. It runs again now."),
         Handled::Dismissed => (Tone::Neutral, " dismissed it. The job is deleted."),
     };
-    job_fields(
-        Msg::new(tone).block(Block::Heading(
-            Text::fixed("A ")
-                .push(Inline::Code(j.kind.to_owned()))
-                .s(" job died"),
-        )),
-        j,
-    )
-    .para(Text::new().person(&Person::unnamed(by)).s(did))
+    job_fields(Msg::new(tone).block(job_heading(j)), j)
+        .para(Text::new().person(&Person::unnamed(by)).s(did))
 }
 
 /// `ops.dead_jobs_more`: more jobs died this minute than were posted.
@@ -450,36 +430,38 @@ pub const FAILED_GROUPS_SHOWN: usize = 10;
 /// counts every failure, `hidden` the groups not in `groups` (which shows
 /// at most [`FAILED_GROUPS_SHOWN`]).
 pub fn failed_actions(groups: &[FailedGroup], total: u64, hidden: u64) -> Msg {
-    let mut msg = Msg::new(Tone::Warning)
-        .block(Block::Heading(Text::fixed(format!(
-            "{} failed",
-            fmt::plural(total, "action", "actions")
-        ))))
-        .para(Text::fixed(
-            "Staff can retry or dismiss them in their server. Nothing here needs a click.",
-        ));
-    for g in groups.iter().take(FAILED_GROUPS_SHOWN) {
-        msg = msg.para(
-            Text::fixed(format!(
-                "{} × {} in ",
-                fmt::count(g.count),
-                word::action(g.kind)
-            ))
+    let mut msg = Msg::new(Tone::Warning).block(Block::Heading(Text::fixed(format!(
+        "⚠️ {} failed",
+        fmt::plural(total, "action", "actions")
+    ))));
+    let mut lines = Text::new();
+    for (n, g) in groups.iter().take(FAILED_GROUPS_SHOWN).enumerate() {
+        if n > 0 {
+            lines = lines.s("\n");
+        }
+        lines = lines
+            .s("• ")
+            .bold(format!("{}×", fmt::count(g.count)))
+            .s(format!(" {} in ", word::action(g.kind)))
             .push(Inline::Code(g.guild.to_string()))
-            .s(": ")
-            .push(Inline::Code(g.reason.as_str().to_owned())),
-        );
+            .s(" · ")
+            .push(Inline::Code(g.reason.as_str().to_owned()));
+    }
+    if !groups.is_empty() {
+        msg = msg.para(lines);
     }
     let hidden =
         hidden + u64::try_from(groups.len().saturating_sub(FAILED_GROUPS_SHOWN)).unwrap_or(0);
+    let mut note = String::new();
     if hidden > 0 {
-        msg = msg.block(Block::Subtext(Text::fixed(format!(
-            "And {} more {}.",
+        note = format!(
+            "And {} more {}. ",
             fmt::count(hidden),
             if hidden == 1 { "group" } else { "groups" }
-        ))));
+        );
     }
-    msg
+    note.push_str("Staff can retry or dismiss them in their server; nothing here needs a click.");
+    msg.block(Block::Subtext(Text::fixed(note)))
 }
 
 /// One group of the error feed.
@@ -504,20 +486,19 @@ pub const ERROR_GROUPS_SHOWN: usize = 10;
 pub fn errors(groups: &[ErrorGroup], dropped: u64) -> Msg {
     let total: u64 = groups.iter().map(|g| g.count).sum::<u64>() + dropped;
     let mut msg = Msg::new(Tone::Danger).block(Block::Heading(Text::fixed(format!(
-        "{} in the last minute",
+        "🧯 {} in the last minute",
         fmt::plural(total, "error", "errors")
     ))));
     for g in groups.iter().take(ERROR_GROUPS_SHOWN) {
         let mut line = Text::new()
-            .push(Inline::Code(fmt::cut(&g.target, 80)))
+            .bold(format!("{}×", fmt::count(g.count)))
             .s(" ")
-            .push(Inline::Code(fmt::cut(&fmt::one_line(&g.message), 300)));
-        if g.count > 1 {
-            line = line.s(format!(" ×{}", fmt::count(g.count)));
-        }
+            .push(Inline::Code(fmt::cut(&fmt::one_line(&g.message), 300)))
+            .s("\n")
+            .push(Inline::Code(fmt::cut(&g.target, 80)));
         match (&g.trace_url, &g.trace_id) {
-            (Some(url), _) => line = line.s(" ").link("trace", url.clone()),
-            (None, Some(id)) => line = line.s(" trace ").push(Inline::Code(id.clone())),
+            (Some(url), _) => line = line.s(" · ").link("trace", url.clone()),
+            (None, Some(id)) => line = line.s(" · trace ").push(Inline::Code(id.clone())),
             (None, None) => {}
         }
         msg = msg.para(line);
@@ -580,18 +561,67 @@ pub struct Server {
 
 /// `ops.server`: one server's metadata and counts.
 pub fn server(s: &Server) -> Msg {
+    let mut facts = Text::new().push(Inline::Code(s.guild.to_string()));
+    facts = facts
+        .s(" · owner ")
+        .person(&Person::unnamed(s.owner))
+        .s(" (")
+        .push(Inline::Code(s.owner.to_string()))
+        .s(") · ");
+    facts = match (s.members, s.installed) {
+        (None, _) => facts.s("members not known yet"),
+        (Some(n), true) => facts
+            .bold(fmt::count(n))
+            .s(if n == 1 { " member" } else { " members" }),
+        (Some(n), false) => facts
+            .bold(fmt::count(n))
+            .s(if n == 1 { " member" } else { " members" })
+            .s(" when Quack left"),
+    };
     let installed = if s.installed {
-        Text::fixed("Quack is in this server. It first joined ")
+        Text::fixed("🟢 Quack is in this server; it first joined ")
             .time(s.first_joined_at, TimeStyle::Date)
             .s(".")
     } else {
-        let t = Text::fixed("Quack isn't in this server any more. It first joined ")
+        let t = Text::fixed("⚪ Quack isn't in this server any more. It first joined ")
             .time(s.first_joined_at, TimeStyle::Date);
         match s.left_at {
             Some(at) => t.s(" and left ").time(at, TimeStyle::Date).s("."),
             None => t.s("."),
         }
     };
+    let counts = Text::new()
+        .bold(fmt::count(s.cases))
+        .s(format!(
+            " {} ({} voided) · ",
+            if s.cases == 1 { "case" } else { "cases" },
+            fmt::count(s.voided_cases)
+        ))
+        .bold(fmt::count(s.active_rules))
+        .s(if s.active_rules == 1 {
+            " active rule"
+        } else {
+            " active rules"
+        })
+        .s("\nWaiting for staff: ")
+        .bold(fmt::count(s.open_appeals))
+        .s(if s.open_appeals == 1 {
+            " appeal · "
+        } else {
+            " appeals · "
+        })
+        .bold(fmt::count(s.failed_actions))
+        .s(if s.failed_actions == 1 {
+            " failed action · "
+        } else {
+            " failed actions · "
+        })
+        .bold(fmt::count(s.open_tickets))
+        .s(if s.open_tickets == 1 {
+            " open ticket"
+        } else {
+            " open tickets"
+        });
     let modules = if s.modules_on.is_empty() {
         "none".to_owned()
     } else {
@@ -599,53 +629,15 @@ pub fn server(s: &Server) -> Msg {
     };
     let missing = match &s.missing_permissions {
         None => Text::fixed("Discord didn't answer, so Quack couldn't check."),
-        Some(p) if p.is_empty() => Text::fixed("none"),
-        Some(p) => Text::fixed(p.join(", ")),
+        Some(p) if p.is_empty() => Text::fixed("none 🟢"),
+        Some(p) => Text::fixed(format!("🟡 {}", p.join(", "))),
     };
     Msg::new(Tone::Neutral)
-        .block(Block::Heading(Text::new().bold_user(&s.name)))
+        .block(Block::Heading(Text::fixed("🏠 ").user(&s.name)))
+        .para(facts)
         .para(installed)
-        .block(Block::Field {
-            label: "ID".to_owned(),
-            value: Text::new().push(Inline::Code(s.guild.to_string())),
-        })
-        .block(Block::Field {
-            label: "Owner".to_owned(),
-            value: Text::new()
-                .person(&Person::unnamed(s.owner))
-                .s(" (")
-                .push(Inline::Code(s.owner.to_string()))
-                .s(")"),
-        })
-        .block(Block::Field {
-            label: "Members".to_owned(),
-            value: Text::fixed(match (s.members, s.installed) {
-                (None, _) => "not known yet".to_owned(),
-                (Some(n), true) => fmt::count(n),
-                (Some(n), false) => format!("{} (when Quack left)", fmt::count(n)),
-            }),
-        })
-        .block(Block::Field {
-            label: "Cases".to_owned(),
-            value: Text::fixed(format!(
-                "{} ({} voided)",
-                fmt::count(s.cases),
-                fmt::count(s.voided_cases)
-            )),
-        })
-        .block(Block::Field {
-            label: "Active rules".to_owned(),
-            value: Text::fixed(fmt::count(s.active_rules)),
-        })
-        .block(Block::Field {
-            label: "Waiting for staff".to_owned(),
-            value: Text::fixed(format!(
-                "{}, {}, {}",
-                fmt::plural(s.open_appeals, "appeal", "appeals"),
-                fmt::plural(s.failed_actions, "failed action", "failed actions"),
-                fmt::plural(s.open_tickets, "open ticket", "open tickets"),
-            )),
-        })
+        .block(Block::Divider)
+        .para(counts)
         .block(Block::Field {
             label: "Modules on".to_owned(),
             value: Text::fixed(modules),

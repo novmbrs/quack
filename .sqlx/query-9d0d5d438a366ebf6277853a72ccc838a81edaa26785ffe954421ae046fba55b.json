@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(c.id) AS \"n!\"\n               FROM generate_series(0, 23) AS h(back)\n               LEFT JOIN cases c\n                 ON c.created_at >= date_trunc('hour', now()) - make_interval(hours => h.back)\n                AND c.created_at < date_trunc('hour', now()) - make_interval(hours => h.back - 1)\n               GROUP BY h.back\n               ORDER BY h.back DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "n!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9d0d5d438a366ebf6277853a72ccc838a81edaa26785ffe954421ae046fba55b"
+}

@@ -30,7 +30,7 @@ pub(crate) async fn ops_posts_installs_and_answers_only_operators() -> Result<()
     let installs = sys.posted(channels.installs.unwrap());
     assert_eq!(installs.len(), 1, "{installs:#?}");
     assert!(
-        installs[0].contains("Quack joined a server"),
+        installs[0].contains("📥 Joined Server 1001"),
         "{}",
         installs[0]
     );
@@ -44,7 +44,7 @@ pub(crate) async fn ops_posts_installs_and_answers_only_operators() -> Result<()
         "{sent:?}"
     );
     let board = plain_msg(&sys.answer());
-    assert!(board.contains("Last 24 hours"), "{board}");
+    assert!(board.contains("1 server, 0 members, 0 cases"), "{board}");
     sys.send(&ix(2, moderator(), sys.channel, &ops_command("status")))
         .await;
     let refused = plain_msg(&sys.answer());

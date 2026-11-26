@@ -14,9 +14,9 @@ use crate::body::DeadJob;
 pub type Answer = Result<Msg, Text>;
 
 impl Ops {
-    /// The status board, with **Refresh** (which re-renders wherever it is
-    /// clicked: the board or a private copy).
-    pub async fn status(&self) -> Result<Msg, DbError> {
+    /// The ops status board with its image, and **Refresh** (which
+    /// re-renders wherever it is clicked: the board or a private copy).
+    pub async fn status(&self) -> Result<crate::Rendered, DbError> {
         crate::status::message(self).await
     }
 

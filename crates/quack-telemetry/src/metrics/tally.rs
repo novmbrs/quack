@@ -148,6 +148,34 @@ impl JobTally {
         self.read_at(self.started.elapsed())
     }
 
+    /// Runs and failed runs (retried or dead) in each of the last 24
+    /// hours of this process, oldest first; the last hour holds the 10
+    /// minutes in progress. Hours before the process started are zero.
+    pub fn hourly(&self) -> Vec<(u64, u64)> {
+        self.hourly_at(self.started.elapsed())
+    }
+
+    fn hourly_at(&self, elapsed: Duration) -> Vec<(u64, u64)> {
+        const PER_HOUR: u64 = 3_600 / BUCKET;
+        let index = elapsed.as_secs() / BUCKET;
+        let mut hours = vec![(0, 0); 24];
+        let buckets = self.buckets.lock().unwrap_or_else(PoisonError::into_inner);
+        for bucket in buckets.iter().filter(|b| b.index <= index) {
+            let back = (index - bucket.index) / PER_HOUR;
+            let Some(slot) = usize::try_from(back)
+                .ok()
+                .and_then(|b| 23usize.checked_sub(b))
+            else {
+                continue;
+            };
+            for row in &bucket.kinds {
+                hours[slot].0 += row.runs;
+                hours[slot].1 += row.retries + row.dead;
+            }
+        }
+        hours
+    }
+
     fn read_at(&self, elapsed: Duration) -> TallyRead {
         let index = elapsed.as_secs() / BUCKET;
         let oldest = index.saturating_sub(DAY);
@@ -175,6 +203,21 @@ mod tests {
 
     const fn at(hours: u64, secs: u64) -> Duration {
         Duration::from_secs(hours * 3_600 + secs)
+    }
+
+    #[test]
+    fn hourly_groups_the_last_day_oldest_first() {
+        let tally = JobTally::new();
+        let ms = Duration::from_millis;
+        tally.record_at(at(0, 5), JobKind::SendDm, JobOutcome::Done, ms(1));
+        tally.record_at(at(10, 0), JobKind::SendDm, JobOutcome::Retry, ms(1));
+        tally.record_at(at(30, 0), JobKind::SendDm, JobOutcome::Done, ms(1));
+        tally.record_at(at(30, 1), JobKind::RunAction, JobOutcome::Dead, ms(1));
+        let hours = tally.hourly_at(at(30, 2));
+        assert_eq!(hours.len(), 24);
+        assert_eq!(hours[23], (2, 1), "the hour in progress is last");
+        assert_eq!(hours[3], (1, 1), "20 hours before");
+        assert_eq!(hours.iter().map(|h| h.0).sum::<u64>(), 3, "a day back only");
     }
 
     #[test]

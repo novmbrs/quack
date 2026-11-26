@@ -215,39 +215,76 @@ pub async fn record_stop(conn: &mut PgConnection, reason: StopReason) -> Result<
     Ok(())
 }
 
-/// The status board's message, when one was posted.
+/// Which status board (§21.6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Board {
+    /// The full board in `#ops-status`.
+    Ops,
+    /// The public board in its configured channel.
+    Public,
+}
+
+/// A status board's message, when one was posted.
 pub async fn status_message(
     conn: &mut PgConnection,
+    board: Board,
 ) -> Result<Option<(ChannelId, MessageId)>, DbError> {
     let row = obs::run(
         Select,
         "ops_state",
-        sqlx::query!("SELECT status_channel_id, status_message_id FROM ops_state").fetch_one(conn),
+        sqlx::query!(
+            "SELECT status_channel_id, status_message_id, public_channel_id, public_message_id
+             FROM ops_state"
+        )
+        .fetch_one(conn),
     )
     .await?;
-    Ok(match (row.status_channel_id, row.status_message_id) {
+    let (channel, message) = match board {
+        Board::Ops => (row.status_channel_id, row.status_message_id),
+        Board::Public => (row.public_channel_id, row.public_message_id),
+    };
+    Ok(match (channel, message) {
         (Some(c), Some(m)) => Some((id(c)?, id(m)?)),
         _ => None,
     })
 }
 
-/// Remembers the status board's message.
+/// Remembers a status board's message.
 pub async fn set_status_message(
     conn: &mut PgConnection,
+    board: Board,
     channel: ChannelId,
     message: MessageId,
 ) -> Result<(), DbError> {
-    obs::run(
-        Update,
-        "ops_state",
-        sqlx::query!(
-            "UPDATE ops_state SET status_channel_id = $1, status_message_id = $2",
-            i64::from(channel),
-            i64::from(message)
-        )
-        .execute(conn),
-    )
-    .await?;
+    let (channel, message) = (i64::from(channel), i64::from(message));
+    match board {
+        Board::Ops => {
+            obs::run(
+                Update,
+                "ops_state",
+                sqlx::query!(
+                    "UPDATE ops_state SET status_channel_id = $1, status_message_id = $2",
+                    channel,
+                    message
+                )
+                .execute(conn),
+            )
+            .await?;
+        }
+        Board::Public => {
+            obs::run(
+                Update,
+                "ops_state",
+                sqlx::query!(
+                    "UPDATE ops_state SET public_channel_id = $1, public_message_id = $2",
+                    channel,
+                    message
+                )
+                .execute(conn),
+            )
+            .await?;
+        }
+    }
     Ok(())
 }
 

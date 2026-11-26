@@ -14,6 +14,7 @@ workspace = true
 [dependencies]
 quack-core = { workspace = true }
 quack-text = { workspace = true }
+quack-card = { workspace = true }
 quack-db = { workspace = true }
 quack-engine = { workspace = true }
 quack-telemetry = { workspace = true }

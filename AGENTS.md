@@ -41,7 +41,8 @@ dependencies in the root `Cargo.toml`), one binary, `quack`.
 | `quack-discord` | Twilight: gateway, caches, REST with typed outcomes, rendering, custom ids, commands. | core, text, telemetry |
 | `quack-engine` | Use cases and job handlers; defines the `Discord` port. | core, text, db, telemetry |
 | `quack-tickets`, `quack-activity-log`, `quack-honeypot` | The optional modules, as service functions plus `ModuleJobs`/`ModuleHooks`. | core, text, db, engine, telemetry |
-| `quack-ops` | Ops in Discord: the ops server's channels, durable posts, alerts, the status board, the error feed, `/ops` answers. | core, text, db, engine, telemetry |
+| `quack-card` | Draws `quack-text`'s cards (the ops boards and metrics) as PNG images with bundled fonts. | text |
+| `quack-ops` | Ops in Discord: the ops server's channels, durable posts, alerts, the status boards, the error feed, `/ops` answers. | core, text, card, db, engine, telemetry |
 | `quack-api` | axum HTTP API, Discord sign-in, sessions, CSRF, rate limits, OpenAPI, dashboard files. | core, text, db, engine, modules, telemetry |
 | `quack-bot` | Interactions and gateway events into engine calls and replies; the module adapters, `/setup`, and `/ops`. | core, text, db, engine, discord, modules, ops, telemetry |
 | `quack-import` | The one-time MySQL importer (the only crate with sqlx's `mysql`). | core, db |

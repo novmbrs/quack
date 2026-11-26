@@ -7,8 +7,9 @@ use quack_core::action::{ActionFailure, ActionKind};
 use quack_core::ids::GuildId;
 use time::OffsetDateTime;
 
-use super::chart::{bar, spark, table};
+use super::chart::table;
 use crate::actions::ButtonAction;
+use crate::card::{Bar, Card, Columns, Section, Tile};
 use crate::fmt;
 use crate::model::{Block, Button, ButtonStyle, Inline, Msg, Text, TimeStyle, Tone};
 use crate::word;
@@ -104,110 +105,145 @@ fn percent(part: u64, whole: u64) -> String {
     )
 }
 
-const BAR: usize = 12;
-/// The module bars are shorter, to leave room for "Server activity log".
-const MODULE_BAR: usize = 10;
+/// The overview's image name.
+pub const OVERVIEW_IMAGE: &str = "quack-metrics.png";
 
-/// `ops.metrics_overview`: the fleet at a glance.
-pub fn metrics_overview(m: &MetricsOverview) -> Msg {
-    let f = &m.fleet;
-    let mut servers = Text::new()
-        .bold(fmt::count(f.servers))
-        .s(if f.servers == 1 {
-            " server · "
-        } else {
-            " servers · "
-        })
-        .bold(fmt::compact(f.members))
-        .s(if f.members == 1 {
-            " member"
-        } else {
-            " members"
-        });
-    if let Some(median) = f.median_members {
-        servers = servers.s(" · median ").bold(fmt::count(median));
-    }
-    if f.counted < f.servers {
-        servers = servers.s(format!(
-            "\nMember counts are known for {} of them so far.",
-            fmt::count(f.counted)
-        ));
-    }
-
-    let days = m.daily_cases.len();
-    let today = m.daily_cases.last().copied().unwrap_or(0);
-    let peak = m.daily_cases.iter().copied().max().unwrap_or(0);
-    let trend = format!(
-        "{}\ntoday {} · peak {} a day",
-        spark(&m.daily_cases),
-        fmt::count(today),
-        fmt::count(peak)
-    );
-
-    let activity = table(&[
-        vec![
-            String::new(),
-            "24h".to_owned(),
-            "7d".to_owned(),
-            "30d".to_owned(),
-            "all".to_owned(),
-        ],
-        window_row("Cases", m.cases),
-        window_row("Voided", m.voided),
-        window_row("Appeals", m.appeals),
-        window_row("Tickets", m.tickets),
-        window_row("Actions", m.actions_done),
-        window_row("Failed", m.actions_failed),
-        window_row("Joined", m.joins),
-        window_row("Left", m.leaves),
-    ]);
-
-    let size_labels = ["< 100", "100–999", "1K–9.9K", "10K–99K", "100K+"];
-    let biggest = f.sizes.iter().copied().max().unwrap_or(0);
-    let sizes = table(
-        &size_labels
+/// The overview's two bar sections: server sizes and modules on.
+fn fleet_bars(f: &Fleet) -> (Section, Section) {
+    let size_labels = [
+        "Under 100",
+        "100 to 999",
+        "1K to 9.9K",
+        "10K to 99K",
+        "100K and up",
+    ];
+    let sizes = Section::Bars {
+        title: "Server sizes, by members".to_owned(),
+        rows: size_labels
             .iter()
             .zip(f.sizes)
-            .map(|(label, n)| vec![(*label).to_owned(), bar(n, biggest, BAR), cell(n)])
-            .collect::<Vec<_>>(),
-    );
-
-    let modules = table(
-        &[
+            .map(|(label, n)| Bar {
+                label: (*label).to_owned(),
+                value: n,
+                shown: cell(n),
+            })
+            .collect(),
+        out_of: None,
+    };
+    let modules = Section::Bars {
+        title: "Modules on".to_owned(),
+        out_of: Some(f.servers),
+        rows: [
             ("Tickets", f.tickets_on),
             ("Server activity log", f.activity_log_on),
             ("Honeypot", f.honeypot_on),
         ]
         .into_iter()
-        .map(|(label, n)| {
-            vec![
-                label.to_owned(),
-                bar(n, f.servers, MODULE_BAR),
-                percent(n, f.servers),
-                cell(n),
-            ]
+        .map(|(label, n)| Bar {
+            label: label.to_owned(),
+            value: n,
+            shown: format!("{:>4}  {:>5}", percent(n, f.servers), cell(n)),
         })
-        .collect::<Vec<_>>(),
-    );
+        .collect(),
+    };
+    (sizes, modules)
+}
 
+/// The overview's image (§21.8).
+pub fn metrics_overview_card(m: &MetricsOverview) -> Card {
+    let f = &m.fleet;
+    let days = m.daily_cases.len();
+    let today = m.daily_cases.last().copied().unwrap_or(0);
+    let peak = m.daily_cases.iter().copied().max().unwrap_or(0);
+    let (sizes, modules) = fleet_bars(f);
+    let members_note = if f.counted < f.servers {
+        format!("known for {} servers", fmt::count(f.counted))
+    } else {
+        "every server counted".to_owned()
+    };
+    Card {
+        title: "Quack at a glance".to_owned(),
+        subtitle: Some("Counts across every server Quack is in".to_owned()),
+        tone: Tone::Neutral,
+        badge: None,
+        sections: vec![
+            Section::Tiles(vec![
+                Tile::new("Servers", fmt::count(f.servers)).note(format!(
+                    "+{} · −{} this week",
+                    cell(m.joins.week),
+                    cell(m.leaves.week)
+                )),
+                Tile::new("Members", fmt::compact(f.members)).note(members_note),
+                Tile::new(
+                    "Median server",
+                    f.median_members.map_or_else(|| "—".to_owned(), fmt::count),
+                )
+                .note("members"),
+                Tile::new("Cases, 30 days", cell(m.cases.month))
+                    .note(format!("{} all time", cell(m.cases.all))),
+            ]),
+            Section::Columns(Columns {
+                title: format!(
+                    "Cases, last {} days",
+                    fmt::count(u64::try_from(days).unwrap_or(0))
+                ),
+                note: Some(format!(
+                    "today {} · peak {} a day",
+                    fmt::count(today),
+                    fmt::count(peak)
+                )),
+                values: m.daily_cases.clone(),
+                failed: None,
+                start: format!(
+                    "{} days ago",
+                    fmt::count(u64::try_from(days.saturating_sub(1)).unwrap_or(0))
+                ),
+                end: "today".to_owned(),
+            }),
+            Section::Table {
+                title: "Activity".to_owned(),
+                header: ["", "24h", "7d", "30d", "All"].map(str::to_owned).to_vec(),
+                rows: vec![
+                    window_row("Cases", m.cases),
+                    window_row("Voided", m.voided),
+                    window_row("Appeals", m.appeals),
+                    window_row("Tickets", m.tickets),
+                    window_row("Actions done", m.actions_done),
+                    window_row("Actions failed", m.actions_failed),
+                    window_row("Servers joined", m.joins),
+                    window_row("Servers left", m.leaves),
+                ],
+            },
+            sizes,
+            modules,
+        ],
+        footer: "Member counts come from Discord when Quack joins.".to_owned(),
+        footer_right: Some(format!("Read {}", fmt::datetime(m.updated_at))),
+        alt: format!(
+            "Quack is in {} with {} members; {} in the last 30 days.",
+            fmt::plural(f.servers, "server", "servers"),
+            fmt::compact(f.members),
+            fmt::plural(m.cases.month, "case", "cases")
+        ),
+    }
+}
+
+/// `ops.metrics_overview`: the fleet at a glance, as
+/// [`metrics_overview_card`] sent as [`OVERVIEW_IMAGE`].
+pub fn metrics_overview(m: &MetricsOverview) -> Msg {
+    let card = metrics_overview_card(m);
     Msg::new(Tone::Neutral)
-        .block(Block::Heading(Text::fixed("📊 Quack at a glance")))
-        .para(servers)
-        .block(Block::Divider)
-        .block(Block::Text(Text::new().bold(format!(
-            "Cases, last {} days",
-            fmt::count(u64::try_from(days).unwrap_or(0))
-        ))))
-        .block(Block::Code(trend))
-        .block(Block::Text(Text::new().bold("Activity")))
-        .block(Block::Code(activity))
-        .block(Block::Text(Text::new().bold("Server sizes (members)")))
-        .block(Block::Code(sizes))
-        .block(Block::Text(Text::new().bold("Modules on")))
-        .block(Block::Code(modules))
+        .block(Block::Image {
+            name: OVERVIEW_IMAGE.to_owned(),
+            alt: card.alt,
+        })
         .block(Block::Subtext(
-            Text::fixed("Counts across every server Quack is in, read ")
+            Text::fixed("Read ")
                 .time(m.updated_at, TimeStyle::Relative)
+                .s(". Rank servers with ")
+                .push(Inline::Code("/ops metrics servers".to_owned()))
+                .s(", jobs with ")
+                .push(Inline::Code("/ops metrics jobs".to_owned()))
                 .s("."),
         ))
 }

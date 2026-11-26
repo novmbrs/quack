@@ -4,59 +4,47 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## one
 tone: Warning
 --- discord ---
-### 13 actions failed
-Staff can retry or dismiss them in their server. Nothing here needs a click.
-13 × ban in `1000`: `quack_role_too_low`
+### ⚠️ 13 actions failed
+• **13×** ban in `1000` · `quack_role_too_low`
+-# Staff can retry or dismiss them in their server; nothing here needs a click.
 --- plain ---
-13 actions failed
-Staff can retry or dismiss them in their server. Nothing here needs a click.
-13 × ban in 1000: quack_role_too_low
+⚠️ 13 actions failed
+• 13× ban in 1000 · quack_role_too_low
+Staff can retry or dismiss them in their server; nothing here needs a click.
 --- model ---
-Heading [Fixed("13 actions failed")]
-Text [Fixed("Staff can retry or dismiss them in their server. Nothing here needs a click.")]
-Text [Fixed("13 × ban in "), Code("1000"), Fixed(": "), Code("quack_role_too_low")]
+Heading [Fixed("⚠\u{fe0f} 13 actions failed")]
+Text [Fixed("• "), Bold([Fixed("13×")]), Fixed(" ban in "), Code("1000"), Fixed(" · "), Code("quack_role_too_low")]
+Subtext [Fixed("Staff can retry or dismiss them in their server; nothing here needs a click.")]
 
 ## more than shown
 tone: Warning
 --- discord ---
-### 130 actions failed
-Staff can retry or dismiss them in their server. Nothing here needs a click.
-13 × ban in `1000`: `quack_role_too_low`
-12 × remove timeout in `1001`: `retries_exhausted`
-11 × ban in `1002`: `retries_exhausted`
-10 × remove timeout in `1003`: `quack_role_too_low`
-9 × ban in `1004`: `retries_exhausted`
-8 × remove timeout in `1005`: `retries_exhausted`
-7 × ban in `1006`: `quack_role_too_low`
-6 × remove timeout in `1007`: `retries_exhausted`
-5 × ban in `1008`: `retries_exhausted`
-4 × remove timeout in `1009`: `quack_role_too_low`
--# And 40 more groups.
+### ⚠️ 130 actions failed
+• **13×** ban in `1000` · `quack_role_too_low`
+• **12×** remove timeout in `1001` · `retries_exhausted`
+• **11×** ban in `1002` · `retries_exhausted`
+• **10×** remove timeout in `1003` · `quack_role_too_low`
+• **9×** ban in `1004` · `retries_exhausted`
+• **8×** remove timeout in `1005` · `retries_exhausted`
+• **7×** ban in `1006` · `quack_role_too_low`
+• **6×** remove timeout in `1007` · `retries_exhausted`
+• **5×** ban in `1008` · `retries_exhausted`
+• **4×** remove timeout in `1009` · `quack_role_too_low`
+-# And 40 more groups. Staff can retry or dismiss them in their server; nothing here needs a click.
 --- plain ---
-130 actions failed
-Staff can retry or dismiss them in their server. Nothing here needs a click.
-13 × ban in 1000: quack_role_too_low
-12 × remove timeout in 1001: retries_exhausted
-11 × ban in 1002: retries_exhausted
-10 × remove timeout in 1003: quack_role_too_low
-9 × ban in 1004: retries_exhausted
-8 × remove timeout in 1005: retries_exhausted
-7 × ban in 1006: quack_role_too_low
-6 × remove timeout in 1007: retries_exhausted
-5 × ban in 1008: retries_exhausted
-4 × remove timeout in 1009: quack_role_too_low
-And 40 more groups.
+⚠️ 130 actions failed
+• 13× ban in 1000 · quack_role_too_low
+• 12× remove timeout in 1001 · retries_exhausted
+• 11× ban in 1002 · retries_exhausted
+• 10× remove timeout in 1003 · quack_role_too_low
+• 9× ban in 1004 · retries_exhausted
+• 8× remove timeout in 1005 · retries_exhausted
+• 7× ban in 1006 · quack_role_too_low
+• 6× remove timeout in 1007 · retries_exhausted
+• 5× ban in 1008 · retries_exhausted
+• 4× remove timeout in 1009 · quack_role_too_low
+And 40 more groups. Staff can retry or dismiss them in their server; nothing here needs a click.
 --- model ---
-Heading [Fixed("130 actions failed")]
-Text [Fixed("Staff can retry or dismiss them in their server. Nothing here needs a click.")]
-Text [Fixed("13 × ban in "), Code("1000"), Fixed(": "), Code("quack_role_too_low")]
-Text [Fixed("12 × remove timeout in "), Code("1001"), Fixed(": "), Code("retries_exhausted")]
-Text [Fixed("11 × ban in "), Code("1002"), Fixed(": "), Code("retries_exhausted")]
-Text [Fixed("10 × remove timeout in "), Code("1003"), Fixed(": "), Code("quack_role_too_low")]
-Text [Fixed("9 × ban in "), Code("1004"), Fixed(": "), Code("retries_exhausted")]
-Text [Fixed("8 × remove timeout in "), Code("1005"), Fixed(": "), Code("retries_exhausted")]
-Text [Fixed("7 × ban in "), Code("1006"), Fixed(": "), Code("quack_role_too_low")]
-Text [Fixed("6 × remove timeout in "), Code("1007"), Fixed(": "), Code("retries_exhausted")]
-Text [Fixed("5 × ban in "), Code("1008"), Fixed(": "), Code("retries_exhausted")]
-Text [Fixed("4 × remove timeout in "), Code("1009"), Fixed(": "), Code("quack_role_too_low")]
-Subtext [Fixed("And 40 more groups.")]
+Heading [Fixed("⚠\u{fe0f} 130 actions failed")]
+Text [Fixed("• "), Bold([Fixed("13×")]), Fixed(" ban in "), Code("1000"), Fixed(" · "), Code("quack_role_too_low"), Fixed("\n• "), Bold([Fixed("12×")]), Fixed(" remove timeout in "), Code("1001"), Fixed(" · "), Code("retries_exhausted"), Fixed("\n• "), Bold([Fixed("11×")]), Fixed(" ban in "), Code("1002"), Fixed(" · "), Code("retries_exhausted"), Fixed("\n• "), Bold([Fixed("10×")]), Fixed(" remove timeout in "), Code("1003"), Fixed(" · "), Code("quack_role_too_low"), Fixed("\n• "), Bold([Fixed("9×")]), Fixed(" ban in "), Code("1004"), Fixed(" · "), Code("retries_exhausted"), Fixed("\n• "), Bold([Fixed("8×")]), Fixed(" remove timeout in "), Code("1005"), Fixed(" · "), Code("retries_exhausted"), Fixed("\n• "), Bold([Fixed("7×")]), Fixed(" ban in "), Code("1006"), Fixed(" · "), Code("quack_role_too_low"), Fixed("\n• "), Bold([Fixed("6×")]), Fixed(" remove timeout in "), Code("1007"), Fixed(" · "), Code("retries_exhausted"), Fixed("\n• "), Bold([Fixed("5×")]), Fixed(" ban in "), Code("1008"), Fixed(" · "), Code("retries_exhausted"), Fixed("\n• "), Bold([Fixed("4×")]), Fixed(" remove timeout in "), Code("1009"), Fixed(" · "), Code("quack_role_too_low")]
+Subtext [Fixed("And 40 more groups. Staff can retry or dismiss them in their server; nothing here needs a click.")]

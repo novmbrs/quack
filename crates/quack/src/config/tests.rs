@@ -213,6 +213,14 @@ fn ops_reads_the_server_operators_and_trace_link() {
         ops.trace_url.as_deref(),
         Some("https://grafana.example/explore?trace={trace_id}")
     );
+    assert_eq!(ops.public_status, None);
+
+    v.insert("ops_status_channel_id".into(), "1005778938108325999".into());
+    let ops = validate(Need::Serve, &v).unwrap().ops.unwrap();
+    assert_eq!(
+        ops.public_status.map(quack_core::ids::ChannelId::get),
+        Some(1_005_778_938_108_325_999)
+    );
 }
 
 #[test]

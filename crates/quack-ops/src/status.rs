@@ -1,16 +1,20 @@
-//! The status board (§21.6): one message in `#ops-status`, edited in
-//! place, posted again when Discord no longer has it.
+//! The status boards (§21.6): the ops board in `#ops-status` and, when
+//! `QUACK_OPS_STATUS_CHANNEL_ID` is set, the public board. Each is one
+//! message with a card image, edited in place and posted again when
+//! Discord no longer has it.
 
 use quack_core::discord::RefusalKind;
+use quack_core::ids::ChannelId;
 use quack_db::DbError;
+use quack_db::ops::Board;
 use quack_engine::port::{FileEdit, Nonce, Outcome};
-use quack_text::Msg;
 use quack_text::ops::{self as text, Backlog, Trend};
 use time::OffsetDateTime;
 
 use crate::Ops;
+use crate::card::{Rendered, attach};
 
-/// Reads everything the board shows.
+/// Reads everything the boards show.
 pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
     let db = ops.engine().db();
     let mut conn = db.conn().await?;
@@ -24,8 +28,10 @@ pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
     let open_appeals = quack_db::appeals::count_open(&mut conn).await?;
     let open_tickets = quack_db::tickets::count_open(&mut conn, None).await?;
     let day = quack_db::fleet::day(&mut conn).await?;
+    let cases_hourly = quack_db::fleet::hourly_cases(&mut conn).await?;
     drop(conn);
-    let runs = quack_telemetry::metrics().jobs.tally().read();
+    let tally = quack_telemetry::metrics().jobs.tally();
+    let runs = tally.read();
     // Capacity, not the connections open now: a pool that opened 2 of
     // its 20 isn't full when both are busy.
     let pool_size = db.pool().options().get_max_connections();
@@ -51,6 +57,8 @@ pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
             job_runs: runs.kinds.iter().map(|k| k.runs).sum(),
             job_failures: runs.kinds.iter().map(|k| k.retries + k.dead).sum(),
             runs_seconds: runs.covers.as_secs(),
+            cases_hourly,
+            runs_hourly: tally.hourly(),
         },
         dead_jobs: backlog.iter().map(|b| b.dead).sum(),
         backlog: backlog
@@ -71,45 +79,90 @@ pub(crate) async fn read(ops: &Ops) -> Result<text::Status, DbError> {
     })
 }
 
-/// The board as a message, with **Refresh**.
-pub(crate) async fn message(ops: &Ops) -> Result<Msg, DbError> {
-    Ok(text::status(&read(ops).await?, true))
+/// The ops board, with **Refresh**.
+pub(crate) async fn message(ops: &Ops) -> Result<Rendered, DbError> {
+    let status = read(ops).await?;
+    Ok(ops_board(&status).await)
 }
 
-/// Edits the board, or posts it when there is none (or Discord lost it).
+async fn ops_board(status: &text::Status) -> Rendered {
+    attach(
+        text::status(status, true),
+        text::status_card(status),
+        text::STATUS_IMAGE,
+    )
+    .await
+}
+
+async fn public_board(status: &text::Status) -> Rendered {
+    attach(
+        text::public_status(status),
+        text::public_card(status),
+        text::PUBLIC_IMAGE,
+    )
+    .await
+}
+
+/// Edits both boards, or posts one that is missing (or that Discord
+/// lost). One read serves both.
 pub(crate) async fn update(ops: &Ops) -> Result<(), DbError> {
-    let Some(channel) = ops.channels().and_then(|c| c.status) else {
+    let ops_channel = ops.channels().and_then(|c| c.status);
+    let public_channel = ops.config().public_status;
+    if ops_channel.is_none() && public_channel.is_none() {
         return Ok(());
-    };
-    let msg = message(ops).await?;
+    }
+    let status = read(ops).await?;
+    if let Some(channel) = ops_channel {
+        put(ops, Board::Ops, channel, ops_board(&status).await).await?;
+    }
+    if let Some(channel) = public_channel {
+        put(ops, Board::Public, channel, public_board(&status).await).await?;
+    }
+    Ok(())
+}
+
+/// Edits `board`'s message in `channel`, or posts it.
+async fn put(ops: &Ops, board: Board, channel: ChannelId, r: Rendered) -> Result<(), DbError> {
     let discord = ops.engine().discord();
     let stored = {
         let mut conn = ops.engine().db().conn().await?;
-        quack_db::ops::status_message(&mut conn).await?
+        quack_db::ops::status_message(&mut conn, board).await?
     };
     if let Some((stored_channel, message)) = stored
         && stored_channel == channel
     {
-        match discord.edit(channel, message, &msg, &FileEdit::None).await {
+        let files = r
+            .files
+            .first()
+            .cloned()
+            .map_or(FileEdit::None, FileEdit::Replace);
+        match discord.edit(channel, message, &r.msg, &files).await {
             Outcome::Done(_) => return Ok(()),
-            Outcome::Refused(r)
+            Outcome::Refused(refusal)
                 if matches!(
-                    r.kind,
+                    refusal.kind,
                     RefusalKind::UnknownMessage | RefusalKind::UnknownChannel
                 ) => {}
             other => {
-                tracing::warn!(outcome = %other.code(), "couldn't edit the ops status board");
+                tracing::warn!(outcome = %other.code(), ?board, "couldn't edit a status board");
                 return Ok(());
             }
         }
     }
-    let nonce = Nonce::new(format!("st{}", OffsetDateTime::now_utc().unix_timestamp()));
-    match discord.send(channel, &msg, &[], &nonce).await {
+    let prefix = match board {
+        Board::Ops => "st",
+        Board::Public => "ps",
+    };
+    let nonce = Nonce::new(format!(
+        "{prefix}{}",
+        OffsetDateTime::now_utc().unix_timestamp()
+    ));
+    match discord.send(channel, &r.msg, &r.files, &nonce).await {
         Outcome::Done(sent) => {
             let mut conn = ops.engine().db().conn().await?;
-            quack_db::ops::set_status_message(&mut conn, channel, sent.message_id).await?;
+            quack_db::ops::set_status_message(&mut conn, board, channel, sent.message_id).await?;
         }
-        other => tracing::warn!(outcome = %other.code(), "couldn't post the ops status board"),
+        other => tracing::warn!(outcome = %other.code(), ?board, "couldn't post a status board"),
     }
     Ok(())
 }

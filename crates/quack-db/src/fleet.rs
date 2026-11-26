@@ -282,6 +282,27 @@ pub async fn daily_cases(conn: &mut PgConnection, days: u16) -> Result<Vec<u64>,
     rows.into_iter().map(count).collect()
 }
 
+/// Cases created in each of the last 24 clock hours, oldest first (the
+/// hour in progress last, so far).
+pub async fn hourly_cases(conn: &mut PgConnection) -> Result<Vec<u64>, DbError> {
+    let rows = obs::run(
+        Select,
+        "cases",
+        sqlx::query_scalar!(
+            r#"SELECT count(c.id) AS "n!"
+               FROM generate_series(0, 23) AS h(back)
+               LEFT JOIN cases c
+                 ON c.created_at >= date_trunc('hour', now()) - make_interval(hours => h.back)
+                AND c.created_at < date_trunc('hour', now()) - make_interval(hours => h.back - 1)
+               GROUP BY h.back
+               ORDER BY h.back DESC"#
+        )
+        .fetch_all(conn),
+    )
+    .await?;
+    rows.into_iter().map(count).collect()
+}
+
 /// How `/ops metrics servers` orders the servers.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum ServerSort {

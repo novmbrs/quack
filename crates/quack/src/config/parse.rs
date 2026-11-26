@@ -196,18 +196,19 @@ impl Problems {
         text.to_owned()
     }
 
-    /// `QUACK_OPS_GUILD_ID`, `QUACK_OPS_USER_IDS`, and
-    /// `QUACK_OPS_TRACE_URL` (§21): all or nothing.
+    /// `QUACK_OPS_GUILD_ID`, `QUACK_OPS_USER_IDS`, `QUACK_OPS_TRACE_URL`,
+    /// and `QUACK_OPS_STATUS_CHANNEL_ID` (§21): all or nothing.
     pub(super) fn ops(&mut self, v: &BTreeMap<String, String>) -> Option<super::OpsSettings> {
-        use quack_core::ids::{AccountId, GuildId};
+        use quack_core::ids::{AccountId, ChannelId, GuildId};
         let guild = self.snowflake(v, "ops_guild_id", false);
         let users = get(v, "ops_user_ids");
         let trace = get(v, "ops_trace_url");
+        let public_status = self.snowflake(v, "ops_status_channel_id", false);
         if guild.is_none() {
-            if users.is_some() || trace.is_some() {
+            if users.is_some() || trace.is_some() || public_status.is_some() {
                 self.push(
                     "ops_guild_id",
-                    "is required when QUACK_OPS_USER_IDS or QUACK_OPS_TRACE_URL is set.",
+                    "is required when QUACK_OPS_USER_IDS, QUACK_OPS_TRACE_URL, or QUACK_OPS_STATUS_CHANNEL_ID is set.",
                 );
             }
             return None;
@@ -247,6 +248,7 @@ impl Problems {
             guild: GuildId::new(guild?)?,
             operators,
             trace_url,
+            public_status: public_status.and_then(ChannelId::new),
         })
     }
 

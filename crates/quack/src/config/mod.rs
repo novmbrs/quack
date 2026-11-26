@@ -13,12 +13,12 @@ use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
-use quack_core::ids::{AccountId, GuildId};
+use quack_core::ids::{AccountId, ChannelId, GuildId};
 
 pub use quack_core::Secret;
 
 /// Every key Quack reads, without the `QUACK_` prefix, in lowercase.
-pub const KEYS: [&str; 20] = [
+pub const KEYS: [&str; 21] = [
     "database_url",
     "database_max_connections",
     "discord_token",
@@ -39,6 +39,7 @@ pub const KEYS: [&str; 20] = [
     "ops_guild_id",
     "ops_user_ids",
     "ops_trace_url",
+    "ops_status_channel_id",
 ];
 
 /// Which command the configuration is for: each needs different keys.
@@ -72,6 +73,8 @@ pub struct OpsSettings {
     pub operators: Vec<AccountId>,
     /// `QUACK_OPS_TRACE_URL`, containing `{trace_id}`.
     pub trace_url: Option<String>,
+    /// `QUACK_OPS_STATUS_CHANNEL_ID`: where the public status board goes.
+    pub public_status: Option<ChannelId>,
 }
 
 /// Validated configuration.

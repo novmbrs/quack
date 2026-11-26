@@ -3,6 +3,7 @@
 
 #![allow(unreachable_pub, reason = "test helpers shared between test modules")]
 
+mod card_snapshots;
 mod coverage;
 mod escape;
 mod fixtures;

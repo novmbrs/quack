@@ -19,6 +19,7 @@ pub mod activity;
 pub mod api;
 pub mod appeal;
 pub mod budget;
+pub mod card;
 pub mod case;
 pub mod command;
 pub mod dm;

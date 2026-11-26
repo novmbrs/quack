@@ -4,95 +4,59 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## first
 tone: Success
 --- discord ---
-### Quack started
-**Version:** `0.1.0` (`f128a3e5c0f…`)
-**Ready in:** 7 seconds
-**Migrations applied:** 1
-**Servers:** 1,204
-This is the first run ops knows about.
+### 🚀 Quack is up
+`0.1.0` `f128a3e5c0f…` · ready in **7 seconds** · **1** migration · **1,204** servers
+-# This is the first run ops knows about.
 --- plain ---
-Quack started
-Version: 0.1.0 (f128a3e5c0f…)
-Ready in: 7 seconds
-Migrations applied: 1
-Servers: 1,204
+🚀 Quack is up
+0.1.0 f128a3e5c0f… · ready in 7 seconds · 1 migration · 1,204 servers
 This is the first run ops knows about.
 --- model ---
-Heading [Fixed("Quack started")]
-Field "Version" [Code("0.1.0"), Fixed(" ("), Code("f128a3e5c0f…"), Fixed(")")]
-Field "Ready in" [Fixed("7 seconds")]
-Field "Migrations applied" [Fixed("1")]
-Field "Servers" [Fixed("1,204")]
-Text [Fixed("This is the first run ops knows about.")]
+Heading [Fixed("🚀 Quack is up")]
+Text [Code("0.1.0"), Fixed(" "), Code("f128a3e5c0f…"), Fixed(" · ready in "), Bold([Fixed("7 seconds")]), Fixed(" · "), Bold([Fixed("1")]), Fixed(" migration · "), Bold([Fixed("1,204")]), Fixed(" servers")]
+Subtext [Fixed("This is the first run ops knows about.")]
 
 ## after a deploy
 tone: Success
 --- discord ---
-### Quack started
-**Version:** `0.1.0`
-**Ready in:** 7 seconds
-**Migrations applied:** 1
-**Servers:** 1,204
-The run before stopped cleanly <t:1794924309:R> (a restart or deploy).
+### 🚀 Quack is up
+`0.1.0` · ready in **7 seconds** · **1** migration · **1,204** servers
+-# The run before stopped cleanly <t:1794924309:R> (a restart or deploy).
 --- plain ---
-Quack started
-Version: 0.1.0
-Ready in: 7 seconds
-Migrations applied: 1
-Servers: 1,204
+🚀 Quack is up
+0.1.0 · ready in 7 seconds · 1 migration · 1,204 servers
 The run before stopped cleanly on 17 Nov 2026 at 14:05 UTC (a restart or deploy).
 --- model ---
-Heading [Fixed("Quack started")]
-Field "Version" [Code("0.1.0")]
-Field "Ready in" [Fixed("7 seconds")]
-Field "Migrations applied" [Fixed("1")]
-Field "Servers" [Fixed("1,204")]
-Text [Fixed("The run before stopped cleanly "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" (a restart or deploy).")]
+Heading [Fixed("🚀 Quack is up")]
+Text [Code("0.1.0"), Fixed(" · ready in "), Bold([Fixed("7 seconds")]), Fixed(" · "), Bold([Fixed("1")]), Fixed(" migration · "), Bold([Fixed("1,204")]), Fixed(" servers")]
+Subtext [Fixed("The run before stopped cleanly "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" (a restart or deploy).")]
 
 ## after the gateway closed
 tone: Warning
 --- discord ---
-### Quack started
-**Version:** `0.1.0`
-**Ready in:** 7 seconds
-**Migrations applied:** 1
-**Servers:** 1,204
-The run before stopped cleanly <t:1794924309:R> because Discord's gateway closed for good.
+### 🚀 Quack is up
+`0.1.0` · ready in **7 seconds** · **1** migration · **1,204** servers
+-# The run before stopped cleanly <t:1794924309:R> because Discord's gateway closed for good.
 --- plain ---
-Quack started
-Version: 0.1.0
-Ready in: 7 seconds
-Migrations applied: 1
-Servers: 1,204
+🚀 Quack is up
+0.1.0 · ready in 7 seconds · 1 migration · 1,204 servers
 The run before stopped cleanly on 17 Nov 2026 at 14:05 UTC because Discord's gateway closed for good.
 --- model ---
-Heading [Fixed("Quack started")]
-Field "Version" [Code("0.1.0")]
-Field "Ready in" [Fixed("7 seconds")]
-Field "Migrations applied" [Fixed("1")]
-Field "Servers" [Fixed("1,204")]
-Text [Fixed("The run before stopped cleanly "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" because Discord's gateway closed for good.")]
+Heading [Fixed("🚀 Quack is up")]
+Text [Code("0.1.0"), Fixed(" · ready in "), Bold([Fixed("7 seconds")]), Fixed(" · "), Bold([Fixed("1")]), Fixed(" migration · "), Bold([Fixed("1,204")]), Fixed(" servers")]
+Subtext [Fixed("The run before stopped cleanly "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(" because Discord's gateway closed for good.")]
 
 ## after a crash
 tone: Warning
 --- discord ---
-### Quack started
-**Version:** `0.1.0`
-**Ready in:** 7 seconds
-**Migrations applied:** 1
-**Servers:** 1,204
-The run before ended without stopping (a crash or a kill). It was last seen <t:1794924309:R>, so Quack was down for about 1 day 1 hour.
+### 🚀 Quack is up
+`0.1.0` · ready in **7 seconds** · **1** migration · **1,204** servers
+⚠️ The run before ended without stopping (a crash or a kill). It was last seen <t:1794924309:R>, so Quack was down for about **1 day 1 hour**.
 --- plain ---
-Quack started
-Version: 0.1.0
-Ready in: 7 seconds
-Migrations applied: 1
-Servers: 1,204
-The run before ended without stopping (a crash or a kill). It was last seen on 17 Nov 2026 at 14:05 UTC, so Quack was down for about 1 day 1 hour.
+🚀 Quack is up
+0.1.0 · ready in 7 seconds · 1 migration · 1,204 servers
+⚠️ The run before ended without stopping (a crash or a kill). It was last seen on 17 Nov 2026 at 14:05 UTC, so Quack was down for about 1 day 1 hour.
 --- model ---
-Heading [Fixed("Quack started")]
-Field "Version" [Code("0.1.0")]
-Field "Ready in" [Fixed("7 seconds")]
-Field "Migrations applied" [Fixed("1")]
-Field "Servers" [Fixed("1,204")]
-Text [Fixed("The run before ended without stopping (a crash or a kill). It was last seen "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(", so Quack was down for about 1 day 1 hour.")]
+Heading [Fixed("🚀 Quack is up")]
+Text [Code("0.1.0"), Fixed(" · ready in "), Bold([Fixed("7 seconds")]), Fixed(" · "), Bold([Fixed("1")]), Fixed(" migration · "), Bold([Fixed("1,204")]), Fixed(" servers")]
+Text [Fixed("⚠\u{fe0f} The run before ended without stopping (a crash or a kill). It was last seen "), Time(2026-11-17 14:05:09.0 +00:00:00, Relative), Fixed(", so Quack was down for about "), Bold([Fixed("1 day 1 hour")]), Fixed(".")]

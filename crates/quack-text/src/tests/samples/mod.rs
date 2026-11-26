@@ -17,7 +17,7 @@ mod lists;
 mod log_entries;
 mod logs;
 mod modules;
-mod ops;
+pub(super) mod ops;
 mod setup;
 mod words;
 
