@@ -1689,7 +1689,8 @@ Components V2 Container (no `content`, no embeds): consecutive text blocks
 become one Text Display (a Code block as a fenced code block of Quack's
 own text, backticks swapped out), Divider a Separator, File a File component,
 Image a one-item Media Gallery of `attachment://<name>` with its alt text
-as the description (the ops cards, §21.6), Gallery a Media Gallery (`https://` URLs only, at most 10, each item
+as the description (the ops cards, §21.6; a message with an Image has no
+Container, so the card shows without a box), Gallery a Media Gallery (`https://` URLs only, at most 10, each item
 spoilered as the model says; evidence always is), rows Action Rows; a
 modal's Files input is a File Upload (type 19, `min_values`/`max_values`,
 at most 10) in a Label, and its submit's attachments come from the modal
