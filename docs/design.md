@@ -1688,7 +1688,8 @@ first session logs "connected to the gateway".
 Components V2 Container (no `content`, no embeds): consecutive text blocks
 become one Text Display (a Code block as a fenced code block of Quack's
 own text, backticks swapped out), Divider a Separator, File a File component,
-Gallery a Media Gallery (`https://` URLs only, at most 10, each item
+Image a one-item Media Gallery of `attachment://<name>` with its alt text
+as the description (the ops cards, §21.6), Gallery a Media Gallery (`https://` URLs only, at most 10, each item
 spoilered as the model says; evidence always is), rows Action Rows; a
 modal's Files input is a File Upload (type 19, `min_values`/`max_values`,
 at most 10) in a Label, and its submit's attachments come from the modal
@@ -1701,8 +1702,8 @@ mentions never ping except the ticket welcome's. Labels: buttons ≤ 80,
 select options ≤ 100, modal titles and labels ≤ 45. Channel message edits
 also send `"content": null` and `"embeds": []` (§17.3).
 
-A Components V2 message keeps only the files a File component names
-(`attachment://<name>`); an unnamed upload is dropped, and so is a kept
+A Components V2 message keeps only the files a File component or an
+Image names (`attachment://<name>`); an unnamed upload is dropped, and so is a kept
 attachment an edit doesn't name. So a message that carries a file names
 it in its `Msg` every time: the ticket post's first edit uploads the
 transcript with a File component, and every later edit lists it in
@@ -1894,9 +1895,19 @@ Operator-only (§21): `ops.started`, `ops.gateway`, `ops.install`,
 `ops.failed_actions`, `ops.errors`, `ops.status`, `ops.server`,
 `ops.server_unknown`, `ops.jobs`, `ops.job_gone`, `ops.not_allowed`,
 `ops.metrics_overview`, `ops.metrics_servers`, `ops.metrics_jobs`,
-`command.ops.*`. Ops messages may draw aligned tables, bars, and
-sparklines in a code block (the model's `Code` block: Quack's own text
-only, never anything a person typed).
+`command.ops.*`; and `ops.public_status`, the one ops message anyone may
+see (§21.6). Ops messages may draw aligned tables in a code block (the
+model's `Code` block: Quack's own text only, never anything a person
+typed). `ops.status`, `ops.public_status`, and `ops.metrics_overview`
+are mostly an image: `quack-text` builds a **card** (`quack_text::card`:
+a title, a badge, tiles, health lines, column charts, bars, and tables,
+plus alt text), and `quack-card` draws it to PNG (SVG through resvg, with
+the bundled Inter and JetBrains Mono fonts, at twice its 880-pixel width,
+and Quack's logo, the dashboard's logo as a PNG, in its header).
+The message shows the card as an Image block and keeps only a line or two
+of text under it: what needs a click or a command, and when it was read.
+A card that fails to draw becomes its title and alt text. The cards' words
+are snapshot-tested like any message (`card_snapshots`).
 
 ## 13. Settings and optional modules
 
@@ -2719,8 +2730,8 @@ from `0008`. A test checks these lines against the `quack-core` enums.
   `case_drafts` (§11.6, with the `/case add` file as `evidence_file`),
   `import_runs` and `import_guilds` (§19.11).
 - `ops_posts` and the one-row `ops_state` (§21.3): durable ops posts
-  waiting for their `post_ops` job, and the current run and the status
-  board's message. `jobs.ops_alerted_at` and `actions.ops_alerted_at`
+  waiting for their `post_ops` job, and the current run and the two status
+  boards' messages. `jobs.ops_alerted_at` and `actions.ops_alerted_at`
   mark what the ops alerts reported (§21.5).
 
 ### 15.7 Honeypot hits
@@ -2775,6 +2786,8 @@ Each hot-path read has an index declared with its table (escalation:
   cross-server time indexes the ops metrics read: `created_at` on
   `cases`, `appeals`, and `tickets`, and `mod_log (created_at, kind)` for
   `quack_joined` and `quack_left`.
+- `0010`: `ops_state.public_channel_id` and `public_message_id`, the
+  public status board's message (§21.6).
 
 
 ## 16. Job queue
@@ -2912,7 +2925,8 @@ public surfaces in rustdoc (`cargo doc --workspace --no-deps`).
 | `quack-discord` | Twilight: gateway, caches, REST with typed outcomes, rendering, custom ids, commands. | core, text, telemetry |
 | `quack-engine` | Use cases and job handlers; defines the `Discord` port. | core, text, db, telemetry |
 | `quack-tickets`, `quack-activity-log`, `quack-honeypot` | The optional modules, as service functions plus `ModuleJobs`/`ModuleHooks`. | core, text, db, engine, telemetry |
-| `quack-ops` | Ops in Discord (§21): channels, durable posts, alerts, the status board, the error feed, `/ops` answers. | core, text, db, engine, telemetry |
+| `quack-card` | Draws `quack-text`'s cards (the ops boards and metrics) as PNG images with bundled fonts. | text |
+| `quack-ops` | Ops in Discord (§21): channels, durable posts, alerts, the status boards, the error feed, `/ops` answers. | core, text, card, db, engine, telemetry |
 | `quack-api` | axum HTTP API, Discord sign-in, sessions, CSRF, rate limits, OpenAPI, dashboard files. | core, text, db, engine, modules, telemetry |
 | `quack-bot` | Interactions and gateway events into engine calls and replies; the module adapters, `/setup`, and `/ops`. | core, text, db, engine, discord, modules, ops, telemetry |
 | `quack-import` | The one-time MySQL importer (the only crate with sqlx's `mysql`). | core, db |
@@ -3078,6 +3092,7 @@ the parser's message, which may quote a secret). Quack never reads `.env`.
 | `QUACK_OPS_GUILD_ID` | snowflake | unset | The ops server (§21); unset turns ops off. |
 | `QUACK_OPS_USER_IDS` | 1–25 snowflakes, comma-separated | required with `QUACK_OPS_GUILD_ID` | The operators (§21.1). |
 | `QUACK_OPS_TRACE_URL` | absolute URL containing `{trace_id}` | unset | Trace links in the error feed (§21.7). |
+| `QUACK_OPS_STATUS_CHANNEL_ID` | snowflake | unset | Where the public status board goes (§21.6); needs `QUACK_OPS_GUILD_ID`. |
 
 
 ### 17.8 Engineering rules
@@ -3654,7 +3669,10 @@ and counts of cases, rules, appeals, tickets, failed actions, and actions
 done (per server, or summed across servers). Never case
 contents, reasons, context, evidence, appeals, member names, messages, or
 DMs. The error feed carries log lines, which §18.5 already keeps free of
-member and staff text and secrets. Discord itself lets the ops server's
+member and staff text and secrets. The public status board (§21.6) is the
+one ops message outside the ops server, and it shows less: fleet-wide
+totals only (servers and members), never case counts or anything about
+one server. Discord itself lets the ops server's
 owner and anyone with Administrator see every channel, so the ops server
 should have no one in those places who isn't an operator.
 
@@ -3744,28 +3762,48 @@ up by the next one:
 Grafana keeps every other alert of §18.7; these two moved here because
 they need a click, not a page.
 
-### 21.6 Status board
+### 21.6 Status boards
 
-One message in `#ops-status` (its id in `ops_state`), edited every 10
-minutes and by its **Refresh** button. It opens with a one-line verdict
-that sets its tone: red when the gateway isn't connected; amber, naming
-each concern, for dead jobs, failed actions, a ready job waiting a minute
-or more, or a full database pool; green otherwise. Under it: version,
-commit, uptime, and when it was updated; then short sections, each line
-marked green, amber, or red where it can be:
+Two boards read the same facts once each update: the **ops board** in
+`#ops-status` for operators, and, when `QUACK_OPS_STATUS_CHANNEL_ID` names
+a channel (any server Quack can post in, such as a support server), the
+**public board** anyone there can see. Each is one message, its id in
+`ops_state`, edited every 10 minutes (the new image replaces the old
+attachment) and posted again when Discord no longer has it (404). The
+public board posts even while the ops channels aren't ready, but only
+while ops runs (it needs `QUACK_OPS_GUILD_ID`). Each is a card image
+(§12.15) with a line of text under it.
 
-- **Discord**: connection and heartbeat latency; servers and members
-  (the sum of the known `member_count`s).
-- **Last 24 hours**: cases, appeals, and tickets created; servers joined
-  and left (`quack_joined` and `quack_left` entries); job runs and failed
-  runs from this process's tally (§21.8; "since start" when younger).
-- **Queue**: jobs ready and the oldest wait by kind (non-zero kinds only);
-  dead jobs.
-- **Waiting for staff**: failed actions, open appeals, open tickets.
-- **Database**: connections in use of the pool's maximum.
+The **ops board** (`ops.status`, with **Refresh**) has a verdict that sets
+its tone: red when the gateway isn't connected; amber, naming each
+concern in its footer, for dead jobs, failed actions, a ready job waiting
+a minute or more, or a full database pool; green otherwise. Its header
+shows the version, commit, and uptime, and its card:
 
-A board Discord no longer has (404) is posted again. `/ops status`
-answers the same message privately.
+- **Tiles**: servers (joined and left in 24 hours, from `quack_joined`
+  and `quack_left` entries), members (the sum of the known
+  `member_count`s), open appeals, open tickets.
+- **Health**, each line green, amber, or red: the Discord gateway with
+  its heartbeat; the job queue (jobs ready, the oldest wait; slow at a
+  minute); dead jobs; failed actions; the database (connections in use
+  of the pool's maximum).
+- **Cases**: a column per clock hour over the last 24 hours, with the
+  day's cases, appeals, and tickets.
+- **Job runs**: a column per hour of this process's tally (§21.8), failed
+  runs in red at the base; "since start" when younger than a day.
+
+Under the image, the text names each slow job kind and points at `/ops
+jobs` when jobs are dead. `/ops status` answers the same board privately.
+
+The **public board** (`ops.public_status`, no buttons) is a status page:
+"All systems operational", "Some actions are delayed" (amber: a ready job
+waiting 10 minutes or more, or a full pool), or "Quack is offline" (red:
+the gateway isn't connected), with Discord connection, moderation
+actions, and the database each Operational, Delayed or Degraded, or
+Outage; then servers, members, and uptime. No case counts, nothing
+staff-only (appeals, tickets, failed actions,
+dead jobs, job kinds) and nothing about one server. Its text says when it
+was updated, so a stale board (Quack down, no edits) reads as stale.
 
 ### 21.7 Error feed
 
@@ -3782,17 +3820,17 @@ Best effort: a restart or a Discord failure loses the minute.
 
 | Command | Answer (ephemeral) |
 | --- | --- |
-| `/ops status` | The status board. |
+| `/ops status` | The ops status board, with its card. |
 | `/ops server id:<server id>` | `ops.server`: §21.1's metadata and counts for any stored server (its member count as last stored, marked as of leaving for a server Quack left), plus Quack's missing permissions there when Discord answers; `ops.server_unknown` otherwise. |
 | `/ops jobs` | `ops.jobs`: dead jobs, newest first, 5 per page, each with **Requeue** and **Dismiss**. |
-| `/ops metrics overview` | `ops.metrics_overview`: servers, members, and the median server's members; a sparkline of cases per UTC day over 14 days (today and the peak); a table of cases, voided cases, appeals, tickets, actions done, actions failed (not dismissed), joins, and leaves over 24 hours, 7 days, 30 days, and all time; servers by size (under 100, 1,000, 10,000, 100,000 members, and larger) and by module on, as bars. Read on demand. |
+| `/ops metrics overview` | `ops.metrics_overview`, a card: servers (joined and left this week), members, the median server's members, and cases in 30 days; a column of cases per UTC day over 14 days (today and the peak); a table of cases, voided cases, appeals, tickets, actions done, actions failed (not dismissed), joins, and leaves over 24 hours, 7 days, 30 days, and all time; servers by size (under 100, 1,000, 10,000, 100,000 members, and larger) and by module on (as a share of all servers), as bars. Read on demand. |
 | `/ops metrics servers` | `ops.metrics_servers`: installed servers, 10 per page, by members (default), by cases in the last 30 days, or newest first install; each with its name, id, members, cases in 30 days and all time, and first install date. **Members**, **Cases**, and **Newest** switch the order (page 1); the pager pages. |
 | `/ops metrics jobs` | `ops.metrics_jobs`: job runs by kind (runs, retried, dead, mean time) over the last 24 hours of this process, the queue by kind now (ready, waiting for later, running, dead) with the oldest ready wait, and undismissed failed actions by kind and reason with how many servers. |
 
 Job runs come from an in-process tally beside the job metrics
 (`quack_telemetry`'s `JobTally`: 10-minute buckets per kind, read as the
 last 24 hours plus the part of the bucket before them, or since start
-while the process is younger). OpenTelemetry can't be read back, and
+while the process is younger; the ops board groups them by hour). OpenTelemetry can't be read back, and
 finished jobs are deleted, so a restart starts it empty; Grafana keeps
 the history. The ranking pages the servers first and counts cases only
 for that page (the Cases order aggregates the 30-day window alone).

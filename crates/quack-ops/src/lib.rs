@@ -3,7 +3,7 @@
 //!
 //! - [`Ops::start`] finds or creates the channels (§21.2), then runs the
 //!   heartbeat, the alerts (§21.5), the error feed (§21.7), the gateway
-//!   summary (§21.3), and the status board (§21.6) until stopped.
+//!   summary (§21.3), and the status boards (§21.6) until stopped.
 //! - [`Ops::record_start`] and [`Ops::record_stop`] keep `ops_state` about
 //!   the current run and post `ops.started`.
 //! - [`Ops::server_joined`] and [`Ops::server_left`] post installs (§21.4).
@@ -18,6 +18,7 @@
 
 mod answers;
 mod body;
+mod card;
 mod channels;
 mod errors;
 mod metrics;
@@ -28,7 +29,7 @@ mod watch;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
-use quack_core::ids::{AccountId, GuildId};
+use quack_core::ids::{AccountId, ChannelId, GuildId};
 use quack_db::DbError;
 use quack_engine::Engine;
 use quack_engine::jobs::ModuleJobs;
@@ -37,6 +38,7 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 pub use answers::Answer;
+pub use card::Rendered;
 pub use channels::Channels;
 pub use quack_db::ops::StopReason;
 
@@ -49,6 +51,8 @@ pub struct OpsConfig {
     pub operators: Vec<AccountId>,
     /// A trace link with `{trace_id}` for the error feed.
     pub trace_url: Option<String>,
+    /// Where the public status board goes, if anywhere (§21.6).
+    pub public_status: Option<ChannelId>,
     /// This build's version.
     pub version: String,
     /// This build's commit, when the build set one.
@@ -231,7 +235,8 @@ impl Ops {
         errors::flush(self).await;
     }
 
-    /// Edits or posts the status board (§21.6).
+    /// Edits or posts the status boards: the ops board and, when
+    /// configured, the public one (§21.6).
     pub async fn update_board(&self) -> Result<(), DbError> {
         status::update(self).await
     }

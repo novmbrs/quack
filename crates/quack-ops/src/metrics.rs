@@ -33,13 +33,13 @@ const fn db_sort(sort: ServerSort) -> fleet::ServerSort {
 
 impl Ops {
     /// `/ops metrics overview`: servers, members, activity, and modules.
-    pub async fn metrics_overview(&self) -> Result<Msg, DbError> {
+    pub async fn metrics_overview(&self) -> Result<crate::Rendered, DbError> {
         let mut conn = self.engine().db().conn().await?;
         let f = fleet::fleet(&mut conn).await?;
         let a = fleet::activity(&mut conn).await?;
         let daily_cases = fleet::daily_cases(&mut conn, SPARK_DAYS).await?;
         drop(conn);
-        Ok(text::metrics_overview(&text::MetricsOverview {
+        let overview = text::MetricsOverview {
             fleet: text::Fleet {
                 servers: f.servers,
                 counted: f.counted,
@@ -60,7 +60,13 @@ impl Ops {
             leaves: window(a.leaves),
             daily_cases,
             updated_at: OffsetDateTime::now_utc(),
-        }))
+        };
+        Ok(crate::card::attach(
+            text::metrics_overview(&overview),
+            text::metrics_overview_card(&overview),
+            text::OVERVIEW_IMAGE,
+        )
+        .await)
     }
 
     /// `/ops metrics servers` and its buttons: one page (1-based) of the

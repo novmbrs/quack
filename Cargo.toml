@@ -24,6 +24,7 @@ quack-tickets = { path = "crates/quack-tickets" }
 quack-activity-log = { path = "crates/quack-activity-log" }
 quack-honeypot = { path = "crates/quack-honeypot" }
 quack-ops = { path = "crates/quack-ops" }
+quack-card = { path = "crates/quack-card" }
 quack-api = { path = "crates/quack-api" }
 quack-bot = { path = "crates/quack-bot" }
 quack-import = { path = "crates/quack-import" }
@@ -77,6 +78,9 @@ thiserror = { version = "=2.0.21" }
 anyhow = { version = "=1.0.104" }
 uuid = { version = "=1.29.3", features = ["v7", "serde"] }
 time = { version = "=0.3.55", features = ["serde", "serde-well-known", "formatting", "parsing"] }
+
+# Ops cards: SVG drawn to PNG with the bundled fonts (no system fonts).
+resvg = { version = "=0.50.0", default-features = false, features = ["text"] }
 
 # OpenAPI.
 utoipa = { version = "=6.0.0", features = ["axum_extras", "uuid", "time"] }

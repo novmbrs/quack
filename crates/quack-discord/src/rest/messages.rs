@@ -94,7 +94,7 @@ impl AllowedMentions {
 /// An attachment entry: a new upload by index, or an existing one by id.
 #[derive(Serialize)]
 #[serde(untagged)]
-enum AttachmentRef {
+pub(super) enum AttachmentRef {
     Upload { id: usize, filename: String },
     Existing { id: String },
 }
@@ -139,7 +139,7 @@ impl<'a> Payload<'a> {
     }
 }
 
-fn uploads(files: &[&OutgoingFile]) -> Vec<AttachmentRef> {
+pub(super) fn uploads(files: &[&OutgoingFile]) -> Vec<AttachmentRef> {
     files
         .iter()
         .enumerate()
@@ -151,7 +151,7 @@ fn uploads(files: &[&OutgoingFile]) -> Vec<AttachmentRef> {
 }
 
 /// A JSON body, or multipart when there are files.
-fn body_with_files(payload: &Payload<'_>, files: &[&OutgoingFile]) -> Body {
+pub(super) fn body_with_files(payload: &impl Serialize, files: &[&OutgoingFile]) -> Body {
     let json = json_body(payload);
     match (files.is_empty(), json) {
         (false, Body::Json(bytes)) => multipart::form(&multipart::boundary(), &bytes, files),

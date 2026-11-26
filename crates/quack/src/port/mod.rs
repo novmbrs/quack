@@ -195,7 +195,7 @@ impl Discord for DiscordPort {
         Box::pin(async move {
             let rendered = render(msg, &self.commands.get());
             self.client()
-                .edit_interaction_original(token, &rendered)
+                .edit_interaction_original(token, &rendered, &[])
                 .await
         })
     }

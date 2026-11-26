@@ -297,7 +297,7 @@ async fn interaction_responses_use_the_token_and_no_bot_auth() {
     );
     assert!(
         client
-            .edit_interaction_original(&i.token, &rendered())
+            .edit_interaction_original(&i.token, &rendered(), &[])
             .await
             .is_done()
     );

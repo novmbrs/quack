@@ -24,6 +24,7 @@ fn new_ops(h: &Harness) -> Ops {
             guild: h.guild,
             operators: vec![sf(OWNER)],
             trace_url: Some("https://grafana.test/trace/{trace_id}".to_owned()),
+            public_status: None,
             version: "9.9.9".to_owned(),
             commit: None,
         },
@@ -40,6 +41,17 @@ fn sent_to(h: &Harness, channel: Option<ChannelId>) -> Vec<String> {
         .filter(|r| r.channel == channel)
         .filter_map(|r: Recorded| r.msg.map(|m| m.plain()))
         .collect()
+}
+
+/// The file names on the messages in `channel`.
+fn attachments_in(h: &Harness, channel: Option<ChannelId>) -> Vec<String> {
+    h.fake.world(|w| {
+        w.messages
+            .values()
+            .filter(|m| Some(m.fetched.channel_id) == channel)
+            .flat_map(|m| m.fetched.attachments.iter().map(|a| a.filename.clone()))
+            .collect()
+    })
 }
 
 #[tokio::test]
@@ -191,7 +203,7 @@ async fn posts_wait_for_the_channels() -> Result<()> {
     h.settle().await?;
     let posts = sent_to(&h, channels.installs);
     assert_eq!(posts.len(), 1);
-    assert!(posts[0].contains("Quack joined a server"), "{}", posts[0]);
+    assert!(posts[0].contains("📥 Joined Server 1001"), "{}", posts[0]);
     Ok(())
 }
 
@@ -295,13 +307,62 @@ async fn the_board_is_edited_in_place_and_posted_again_when_gone() -> Result<()>
     assert_eq!(sent_to(&h, channels.status).len(), 1);
     assert_eq!(h.fake.count(Call::Edit), 1);
     let board = sent_to(&h, channels.status).remove(0);
-    assert!(board.contains("All systems normal"), "{board}");
-    assert!(board.contains("Connected · 40 ms heartbeat"), "{board}");
-    assert!(board.contains("9.9.9"), "{board}");
+    assert!(board.contains("[image: All systems normal."), "{board}");
+    assert_eq!(
+        attachments_in(&h, channels.status),
+        ["quack-ops-status.png"],
+        "the card, replaced on each edit"
+    );
 
     h.fake.world(|w| w.messages.clear());
     ops.update_board().await?;
     assert_eq!(sent_to(&h, channels.status).len(), 2, "posted again");
+    Ok(())
+}
+
+#[tokio::test]
+async fn the_public_board_goes_to_its_own_channel_without_buttons() -> Result<()> {
+    let h = Harness::new().await?;
+    let public = h.fake.world(|w| w.add_text_channel(h.guild, false));
+    let ops = Ops::new(
+        h.engine.clone(),
+        OpsConfig {
+            guild: h.guild,
+            operators: vec![sf(OWNER)],
+            trace_url: None,
+            public_status: Some(public),
+            version: "9.9.9".to_owned(),
+            commit: None,
+        },
+    );
+    ops.set_gateway(Arc::new(|| GatewaySnapshot {
+        connected: true,
+        ..GatewaySnapshot::default()
+    }));
+    // Before the ops channels exist, the public board still posts.
+    ops.update_board().await?;
+    ops.update_board().await?;
+    let posts = sent_to(&h, Some(public));
+    assert_eq!(posts.len(), 1, "posted once, then edited");
+    assert!(
+        posts[0].contains("[image: All systems operational."),
+        "{}",
+        posts[0]
+    );
+    assert!(
+        !posts[0].contains("appeal"),
+        "nothing staff-only: {}",
+        posts[0]
+    );
+    let sent = h
+        .fake
+        .calls_of(Call::Send)
+        .into_iter()
+        .find(|r| r.channel == Some(public))
+        .and_then(|r| r.msg)
+        .unwrap();
+    assert!(sent.rows.is_empty(), "no Refresh on the public board");
+    assert_eq!(attachments_in(&h, Some(public)), ["quack-status.png"]);
     Ok(())
 }
 
@@ -350,9 +411,9 @@ async fn installs_post_members_and_how_long_quack_stayed() -> Result<()> {
     ops.server_joined(h.guild, false).await;
     h.settle().await?;
     let joined = sent_to(&h, channels.installs).remove(0);
-    assert!(joined.contains("Members: 1,234"), "{joined}");
+    assert!(joined.contains("1,234 members · owner"), "{joined}");
     assert!(
-        joined.contains("Quack is in 1 server now, with 1.23K members."),
+        joined.contains("Quack is in 1 server with 1.23K members now."),
         "{joined}"
     );
 
@@ -362,11 +423,11 @@ async fn installs_post_members_and_how_long_quack_stayed() -> Result<()> {
     ops.server_left(h.guild).await;
     h.settle().await?;
     let left = sent_to(&h, channels.installs).remove(1);
-    assert!(left.contains("Quack left a server"), "{left}");
-    assert!(left.contains("Members: 1,234 (last known)"), "{left}");
-    assert!(left.contains("Installed for: "), "{left}");
-    assert!(left.contains("Left behind: 1 case"), "{left}");
-    assert!(left.contains("Quack is in 0 servers now"), "{left}");
+    assert!(left.contains("📤 Left Server 1001"), "{left}");
+    assert!(left.contains("1,234 members (last known)"), "{left}");
+    assert!(left.contains("Installed for "), "{left}");
+    assert!(left.contains("left behind 1 case, "), "{left}");
+    assert!(left.contains("Quack is in 0 servers"), "{left}");
     Ok(())
 }
 
@@ -383,22 +444,14 @@ async fn metrics_count_the_fleet() -> Result<()> {
     h.apply(MEMBER, rule).await?;
     h.settle().await?;
 
-    let overview = ops.metrics_overview().await?.plain();
+    let overview = ops.metrics_overview().await?;
+    assert_eq!(overview.files.len(), 1, "the card");
+    assert_eq!(&overview.files[0].bytes[1..4], b"PNG");
+    let overview = overview.msg.plain();
     assert!(
-        overview.contains("1 server · 250 members · median 250"),
+        overview.contains("Quack is in 1 server with 250 members; 1 case in the last 30 days."),
         "{overview}"
     );
-    assert!(overview.contains("today 1 · peak 1 a day"), "{overview}");
-    let cases = overview
-        .lines()
-        .find(|l| l.starts_with("Cases "))
-        .unwrap_or_default();
-    assert_eq!(
-        cases.split_whitespace().collect::<Vec<_>>(),
-        ["Cases", "1", "1", "1", "1"],
-        "{overview}"
-    );
-    assert!(overview.contains("100–999"), "{overview}");
 
     let servers = ops
         .metrics_servers(quack_text::ops::ServerSort::Cases, 1)
@@ -419,9 +472,13 @@ async fn metrics_count_the_fleet() -> Result<()> {
     assert!(jobs.contains("Runs by kind"), "{jobs}");
     assert!(jobs.contains("Failed actions waiting for staff"), "{jobs}");
 
-    let board = ops.status().await?.plain();
-    assert!(board.contains("1 server · 250 members"), "{board}");
-    assert!(board.contains("1 case · 0 appeals · 0 tickets"), "{board}");
+    let board = ops.status().await?;
+    assert_eq!(board.files[0].name, "quack-ops-status.png");
+    let board = board.msg.plain();
+    assert!(
+        board.contains("1 server, 250 members, 1 case in the last 24 hours."),
+        "{board}"
+    );
     Ok(())
 }
 
@@ -435,7 +492,7 @@ async fn server_lookups_show_counts_or_say_unknown() -> Result<()> {
         .unwrap()
         .plain();
     assert!(shown.contains("Quack is in this server"), "{shown}");
-    assert!(shown.contains("Cases: 0 (0 voided)"), "{shown}");
+    assert!(shown.contains("0 cases (0 voided)"), "{shown}");
     assert!(shown.contains("Missing permissions: none"), "{shown}");
     assert!(ops.server("12345").await?.is_err());
     assert!(ops.server("not a number").await?.is_err());

@@ -44,7 +44,8 @@ fn started(previous: Previous, commit: Option<&str>) -> Started {
     }
 }
 
-fn status() -> Status {
+/// The board's facts, shared with the card snapshots.
+pub(crate) fn status() -> Status {
     Status {
         version: "0.1.0".to_owned(),
         commit: Some("a762256d1f".to_owned()),
@@ -62,6 +63,10 @@ fn status() -> Status {
             job_runs: 1_920,
             job_failures: 3,
             runs_seconds: 86_400,
+            cases_hourly: (0..24u64).map(|h| (h * 5) % 9).collect(),
+            runs_hourly: (0..24u64)
+                .map(|h| (70 + (h * 13) % 30, u64::from(h == 20)))
+                .collect(),
         },
         backlog: vec![Backlog {
             kind: "run_action",
@@ -128,7 +133,7 @@ fn window(day: u64) -> Window {
     }
 }
 
-fn overview(counted: u64) -> MetricsOverview {
+pub(crate) fn overview(counted: u64) -> MetricsOverview {
     MetricsOverview {
         fleet: Fleet {
             servers: 1_204,
@@ -431,6 +436,19 @@ pub fn samples() -> Vec<Sample> {
             },
             true,
         ),
+    ));
+    v.push(msg(
+        "ops.public_status",
+        "operational",
+        ops::public_status(&status()),
+    ));
+    v.push(msg(
+        "ops.public_status",
+        "offline",
+        ops::public_status(&Status {
+            gateway_connected: false,
+            ..status()
+        }),
     ));
     v.push(msg(
         "ops.metrics_overview",

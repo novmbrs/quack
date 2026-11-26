@@ -74,6 +74,7 @@ impl App {
                     guild: o.guild,
                     operators: o.operators.clone(),
                     trace_url: o.trace_url.clone(),
+                    public_status: o.public_status,
                     version: env!("CARGO_PKG_VERSION").to_owned(),
                     commit: option_env!("QUACK_GIT_COMMIT")
                         .filter(|c| !c.is_empty())

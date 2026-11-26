@@ -152,7 +152,7 @@ fn shows_file(msg: &Msg, name: &str) -> bool {
         || msg
             .blocks
             .iter()
-            .any(|b| matches!(b, quack_text::Block::File(n) if n == name))
+            .any(|b| matches!(b, quack_text::Block::File(n) | quack_text::Block::Image { name: n, .. } if n == name))
 }
 
 fn first_attachment(message: MessageId) -> AttachmentId {

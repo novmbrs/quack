@@ -1,0 +1,24 @@
+---
+source: crates/quack-text/src/tests/snapshots.rs
+---
+## operational
+tone: Success
+--- discord ---
+-# Updated <t:1795014309:R>. If that was more than 20 minutes ago, Quack may be down.
+--- plain ---
+[image: All systems operational. Quack is in 1,204 servers with 2.31M members.]
+Updated on 18 Nov 2026 at 15:05 UTC. If that was more than 20 minutes ago, Quack may be down.
+--- model ---
+Image "quack-status.png" alt "All systems operational. Quack is in 1,204 servers with 2.31M members."
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". If that was more than 20 minutes ago, Quack may be down.")]
+
+## offline
+tone: Danger
+--- discord ---
+-# Updated <t:1795014309:R>. If that was more than 20 minutes ago, Quack may be down.
+--- plain ---
+[image: Quack is offline. Quack is in 1,204 servers with 2.31M members.]
+Updated on 18 Nov 2026 at 15:05 UTC. If that was more than 20 minutes ago, Quack may be down.
+--- model ---
+Image "quack-status.png" alt "Quack is offline. Quack is in 1,204 servers with 2.31M members."
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative), Fixed(". If that was more than 20 minutes ago, Quack may be down.")]

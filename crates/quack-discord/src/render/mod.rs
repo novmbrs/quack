@@ -85,6 +85,26 @@ fn blocks(msg: &Msg, commands: &CommandIds) -> Vec<Component> {
                     spoiler: None,
                 }));
             }
+            Block::Image { name, alt } => {
+                flush(&mut run, &mut out);
+                out.push(Component::MediaGallery(MediaGallery {
+                    id: None,
+                    items: vec![MediaGalleryItem {
+                        description: Some(alt.chars().take(1024).collect()),
+                        media: UnfurledMediaItem {
+                            content_type: None,
+                            height: None,
+                            proxy_url: None,
+                            url: format!(
+                                "attachment://{}",
+                                crate::rest::multipart::upload_name(name)
+                            ),
+                            width: None,
+                        },
+                        spoiler: None,
+                    }],
+                }));
+            }
             Block::Gallery(items) => {
                 flush(&mut run, &mut out);
                 let items: Vec<MediaGalleryItem> = items

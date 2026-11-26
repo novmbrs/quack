@@ -194,7 +194,7 @@ fn block_to(block: &Block, surface: Surface<'_>) -> Option<String> {
         Block::Field { label, value } => field(label, &text(value, surface), discord),
         Block::Code(body) if discord => format!("```\n{}\n```", body.replace('`', "ˋ")),
         Block::Code(body) => body.clone(),
-        Block::Divider | Block::File(_) | Block::Gallery(_) => return None,
+        Block::Divider | Block::File(_) | Block::Image { .. } | Block::Gallery(_) => return None,
     })
 }
 
@@ -227,6 +227,7 @@ pub fn plain_msg(msg: &Msg) -> String {
         .map(|b| match b {
             Block::Divider => String::new(),
             Block::File(name) => format!("[file: {}]", fmt::clean(name)),
+            Block::Image { alt, .. } => format!("[image: {}]", fmt::clean(alt)),
             Block::Gallery(items) => items
                 .iter()
                 .map(|i| match &i.description {

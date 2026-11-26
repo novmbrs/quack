@@ -177,6 +177,7 @@ impl Responder for Recorder {
         &'a self,
         _: &'a InteractionToken,
         msg: &'a Msg,
+        _: &'a [quack_engine::port::OutgoingFile],
     ) -> BoxFuture<'a, Outcome<()>> {
         self.later(Sent::Edit(msg.clone()))
     }

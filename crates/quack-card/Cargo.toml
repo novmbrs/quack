@@ -1,0 +1,20 @@
+[package]
+name = "quack-card"
+description = "Draws Quack's ops cards (status boards, metrics) as PNG images"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quack-text = { workspace = true }
+resvg = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+time = { workspace = true, features = ["macros"] }

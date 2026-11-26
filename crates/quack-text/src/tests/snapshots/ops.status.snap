@@ -4,166 +4,40 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## board
 tone: Warning
 --- discord ---
-### 🟡 Needs a look: 2 failed actions
--# `0.1.0` `a762256` · up 1 day 1 hour · updated <t:1795014309:R>
-**Discord**
-🟢 Connected · 42 ms heartbeat
-**1,204** servers · **2.31M** members
-
-**Last 24 hours**
-88 cases · 4 appeals · 17 tickets
-+6 servers joined · −1 left
-1,920 job runs, 3 failed
-
-**Queue**
-🟢 3 `run_action` waiting, oldest 12 seconds
-🟢 No dead jobs
-
-**Waiting for staff**
-🟡 2 failed actions · 5 open appeals · 1 open ticket
-
-**Database**
-🟢 3 of 20 connections in use
+-# Updated <t:1795014309:R>
 buttons: [Refresh · Secondary] OpsRefresh
 --- plain ---
-🟡 Needs a look: 2 failed actions
-0.1.0 a762256 · up 1 day 1 hour · updated on 18 Nov 2026 at 15:05 UTC
-
-Discord
-🟢 Connected · 42 ms heartbeat
-1,204 servers · 2.31M members
-
-Last 24 hours
-88 cases · 4 appeals · 17 tickets
-+6 servers joined · −1 left
-1,920 job runs, 3 failed
-
-Queue
-🟢 3 run_action waiting, oldest 12 seconds
-🟢 No dead jobs
-
-Waiting for staff
-🟡 2 failed actions · 5 open appeals · 1 open ticket
-
-Database
-🟢 3 of 20 connections in use
+[image: Quack needs a look. 1,204 servers, 2.31M members, 88 cases in the last 24 hours.]
+Updated on 18 Nov 2026 at 15:05 UTC
 --- model ---
-Heading [Fixed("🟡 Needs a look: 2 failed actions")]
-Subtext [Code("0.1.0"), Fixed(" "), Code("a762256"), Fixed(" · up 1 day 1 hour · updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative)]
-Divider
-Text [Bold([Fixed("Discord")]), Fixed("\n🟢 Connected · 42 ms heartbeat\n"), Bold([Fixed("1,204")]), Fixed(" servers · "), Bold([Fixed("2.31M")]), Fixed(" members")]
-Text [Fixed("\n"), Bold([Fixed("Last 24 hours")]), Fixed("\n88 cases · 4 appeals · 17 tickets\n+6 servers joined · −1 left\n1,920 job runs, 3 failed")]
-Text [Fixed("\n"), Bold([Fixed("Queue")]), Fixed("\n🟢 3 "), Code("run_action"), Fixed(" waiting, oldest 12 seconds\n🟢 No dead jobs")]
-Text [Fixed("\n"), Bold([Fixed("Waiting for staff")]), Fixed("\n🟡 2 failed actions · 5 open appeals · 1 open ticket")]
-Text [Fixed("\n"), Bold([Fixed("Database")]), Fixed("\n🟢 3 of 20 connections in use")]
+Image "quack-ops-status.png" alt "Quack needs a look. 1,204 servers, 2.31M members, 88 cases in the last 24 hours."
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative)]
 
 ## trouble, no button
 tone: Danger
 --- discord ---
-### 🔴 Quack isn't connected to Discord
--# `0.1.0` `a762256` · up 1 day 1 hour · updated <t:1795014309:R>
-**Discord**
-🔴 Not connected
-**1,204** servers · **2.31M** members
-
-**Last 24 hours**
-88 cases · 4 appeals · 17 tickets
-+6 servers joined · −1 left
-1,920 job runs, 3 failed
-
-**Queue**
-🟢 Nothing waiting
 🔴 2 dead jobs · `/ops jobs`
-
-**Waiting for staff**
-🟡 2 failed actions · 5 open appeals · 1 open ticket
-
-**Database**
-🟢 3 of 20 connections in use
+-# Updated <t:1795014309:R>
 --- plain ---
-🔴 Quack isn't connected to Discord
-0.1.0 a762256 · up 1 day 1 hour · updated on 18 Nov 2026 at 15:05 UTC
-
-Discord
-🔴 Not connected
-1,204 servers · 2.31M members
-
-Last 24 hours
-88 cases · 4 appeals · 17 tickets
-+6 servers joined · −1 left
-1,920 job runs, 3 failed
-
-Queue
-🟢 Nothing waiting
+[image: Quack isn't connected to Discord. 1,204 servers, 2.31M members, 88 cases in the last 24 hours.]
 🔴 2 dead jobs · /ops jobs
-
-Waiting for staff
-🟡 2 failed actions · 5 open appeals · 1 open ticket
-
-Database
-🟢 3 of 20 connections in use
+Updated on 18 Nov 2026 at 15:05 UTC
 --- model ---
-Heading [Fixed("🔴 Quack isn't connected to Discord")]
-Subtext [Code("0.1.0"), Fixed(" "), Code("a762256"), Fixed(" · up 1 day 1 hour · updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative)]
-Divider
-Text [Bold([Fixed("Discord")]), Fixed("\n🔴 Not connected\n"), Bold([Fixed("1,204")]), Fixed(" servers · "), Bold([Fixed("2.31M")]), Fixed(" members")]
-Text [Fixed("\n"), Bold([Fixed("Last 24 hours")]), Fixed("\n88 cases · 4 appeals · 17 tickets\n+6 servers joined · −1 left\n1,920 job runs, 3 failed")]
-Text [Fixed("\n"), Bold([Fixed("Queue")]), Fixed("\n🟢 Nothing waiting\n🔴 2 dead jobs · "), Code("/ops jobs")]
-Text [Fixed("\n"), Bold([Fixed("Waiting for staff")]), Fixed("\n🟡 2 failed actions · 5 open appeals · 1 open ticket")]
-Text [Fixed("\n"), Bold([Fixed("Database")]), Fixed("\n🟢 3 of 20 connections in use")]
+Image "quack-ops-status.png" alt "Quack isn't connected to Discord. 1,204 servers, 2.31M members, 88 cases in the last 24 hours."
+Text [Fixed("🔴 2 dead jobs · "), Code("/ops jobs")]
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative)]
 
 ## needs a look, since start
 tone: Warning
 --- discord ---
-### 🟡 Needs a look: a slow queue and a full database pool
--# `0.1.0` `a762256` · up 1 day 1 hour · updated <t:1795014309:R>
-**Discord**
-🟢 Connected · 42 ms heartbeat
-**1,204** servers · **2.31M** members
-
-**Last 24 hours**
-88 cases · 4 appeals · 17 tickets
-+6 servers joined · −1 left
-1,920 job runs (since start, 1 hour 1 minute ago)
-
-**Queue**
 🟡 40 `send_dm` waiting, oldest 1 minute 35 seconds
-🟢 No dead jobs
-
-**Waiting for staff**
-🟢 0 failed actions · 5 open appeals · 1 open ticket
-
-**Database**
-🟡 20 of 20 connections in use
+-# Updated <t:1795014309:R>
 buttons: [Refresh · Secondary] OpsRefresh
 --- plain ---
-🟡 Needs a look: a slow queue and a full database pool
-0.1.0 a762256 · up 1 day 1 hour · updated on 18 Nov 2026 at 15:05 UTC
-
-Discord
-🟢 Connected · 42 ms heartbeat
-1,204 servers · 2.31M members
-
-Last 24 hours
-88 cases · 4 appeals · 17 tickets
-+6 servers joined · −1 left
-1,920 job runs (since start, 1 hour 1 minute ago)
-
-Queue
+[image: Quack needs a look. 1,204 servers, 2.31M members, 88 cases in the last 24 hours.]
 🟡 40 send_dm waiting, oldest 1 minute 35 seconds
-🟢 No dead jobs
-
-Waiting for staff
-🟢 0 failed actions · 5 open appeals · 1 open ticket
-
-Database
-🟡 20 of 20 connections in use
+Updated on 18 Nov 2026 at 15:05 UTC
 --- model ---
-Heading [Fixed("🟡 Needs a look: a slow queue and a full database pool")]
-Subtext [Code("0.1.0"), Fixed(" "), Code("a762256"), Fixed(" · up 1 day 1 hour · updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative)]
-Divider
-Text [Bold([Fixed("Discord")]), Fixed("\n🟢 Connected · 42 ms heartbeat\n"), Bold([Fixed("1,204")]), Fixed(" servers · "), Bold([Fixed("2.31M")]), Fixed(" members")]
-Text [Fixed("\n"), Bold([Fixed("Last 24 hours")]), Fixed("\n88 cases · 4 appeals · 17 tickets\n+6 servers joined · −1 left\n1,920 job runs (since start, 1 hour 1 minute ago)")]
-Text [Fixed("\n"), Bold([Fixed("Queue")]), Fixed("\n🟡 40 "), Code("send_dm"), Fixed(" waiting, oldest 1 minute 35 seconds\n🟢 No dead jobs")]
-Text [Fixed("\n"), Bold([Fixed("Waiting for staff")]), Fixed("\n🟢 0 failed actions · 5 open appeals · 1 open ticket")]
-Text [Fixed("\n"), Bold([Fixed("Database")]), Fixed("\n🟡 20 of 20 connections in use")]
+Image "quack-ops-status.png" alt "Quack needs a look. 1,204 servers, 2.31M members, 88 cases in the last 24 hours."
+Text [Fixed("🟡 40 "), Code("send_dm"), Fixed(" waiting, oldest 1 minute 35 seconds")]
+Subtext [Fixed("Updated "), Time(2026-11-18 15:05:09.0 +00:00:00, Relative)]

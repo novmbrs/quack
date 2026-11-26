@@ -8,11 +8,11 @@
 use serde::Serialize;
 use twilight_model::channel::message::{Component, MessageFlags};
 
-use super::messages::{AllowedMentions, Mentions};
+use super::messages::{AllowedMentions, AttachmentRef, Mentions, body_with_files, uploads};
 use super::route::{Method, Route};
-use super::{DiscordClient, Outcome, converted, with_json};
+use super::{DiscordClient, Outcome, Request, converted, with_json};
 use crate::convert;
-use crate::model::{InteractionRef, InteractionToken, SentMessage};
+use crate::model::{InteractionRef, InteractionToken, OutgoingFile, SentMessage};
 use crate::render::{RenderedMessage, RenderedModal};
 
 /// One autocomplete suggestion: the label people see and the value sent
@@ -51,6 +51,9 @@ struct Data<'a> {
     title: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     choices: Option<&'a [AutocompleteChoice]>,
+    /// The files of an edit: replaces the message's attachments.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attachments: Option<Vec<AttachmentRef>>,
 }
 
 const EPHEMERAL: u64 = MessageFlags::EPHEMERAL.bits();
@@ -169,11 +172,13 @@ impl DiscordClient {
 
     /// Edits the original response after an ack (`PATCH
     /// /webhooks/{app}/{token}/messages/@original`); sets the Components V2
-    /// flag (§11.3).
+    /// flag (§11.3). With files, they replace the response's attachments
+    /// (an ops card image, say).
     pub async fn edit_interaction_original(
         &self,
         token: &InteractionToken,
         message: &RenderedMessage,
+        files: &[OutgoingFile],
     ) -> Outcome<()> {
         let route = Route::webhook_message(
             Method::Patch,
@@ -181,8 +186,18 @@ impl DiscordClient {
             token.expose(),
             "@original",
         );
-        self.object(with_json(route, &message_data(message, COMPONENTS_V2)))
-            .await
+        let mut data = message_data(message, COMPONENTS_V2);
+        if files.is_empty() {
+            return self.object(with_json(route, &data)).await;
+        }
+        let files: Vec<&OutgoingFile> = files.iter().collect();
+        data.attachments = Some(uploads(&files));
+        let request = Request {
+            body: body_with_files(&data, &files),
+            files: true,
+            ..Request::new(route)
+        };
+        self.object(request).await
     }
 
     /// Posts a follow-up message for an interaction.

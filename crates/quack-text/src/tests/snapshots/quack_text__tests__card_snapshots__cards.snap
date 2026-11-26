@@ -1,0 +1,134 @@
+---
+source: crates/quack-text/src/tests/card_snapshots.rs
+expression: out
+---
+## ops healthy
+tone: Warning · badge: Some("Needs a look")
+# Quack needs a look
+  Quack 0.1.0 (a762256) · up 1 day 1 hour
+[Servers Neutral] 1,204 — +6 · −1 today
+[Members Neutral] 2.31M — about 1.92K a server
+[Open appeals Neutral] 5 — waiting for staff
+[Open tickets Neutral] 1 — across servers
+== Health
+• Discord gateway (42 ms heartbeat) → Connected [Success]
+• Job queue (3 waiting, oldest 12 seconds) → Normal [Success]
+• Dead jobs () → None [Success]
+• Failed actions (staff can retry them) → 2 [Warning]
+• Database (3 of 20 connections in use) → Normal [Success]
+== Cases | 88 cases · 4 appeals · 17 tickets in 24 hours | [0, 5, 1, 6, 2, 7, 3, 8, 4, 0, 5, 1, 6, 2, 7, 3, 8, 4, 0, 5, 1, 6, 2, 7] failed None | 24 hours ago → now
+== Job runs | 1.92K runs · 3 failed | [70, 83, 96, 79, 92, 75, 88, 71, 84, 97, 80, 93, 76, 89, 72, 85, 98, 81, 94, 77, 90, 73, 86, 99] failed Some([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]) | 24 hours ago → now
+-- Needs a look: 2 failed actions. | Updated 18 Nov, 15:05 UTC
+alt: Quack needs a look. 1,204 servers, 2.31M members, 88 cases in the last 24 hours.
+
+## ops needs a look
+tone: Warning · badge: Some("Needs a look")
+# Quack needs a look
+  Quack 0.1.0 (a762256) · up 1 day 1 hour
+[Servers Neutral] 1,204 — +6 · −1 today
+[Members Neutral] 2.31M — about 1.92K a server
+[Open appeals Neutral] 5 — waiting for staff
+[Open tickets Neutral] 1 — across servers
+== Health
+• Discord gateway (42 ms heartbeat) → Connected [Success]
+• Job queue (40 waiting, oldest 12 minutes) → Slow [Warning]
+• Dead jobs (see /ops jobs) → 2 [Danger]
+• Failed actions (staff can retry them) → 2 [Warning]
+• Database (20 of 20 connections in use) → Full [Warning]
+== Cases | 88 cases · 4 appeals · 17 tickets in 24 hours | [0, 5, 1, 6, 2, 7, 3, 8, 4, 0, 5, 1, 6, 2, 7, 3, 8, 4, 0, 5, 1, 6, 2, 7] failed None | 24 hours ago → now
+== Job runs | 1.92K runs · 3 failed | [70, 83, 96, 79, 92, 75, 88, 71, 84, 97, 80, 93, 76, 89, 72, 85, 98, 81, 94, 77, 90, 73, 86, 99] failed Some([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]) | 24 hours ago → now
+-- Needs a look: 2 dead jobs, 2 failed actions, a slow queue, and a full database pool. | Updated 18 Nov, 15:05 UTC
+alt: Quack needs a look. 1,204 servers, 2.31M members, 88 cases in the last 24 hours.
+
+## ops down
+tone: Danger · badge: Some("Down")
+# Quack isn't connected to Discord
+  Quack 0.1.0 (a762256) · up 1 day 1 hour
+[Servers Neutral] 1,204 — +6 · −1 today
+[Members Neutral] 2.31M — about 1.92K a server
+[Open appeals Neutral] 5 — waiting for staff
+[Open tickets Neutral] 1 — across servers
+== Health
+• Discord gateway () → Disconnected [Danger]
+• Job queue (3 waiting, oldest 12 seconds) → Normal [Success]
+• Dead jobs () → None [Success]
+• Failed actions (staff can retry them) → 2 [Warning]
+• Database (3 of 20 connections in use) → Normal [Success]
+== Cases | 88 cases · 4 appeals · 17 tickets in 24 hours | [0, 5, 1, 6, 2, 7, 3, 8, 4, 0, 5, 1, 6, 2, 7, 3, 8, 4, 0, 5, 1, 6, 2, 7] failed None | 24 hours ago → now
+== Job runs | 1.92K runs · 3 failed | [70, 83, 96, 79, 92, 75, 88, 71, 84, 97, 80, 93, 76, 89, 72, 85, 98, 81, 94, 77, 90, 73, 86, 99] failed Some([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]) | 24 hours ago → now
+-- Needs a look: Discord isn't connected and 2 failed actions. | Updated 18 Nov, 15:05 UTC
+alt: Quack isn't connected to Discord. 1,204 servers, 2.31M members, 88 cases in the last 24 hours.
+
+## public operational
+tone: Success · badge: Some("Operational")
+# All systems operational
+  Quack status · 18 Nov, 15:05 UTC
+== (checks)
+• Discord connection (42 ms) → Operational [Success]
+• Moderation actions (timeouts, kicks, bans, DMs) → Operational [Success]
+• Database () → Operational [Success]
+[Servers Neutral] 1,204 — 
+[Members Neutral] 2.31M — 
+[Uptime Neutral] 1d 1h — 
+-- Quack 0.1.0 | Updated every 10 minutes
+alt: All systems operational. Quack is in 1,204 servers with 2.31M members.
+
+## public degraded
+tone: Warning · badge: Some("Degraded")
+# Some actions are delayed
+  Quack status · 18 Nov, 15:05 UTC
+== (checks)
+• Discord connection (42 ms) → Operational [Success]
+• Moderation actions (timeouts, kicks, bans, DMs) → Delayed [Warning]
+• Database () → Degraded [Warning]
+[Servers Neutral] 1,204 — 
+[Members Neutral] 2.31M — 
+[Uptime Neutral] 1d 1h — 
+-- Quack 0.1.0 | Updated every 10 minutes
+alt: Some actions are delayed. Quack is in 1,204 servers with 2.31M members.
+
+## public outage
+tone: Danger · badge: Some("Outage")
+# Quack is offline
+  Quack status · 18 Nov, 15:05 UTC
+== (checks)
+• Discord connection () → Outage [Danger]
+• Moderation actions (timeouts, kicks, bans, DMs) → Operational [Success]
+• Database () → Operational [Success]
+[Servers Neutral] 1,204 — 
+[Members Neutral] 2.31M — 
+[Uptime Neutral] 1d 1h — 
+-- Quack 0.1.0 | Updated every 10 minutes
+alt: Quack is offline. Quack is in 1,204 servers with 2.31M members.
+
+## metrics overview
+tone: Neutral · badge: None
+# Quack at a glance
+  Counts across every server Quack is in
+[Servers Neutral] 1,204 — +36 · −6 this week
+[Members Neutral] 2.31M — known for 1,100 servers
+[Median server Neutral] 212 — members
+[Cases, 30 days Neutral] 2,200 — 36K all time
+== Cases, last 14 days | today 31 · peak 95 a day | [40, 52, 61, 38, 0, 12, 70, 88, 91, 64, 59, 80, 95, 31] failed None | 13 days ago → today
+== Activity
+ | 24h | 7d | 30d | All
+Cases | 88 | 528 | 2,200 | 36K
+Voided | 3 | 18 | 75 | 1,230
+Appeals | 4 | 24 | 100 | 1,640
+Tickets | 17 | 102 | 425 | 6,970
+Actions done | 61 | 366 | 1,525 | 25K
+Actions failed | 1 | 6 | 25 | 410
+Servers joined | 6 | 36 | 150 | 2,460
+Servers left | 1 | 6 | 25 | 410
+== Server sizes, by members (out of None)
+Under 100 412 412
+100 to 999 398 398
+1K to 9.9K 220 220
+10K to 99K 48 48
+100K and up 2 2
+== Modules on (out of Some(1204))
+Tickets 210  17%    210
+Server activity log 340  28%    340
+Honeypot 55   5%     55
+-- Member counts come from Discord when Quack joins. | Read 18 Nov 2026 at 15:05 UTC
+alt: Quack is in 1,204 servers with 2.31M members; 2,200 cases in the last 30 days.

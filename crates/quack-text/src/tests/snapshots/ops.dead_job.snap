@@ -3,46 +3,34 @@ source: crates/quack-text/src/tests/snapshots.rs
 ---
 tone: Danger
 --- discord ---
-### A `run_action` job died
-**Key:** `run_action:0193-1`
-**Server:** `1005778938108325970`
-**Runs:** 8
-**Last error:** `discord_unavailable`
+### 💀 A `run_action` job died
+`run_action:0193-1` · server `1005778938108325970` · **8** runs
+Last error: `discord_unavailable`
 -# Died <t:1794924309:f> (<t:1794924309:R>).
 buttons: [Requeue · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000001)) | [Dismiss · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000001))
 --- plain ---
-A run_action job died
-Key: run_action:0193-1
-Server: 1005778938108325970
-Runs: 8
+💀 A run_action job died
+run_action:0193-1 · server 1005778938108325970 · 8 runs
 Last error: discord_unavailable
 Died 17 Nov 2026 at 14:05 UTC.
 --- model ---
-Heading [Fixed("A "), Code("run_action"), Fixed(" job died")]
-Field "Key" [Code("run_action:0193-1")]
-Field "Server" [Code("1005778938108325970")]
-Field "Runs" [Fixed("8")]
-Field "Last error" [Code("discord_unavailable")]
+Heading [Fixed("💀 A "), Code("run_action"), Fixed(" job died")]
+Text [Code("run_action:0193-1"), Fixed(" · server "), Code("1005778938108325970"), Fixed(" · "), Bold([Fixed("8")]), Fixed(" runs")]
+Text [Fixed("Last error: "), Code("discord_unavailable")]
 Subtext [Fixed("Died "), Time(2026-11-17 14:05:09.0 +00:00:00, FullRelative), Fixed(".")]
 
 ## no error, no server
 tone: Danger
 --- discord ---
-### A `housekeeping` job died
-**Key:** `housekeeping`
-**Server:** none
-**Runs:** 1
+### 💀 A `housekeeping` job died
+`housekeeping` · no server · **1** run
 -# Died <t:1794924309:f> (<t:1794924309:R>).
 buttons: [Requeue · Primary] OpsRequeueJob(JobId(01930000-0000-7000-8000-000000000002)) | [Dismiss · Secondary] OpsDismissJob(JobId(01930000-0000-7000-8000-000000000002))
 --- plain ---
-A housekeeping job died
-Key: housekeeping
-Server: none
-Runs: 1
+💀 A housekeeping job died
+housekeeping · no server · 1 run
 Died 17 Nov 2026 at 14:05 UTC.
 --- model ---
-Heading [Fixed("A "), Code("housekeeping"), Fixed(" job died")]
-Field "Key" [Code("housekeeping")]
-Field "Server" [Fixed("none")]
-Field "Runs" [Fixed("1")]
+Heading [Fixed("💀 A "), Code("housekeeping"), Fixed(" job died")]
+Text [Code("housekeeping"), Fixed(" · no server · "), Bold([Fixed("1")]), Fixed(" run")]
 Subtext [Fixed("Died "), Time(2026-11-17 14:05:09.0 +00:00:00, FullRelative), Fixed(".")]

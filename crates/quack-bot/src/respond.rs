@@ -9,7 +9,7 @@ use std::sync::{Arc, PoisonError, RwLock};
 
 use quack_discord::DiscordClient;
 use quack_discord::Outcome;
-use quack_discord::model::{InteractionRef, InteractionToken};
+use quack_discord::model::{InteractionRef, InteractionToken, OutgoingFile};
 use quack_discord::render::{render, render_modal};
 use quack_discord::rest::AutocompleteChoice;
 use quack_engine::BoxFuture;
@@ -41,11 +41,13 @@ pub trait Responder: Send + Sync + 'static {
         ix: &'a InteractionRef,
         choices: &'a [AutocompleteChoice],
     ) -> BoxFuture<'a, Outcome<()>>;
-    /// Edits the original response after an ack.
+    /// Edits the original response after an ack; `files` (the images an
+    /// ops card shows) replace its attachments when there are any.
     fn edit_original<'a>(
         &'a self,
         token: &'a InteractionToken,
         msg: &'a Msg,
+        files: &'a [OutgoingFile],
     ) -> BoxFuture<'a, Outcome<()>>;
     /// Posts a follow-up message.
     fn followup<'a>(
@@ -129,11 +131,12 @@ impl Responder for DiscordResponder {
         &'a self,
         token: &'a InteractionToken,
         msg: &'a Msg,
+        files: &'a [OutgoingFile],
     ) -> BoxFuture<'a, Outcome<()>> {
         Box::pin(async move {
             let rendered = render(msg, &self.commands.get());
             self.client
-                .edit_interaction_original(token, &rendered)
+                .edit_interaction_original(token, &rendered, files)
                 .await
         })
     }

@@ -4,29 +4,29 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## connected
 tone: Warning
 --- discord ---
-### Gateway trouble in the last 10 minutes
-2 dropped connections, 1 failed reconnect, and 2 resumed sessions.
-Quack is connected now.
+### 📡 Gateway trouble in the last 10 minutes
+**2** dropped connections · **1** failed reconnect · **2** resumed sessions
+🟢 Quack is connected now.
 --- plain ---
-Gateway trouble in the last 10 minutes
-2 dropped connections, 1 failed reconnect, and 2 resumed sessions.
-Quack is connected now.
+📡 Gateway trouble in the last 10 minutes
+2 dropped connections · 1 failed reconnect · 2 resumed sessions
+🟢 Quack is connected now.
 --- model ---
-Heading [Fixed("Gateway trouble in the last 10 minutes")]
-Text [Fixed("2 dropped connections, 1 failed reconnect, and 2 resumed sessions.")]
-Text [Fixed("Quack is connected now.")]
+Heading [Fixed("📡 Gateway trouble in the last 10 minutes")]
+Text [Bold([Fixed("2")]), Fixed(" dropped connections · "), Bold([Fixed("1")]), Fixed(" failed reconnect · "), Bold([Fixed("2")]), Fixed(" resumed sessions")]
+Text [Fixed("🟢 Quack is connected now.")]
 
 ## down
 tone: Danger
 --- discord ---
-### Gateway trouble in the last 10 minutes
-1 dropped connection, 5 failed reconnects, 1 new session, and 1 invalidated session.
-Quack is not connected right now.
+### 📡 Gateway trouble in the last 10 minutes
+**1** dropped connection · **5** failed reconnects · **1** new session · **1** invalidated session
+🔴 Quack is not connected right now.
 --- plain ---
-Gateway trouble in the last 10 minutes
-1 dropped connection, 5 failed reconnects, 1 new session, and 1 invalidated session.
-Quack is not connected right now.
+📡 Gateway trouble in the last 10 minutes
+1 dropped connection · 5 failed reconnects · 1 new session · 1 invalidated session
+🔴 Quack is not connected right now.
 --- model ---
-Heading [Fixed("Gateway trouble in the last 10 minutes")]
-Text [Fixed("1 dropped connection, 5 failed reconnects, 1 new session, and 1 invalidated session.")]
-Text [Fixed("Quack is not connected right now.")]
+Heading [Fixed("📡 Gateway trouble in the last 10 minutes")]
+Text [Bold([Fixed("1")]), Fixed(" dropped connection · "), Bold([Fixed("5")]), Fixed(" failed reconnects · "), Bold([Fixed("1")]), Fixed(" new session · "), Bold([Fixed("1")]), Fixed(" invalidated session")]
+Text [Fixed("🔴 Quack is not connected right now.")]

@@ -4,116 +4,92 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## installed
 tone: Neutral
 --- discord ---
-### **Quack Pond**
-Quack is in this server. It first joined <t:1794924309:d>.
-**ID:** `1005778938108325970`
-**Owner:** <@444> (`444`)
-**Members:** 12,480
-**Cases:** 120 (4 voided)
-**Active rules:** 6
-**Waiting for staff:** 1 appeal, 0 failed actions, 2 open tickets
+### 🏠 Quack Pond
+`1005778938108325970` · owner <@444> (`444`) · **12,480** members
+🟢 Quack is in this server; it first joined <t:1794924309:d>.
+**120** cases (4 voided) · **6** active rules
+Waiting for staff: **1** appeal · **0** failed actions · **2** open tickets
 **Modules on:** tickets, honeypot
-**Missing permissions:** none
+**Missing permissions:** none 🟢
 -# Ops shows only facts about the server and counts, never its cases or members.
 --- plain ---
-Quack Pond
-Quack is in this server. It first joined 17 Nov 2026.
-ID: 1005778938108325970
-Owner: A member (ID 444) (444)
-Members: 12,480
-Cases: 120 (4 voided)
-Active rules: 6
-Waiting for staff: 1 appeal, 0 failed actions, 2 open tickets
+🏠 Quack Pond
+1005778938108325970 · owner a member (ID 444) (444) · 12,480 members
+🟢 Quack is in this server; it first joined 17 Nov 2026.
+
+120 cases (4 voided) · 6 active rules
+Waiting for staff: 1 appeal · 0 failed actions · 2 open tickets
 Modules on: tickets, honeypot
-Missing permissions: none
+Missing permissions: none 🟢
 Ops shows only facts about the server and counts, never its cases or members.
 --- model ---
-Heading [Bold([User("Quack Pond")])]
-Text [Fixed("Quack is in this server. It first joined "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(".")]
-Field "ID" [Code("1005778938108325970")]
-Field "Owner" [Person(Person { id: AccountId(444), name: None }), Fixed(" ("), Code("444"), Fixed(")")]
-Field "Members" [Fixed("12,480")]
-Field "Cases" [Fixed("120 (4 voided)")]
-Field "Active rules" [Fixed("6")]
-Field "Waiting for staff" [Fixed("1 appeal, 0 failed actions, 2 open tickets")]
+Heading [Fixed("🏠 "), User("Quack Pond")]
+Text [Code("1005778938108325970"), Fixed(" · owner "), Person(Person { id: AccountId(444), name: None }), Fixed(" ("), Code("444"), Fixed(") · "), Bold([Fixed("12,480")]), Fixed(" members")]
+Text [Fixed("🟢 Quack is in this server; it first joined "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(".")]
+Divider
+Text [Bold([Fixed("120")]), Fixed(" cases (4 voided) · "), Bold([Fixed("6")]), Fixed(" active rules\nWaiting for staff: "), Bold([Fixed("1")]), Fixed(" appeal · "), Bold([Fixed("0")]), Fixed(" failed actions · "), Bold([Fixed("2")]), Fixed(" open tickets")]
 Field "Modules on" [Fixed("tickets, honeypot")]
-Field "Missing permissions" [Fixed("none")]
+Field "Missing permissions" [Fixed("none 🟢")]
 Subtext [Fixed("Ops shows only facts about the server and counts, never its cases or members.")]
 
 ## left, no modules
 tone: Neutral
 --- discord ---
-### **Quack Pond**
-Quack isn't in this server any more. It first joined <t:1794924309:d> and left <t:1795014309:d>.
-**ID:** `1005778938108325970`
-**Owner:** <@444> (`444`)
-**Members:** 12,401 (when Quack left)
-**Cases:** 120 (4 voided)
-**Active rules:** 6
-**Waiting for staff:** 1 appeal, 0 failed actions, 2 open tickets
+### 🏠 Quack Pond
+`1005778938108325970` · owner <@444> (`444`) · **12,401** members when Quack left
+⚪ Quack isn't in this server any more. It first joined <t:1794924309:d> and left <t:1795014309:d>.
+**120** cases (4 voided) · **6** active rules
+Waiting for staff: **1** appeal · **0** failed actions · **2** open tickets
 **Modules on:** none
-**Missing permissions:** Ban Members
+**Missing permissions:** 🟡 Ban Members
 -# Ops shows only facts about the server and counts, never its cases or members.
 --- plain ---
-Quack Pond
-Quack isn't in this server any more. It first joined 17 Nov 2026 and left 18 Nov 2026.
-ID: 1005778938108325970
-Owner: A member (ID 444) (444)
-Members: 12,401 (when Quack left)
-Cases: 120 (4 voided)
-Active rules: 6
-Waiting for staff: 1 appeal, 0 failed actions, 2 open tickets
+🏠 Quack Pond
+1005778938108325970 · owner a member (ID 444) (444) · 12,401 members when Quack left
+⚪ Quack isn't in this server any more. It first joined 17 Nov 2026 and left 18 Nov 2026.
+
+120 cases (4 voided) · 6 active rules
+Waiting for staff: 1 appeal · 0 failed actions · 2 open tickets
 Modules on: none
-Missing permissions: Ban Members
+Missing permissions: 🟡 Ban Members
 Ops shows only facts about the server and counts, never its cases or members.
 --- model ---
-Heading [Bold([User("Quack Pond")])]
-Text [Fixed("Quack isn't in this server any more. It first joined "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" and left "), Time(2026-11-18 15:05:09.0 +00:00:00, Date), Fixed(".")]
-Field "ID" [Code("1005778938108325970")]
-Field "Owner" [Person(Person { id: AccountId(444), name: None }), Fixed(" ("), Code("444"), Fixed(")")]
-Field "Members" [Fixed("12,401 (when Quack left)")]
-Field "Cases" [Fixed("120 (4 voided)")]
-Field "Active rules" [Fixed("6")]
-Field "Waiting for staff" [Fixed("1 appeal, 0 failed actions, 2 open tickets")]
+Heading [Fixed("🏠 "), User("Quack Pond")]
+Text [Code("1005778938108325970"), Fixed(" · owner "), Person(Person { id: AccountId(444), name: None }), Fixed(" ("), Code("444"), Fixed(") · "), Bold([Fixed("12,401")]), Fixed(" members when Quack left")]
+Text [Fixed("⚪ Quack isn't in this server any more. It first joined "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" and left "), Time(2026-11-18 15:05:09.0 +00:00:00, Date), Fixed(".")]
+Divider
+Text [Bold([Fixed("120")]), Fixed(" cases (4 voided) · "), Bold([Fixed("6")]), Fixed(" active rules\nWaiting for staff: "), Bold([Fixed("1")]), Fixed(" appeal · "), Bold([Fixed("0")]), Fixed(" failed actions · "), Bold([Fixed("2")]), Fixed(" open tickets")]
 Field "Modules on" [Fixed("none")]
-Field "Missing permissions" [Fixed("Ban Members")]
+Field "Missing permissions" [Fixed("🟡 Ban Members")]
 Subtext [Fixed("Ops shows only facts about the server and counts, never its cases or members.")]
 
 ## discord unavailable
 tone: Neutral
 --- discord ---
-### **Quack Pond**
-Quack is in this server. It first joined <t:1794924309:d>.
-**ID:** `1005778938108325970`
-**Owner:** <@444> (`444`)
-**Members:** 12,480
-**Cases:** 120 (4 voided)
-**Active rules:** 6
-**Waiting for staff:** 1 appeal, 0 failed actions, 2 open tickets
+### 🏠 Quack Pond
+`1005778938108325970` · owner <@444> (`444`) · **12,480** members
+🟢 Quack is in this server; it first joined <t:1794924309:d>.
+**120** cases (4 voided) · **6** active rules
+Waiting for staff: **1** appeal · **0** failed actions · **2** open tickets
 **Modules on:** tickets, honeypot
 **Missing permissions:** Discord didn't answer, so Quack couldn't check.
 -# Ops shows only facts about the server and counts, never its cases or members.
 --- plain ---
-Quack Pond
-Quack is in this server. It first joined 17 Nov 2026.
-ID: 1005778938108325970
-Owner: A member (ID 444) (444)
-Members: 12,480
-Cases: 120 (4 voided)
-Active rules: 6
-Waiting for staff: 1 appeal, 0 failed actions, 2 open tickets
+🏠 Quack Pond
+1005778938108325970 · owner a member (ID 444) (444) · 12,480 members
+🟢 Quack is in this server; it first joined 17 Nov 2026.
+
+120 cases (4 voided) · 6 active rules
+Waiting for staff: 1 appeal · 0 failed actions · 2 open tickets
 Modules on: tickets, honeypot
 Missing permissions: Discord didn't answer, so Quack couldn't check.
 Ops shows only facts about the server and counts, never its cases or members.
 --- model ---
-Heading [Bold([User("Quack Pond")])]
-Text [Fixed("Quack is in this server. It first joined "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(".")]
-Field "ID" [Code("1005778938108325970")]
-Field "Owner" [Person(Person { id: AccountId(444), name: None }), Fixed(" ("), Code("444"), Fixed(")")]
-Field "Members" [Fixed("12,480")]
-Field "Cases" [Fixed("120 (4 voided)")]
-Field "Active rules" [Fixed("6")]
-Field "Waiting for staff" [Fixed("1 appeal, 0 failed actions, 2 open tickets")]
+Heading [Fixed("🏠 "), User("Quack Pond")]
+Text [Code("1005778938108325970"), Fixed(" · owner "), Person(Person { id: AccountId(444), name: None }), Fixed(" ("), Code("444"), Fixed(") · "), Bold([Fixed("12,480")]), Fixed(" members")]
+Text [Fixed("🟢 Quack is in this server; it first joined "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(".")]
+Divider
+Text [Bold([Fixed("120")]), Fixed(" cases (4 voided) · "), Bold([Fixed("6")]), Fixed(" active rules\nWaiting for staff: "), Bold([Fixed("1")]), Fixed(" appeal · "), Bold([Fixed("0")]), Fixed(" failed actions · "), Bold([Fixed("2")]), Fixed(" open tickets")]
 Field "Modules on" [Fixed("tickets, honeypot")]
 Field "Missing permissions" [Fixed("Discord didn't answer, so Quack couldn't check.")]
 Subtext [Fixed("Ops shows only facts about the server and counts, never its cases or members.")]

@@ -65,6 +65,7 @@ fn model(m: &Msg, out: &mut String) {
             Block::Subtext(t) => writeln!(out, "Subtext {}", model_text(t)),
             Block::Divider => writeln!(out, "Divider"),
             Block::File(name) => writeln!(out, "File {name:?}"),
+            Block::Image { name, alt } => writeln!(out, "Image {name:?} alt {alt:?}"),
             Block::Gallery(items) => writeln!(out, "Gallery {items:?}"),
             Block::Code(body) => writeln!(out, "Code {body:?}"),
         };

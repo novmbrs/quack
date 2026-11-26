@@ -4,68 +4,47 @@ source: crates/quack-text/src/tests/snapshots.rs
 ## joined
 tone: Success
 --- discord ---
-### 📥 Quack joined a server
-Quack was added to **Quack \*Pond\*** (`1005778938108325970`).
-**Owner:** <@444>
-**Members:** 12,480
--# Quack is in 1,205 servers now, with 2.31M members.
+### 📥 Joined Quack \*Pond\*
+**12,480** members · owner <@444> · `1005778938108325970`
+-# Quack is in **1,205** servers with **2.31M** members now.
 --- plain ---
-📥 Quack joined a server
-Quack was added to Quack *Pond* (1005778938108325970).
-Owner: A member (ID 444)
-Members: 12,480
-Quack is in 1,205 servers now, with 2.31M members.
+📥 Joined Quack *Pond*
+12,480 members · owner a member (ID 444) · 1005778938108325970
+Quack is in 1,205 servers with 2.31M members now.
 --- model ---
-Heading [Fixed("📥 Quack joined a server")]
-Text [Fixed("Quack was added to "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
-Field "Owner" [Person(Person { id: AccountId(444), name: None })]
-Field "Members" [Fixed("12,480")]
-Subtext [Fixed("Quack is in 1,205 servers now, with 2.31M members.")]
+Heading [Fixed("📥 Joined "), User("Quack *Pond*")]
+Text [Bold([Fixed("12,480")]), Fixed(" members · owner "), Person(Person { id: AccountId(444), name: None }), Fixed(" · "), Code("1005778938108325970")]
+Subtext [Fixed("Quack is in "), Bold([Fixed("1,205")]), Fixed(" servers with "), Bold([Fixed("2.31M")]), Fixed(" members now.")]
 
 ## rejoined
 tone: Success
 --- discord ---
-### 🔁 Quack rejoined a server
-Quack was added again to **Quack \*Pond\*** (`1005778938108325970`).
-**Owner:** <@444>
-**Members:** 12,480
--# Quack is in 1,205 servers now, with 2.31M members.
+### 🔁 Rejoined Quack \*Pond\*
+**12,480** members · owner <@444> · `1005778938108325970`
+-# Quack is in **1,205** servers with **2.31M** members now.
 --- plain ---
-🔁 Quack rejoined a server
-Quack was added again to Quack *Pond* (1005778938108325970).
-Owner: A member (ID 444)
-Members: 12,480
-Quack is in 1,205 servers now, with 2.31M members.
+🔁 Rejoined Quack *Pond*
+12,480 members · owner a member (ID 444) · 1005778938108325970
+Quack is in 1,205 servers with 2.31M members now.
 --- model ---
-Heading [Fixed("🔁 Quack rejoined a server")]
-Text [Fixed("Quack was added again to "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
-Field "Owner" [Person(Person { id: AccountId(444), name: None })]
-Field "Members" [Fixed("12,480")]
-Subtext [Fixed("Quack is in 1,205 servers now, with 2.31M members.")]
+Heading [Fixed("🔁 Rejoined "), User("Quack *Pond*")]
+Text [Bold([Fixed("12,480")]), Fixed(" members · owner "), Person(Person { id: AccountId(444), name: None }), Fixed(" · "), Code("1005778938108325970")]
+Subtext [Fixed("Quack is in "), Bold([Fixed("1,205")]), Fixed(" servers with "), Bold([Fixed("2.31M")]), Fixed(" members now.")]
 
 ## left
 tone: Warning
 --- discord ---
-### 📤 Quack left a server
-Quack was removed from **Quack \*Pond\*** (`1005778938108325970`).
-**Owner:** <@444>
-**Members:** 12,480 (last known)
-**Installed for:** 1 day 1 hour, since <t:1794924309:d>
-**Left behind:** 341 cases · 4 active rules
--# Quack is in 1,205 servers now, with 2.31M members.
+### 📤 Left Quack \*Pond\*
+**12,480** members (last known) · owner <@444> · `1005778938108325970`
+Installed for **1 day 1 hour**, since <t:1794924309:d> · left behind **341** cases, **4** active rules
+-# Quack is in **1,205** servers with **2.31M** members now.
 --- plain ---
-📤 Quack left a server
-Quack was removed from Quack *Pond* (1005778938108325970).
-Owner: A member (ID 444)
-Members: 12,480 (last known)
-Installed for: 1 day 1 hour, since 17 Nov 2026
-Left behind: 341 cases · 4 active rules
-Quack is in 1,205 servers now, with 2.31M members.
+📤 Left Quack *Pond*
+12,480 members (last known) · owner a member (ID 444) · 1005778938108325970
+Installed for 1 day 1 hour, since 17 Nov 2026 · left behind 341 cases, 4 active rules
+Quack is in 1,205 servers with 2.31M members now.
 --- model ---
-Heading [Fixed("📤 Quack left a server")]
-Text [Fixed("Quack was removed from "), Bold([User("Quack *Pond*")]), Fixed(" ("), Code("1005778938108325970"), Fixed(").")]
-Field "Owner" [Person(Person { id: AccountId(444), name: None })]
-Field "Members" [Fixed("12,480 (last known)")]
-Field "Installed for" [Fixed("1 day 1 hour, since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date)]
-Field "Left behind" [Fixed("341 cases · 4 active rules")]
-Subtext [Fixed("Quack is in 1,205 servers now, with 2.31M members.")]
+Heading [Fixed("📤 Left "), User("Quack *Pond*")]
+Text [Bold([Fixed("12,480")]), Fixed(" members (last known) · owner "), Person(Person { id: AccountId(444), name: None }), Fixed(" · "), Code("1005778938108325970")]
+Text [Fixed("Installed for "), Bold([Fixed("1 day 1 hour")]), Fixed(", since "), Time(2026-11-17 14:05:09.0 +00:00:00, Date), Fixed(" · left behind "), Bold([Fixed("341")]), Fixed(" cases, "), Bold([Fixed("4")]), Fixed(" active rules")]
+Subtext [Fixed("Quack is in "), Bold([Fixed("1,205")]), Fixed(" servers with "), Bold([Fixed("2.31M")]), Fixed(" members now.")]

@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 use quack_core::ids::{CaseId, GuildId};
 use quack_discord::Outcome;
 use quack_discord::interaction::{Interaction, Source};
+use quack_discord::model::OutgoingFile;
 use quack_discord::rest::AutocompleteChoice;
 use quack_engine::cache::{Choice, GuildRules};
 use quack_engine::{Engine, GuildConfig};
@@ -326,10 +327,15 @@ impl<'a> Acked<'a> {
     /// Edits the original response (or the component's ephemeral message)
     /// to `msg`.
     pub(crate) async fn answer(&self, msg: &Msg) -> Finish {
+        self.answer_with(msg, &[]).await
+    }
+
+    /// Answers with `msg` and the files its image blocks name.
+    pub(crate) async fn answer_with(&self, msg: &Msg, files: &[OutgoingFile]) -> Finish {
         let outcome = self
             .shared
             .responder
-            .edit_original(&self.ix.token, msg)
+            .edit_original(&self.ix.token, msg, files)
             .await;
         spans::event(&tracing::Span::current(), SpanEvent::Replied, Vec::new());
         if outcome.is_done() {
@@ -352,6 +358,17 @@ impl<'a> Acked<'a> {
                     replied
                 }
             }
+        }
+    }
+
+    /// Answers with `result` and its files (an ops card), or the failure.
+    pub(crate) async fn finish_rendered(
+        &self,
+        result: Result<quack_ops::Rendered, Failure>,
+    ) -> Finish {
+        match result {
+            Ok(r) => self.answer_with(&r.msg, &r.files).await,
+            Err(failure) => self.finish(Err(failure)).await,
         }
     }
 
