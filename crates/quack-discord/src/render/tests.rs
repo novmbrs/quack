@@ -305,3 +305,35 @@ fn the_files_input_is_a_file_upload() {
     assert_eq!(upload["required"], false);
     assert_eq!(wire[2]["component"]["custom_id"], "note");
 }
+
+/// A card image stands alone: no container, so Discord shows the image
+/// and its text without a box around them.
+#[test]
+fn a_card_image_is_not_boxed() {
+    let msg = Msg::new(Tone::Success)
+        .block(Block::Image {
+            name: "quack-status.png".to_owned(),
+            alt: "All systems operational.".to_owned(),
+        })
+        .block(Block::Subtext(Text::fixed("Updated now.")))
+        .buttons(vec![Button::new(
+            "Refresh",
+            ButtonStyle::Secondary,
+            ButtonAction::OpsRefresh,
+        )]);
+    let rendered = render(&msg, &CommandIds::EMPTY);
+    assert!(
+        !rendered
+            .components
+            .iter()
+            .any(|c| matches!(c, Component::Container(_))),
+        "{rendered:?}"
+    );
+    let v = json(&rendered);
+    assert_eq!(
+        v[0]["items"][0]["media"]["url"],
+        "attachment://quack-status.png"
+    );
+    assert_eq!(v[1]["content"], "-# Updated now.");
+    assert_eq!(rendered.components.len(), 3, "gallery, text, and the row");
+}

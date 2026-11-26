@@ -1,6 +1,8 @@
 //! The neutral message model → Components V2 (§11.11).
 //!
-//! Everything sits in one Container whose accent follows the tone. Each run
+//! Everything sits in one Container whose accent follows the tone, except a
+//! message that shows a card image (an Image block): its components stand
+//! alone, so the image isn't boxed in a container. Each run
 //! of consecutive text blocks becomes one Text Display; dividers become
 //! Separators, files File components, rows Action Rows. The message is
 //! first fitted to Discord's text budget (`quack_text::budget::fit`); the
@@ -33,7 +35,8 @@ pub use modal::{RenderedModal, render_modal};
 /// `IS_COMPONENTS_V2` flag and no `content` or embeds (the client does).
 #[derive(Clone, Debug, PartialEq)]
 pub struct RenderedMessage {
-    /// The container, then nothing else (rows live inside the container).
+    /// The container, then nothing else (rows live inside the container);
+    /// or, for a message with an Image block, the components on their own.
     pub components: Vec<Component>,
 }
 
@@ -264,6 +267,11 @@ pub fn render(msg: &Msg, commands: &CommandIds) -> RenderedMessage {
     }
     if children.is_empty() {
         children.push(text_display("\u{200b}".to_owned()));
+    }
+    if msg.blocks.iter().any(|b| matches!(b, Block::Image { .. })) {
+        return RenderedMessage {
+            components: children,
+        };
     }
     RenderedMessage {
         components: vec![Component::Container(Container {
